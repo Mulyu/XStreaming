@@ -13,6 +13,7 @@ type Props = ViewProps & {
   mirror?: boolean;
   zOrder?: number;
   videoFormat?: string;
+  screenPosition?: string;
   fsrEnabled?: boolean;
   fsrSharpness?: number;
 };

@@ -37,6 +37,9 @@ public class RTCFsrVideoView extends ViewGroup {
     private static final int VIDEO_FORMAT_MODE_STRETCH = 1;
     private static final int VIDEO_FORMAT_MODE_ZOOM = 2;
     private static final int VIDEO_FORMAT_MODE_FIXED_RATIO = 3;
+    private static final int SCREEN_POSITION_CENTER = 0;
+    private static final int SCREEN_POSITION_TOP = 1;
+    private static final int SCREEN_POSITION_BOTTOM = 2;
 
     private static int surfaceViewRendererInstances;
     private static final Object EGL_LAYOUT_ASPECT_REFLECTION_LOCK = new Object();
@@ -56,6 +59,8 @@ public class RTCFsrVideoView extends ViewGroup {
     private int videoFormatMode = VIDEO_FORMAT_MODE_AUTO;
     private float videoFormatAspectRatio;
     private String videoFormat = "";
+    private int screenPositionMode = SCREEN_POSITION_CENTER;
+    private String screenPosition = "center";
     private boolean eglLayoutAspectReflectionFailed;
     private String streamURL;
     private VideoTrack videoTrack;
@@ -184,6 +189,7 @@ public class RTCFsrVideoView extends ViewGroup {
             ScalingType scalingType;
             int videoFormatMode;
             float videoFormatAspectRatio;
+            int screenPositionMode;
 
             synchronized (layoutSyncRoot) {
                 frameHeight = this.frameHeight;
@@ -192,6 +198,7 @@ public class RTCFsrVideoView extends ViewGroup {
                 scalingType = this.scalingType;
                 videoFormatMode = this.videoFormatMode;
                 videoFormatAspectRatio = this.videoFormatAspectRatio;
+                screenPositionMode = this.screenPositionMode;
             }
 
             if (videoFormatMode == VIDEO_FORMAT_MODE_STRETCH) {
@@ -221,8 +228,15 @@ public class RTCFsrVideoView extends ViewGroup {
                         height
                 );
 
+                int verticalSpace = height - frameDisplaySize.y;
                 l = (width - frameDisplaySize.x) / 2;
-                t = (height - frameDisplaySize.y) / 2;
+                if (screenPositionMode == SCREEN_POSITION_TOP) {
+                    t = 0;
+                } else if (screenPositionMode == SCREEN_POSITION_BOTTOM) {
+                    t = verticalSpace;
+                } else {
+                    t = verticalSpace / 2;
+                }
                 r = l + frameDisplaySize.x;
                 b = t + frameDisplaySize.y;
             }
@@ -307,6 +321,30 @@ public class RTCFsrVideoView extends ViewGroup {
                     videoFormatMode = VIDEO_FORMAT_MODE_AUTO;
                     videoFormatAspectRatio = 0f;
                 }
+            }
+        }
+
+        requestSurfaceViewRendererLayout();
+    }
+
+    public void setScreenPosition(String screenPosition) {
+        String normalized = screenPosition == null ? "center" : screenPosition.trim();
+        if (normalized.isEmpty()) {
+            normalized = "center";
+        }
+        if (Objects.equals(this.screenPosition, normalized)) {
+            return;
+        }
+
+        this.screenPosition = normalized;
+
+        synchronized (layoutSyncRoot) {
+            if ("top".equals(normalized)) {
+                screenPositionMode = SCREEN_POSITION_TOP;
+            } else if ("bottom".equals(normalized)) {
+                screenPositionMode = SCREEN_POSITION_BOTTOM;
+            } else {
+                screenPositionMode = SCREEN_POSITION_CENTER;
             }
         }
 

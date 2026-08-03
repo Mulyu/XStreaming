@@ -202,6 +202,17 @@ function NanoStreamScreen({navigation, route}) {
     };
   }, [windowHeight, windowWidth]);
 
+  const containerJustify = React.useMemo(() => {
+    switch (settings.screen_position) {
+      case 'top':
+        return 'flex-start';
+      case 'bottom':
+        return 'flex-end';
+      default:
+        return 'center';
+    }
+  }, [settings.screen_position]);
+
   const streamInfo = React.useMemo(
     () => ({
       sessionId: route.params?.sessionId ?? '',
@@ -1101,7 +1112,7 @@ function NanoStreamScreen({navigation, route}) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {justifyContent: containerJustify}]}>
       <Spinner
         loading={loading || isExiting}
         text={isExiting ? t('Disconnecting...') : loadingText}

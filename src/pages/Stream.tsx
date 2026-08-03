@@ -858,6 +858,28 @@ function StreamScreen({navigation, route}) {
       webviewRef.current.postMessage(JSON.stringify({type, value}));
   };
 
+  const applyScreenPositionCss = React.useCallback(() => {
+    if (!webviewRef.current) {
+      return;
+    }
+    const position =
+      settings.screen_position === 'top'
+        ? 'center top'
+        : settings.screen_position === 'bottom'
+        ? 'center bottom'
+        : 'center center';
+    // Use a dedicated <style> element (not #video-css, which the web player
+    // overwrites on every refreshVideo) to shift the video within the
+    // letterboxed area. Only visible when there is letterboxing, i.e. video
+    // format is not Stretch/Zoom.
+    const css = `#videoHolder video { object-position: ${position} !important; }`;
+    const js = `(function(){try{var id='screen-position-css';var el=document.getElementById(id);if(!el){el=document.createElement('style');el.id=id;(document.head||document.documentElement).appendChild(el);}el.textContent=${JSON.stringify(
+      css,
+    )};}catch(e){}})();true;`;
+    // @ts-ignore
+    webviewRef.current.injectJavaScript(js);
+  }, [settings.screen_position]);
+
   const handleWebviewMessage = event => {
     const data = JSON.parse(event.nativeEvent.data);
     const {type, message} = data;
@@ -1843,6 +1865,7 @@ function StreamScreen({navigation, route}) {
           onMessage={event => {
             handleWebviewMessage(event);
           }}
+          onLoadEnd={applyScreenPositionCss}
         />
       </View>
     </>

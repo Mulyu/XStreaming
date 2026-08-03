@@ -1,8 +1,8 @@
 diff --git a/node_modules/react-native-webrtc/android/src/main/java/com/oney/WebRTCModule/RTCVideoViewManager.java b/node_modules/react-native-webrtc/android/src/main/java/com/oney/WebRTCModule/RTCVideoViewManager.java
-index 387d9fd..5535b10 100644
+index 387d9fd..3ac74de 100644
 --- a/node_modules/react-native-webrtc/android/src/main/java/com/oney/WebRTCModule/RTCVideoViewManager.java
 +++ b/node_modules/react-native-webrtc/android/src/main/java/com/oney/WebRTCModule/RTCVideoViewManager.java
-@@ -56,6 +56,11 @@ public class RTCVideoViewManager extends SimpleViewManager<WebRTCView> {
+@@ -56,6 +56,16 @@ public class RTCVideoViewManager extends SimpleViewManager<WebRTCView> {
          view.setStreamURL(streamURL);
      }
  
@@ -11,11 +11,16 @@ index 387d9fd..5535b10 100644
 +        view.setVideoFormat(videoFormat);
 +    }
 +
++    @ReactProp(name = "screenPosition")
++    public void setScreenPosition(WebRTCView view, String screenPosition) {
++        view.setScreenPosition(screenPosition);
++    }
++
      /**
       * Sets the z-order of a specific {@link WebRTCView} in the stacking space of
       * all {@code WebRTCView}s. For more details, refer to the documentation of
 diff --git a/node_modules/react-native-webrtc/android/src/main/java/com/oney/WebRTCModule/WebRTCView.java b/node_modules/react-native-webrtc/android/src/main/java/com/oney/WebRTCModule/WebRTCView.java
-index 95ede81..00f5800 100644
+index 95ede81..32b87fe 100644
 --- a/node_modules/react-native-webrtc/android/src/main/java/com/oney/WebRTCModule/WebRTCView.java
 +++ b/node_modules/react-native-webrtc/android/src/main/java/com/oney/WebRTCModule/WebRTCView.java
 @@ -21,6 +21,7 @@ import org.webrtc.RendererCommon.ScalingType;
@@ -26,7 +31,7 @@ index 95ede81..00f5800 100644
  import java.lang.reflect.InvocationTargetException;
  import java.lang.reflect.Method;
  import java.util.List;
-@@ -43,6 +44,10 @@ public class WebRTCView extends ViewGroup {
+@@ -43,6 +44,13 @@ public class WebRTCView extends ViewGroup {
       * video represent nothing.
       */
      private static final ScalingType DEFAULT_SCALING_TYPE = ScalingType.SCALE_ASPECT_FIT;
@@ -34,10 +39,13 @@ index 95ede81..00f5800 100644
 +    private static final int VIDEO_FORMAT_MODE_STRETCH = 1;
 +    private static final int VIDEO_FORMAT_MODE_ZOOM = 2;
 +    private static final int VIDEO_FORMAT_MODE_FIXED_RATIO = 3;
++    private static final int SCREEN_POSITION_CENTER = 0;
++    private static final int SCREEN_POSITION_TOP = 1;
++    private static final int SCREEN_POSITION_BOTTOM = 2;
  
      private static final String TAG = WebRTCModule.TAG;
  
-@@ -53,6 +58,10 @@ public class WebRTCView extends ViewGroup {
+@@ -53,6 +61,10 @@ public class WebRTCView extends ViewGroup {
       * be created before the exception is thrown.
       */
      private static int surfaceViewRendererInstances;
@@ -48,23 +56,26 @@ index 95ede81..00f5800 100644
  
      /**
       * The height of the last video frame rendered by
-@@ -126,6 +135,10 @@ public class WebRTCView extends ViewGroup {
+@@ -126,6 +138,12 @@ public class WebRTCView extends ViewGroup {
       * the CSS property {@code object-fit} in the terms of WebRTC.
       */
      private ScalingType scalingType;
 +    private int videoFormatMode = VIDEO_FORMAT_MODE_AUTO;
 +    private float videoFormatAspectRatio;
 +    private String videoFormat = "";
++    private int screenPositionMode = SCREEN_POSITION_CENTER;
++    private String screenPosition = "center";
 +    private boolean eglLayoutAspectReflectionFailed;
  
      /**
       * The URL, if any, of the {@link MediaStream} (to be) rendered by this
-@@ -272,48 +285,46 @@ public class WebRTCView extends ViewGroup {
+@@ -272,48 +290,55 @@ public class WebRTCView extends ViewGroup {
              int frameRotation;
              int frameWidth;
              ScalingType scalingType;
 +            int videoFormatMode;
 +            float videoFormatAspectRatio;
++            int screenPositionMode;
  
              synchronized (layoutSyncRoot) {
                  frameHeight = this.frameHeight;
@@ -73,6 +84,7 @@ index 95ede81..00f5800 100644
                  scalingType = this.scalingType;
 +                videoFormatMode = this.videoFormatMode;
 +                videoFormatAspectRatio = this.videoFormatAspectRatio;
++                screenPositionMode = this.screenPositionMode;
              }
  
 -            switch (scalingType) {
@@ -83,7 +95,30 @@ index 95ede81..00f5800 100644
 -                    r = width;
 -                    l = 0;
 -                    b = height;
--                    t = 0;
++            if (videoFormatMode == VIDEO_FORMAT_MODE_STRETCH) {
++                r = width;
++                l = 0;
++                b = height;
++                t = 0;
++            } else if (frameHeight == 0 || frameWidth == 0) {
++                l = t = r = b = 0;
++            } else {
++                float frameAspectRatio = (frameRotation % 180 == 0) ? frameWidth / (float) frameHeight
++                                                                    : frameHeight / (float) frameWidth;
++                float targetAspectRatio = videoFormatMode == VIDEO_FORMAT_MODE_FIXED_RATIO
++                        ? videoFormatAspectRatio
++                        : frameAspectRatio;
++                ScalingType layoutScalingType = videoFormatMode == VIDEO_FORMAT_MODE_ZOOM
++                        ? ScalingType.SCALE_ASPECT_FILL
++                        : scalingType;
++
++                Point frameDisplaySize =
++                        RendererCommon.getDisplaySize(layoutScalingType, targetAspectRatio, width, height);
++
++                int verticalSpace = height - frameDisplaySize.y;
++                l = (width - frameDisplaySize.x) / 2;
++                if (screenPositionMode == SCREEN_POSITION_TOP) {
+                     t = 0;
 -                    break;
 -                case SCALE_ASPECT_FIT:
 -                default:
@@ -106,28 +141,11 @@ index 95ede81..00f5800 100644
 -                        b = t + frameDisplaySize.y;
 -                    }
 -                    break;
-+            if (videoFormatMode == VIDEO_FORMAT_MODE_STRETCH) {
-+                r = width;
-+                l = 0;
-+                b = height;
-+                t = 0;
-+            } else if (frameHeight == 0 || frameWidth == 0) {
-+                l = t = r = b = 0;
-+            } else {
-+                float frameAspectRatio = (frameRotation % 180 == 0) ? frameWidth / (float) frameHeight
-+                                                                    : frameHeight / (float) frameWidth;
-+                float targetAspectRatio = videoFormatMode == VIDEO_FORMAT_MODE_FIXED_RATIO
-+                        ? videoFormatAspectRatio
-+                        : frameAspectRatio;
-+                ScalingType layoutScalingType = videoFormatMode == VIDEO_FORMAT_MODE_ZOOM
-+                        ? ScalingType.SCALE_ASPECT_FILL
-+                        : scalingType;
-+
-+                Point frameDisplaySize =
-+                        RendererCommon.getDisplaySize(layoutScalingType, targetAspectRatio, width, height);
-+
-+                l = (width - frameDisplaySize.x) / 2;
-+                t = (height - frameDisplaySize.y) / 2;
++                } else if (screenPositionMode == SCREEN_POSITION_BOTTOM) {
++                    t = verticalSpace;
++                } else {
++                    t = verticalSpace / 2;
++                }
 +                r = l + frameDisplaySize.x;
 +                b = t + frameDisplaySize.y;
              }
@@ -137,7 +155,7 @@ index 95ede81..00f5800 100644
      }
  
      /**
-@@ -402,6 +413,151 @@ public class WebRTCView extends ViewGroup {
+@@ -402,6 +427,175 @@ public class WebRTCView extends ViewGroup {
          setScalingType(scalingType);
      }
  
@@ -168,6 +186,30 @@ index 95ede81..00f5800 100644
 +                    videoFormatMode = VIDEO_FORMAT_MODE_AUTO;
 +                    videoFormatAspectRatio = 0f;
 +                }
++            }
++        }
++
++        requestSurfaceViewRendererLayout();
++    }
++
++    public void setScreenPosition(String screenPosition) {
++        String normalized = screenPosition == null ? "center" : screenPosition.trim();
++        if (normalized.isEmpty()) {
++            normalized = "center";
++        }
++        if (Objects.equals(this.screenPosition, normalized)) {
++            return;
++        }
++
++        this.screenPosition = normalized;
++
++        synchronized (layoutSyncRoot) {
++            if ("top".equals(normalized)) {
++                screenPositionMode = SCREEN_POSITION_TOP;
++            } else if ("bottom".equals(normalized)) {
++                screenPositionMode = SCREEN_POSITION_BOTTOM;
++            } else {
++                screenPositionMode = SCREEN_POSITION_CENTER;
 +            }
 +        }
 +
@@ -290,10 +332,10 @@ index 95ede81..00f5800 100644
          synchronized (layoutSyncRoot) {
              if (this.scalingType == scalingType) {
 diff --git a/node_modules/react-native-webrtc/lib/typescript/RTCView.d.ts b/node_modules/react-native-webrtc/lib/typescript/RTCView.d.ts
-index 07483c4..1c3737c 100644
+index 07483c4..6abb8b2 100644
 --- a/node_modules/react-native-webrtc/lib/typescript/RTCView.d.ts
 +++ b/node_modules/react-native-webrtc/lib/typescript/RTCView.d.ts
-@@ -31,6 +31,12 @@ export interface RTCVideoViewProps extends ViewProps {
+@@ -31,6 +31,19 @@ export interface RTCVideoViewProps extends ViewProps {
       * streamURL: string
       */
      streamURL?: string;
@@ -303,14 +345,21 @@ index 07483c4..1c3737c 100644
 +     * Supported values: '', 'Stretch', 'Zoom', '16:10', '18:9', '21:9', '4:3'.
 +     */
 +    videoFormat?: string;
++    /**
++     * Vertical position of the video within the letterboxed area. Android custom
++     * extension in this project.
++     *
++     * Supported values: 'top', 'center', 'bottom'.
++     */
++    screenPosition?: string;
      /**
       * Similarly to the CSS property z-index, specifies the z-order of this
       * RTCView in the stacking space of all RTCViews. When RTCViews overlap,
 diff --git a/node_modules/react-native-webrtc/src/RTCView.ts b/node_modules/react-native-webrtc/src/RTCView.ts
-index ac75f95..d8253ff 100644
+index ac75f95..8edd05c 100644
 --- a/node_modules/react-native-webrtc/src/RTCView.ts
 +++ b/node_modules/react-native-webrtc/src/RTCView.ts
-@@ -34,6 +34,13 @@ export interface RTCVideoViewProps extends ViewProps {
+@@ -34,6 +34,21 @@ export interface RTCVideoViewProps extends ViewProps {
     * streamURL: string
     */
    streamURL?: string;
@@ -321,6 +370,14 @@ index ac75f95..d8253ff 100644
 +   * Supported values: '', 'Stretch', 'Zoom', '16:10', '18:9', '21:9', '4:3'.
 +   */
 +  videoFormat?: string;
++
++  /**
++   * Vertical position of the video within the letterboxed area. Android custom
++   * extension in this project.
++   *
++   * Supported values: 'top', 'center', 'bottom'.
++   */
++  screenPosition?: string;
    /**
     * Similarly to the CSS property z-index, specifies the z-order of this
     * RTCView in the stacking space of all RTCViews. When RTCViews overlap,
