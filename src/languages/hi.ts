@@ -306,6 +306,12 @@ export default {
     gyroSenDescY: 'Y-अक्ष की गति सेट करें।',
     byorg: 'यह आपका खरीदा हुआ गेम है।',
     compatibleWarn: 'इस गेम में कुछ समस्याएं हो सकती हैं।',
+    'Game screen position': 'गेम स्क्रीन की स्थिति',
+    GameScreenPositionDesc:
+      'लेटरबॉक्स (काली पट्टियों वाले) क्षेत्र में गेम वीडियो को ऊपर, बीच या नीचे शिफ्ट करें (फोल्डेबल डिवाइस पर उपयोगी)। जब वीडियो प्रारूप Stretch या Zoom हो तो कोई असर नहीं होता, क्योंकि वीडियो पूरी स्क्रीन भर देता है।',
+    Top: 'ऊपर',
+    Center: 'बीच',
+    Bottom: 'नीचे',
     'Picture in picture': 'पिक्चर इन पिक्चर',
     PictureInPictureDesc: 'गेम को छोटी विंडो में चलाएं।',
     'Native portrait mode': 'पोर्ट्रेट मोड',

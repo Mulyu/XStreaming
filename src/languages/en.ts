@@ -336,6 +336,12 @@ export default {
       'This is an owned game, not an XGPU library game. To play it, make sure you have purchased it.',
     compatibleWarn:
       'This game has compatibility issues in third-party streaming apps. Playing through official channels is recommended.',
+    'Game screen position': 'Game screen position',
+    GameScreenPositionDesc:
+      'Shift the game video toward the top, center, or bottom within the letterboxed area (useful on foldables). No effect when the video format is Stretch or Zoom, since the video fills the screen.',
+    Top: 'Top',
+    Center: 'Center',
+    Bottom: 'Bottom',
     'Picture in picture': 'Picture in picture',
     PictureInPictureDesc:
       'After enabling this, switching streaming to the background enters Android picture-in-picture and keeps the video visible.',

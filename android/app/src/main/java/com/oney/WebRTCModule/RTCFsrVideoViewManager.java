@@ -42,6 +42,11 @@ public class RTCFsrVideoViewManager extends SimpleViewManager<RTCFsrVideoView> {
         view.setVideoFormat(videoFormat);
     }
 
+    @ReactProp(name = "screenPosition")
+    public void setScreenPosition(RTCFsrVideoView view, String screenPosition) {
+        view.setScreenPosition(screenPosition);
+    }
+
     @ReactProp(name = "fsrEnabled", defaultBoolean = true)
     public void setFsrEnabled(RTCFsrVideoView view, boolean enabled) {
         view.setFsrEnabled(enabled);

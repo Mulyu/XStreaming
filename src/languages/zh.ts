@@ -325,6 +325,12 @@ export default {
     byorg: '该游戏属于自购游戏，非XGPU库游戏，如需游玩，请保证已购买此游戏。',
     compatibleWarn:
       '该游戏在第三方串流应用上存在兼容性问题，建议从官方途径游玩此游戏。',
+    'Game screen position': '游戏画面位置',
+    GameScreenPositionDesc:
+      '在黑边（信箱）区域内将游戏画面靠上、居中或靠下显示（折叠屏等设备较为实用）。当画面比例为拉伸(Stretch)或缩放(Zoom)时会铺满屏幕，此设置无效。',
+    Top: '靠上',
+    Center: '居中',
+    Bottom: '靠下',
     'Picture in picture': '画中画',
     PictureInPictureDesc: '开启后串流时切到后台会进入安卓画中画并保持画面显示',
     'Native portrait mode': '原生竖屏模式',

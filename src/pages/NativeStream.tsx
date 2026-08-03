@@ -2491,6 +2491,7 @@ export function NativeStreamScreenBase({
   );
 
   const video_format = settings.native_touch ? '' : settings.video_format;
+  const screen_position = settings.screen_position || 'center';
   const loadingPosterUrl =
     typeof route.params?.postUrl === 'string' ? route.params.postUrl : '';
   const showLoadingPoster = loading && !!loadingPosterUrl;
@@ -2516,6 +2517,7 @@ export function NativeStreamScreenBase({
             objectFit={objectFit}
             streamURL={remote}
             videoFormat={video_format || ''}
+            screenPosition={screen_position}
             fsrEnabled={true}
             fsrSharpness={fsrSharpness}
           />
@@ -2536,6 +2538,7 @@ export function NativeStreamScreenBase({
           objectFit={objectFit}
           streamURL={remote}
           videoFormat={video_format || ''}
+          screenPosition={screen_position}
         />
         <NativeTouchOverlay
           enabled={!!settings.native_touch && !isInPictureInPicture}

@@ -43,6 +43,17 @@ const display = [
     ],
   },
   {
+    name: 'screen_position',
+    type: 'radio',
+    title: t('Game screen position'),
+    description: t('GameScreenPositionDesc'),
+    data: [
+      {value: 'top', text: t('Top')},
+      {value: 'center', text: t('Center')},
+      {value: 'bottom', text: t('Bottom')},
+    ],
+  },
+  {
     name: 'picture_in_picture',
     type: 'radio',
     title: t('Picture in picture'),

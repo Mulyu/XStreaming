@@ -299,6 +299,12 @@ export default {
     gyroSenDescY: 'Y軸の感度調整',
     byorg: '所有済みゲームです।',
     compatibleWarn: '互換性の問題がある可能性があります।',
+    'Game screen position': 'ゲーム画面の表示位置',
+    GameScreenPositionDesc:
+      'レターボックスの余白内でゲーム映像を上・中央・下に寄せます（折りたたみ端末などに便利）。ビデオ形式が Stretch/Zoom のときは全画面表示になるため効果はありません。',
+    Top: '上寄せ',
+    Center: '中央',
+    Bottom: '下寄せ',
     'Picture in picture': 'PIPモード',
     PictureInPictureDesc: 'バックグラウンドで小窓表示',
     'Native portrait mode': '縦向きモード',
