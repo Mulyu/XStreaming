@@ -308,8 +308,7 @@ export default {
     compatibleWarn:
       '該遊戲在第三方串流應用上存在相容性問題，建議通過官方途徑遊玩此遊戲。',
     'Game screen position': '遊戲畫面位置',
-    GameScreenPositionDesc:
-      '在黑邊（信箱）區域內將遊戲畫面靠上、置中或靠下顯示（摺疊螢幕等裝置較為實用）。當畫面比例為拉伸(Stretch)或縮放(Zoom)時會鋪滿螢幕，此設定無效。',
+    GameScreenPositionDesc: '將遊戲畫面靠上、置中或靠下顯示。',
     Top: '靠上',
     Center: '置中',
     Bottom: '靠下',

@@ -871,8 +871,9 @@ function StreamScreen({navigation, route}) {
     // Use a dedicated <style> element (not #video-css, which the web player
     // overwrites on every refreshVideo) to shift the video within the
     // letterboxed area. Only visible when there is letterboxing, i.e. video
-    // format is not Stretch/Zoom.
-    const css = `#videoHolder video { object-position: ${position} !important; }`;
+    // format is not Stretch/Zoom. The canvas selector covers the FSR path,
+    // where the player hides #videoHolder and shows #canvas-container.
+    const css = `#videoHolder video, #canvas-container canvas { object-position: ${position} !important; }`;
     const js = `(function(){try{var id='screen-position-css';var el=document.getElementById(id);if(!el){el=document.createElement('style');el.id=id;(document.head||document.documentElement).appendChild(el);}el.textContent=${JSON.stringify(
       css,
     )};}catch(e){}})();true;`;

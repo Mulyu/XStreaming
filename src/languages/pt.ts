@@ -320,7 +320,7 @@ export default {
       'Este jogo possui problemas de compatibilidade em apps de streaming de terceiros. Recomenda-se jogar pelos canais oficiais.',
     'Game screen position': 'Posição da tela do jogo',
     GameScreenPositionDesc:
-      'Desloca a imagem do jogo para cima, para o centro ou para baixo dentro da área com bordas pretas (útil em dobráveis). Sem efeito quando o formato de vídeo é Stretch ou Zoom, pois a imagem preenche a tela.',
+      'Alinha a imagem do jogo no topo, centro ou base da tela.',
     Top: 'Cima',
     Center: 'Centro',
     Bottom: 'Baixo',

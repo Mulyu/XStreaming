@@ -263,7 +263,7 @@ export default {
     compatibleWarn: 'Puede haber problemas de compatibilidad.',
     'Game screen position': 'Posición de la pantalla de juego',
     GameScreenPositionDesc:
-      'Desplaza la imagen del juego hacia arriba, al centro o hacia abajo dentro del área con bordes negros (útil en plegables). No tiene efecto cuando el formato de vídeo es Stretch o Zoom, ya que la imagen llena la pantalla.',
+      'Alinea la imagen del juego arriba, al centro o abajo de la pantalla.',
     Top: 'Arriba',
     Center: 'Centro',
     Bottom: 'Abajo',
