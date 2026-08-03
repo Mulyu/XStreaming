@@ -338,7 +338,7 @@ export default {
       'This game has compatibility issues in third-party streaming apps. Playing through official channels is recommended.',
     'Game screen position': 'Game screen position',
     GameScreenPositionDesc:
-      'Shift the game video toward the top, center, or bottom within the letterboxed area (useful on foldables). No effect when the video format is Stretch or Zoom, since the video fills the screen.',
+      'Align the game video to the top, center, or bottom of the screen.',
     Top: 'Top',
     Center: 'Center',
     Bottom: 'Bottom',

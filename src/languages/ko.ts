@@ -298,8 +298,7 @@ export default {
     byorg: '소유한 게임입니다.',
     compatibleWarn: '호환성 문제가 있을 수 있습니다.',
     'Game screen position': '게임 화면 위치',
-    GameScreenPositionDesc:
-      '레터박스 여백 안에서 게임 영상을 위·가운데·아래로 정렬합니다(폴더블 기기 등에 유용). 비디오 형식이 Stretch/Zoom이면 화면을 가득 채우므로 효과가 없습니다.',
+    GameScreenPositionDesc: '게임 영상을 화면의 위·가운데·아래로 정렬합니다.',
     Top: '위',
     Center: '가운데',
     Bottom: '아래',

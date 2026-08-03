@@ -326,8 +326,7 @@ export default {
     compatibleWarn:
       '该游戏在第三方串流应用上存在兼容性问题，建议从官方途径游玩此游戏。',
     'Game screen position': '游戏画面位置',
-    GameScreenPositionDesc:
-      '在黑边（信箱）区域内将游戏画面靠上、居中或靠下显示（折叠屏等设备较为实用）。当画面比例为拉伸(Stretch)或缩放(Zoom)时会铺满屏幕，此设置无效。',
+    GameScreenPositionDesc: '将游戏画面靠上、居中或靠下显示。',
     Top: '靠上',
     Center: '居中',
     Bottom: '靠下',
