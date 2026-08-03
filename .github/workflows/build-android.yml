@@ -1,0 +1,79 @@
+name: Build Android APK
+
+# Manually build an installable, debug-signed release APK and expose it as a
+# downloadable workflow artifact. Triggered from the Actions tab
+# ("Run workflow"). No repository secrets are required: the release variant is
+# signed with the committed android/app/debug.keystore via -P properties, so
+# the APK is a standalone build (JS bundled into Hermes bytecode, no Metro
+# needed) suitable for sideloading onto a device for testing.
+on:
+  workflow_dispatch:
+    inputs:
+      abi:
+        description: 'Target ABI (arm64-v8a covers virtually all modern phones)'
+        required: true
+        default: 'arm64-v8a'
+        type: choice
+        options:
+          - arm64-v8a
+          - 'armeabi-v7a,arm64-v8a'
+
+jobs:
+  build:
+    # nano-rs (Rust) is cross-compiled through the NDK toolchain, whose path is
+    # hardcoded to darwin-* in android/app/build.gradle, so the build must run
+    # on macOS. macos-13 is Intel and matches NDK r23's darwin-x86_64 toolchain
+    # natively (no Rosetta).
+    runs-on: macos-13
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages (NDK 23.1.7779620)
+        run: |
+          sdkmanager --install \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;23.1.7779620"
+
+      - name: Add Rust Android target
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi
+
+      - name: Install JS dependencies
+        run: yarn install --immutable
+
+      - name: Build release APK (debug-signed)
+        working-directory: android
+        run: |
+          ./gradlew assembleProdRelease --no-daemon \
+            -PreactNativeArchitectures="${{ inputs.abi }}" \
+            -PXSTREAMING_RELEASE_STORE_FILE=debug.keystore \
+            -PXSTREAMING_RELEASE_STORE_PASSWORD=android \
+            -PXSTREAMING_RELEASE_KEY_ALIAS=androiddebugkey \
+            -PXSTREAMING_RELEASE_KEY_PASSWORD=android
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xstreaming-prod-release-apk
+          path: android/app/build/outputs/apk/prod/release/*.apk
+          if-no-files-found: error
