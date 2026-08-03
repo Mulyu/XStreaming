@@ -166,11 +166,18 @@ def nanoRustTargetMap = [
 ]
 
 def nanoRustHostTag = { ndkDir ->
-    def armTag = file("${ndkDir}/toolchains/llvm/prebuilt/darwin-arm64")
-    if (armTag.exists()) {
-        return "darwin-arm64"
+    def osName = System.getProperty("os.name").toLowerCase()
+    if (osName.contains("windows")) {
+        return "windows-x86_64"
     }
-    return "darwin-x86_64"
+    if (osName.contains("mac") || osName.contains("darwin")) {
+        def armTag = file("${ndkDir}/toolchains/llvm/prebuilt/darwin-arm64")
+        if (armTag.exists()) {
+            return "darwin-arm64"
+        }
+        return "darwin-x86_64"
+    }
+    return "linux-x86_64"
 }
 
 def nanoRustClangPrefix = { triple ->
