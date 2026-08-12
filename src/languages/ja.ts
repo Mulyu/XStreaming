@@ -55,7 +55,6 @@ export default {
       'XGPUが見つかりません。サブスクリプションまたは地域設定を確認してください।',
     Recently: '最近',
     Newest: '最新',
-    'Game Pass': 'Game Pass',
     Stars: 'お気に入り',
     Own: '所有済み',
     All: 'すべて',

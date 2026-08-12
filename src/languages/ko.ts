@@ -54,7 +54,6 @@ export default {
       'XGPU가 없거나 해당 지역에서 xCloud를 사용할 수 없습니다. 계정 권한을 확인하거나 설정에서 지역을 변경하세요.',
     Recently: '최근 항목',
     Newest: '최신순',
-    'Game Pass': 'Game Pass',
     Stars: '즐겨찾기',
     Own: '소유함',
     All: '전체',

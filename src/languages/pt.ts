@@ -54,7 +54,6 @@ export default {
       'Você não tem XGP ou o xCloud não está disponível na sua região. Verifique as permissões da conta ou altere a região nas configurações.\nSe já alterou a região, ative o login por código de autorização.',
     Recently: 'Jogados recentemente',
     Newest: 'Adicionados recentemente',
-    'Game Pass': 'Game Pass',
     Stars: 'Favoritos',
     Own: 'Próprios',
     All: 'Todos',
