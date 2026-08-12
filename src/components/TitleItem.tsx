@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {Text, useTheme} from 'react-native-paper';
-import {useTranslation} from 'react-i18next';
 
 type Props = {
   titleItem: any;
@@ -17,11 +16,10 @@ type Props = {
 
 const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
   const theme = useTheme();
-  const {t} = useTranslation();
   const [loading, setLoading] = React.useState(true);
 
-  // Playable through the user's Game Pass (XGPU library) entitlement.
-  const isGamePass = titleItem?.details?.hasEntitlement === true;
+  // Playable now: the user is entitled to this title (Game Pass / XGPU library).
+  const isPlayable = titleItem?.details?.hasEntitlement === true;
   const hasImage = !!(titleItem?.Image_Tile || titleItem?.Image_Poster);
 
   const handlePress = () => {
@@ -71,12 +69,11 @@ const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
         )}
         <View>
           {renderImage()}
-          {hasImage && isGamePass && (
+          {hasImage && isPlayable && (
             <View style={[styles.badge, compact && styles.badgeCompact]}>
               <Text
-                style={[styles.badgeText, compact && styles.badgeTextCompact]}
-                numberOfLines={1}>
-                {t('Game Pass')}
+                style={[styles.badgeText, compact && styles.badgeTextCompact]}>
+                ✓
               </Text>
             </View>
           )}
@@ -136,26 +133,30 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 6,
     bottom: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#107C10',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    maxWidth: '90%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badgeCompact: {
     left: 4,
     bottom: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
   },
   badgeText: {
     color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '900',
+    textAlign: 'center',
   },
   badgeTextCompact: {
-    fontSize: 9,
+    fontSize: 11,
+    lineHeight: 13,
   },
   descriptionContainer: {
     padding: 10,
