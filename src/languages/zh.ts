@@ -69,6 +69,7 @@ export default {
       '你没有开通XGP或所在地区没有xCloud权限，请检查账号权限或到设置中修改地区重试。\n如你已修改地区，请在设置中开启授权登录尝试解决。',
     Recently: '最近游玩',
     Newest: '新入库',
+    'Game Pass': 'Game Pass',
     Stars: '收藏',
     Own: '自购库',
     All: '全部',

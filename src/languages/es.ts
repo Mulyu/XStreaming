@@ -46,6 +46,7 @@ export default {
     NoXGP: 'No tienes XGP o xCloud no está disponible en tu región.',
     Recently: 'Jugados recientemente',
     Newest: 'Añadidos recientemente',
+    'Game Pass': 'Game Pass',
     Stars: 'Favoritos',
     Own: 'Propios',
     All: 'Todo',
