@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {Text, useTheme} from 'react-native-paper';
+import {useTranslation} from 'react-i18next';
 
 type Props = {
   titleItem: any;
@@ -16,7 +17,12 @@ type Props = {
 
 const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
   const theme = useTheme();
+  const {t} = useTranslation();
   const [loading, setLoading] = React.useState(true);
+
+  // Playable through the user's Game Pass (XGPU library) entitlement.
+  const isGamePass = titleItem?.details?.hasEntitlement === true;
+  const hasImage = !!(titleItem?.Image_Tile || titleItem?.Image_Poster);
 
   const handlePress = () => {
     onPress && onPress(titleItem);
@@ -63,7 +69,18 @@ const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
             />
           </View>
         )}
-        {renderImage()}
+        <View>
+          {renderImage()}
+          {hasImage && isGamePass && (
+            <View style={[styles.badge, compact && styles.badgeCompact]}>
+              <Text
+                style={[styles.badgeText, compact && styles.badgeTextCompact]}
+                numberOfLines={1}>
+                {t('Game Pass')}
+              </Text>
+            </View>
+          )}
+        </View>
         <View
           style={[
             styles.descriptionContainer,
@@ -114,6 +131,31 @@ const styles = StyleSheet.create({
   },
   imageCompact: {
     height: 104,
+  },
+  badge: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    backgroundColor: '#107C10',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    maxWidth: '90%',
+  },
+  badgeCompact: {
+    left: 4,
+    bottom: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  badgeTextCompact: {
+    fontSize: 9,
   },
   descriptionContainer: {
     padding: 10,

@@ -294,6 +294,7 @@ function CloudScreen({navigation, route}) {
    * 1 - star
    * 2 - newest
    * 3 - all
+   * 4 - game pass
    */
   switch (`${current}`) {
     case '0':
@@ -317,6 +318,12 @@ function CloudScreen({navigation, route}) {
       break;
     case '3':
       currentTitles.current = titles;
+      break;
+    case '4':
+      // Games playable through the user's Game Pass (XGPU library)
+      currentTitles.current = titles.filter(
+        (item: any) => item.details && item.details.hasEntitlement === true,
+      );
       break;
     default:
       currentTitles.current = [];
@@ -353,6 +360,10 @@ function CloudScreen({navigation, route}) {
     {
       value: '3',
       label: t('All'),
+    },
+    {
+      value: '4',
+      label: t('Game Pass'),
     },
   ];
 
