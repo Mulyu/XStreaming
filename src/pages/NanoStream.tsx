@@ -179,7 +179,9 @@ function NanoStreamScreen({navigation, route}) {
       selectedStreamingToken?.data?.offeringSettings?.regions ?? [];
     const fallbackRegion =
       regions.find((region: any) => region?.isDefault) ?? regions[0];
-    return fallbackRegion?.baseUri ?? selectedStreamingToken?.data?.baseUri ?? '';
+    return (
+      fallbackRegion?.baseUri ?? selectedStreamingToken?.data?.baseUri ?? ''
+    );
   }, [selectedStreamingToken]);
   const selectedGsToken = React.useMemo(
     () => selectedStreamingToken?.data?.gsToken ?? '',
@@ -480,7 +482,8 @@ function NanoStreamScreen({navigation, route}) {
 
     const syncLeftThumbButton = () => {
       inputStateRef.current.buttons.LeftThumb =
-        manualLeftThumbPressedRef.current || autoSprintLeftThumbPressedRef.current
+        manualLeftThumbPressedRef.current ||
+        autoSprintLeftThumbPressedRef.current
           ? 1
           : 0;
     };
@@ -568,7 +571,9 @@ function NanoStreamScreen({navigation, route}) {
           }
 
           inputStateRef.current.buttons.LeftTrigger = Number(leftTrigger || 0);
-          inputStateRef.current.buttons.RightTrigger = Number(rightTrigger || 0);
+          inputStateRef.current.buttons.RightTrigger = Number(
+            rightTrigger || 0,
+          );
           inputStateRef.current.sticks.left = {
             x: normaliseAxis(Number(leftStickX || 0)),
             y: normaliseAxis(Number(leftStickY || 0)),
@@ -644,8 +649,8 @@ function NanoStreamScreen({navigation, route}) {
           const pressedKeys = Array.isArray(event?.dpadIdxList)
             ? event.dpadIdxList
             : event?.dpadIdx >= 0
-              ? [event.dpadIdx]
-              : [];
+            ? [event.dpadIdx]
+            : [];
           syncDpadState(pressedKeys);
         },
       );
@@ -760,12 +765,18 @@ function NanoStreamScreen({navigation, route}) {
       const sessionStatusText = String(state.sessionStatusText || '');
       const statusText = sessionStatusText || String(state.statusText || '');
       const sessionStage = String(state.sessionStage || '');
-      if (state.terminalSessionError || sessionStage === 'failed') {
+      if (
+        (state.terminalSessionError || sessionStage === 'failed') &&
+        !statusText.includes('closed')
+      ) {
         setFatalError(statusText || t('NAT failed'));
         return;
       }
       if (!isConnectedRef.current && sessionStatusText) {
-        setLoadingText(t(sessionStatusText));
+        const nextLoadingText = t(sessionStatusText);
+        setLoadingText(prev =>
+          prev === nextLoadingText ? prev : nextLoadingText,
+        );
       }
 
       const renderedVideoFrames = Number(state.renderedVideoFrames || 0);
@@ -775,31 +786,33 @@ function NanoStreamScreen({navigation, route}) {
         videoWidth > 0 && videoHeight > 0
           ? `${videoWidth}x${videoHeight}`
           : state.surfaceWidth && state.surfaceHeight
-            ? `${state.surfaceWidth}x${state.surfaceHeight}`
-            : '';
+          ? `${state.surfaceWidth}x${state.surfaceHeight}`
+          : '';
 
-      setPerformance((prev: any) => ({
-        ...prev,
-        resolution: resolution || prev.resolution,
-        rtt: formatMs(state.webRtcRttMs) ?? prev.rtt,
-        jit: formatMs(state.webRtcJitterMs) ?? prev.jit,
-        fps: isFiniteNumber(state.webRtcFps)
-          ? Math.round(Number(state.webRtcFps))
-          : prev.fps,
-        fl:
-          formatCountPercent(
-            state.webRtcFramesDropped,
-            state.webRtcFramesReceived,
-          ) ?? prev.fl,
-        pl:
-          formatCountPercent(
-            state.webRtcPacketsLost,
-            state.webRtcPacketsReceived,
-            state.webRtcPacketLossPercent,
-          ) ?? prev.pl,
-        br: formatMbps(state.webRtcBitrateMbps) ?? prev.br,
-        decode: formatMs(state.webRtcDecodeMs) ?? prev.decode,
-      }));
+      if (showPerformance) {
+        setPerformance((prev: any) => ({
+          ...prev,
+          resolution: resolution || prev.resolution,
+          rtt: formatMs(state.webRtcRttMs) ?? prev.rtt,
+          jit: formatMs(state.webRtcJitterMs) ?? prev.jit,
+          fps: isFiniteNumber(state.webRtcFps)
+            ? Math.round(Number(state.webRtcFps))
+            : prev.fps,
+          fl:
+            formatCountPercent(
+              state.webRtcFramesDropped,
+              state.webRtcFramesReceived,
+            ) ?? prev.fl,
+          pl:
+            formatCountPercent(
+              state.webRtcPacketsLost,
+              state.webRtcPacketsReceived,
+              state.webRtcPacketLossPercent,
+            ) ?? prev.pl,
+          br: formatMbps(state.webRtcBitrateMbps) ?? prev.br,
+          decode: formatMs(state.webRtcDecodeMs) ?? prev.decode,
+        }));
+      }
 
       if (
         (renderedVideoFrames > 0 || sessionStage === 'connected') &&
@@ -817,7 +830,12 @@ function NanoStreamScreen({navigation, route}) {
         }
       }
     },
-    [settings.show_performance, settings.show_virtual_gamead, t],
+    [
+      settings.show_performance,
+      settings.show_virtual_gamead,
+      showPerformance,
+      t,
+    ],
   );
 
   const handleNanoRumble = React.useCallback(
@@ -916,14 +934,7 @@ function NanoStreamScreen({navigation, route}) {
           rightTrigger <= 0;
         if (shouldStop) {
           isRumblingRef.current = false;
-          GamepadManager.vibrate(
-            0,
-            0,
-            0,
-            0,
-            0,
-            settings.rumble_intensity || 3,
-          );
+          GamepadManager.vibrate(0, 0, 0, 0, 0, settings.rumble_intensity || 3);
           return;
         }
 
@@ -1131,10 +1142,7 @@ function NanoStreamScreen({navigation, route}) {
         />
       </View>
       {showPerformance && (
-        <PerfPanel
-          performance={performance}
-          streamType={streamType}
-        />
+        <PerfPanel performance={performance} streamType={streamType} />
       )}
       {renderVirtualGamepad()}
     </View>
