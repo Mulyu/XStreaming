@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
+  ScrollView,
   useWindowDimensions,
 } from 'react-native';
 import {Text, Portal, Modal, Card, IconButton, Icon} from 'react-native-paper';
@@ -367,37 +368,51 @@ function CloudScreen({navigation, route}) {
     },
   ];
 
-  const renderCategoryTabs = () => (
-    <View style={[styles.tabs, isLargeScreen && styles.tabsLarge]}>
-      {segmentedButtons.map(item => {
-        const selected = `${current}` === item.value;
-        return (
-          <Pressable
-            key={item.value}
-            focusable={true}
-            onPress={() => handleSelectCategories(item.value)}
-            android_ripple={{color: 'rgba(16, 124, 16, 0.16)'}}
-            style={({focused, pressed}) => [
-              styles.tab,
-              isLargeScreen && styles.tabLarge,
-              selected && styles.tabSelected,
-              focused && styles.tabFocused,
-              pressed && styles.tabPressed,
+  const renderCategoryTabs = () => {
+    const tabNodes = segmentedButtons.map(item => {
+      const selected = `${current}` === item.value;
+      return (
+        <Pressable
+          key={item.value}
+          focusable={true}
+          onPress={() => handleSelectCategories(item.value)}
+          android_ripple={{color: 'rgba(16, 124, 16, 0.16)'}}
+          style={({focused, pressed}) => [
+            styles.tab,
+            isLargeScreen ? styles.tabLarge : styles.tabMobileScroll,
+            selected && styles.tabSelected,
+            focused && styles.tabFocused,
+            pressed && styles.tabPressed,
+          ]}>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.tabText,
+              isLargeScreen && styles.tabTextLarge,
+              selected && styles.tabTextSelected,
             ]}>
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.tabText,
-                isLargeScreen && styles.tabTextLarge,
-                selected && styles.tabTextSelected,
-              ]}>
-              {item.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+            {item.label}
+          </Text>
+        </Pressable>
+      );
+    });
+
+    if (isLargeScreen) {
+      return <View style={[styles.tabs, styles.tabsLarge]}>{tabNodes}</View>;
+    }
+
+    // Mobile: allow the tab strip to scroll horizontally so a longer label
+    // (e.g. "Game Pass") and all tabs stay fully usable on narrow phones
+    // instead of being clipped by the fixed-width row.
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabsScrollContent}>
+        <View style={styles.tabs}>{tabNodes}</View>
+      </ScrollView>
+    );
+  };
 
   const renderMobileSearchButton = () => {
     if (isLargeScreen) {
@@ -651,6 +666,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRightWidth: 1,
     borderRightColor: 'rgba(16, 124, 16, 0.24)',
+  },
+  tabMobileScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+    minWidth: 72,
+    paddingHorizontal: 14,
+  },
+  tabsScrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
   },
   tabLarge: {
     minWidth: 86,
