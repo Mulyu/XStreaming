@@ -73,6 +73,7 @@ export default {
     Newest: 'Recently added',
     Stars: 'Favorites',
     Own: 'Owned',
+    Playable: 'Playable',
     All: 'All',
     Search: 'Search',
     Unlocked: 'Unlocked',

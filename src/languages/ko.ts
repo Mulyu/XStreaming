@@ -56,6 +56,7 @@ export default {
     Newest: '최신순',
     Stars: '즐겨찾기',
     Own: '소유함',
+    Playable: '플레이 가능',
     All: '전체',
     Search: '검색',
     Unlocked: '잠금 해제됨',

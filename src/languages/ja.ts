@@ -57,6 +57,7 @@ export default {
     Newest: '最新',
     Stars: 'お気に入り',
     Own: '所有済み',
+    Playable: 'プレイ可能',
     All: 'すべて',
     Search: '検索',
     Unlocked: '解除済み',

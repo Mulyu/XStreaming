@@ -18,8 +18,8 @@ const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
   const theme = useTheme();
   const [loading, setLoading] = React.useState(true);
 
-  // Playable through the user's Game Pass (XGPU library) entitlement.
-  const isGamePass = titleItem?.details?.hasEntitlement === true;
+  // Playable now: the user is entitled to this title (Game Pass / XGPU library).
+  const isPlayable = titleItem?.details?.hasEntitlement === true;
   const hasImage = !!(titleItem?.Image_Tile || titleItem?.Image_Poster);
 
   const handlePress = () => {
@@ -69,7 +69,7 @@ const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
         )}
         <View>
           {renderImage()}
-          {hasImage && isGamePass && (
+          {hasImage && isPlayable && (
             <View style={[styles.badge, compact && styles.badgeCompact]}>
               <Text
                 style={[styles.badgeText, compact && styles.badgeTextCompact]}>

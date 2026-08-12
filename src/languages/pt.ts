@@ -56,6 +56,7 @@ export default {
     Newest: 'Adicionados recentemente',
     Stars: 'Favoritos',
     Own: 'Próprios',
+    Playable: 'Jogáveis',
     All: 'Todos',
     Search: 'Buscar',
     Unlocked: 'Desbloqueado',

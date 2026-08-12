@@ -58,6 +58,7 @@ export default {
     Newest: 'नवीनतम',
     Stars: 'पसंदीदा',
     Own: 'स्वामित्व वाले',
+    Playable: 'खेलने योग्य',
     All: 'सभी',
     Search: 'खोजें',
     Unlocked: 'अनलॉक',

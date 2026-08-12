@@ -295,7 +295,7 @@ function CloudScreen({navigation, route}) {
    * 1 - star
    * 2 - newest
    * 3 - all
-   * 4 - owned
+   * 4 - playable
    */
   switch (`${current}`) {
     case '0':
@@ -321,10 +321,11 @@ function CloudScreen({navigation, route}) {
       currentTitles.current = titles;
       break;
     case '4':
-      // Owned (purchased) games: shown in the library but not covered by the
-      // user's Game Pass entitlement.
+      // Playable now: titles the user is entitled to (Game Pass / XGPU
+      // library). Using the positive entitlement signal avoids listing
+      // titles that would fail with a permission error on launch.
       currentTitles.current = titles.filter(
-        (item: any) => item.details && item.details.hasEntitlement === false,
+        (item: any) => item.details && item.details.hasEntitlement === true,
       );
       break;
     default:
@@ -361,7 +362,7 @@ function CloudScreen({navigation, route}) {
     },
     {
       value: '4',
-      label: t('Own'),
+      label: t('Playable'),
     },
     {
       value: '3',

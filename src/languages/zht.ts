@@ -56,6 +56,7 @@ export default {
     Newest: '新入庫',
     Stars: '收藏',
     Own: '自有庫',
+    Playable: '可遊玩',
     All: '全部',
     Search: '搜索',
     Unlocked: '已解鎖',

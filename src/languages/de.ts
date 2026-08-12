@@ -57,6 +57,7 @@ export default {
     Newest: 'Neu hinzugefügt',
     Stars: 'Favoriten',
     Own: 'Eigene Spiele',
+    Playable: 'Spielbar',
     All: 'Alle',
     Search: 'Suchen',
     Unlocked: 'Freigeschaltet',
