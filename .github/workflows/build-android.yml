@@ -35,6 +35,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
+    # Needed to publish the built APK as a GitHub Release asset (see below).
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -85,3 +89,31 @@ jobs:
           name: xstreaming-prod-release-apk
           path: android/app/build/outputs/apk/prod/release/*.apk
           if-no-files-found: error
+
+      # GitHub always zips workflow artifacts, so downloading the artifact above
+      # yields a .zip. To get the raw .apk with a single click, also publish it
+      # as a GitHub Release asset (release assets download unwrapped). This uses
+      # a rolling "latest" pre-release so the download URL stays stable:
+      #   https://github.com/<owner>/<repo>/releases/download/latest/xstreaming-latest.apk
+      - name: Stage APK for release
+        run: |
+          mkdir -p dist
+          apk="$(ls android/app/build/outputs/apk/prod/release/*.apk | head -n1)"
+          cp "$apk" "dist/xstreaming-latest.apk"
+
+      - name: Publish APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest APK (build ${{ github.run_number }})
+          body: |
+            Automated debug-signed release APK (sideload build).
+
+            - Commit: ${{ github.sha }}
+            - Built from: ${{ github.ref_name }}
+
+            Download **xstreaming-latest.apk** below and install it directly on
+            your device (no unzip needed).
+          prerelease: true
+          make_latest: false
+          files: dist/xstreaming-latest.apk
