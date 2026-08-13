@@ -241,9 +241,9 @@ function TitleDetail({navigation, route}) {
     }
 
     const titleName = titleItem.ProductTitle || productId;
-    const iconUrl = titleItem.Image_Poster?.URL
-      ? `https:${titleItem.Image_Poster.URL}`
-      : '';
+    const artworkUrl =
+      titleItem.Image_Poster?.URL || titleItem.Image_Tile?.URL || '';
+    const iconUrl = artworkUrl ? `https:${artworkUrl}` : '';
 
     saveTitleShortcutSnapshot(titleItem);
 
