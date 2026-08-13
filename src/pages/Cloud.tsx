@@ -196,6 +196,38 @@ function CloudScreen({navigation, route}) {
     navigation.navigate('TitleDetail', {titleItem});
   };
 
+  const isTitleStarred = (titleItem: any) =>
+    !!titleItem &&
+    (starTitles.includes(titleItem.XCloudTitleId) ||
+      starTitles.includes(titleItem.titleId));
+
+  // Long-press on a list card toggles the favorite (star) state. Stars are
+  // keyed by XCloudTitleId to match the detail-screen toggle, and persisted
+  // to the xcloud cache so the choice survives restarts.
+  const handleToggleStar = (titleItem: any) => {
+    const starId = titleItem?.XCloudTitleId || titleItem?.titleId;
+    if (!starId) {
+      return;
+    }
+    const newStarTitles = isTitleStarred(titleItem)
+      ? starTitles.filter(
+          (id: any) =>
+            id !== titleItem.XCloudTitleId && id !== titleItem.titleId,
+        )
+      : [...starTitles, starId];
+
+    dispatch({
+      type: 'SET_STARS',
+      payload: newStarTitles,
+    });
+
+    const cacheData = getXcloudData();
+    if (cacheData) {
+      cacheData.starTitles = newStarTitles;
+      saveXcloudData(cacheData);
+    }
+  };
+
   const handleOpenSearch = () => {
     navigation.navigate('Search', {
       keyword,
@@ -651,6 +683,7 @@ function CloudScreen({navigation, route}) {
                   data={showTitles}
                   numColumns={numColumns}
                   key={numColumns}
+                  extraData={starTitles}
                   contentContainerStyle={[
                     styles.listContainer,
                     isLargeScreen && styles.listContainerLarge,
@@ -665,6 +698,8 @@ function CloudScreen({navigation, route}) {
                         <TitleItem
                           titleItem={item}
                           onPress={handleViewDetail}
+                          onLongPress={handleToggleStar}
+                          isFavorite={isTitleStarred(item)}
                           compact={isLargeScreen}
                         />
                       </View>
