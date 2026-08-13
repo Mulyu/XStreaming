@@ -49,6 +49,8 @@ function CloudScreen({navigation, route}) {
   const [_titlesMap, setTitlesMap] = React.useState({});
   const [recentTitles, setRecentTitles] = React.useState([]);
   const [keyword, setKeyword] = React.useState('');
+  const [playableOnly, setPlayableOnly] = React.useState(false);
+  const [selectedGenre, setSelectedGenre] = React.useState('');
   const flatListRef = React.useRef<any>(null);
   const isFetchGame = React.useRef(false);
 
@@ -247,6 +249,18 @@ function CloudScreen({navigation, route}) {
     }, 1000);
   };
 
+  const handleTogglePlayable = () => {
+    setPlayableOnly(prev => !prev);
+    setCurrentPage(1);
+    scrollToTop();
+  };
+
+  const handleSelectGenre = (genre: string) => {
+    setSelectedGenre(prev => (prev === genre ? '' : genre));
+    setCurrentPage(1);
+    scrollToTop();
+  };
+
   const renderTutorial = () => {
     return (
       <Portal>
@@ -290,12 +304,28 @@ function CloudScreen({navigation, route}) {
     );
   };
 
+  // Genre facets derived from the loaded catalog (LocalizedCategories are
+  // already localized by the catalog API via the language param).
+  const genres = React.useMemo(() => {
+    const set = new Set<string>();
+    (titles || []).forEach((item: any) => {
+      const cats = item?.LocalizedCategories || item?.Categories;
+      if (Array.isArray(cats)) {
+        cats.forEach((c: any) => {
+          if (typeof c === 'string' && c.trim()) {
+            set.add(c.trim());
+          }
+        });
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [titles]);
+
   /**
    * 0 - recent
    * 1 - star
    * 2 - newest
    * 3 - all
-   * 4 - playable
    */
   switch (`${current}`) {
     case '0':
@@ -320,17 +350,24 @@ function CloudScreen({navigation, route}) {
     case '3':
       currentTitles.current = titles;
       break;
-    case '4':
-      // Playable now: titles the user is entitled to (Game Pass / XGPU
-      // library). Using the positive entitlement signal avoids listing
-      // titles that would fail with a permission error on launch.
-      currentTitles.current = titles.filter(
-        (item: any) => item.details && item.details.hasEntitlement === true,
-      );
-      break;
     default:
       currentTitles.current = [];
       break;
+  }
+
+  // "Playable" moved from a tab to a filter: keep only titles the user is
+  // entitled to (positive signal, avoids permission errors on launch).
+  if (playableOnly) {
+    currentTitles.current = currentTitles.current.filter(
+      (item: any) => item.details && item.details.hasEntitlement === true,
+    );
+  }
+
+  if (selectedGenre) {
+    currentTitles.current = currentTitles.current.filter((item: any) => {
+      const cats = item?.LocalizedCategories || item?.Categories;
+      return Array.isArray(cats) && cats.includes(selectedGenre);
+    });
   }
 
   if (keyword.length > 0) {
@@ -359,10 +396,6 @@ function CloudScreen({navigation, route}) {
     {
       value: '2',
       label: t('Newest'),
-    },
-    {
-      value: '4',
-      label: t('Playable'),
     },
     {
       value: '3',
@@ -403,15 +436,63 @@ function CloudScreen({navigation, route}) {
       return <View style={[styles.tabs, styles.tabsLarge]}>{tabNodes}</View>;
     }
 
-    // Mobile: allow the tab strip to scroll horizontally so a longer label
-    // (e.g. "Game Pass") and all tabs stay fully usable on narrow phones
-    // instead of being clipped by the fixed-width row.
+    // Mobile: allow the tab strip to scroll horizontally so all tabs stay
+    // fully usable on narrow phones instead of being clipped by the row.
     return (
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabsScrollContent}>
         <View style={styles.tabs}>{tabNodes}</View>
+      </ScrollView>
+    );
+  };
+
+  const renderFilterBar = () => {
+    const renderChip = (
+      key: string,
+      label: string,
+      active: boolean,
+      onPress: () => void,
+    ) => (
+      <Pressable
+        key={key}
+        focusable={true}
+        onPress={onPress}
+        android_ripple={{color: 'rgba(16, 124, 16, 0.16)'}}
+        style={[styles.filterChip, active && styles.filterChipSelected]}>
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.filterChipText,
+            active && styles.filterChipTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </Pressable>
+    );
+
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterBar}
+        contentContainerStyle={styles.filterBarContent}>
+        {renderChip(
+          '__playable',
+          `${playableOnly ? '✓ ' : ''}${t('Playable')}`,
+          playableOnly,
+          handleTogglePlayable,
+        )}
+        <View style={styles.filterDivider} />
+        {renderChip('__all', t('All'), selectedGenre === '', () =>
+          handleSelectGenre(''),
+        )}
+        {genres.map(genre =>
+          renderChip(genre, genre, selectedGenre === genre, () =>
+            handleSelectGenre(genre),
+          ),
+        )}
       </ScrollView>
     );
   };
@@ -543,6 +624,8 @@ function CloudScreen({navigation, route}) {
                 onPress={handleOpenSearch}
               />
             </View>
+
+            {renderFilterBar()}
 
             {renderMobileSearchButton()}
 
@@ -708,6 +791,43 @@ const styles = StyleSheet.create({
   },
   tabTextSelected: {
     color: '#FFFFFF',
+  },
+  filterBar: {
+    flexGrow: 0,
+    marginTop: 10,
+  },
+  filterBarContent: {
+    alignItems: 'center',
+    paddingRight: 12,
+  },
+  filterChip: {
+    height: 32,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 124, 16, 0.35)',
+    marginRight: 6,
+  },
+  filterChipSelected: {
+    backgroundColor: '#107C10',
+    borderColor: '#107C10',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8fb98f',
+  },
+  filterChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  filterDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    marginRight: 6,
+    marginLeft: 2,
+    alignSelf: 'center',
   },
   searchButton: {
     position: 'absolute',
