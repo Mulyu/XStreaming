@@ -51,6 +51,7 @@ function TitleDetail({navigation, route}) {
   const [shortcutLoadFailed, setShortcutLoadFailed] = React.useState(false);
   // const streamingTokens = useSelector(state => state.streamingTokens);
   const [showUsbWarnModal, setShowUsbWarnShowModal] = React.useState(false);
+  const autoStartHandledRef = React.useRef(false);
   const isLandscape = screenWidth > screenHeight;
   const isLargeScreen = Platform.isTV || isLandscape;
   const canAddTitleShortcut =
@@ -163,6 +164,26 @@ function TitleDetail({navigation, route}) {
       },
     });
   };
+
+  // Launched from a home-screen shortcut with autoStart: skip the detail
+  // screen interaction and start streaming as soon as the title is ready.
+  // The ref guard keeps it one-shot so returning from the stream (this
+  // screen stays mounted underneath) does not relaunch the game.
+  React.useEffect(() => {
+    if (
+      !route.params?.autoStart ||
+      autoStartHandledRef.current ||
+      !titleItem ||
+      !settings?.render_engine
+    ) {
+      return;
+    }
+    autoStartHandledRef.current = true;
+    // Consume the flag so it never fires again for this screen instance.
+    navigation.setParams({autoStart: false});
+    handleStartGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.autoStart, titleItem, settings]);
 
   // Warn: xboxOne controller must press Nexus button first to active button
   const renderUsbWarningModal = () => {
