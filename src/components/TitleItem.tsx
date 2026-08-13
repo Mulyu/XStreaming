@@ -11,10 +11,18 @@ import {Text, useTheme} from 'react-native-paper';
 type Props = {
   titleItem: any;
   onPress: (titleItem: any) => any;
+  onLongPress?: (titleItem: any) => any;
+  isFavorite?: boolean;
   compact?: boolean;
 };
 
-const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
+const TitleItem: React.FC<Props> = ({
+  titleItem,
+  onPress,
+  onLongPress,
+  isFavorite = false,
+  compact = false,
+}) => {
   const theme = useTheme();
   const [loading, setLoading] = React.useState(true);
 
@@ -24,6 +32,10 @@ const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
 
   const handlePress = () => {
     onPress && onPress(titleItem);
+  };
+
+  const handleLongPress = () => {
+    onLongPress && onLongPress(titleItem);
   };
 
   const renderImage = () => {
@@ -56,6 +68,8 @@ const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
   return (
     <Pressable
       onPress={handlePress}
+      onLongPress={onLongPress ? handleLongPress : undefined}
+      delayLongPress={300}
       android_ripple={{color: 'rgba(255,255,255,0.18)'}}
       style={styles.pressable}>
       <View style={[styles.card, compact && styles.cardCompact]}>
@@ -74,6 +88,21 @@ const TitleItem: React.FC<Props> = ({titleItem, onPress, compact = false}) => {
               <Text
                 style={[styles.badgeText, compact && styles.badgeTextCompact]}>
                 ✓
+              </Text>
+            </View>
+          )}
+          {hasImage && isFavorite && (
+            <View
+              style={[
+                styles.favoriteBadge,
+                compact && styles.favoriteBadgeCompact,
+              ]}>
+              <Text
+                style={[
+                  styles.favoriteIcon,
+                  compact && styles.favoriteIconCompact,
+                ]}>
+                ♥
               </Text>
             </View>
           )}
@@ -157,6 +186,34 @@ const styles = StyleSheet.create({
   badgeTextCompact: {
     fontSize: 11,
     lineHeight: 13,
+  },
+  favoriteBadge: {
+    position: 'absolute',
+    right: 6,
+    bottom: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  favoriteBadgeCompact: {
+    right: 4,
+    bottom: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  favoriteIcon: {
+    color: '#ff4d6d',
+    fontSize: 14,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  favoriteIconCompact: {
+    fontSize: 12,
+    lineHeight: 14,
   },
   descriptionContainer: {
     padding: 10,
