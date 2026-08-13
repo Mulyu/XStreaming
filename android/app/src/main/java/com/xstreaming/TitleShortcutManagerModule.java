@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.ShortcutInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.text.TextUtils;
@@ -140,7 +141,7 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
             if (bitmap == null) {
                 return null;
             }
-            Bitmap square = cropCenterSquare(bitmap, SHORTCUT_ICON_SIZE_PX);
+            Bitmap square = fitCenterSquare(bitmap, SHORTCUT_ICON_SIZE_PX);
             return Icon.createWithBitmap(square);
         } catch (Throwable t) {
             return null;
@@ -151,24 +152,32 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
         }
     }
 
-    private Bitmap cropCenterSquare(Bitmap src, int targetSize) {
+    // Fit the whole artwork inside a square canvas without cropping: scale it
+    // down preserving aspect ratio and center it (transparent padding on the
+    // shorter axis), so the full image is visible on the shortcut.
+    private Bitmap fitCenterSquare(Bitmap src, int targetSize) {
         int width = src.getWidth();
         int height = src.getHeight();
-        int size = Math.min(width, height);
-        int x = (width - size) / 2;
-        int y = (height - size) / 2;
-        Bitmap cropped = Bitmap.createBitmap(src, x, y, size, size);
-        if (cropped != src) {
+        float scale = Math.min(
+                (float) targetSize / width,
+                (float) targetSize / height);
+        int scaledWidth = Math.max(1, Math.round(width * scale));
+        int scaledHeight = Math.max(1, Math.round(height * scale));
+
+        Bitmap scaled = Bitmap.createScaledBitmap(src, scaledWidth, scaledHeight, true);
+        if (scaled != src) {
             src.recycle();
         }
-        if (cropped.getWidth() == targetSize && cropped.getHeight() == targetSize) {
-            return cropped;
+
+        Bitmap output = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        int left = (targetSize - scaledWidth) / 2;
+        int top = (targetSize - scaledHeight) / 2;
+        canvas.drawBitmap(scaled, left, top, null);
+        if (scaled != output) {
+            scaled.recycle();
         }
-        Bitmap scaled = Bitmap.createScaledBitmap(cropped, targetSize, targetSize, true);
-        if (scaled != cropped) {
-            cropped.recycle();
-        }
-        return scaled;
+        return output;
     }
 
     @ReactMethod
