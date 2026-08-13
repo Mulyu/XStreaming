@@ -794,11 +794,13 @@ const styles = StyleSheet.create({
   },
   filterBar: {
     flexGrow: 0,
-    marginTop: 10,
+    marginTop: 6,
+    marginBottom: 4,
   },
   filterBarContent: {
     alignItems: 'center',
-    paddingRight: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   filterChip: {
     height: 32,
