@@ -227,7 +227,7 @@ function App() {
         return;
       }
 
-      navigationRef.navigate('TitleDetail', {titleItem});
+      navigationRef.navigate('TitleDetail', {titleItem, autoStart: true});
     },
     [t],
   );
