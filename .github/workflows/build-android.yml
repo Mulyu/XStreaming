@@ -1,12 +1,15 @@
 name: Build Android APK
 
-# Manually build an installable, debug-signed release APK and expose it as a
-# downloadable workflow artifact. Triggered from the Actions tab
-# ("Run workflow"). No repository secrets are required: the release variant is
-# signed with the committed android/app/debug.keystore via -P properties, so
+# Build an installable, debug-signed release APK and expose it as a
+# downloadable workflow artifact. Runs automatically on every push to main
+# (e.g. when a PR is merged) and can also be started manually from the Actions
+# tab ("Run workflow"). No repository secrets are required: the release variant
+# is signed with the committed android/app/debug.keystore via -P properties, so
 # the APK is a standalone build (JS bundled into Hermes bytecode, no Metro
 # needed) suitable for sideloading onto a device for testing.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       abi:
@@ -17,6 +20,11 @@ on:
         options:
           - arm64-v8a
           - 'armeabi-v7a,arm64-v8a'
+
+# A newer push to the same ref supersedes an in-progress build.
+concurrency:
+  group: build-android-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -65,7 +73,7 @@ jobs:
         working-directory: android
         run: |
           ./gradlew assembleProdRelease --no-daemon \
-            -PreactNativeArchitectures="${{ inputs.abi }}" \
+            -PreactNativeArchitectures="${{ inputs.abi || 'arm64-v8a' }}" \
             -PXSTREAMING_RELEASE_STORE_FILE=debug.keystore \
             -PXSTREAMING_RELEASE_STORE_PASSWORD=android \
             -PXSTREAMING_RELEASE_KEY_ALIAS=androiddebugkey \
