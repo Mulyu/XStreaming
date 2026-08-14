@@ -75,8 +75,11 @@ function CloudScreen({navigation, route}) {
   const priceSigRef = React.useRef<string>('');
   const [priceRetry, setPriceRetry] = React.useState(0);
   const retryTimerRef = React.useRef<any>(null);
+  const retryCountRef = React.useRef(0);
+  const isMountedRef = React.useRef(true);
   React.useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (retryTimerRef.current) {
         clearTimeout(retryTimerRef.current);
       }
@@ -281,10 +284,11 @@ function CloudScreen({navigation, route}) {
 
   // Fetch Store prices for the loaded titles, batched and cached in a
   // dedicated store (so it doesn't reset the catalog cache age). The request
-  // is keyed by a signature of market + title set, so a language/region change
-  // or the catalog growing (cache -> network refresh) refetches, while a stable
-  // set is fetched only once. The cancel flag drops a superseded in-flight
-  // result so it can't overwrite newer prices.
+  // is keyed by a signature of market + title set, so a market/region change or
+  // the catalog growing (cache -> network refresh) refetches, while a stable
+  // set is fetched only once. Results are applied only if the claim is still
+  // current at resolve time, so a superseded fetch can't overwrite newer prices
+  // and the common cache->network double render (identical sig) isn't orphaned.
   React.useEffect(() => {
     if (!titles || titles.length === 0) {
       return;
@@ -307,57 +311,56 @@ function CloudScreen({navigation, route}) {
     if (priceSigRef.current === sig) {
       return;
     }
+    // A genuine change (not a retry, which re-enters with priceSigRef '')
+    // resets the failure backoff.
+    if (priceSigRef.current !== '') {
+      retryCountRef.current = 0;
+    }
     priceSigRef.current = sig;
 
     // Reuse the cache only when it covers exactly this market + title set.
     const cache = getFreshPriceCache(market);
     if (cache && cache.sig === sig) {
+      retryCountRef.current = 0;
       setPriceMap(cache.priceMap);
       return;
     }
 
     const scheduleRetry = () => {
-      if (retryTimerRef.current) {
+      if (retryTimerRef.current || retryCountRef.current >= 3) {
         return;
       }
+      const attempt = retryCountRef.current;
+      retryCountRef.current = attempt + 1;
+      const delay = 15000 * Math.pow(2, attempt); // 15s, 30s, 60s
       retryTimerRef.current = setTimeout(() => {
         retryTimerRef.current = null;
-        setPriceRetry(x => x + 1);
-      }, 15000);
+        if (isMountedRef.current) {
+          setPriceRetry(x => x + 1);
+        }
+      }, delay);
     };
 
-    let cancelled = false;
-    fetchPrices(storeIds, market, language)
-      .then(({prices, ok}) => {
-        if (cancelled) {
-          return;
+    fetchPrices(storeIds, market, language).then(({prices, ok}) => {
+      // Drop the result if a newer request superseded this one, or we unmounted.
+      if (priceSigRef.current !== sig || !isMountedRef.current) {
+        return;
+      }
+      if (!ok) {
+        // A batch failed — merge in whatever arrived (so already-shown prices
+        // aren't dropped) but don't cache the partial result, free the claim,
+        // and schedule a bounded retry so recovery doesn't wait for a change.
+        if (Object.keys(prices).length > 0) {
+          setPriceMap(prev => ({...prev, ...prices}));
         }
-        if (!ok) {
-          // A batch failed — merge in whatever arrived (so already-shown prices
-          // aren't dropped) but don't cache the partial result, free the claim,
-          // and schedule a retry so recovery doesn't wait for an unrelated change.
-          if (Object.keys(prices).length > 0) {
-            setPriceMap(prev => ({...prev, ...prices}));
-          }
-          if (priceSigRef.current === sig) {
-            priceSigRef.current = '';
-          }
-          scheduleRetry();
-          return;
-        }
-        savePriceCache(prices, market, sig);
-        setPriceMap(prices);
-      })
-      .catch(() => {
-        if (!cancelled && priceSigRef.current === sig) {
-          priceSigRef.current = '';
-        }
+        priceSigRef.current = '';
         scheduleRetry();
-      });
-
-    return () => {
-      cancelled = true;
-    };
+        return;
+      }
+      retryCountRef.current = 0;
+      savePriceCache(prices, market, sig);
+      setPriceMap(prices);
+    });
   }, [titles, gameLanguage, deviceRegion, priceRetry]);
 
   // Rows re-render when favorites or fetched prices change.

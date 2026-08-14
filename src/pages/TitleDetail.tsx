@@ -205,14 +205,15 @@ function TitleDetail({navigation, route}) {
         return;
       }
     }
+    // Cache miss: clear any previous title's price so it can't flash while the
+    // fetch is in flight.
+    setPrice(null);
     let cancelled = false;
-    fetchPrices([productId], market, language)
-      .then(({prices}) => {
-        if (!cancelled) {
-          setPrice(getPrice(prices, productId));
-        }
-      })
-      .catch(() => {});
+    fetchPrices([productId], market, language).then(({prices}) => {
+      if (!cancelled) {
+        setPrice(getPrice(prices, productId));
+      }
+    });
     return () => {
       cancelled = true;
     };
