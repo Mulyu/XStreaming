@@ -40,6 +40,7 @@ import {
   deriveMarketLanguage,
   getStoreUrl,
   getPrice,
+  discountPercent,
 } from '../utils/storePrice';
 import {getFreshPriceCache, savePriceCache} from '../store/priceStore';
 import {getSystemRegion} from '../utils/locale';
@@ -585,9 +586,12 @@ function CloudScreen({navigation, route}) {
   }
 
   if (saleOnly) {
-    currentTitles.current = currentTitles.current.filter(
-      (item: any) => getPrice(priceMap, item.productId)?.onSale === true,
-    );
+    // Match the card's sale threshold (>=1% off), so the filter never surfaces
+    // a title whose card shows no sale indicator.
+    currentTitles.current = currentTitles.current.filter((item: any) => {
+      const p = getPrice(priceMap, item.productId);
+      return !!p?.onSale && discountPercent(p) > 0;
+    });
   }
 
   if (selectedGenre) {
