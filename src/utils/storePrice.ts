@@ -284,7 +284,11 @@ export const formatSaleEnd = (info: PriceInfo): string => {
   }
   // DisplayCatalog returns .NET timestamps with up to 7 fractional-second
   // digits, which some engines reject; trim to milliseconds before parsing.
-  const normalized = info.saleEndDate.replace(/(\.\d{3})\d+(?=Z|[+-]|$)/, '$1');
+  let normalized = info.saleEndDate.replace(/(\.\d{3})\d+(?=Z|[+-]|$)/, '$1');
+  // Treat a zone-less timestamp as UTC so the UTC calendar day below is right.
+  if (!/(Z|[+-]\d{2}:?\d{2})$/.test(normalized)) {
+    normalized += 'Z';
+  }
   const end = new Date(normalized);
   const time = end.getTime();
   if (!Number.isFinite(time)) {

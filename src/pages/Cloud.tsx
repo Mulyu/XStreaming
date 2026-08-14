@@ -32,8 +32,13 @@ import {
   getStoreUrl,
   getPrice,
 } from '../utils/storePrice';
-import {getFreshPriceCache, savePriceCache} from '../store/priceStore';
+import {
+  getFreshPriceCache,
+  savePriceCache,
+  PRICE_TTL_MS,
+} from '../store/priceStore';
 import {getSystemRegion} from '../utils/locale';
+import {getTitleProductId} from '../store/shortcutStore';
 
 const log = debugFactory('CloudScreen');
 
@@ -261,7 +266,7 @@ function CloudScreen({navigation, route}) {
   };
 
   const handleActionOpenStore = () => {
-    const storeId = actionTitle?.productId;
+    const storeId = actionTitle && getTitleProductId(actionTitle);
     closeActions();
     if (storeId) {
       Linking.openURL(getStoreUrl(storeId)).catch(() => {});
@@ -292,7 +297,10 @@ function CloudScreen({navigation, route}) {
       // eslint-disable-next-line no-bitwise
       hash = (Math.imul(hash, 31) + idsKey.charCodeAt(i)) | 0;
     }
-    const sig = `${market}:${storeIds.length}:${hash}`;
+    // Include a TTL bucket so an app left mounted past the cache window
+    // refetches (the bucket flips) instead of showing stale prices forever.
+    const ttlBucket = Math.floor(Date.now() / PRICE_TTL_MS);
+    const sig = `${market}:${storeIds.length}:${hash}:${ttlBucket}`;
 
     // Same market + same title set as the in-flight/last request — nothing to
     // do. Also de-dupes the cache->network double render for an unchanged set.
@@ -459,7 +467,7 @@ function CloudScreen({navigation, route}) {
       return null;
     }
     const starred = isTitleStarred(actionTitle);
-    const canStore = !!actionTitle.productId;
+    const canStore = !!getTitleProductId(actionTitle);
     return (
       <Portal>
         <Modal
