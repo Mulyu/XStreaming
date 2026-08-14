@@ -238,16 +238,30 @@ const delay = (ms: number): Promise<void> =>
 // fetchPrices, retrying the whole request (with backoff) while a batch fails.
 // Resolves with the last result; ok is false only if every attempt had a
 // failed batch. Callers apply the prices and, on ok:false, may refetch later.
+// Pass isCancelled to stop the retry chain early (e.g. after navigating away).
 export const fetchPricesWithRetry = async (
   storeIds: string[],
   market = 'US',
   language = 'en-US',
-  attempts = 3,
-  baseDelayMs = 15000,
+  {
+    attempts = 3,
+    baseDelayMs = 15000,
+    isCancelled,
+  }: {
+    attempts?: number;
+    baseDelayMs?: number;
+    isCancelled?: () => boolean;
+  } = {},
 ): Promise<FetchPricesResult> => {
   let result = await fetchPrices(storeIds, market, language);
   for (let attempt = 1; !result.ok && attempt < attempts; attempt++) {
+    if (isCancelled?.()) {
+      break;
+    }
     await delay(baseDelayMs * Math.pow(2, attempt - 1));
+    if (isCancelled?.()) {
+      break;
+    }
     result = await fetchPrices(storeIds, market, language);
   }
   return result;

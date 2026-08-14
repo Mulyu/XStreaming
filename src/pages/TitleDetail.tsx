@@ -43,7 +43,7 @@ import {
   discountPercent,
   formatSaleEnd,
 } from '../utils/storePrice';
-import {getSystemRegion} from '../utils/locale';
+import {getSystemRegion, toBcp47Locale} from '../utils/locale';
 import {getFreshPriceCache} from '../store/priceStore';
 import games from '../mock/games.json';
 
@@ -190,7 +190,7 @@ function TitleDetail({navigation, route}) {
       setPrice(null);
       return;
     }
-    const productId = titleItem.productId || getTitleProductId(titleItem);
+    const productId = getTitleProductId(titleItem);
     if (!productId) {
       setPrice(null);
       return;
@@ -209,7 +209,9 @@ function TitleDetail({navigation, route}) {
     // fetch is in flight.
     setPrice(null);
     let cancelled = false;
-    fetchPricesWithRetry([productId], market, language).then(({prices}) => {
+    fetchPricesWithRetry([productId], market, language, {
+      isCancelled: () => cancelled,
+    }).then(({prices}) => {
       if (!cancelled) {
         setPrice(getPrice(prices, productId));
       }
@@ -220,7 +222,7 @@ function TitleDetail({navigation, route}) {
   }, [titleItem, gameLanguage, deviceRegion]);
 
   const handleOpenStore = () => {
-    const productId = titleItem?.productId || getTitleProductId(titleItem);
+    const productId = titleItem && getTitleProductId(titleItem);
     if (productId) {
       Linking.openURL(getStoreUrl(productId)).catch(() => {});
     }
@@ -374,19 +376,11 @@ function TitleDetail({navigation, route}) {
   const priceDiscount = price ? discountPercent(price) : 0;
   // Show sale styling only for a real (>=1%) discount.
   const showDetailSale = !!price && price.onSale && priceDiscount > 0;
-  // Map the app's custom locale codes to BCP-47 so Intl formats correctly.
-  const dateLocale =
-    i18n.language === 'zht'
-      ? 'zh-Hant'
-      : i18n.language === 'zh'
-      ? 'zh-Hans'
-      : i18n.language;
   const saleEndLabel =
-    price && showDetailSale ? formatSaleEnd(price, dateLocale) : '';
-  const canOpenStore = !!(
-    titleItem &&
-    (titleItem.productId || getTitleProductId(titleItem))
-  );
+    price && showDetailSale
+      ? formatSaleEnd(price, toBcp47Locale(i18n.language))
+      : '';
+  const canOpenStore = !!(titleItem && getTitleProductId(titleItem));
 
   const renderLargeActionButton = (
     label: string,
