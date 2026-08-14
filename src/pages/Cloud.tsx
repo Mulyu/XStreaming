@@ -78,6 +78,7 @@ function CloudScreen({navigation, route}) {
   const [saleOnly, setSaleOnly] = React.useState(false);
   const [selectedGenre, setSelectedGenre] = React.useState('');
   const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
+  const filterChangedInSheetRef = React.useRef(false);
   const flatListRef = React.useRef<any>(null);
   const isFetchGame = React.useRef(false);
   const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
@@ -371,7 +372,7 @@ function CloudScreen({navigation, route}) {
   };
 
   const loadMoreData = () => {
-    if (currentPage <= totalPage.current) {
+    if (currentPage < totalPage.current) {
       setLoadmoring(true);
       setCurrentPage(currentPage + 1);
       setTimeout(() => {
@@ -407,11 +408,13 @@ function CloudScreen({navigation, route}) {
   };
 
   // Reset paging after a filter change. Only scroll when the change came from
-  // the inline bar; while the sheet is open the list is covered, so we scroll
-  // once when the sheet is applied/closed instead.
+  // the inline bar; while the sheet is open the list is covered, so we defer
+  // the scroll until the sheet closes — and only if a filter actually changed.
   const resetAfterFilterChange = () => {
     setCurrentPage(1);
-    if (!filterSheetOpen) {
+    if (filterSheetOpen) {
+      filterChangedInSheetRef.current = true;
+    } else {
       scrollToTop();
     }
   };
@@ -440,7 +443,10 @@ function CloudScreen({navigation, route}) {
 
   const closeFilterSheet = () => {
     setFilterSheetOpen(false);
-    scrollToTop();
+    if (filterChangedInSheetRef.current) {
+      filterChangedInSheetRef.current = false;
+      scrollToTop();
+    }
   };
 
   const activeFilterCount =
@@ -608,7 +614,14 @@ function CloudScreen({navigation, route}) {
   if (selectedGenre) {
     currentTitles.current = currentTitles.current.filter((item: any) => {
       const cats = item?.LocalizedCategories || item?.Categories;
-      return Array.isArray(cats) && cats.includes(selectedGenre);
+      // Compare against trimmed values — the genre chips are built from
+      // c.trim(), so a whitespace-padded category would otherwise never match.
+      return (
+        Array.isArray(cats) &&
+        cats.some(
+          (c: any) => typeof c === 'string' && c.trim() === selectedGenre,
+        )
+      );
     });
   }
 
