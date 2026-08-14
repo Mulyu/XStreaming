@@ -406,29 +406,40 @@ function CloudScreen({navigation, route}) {
     }, 1000);
   };
 
+  // Reset paging after a filter change. Only scroll when the change came from
+  // the inline bar; while the sheet is open the list is covered, so we scroll
+  // once when the sheet is applied/closed instead.
+  const resetAfterFilterChange = () => {
+    setCurrentPage(1);
+    if (!filterSheetOpen) {
+      scrollToTop();
+    }
+  };
+
   const handleTogglePlayable = () => {
     setPlayableOnly(prev => !prev);
-    setCurrentPage(1);
-    scrollToTop();
+    resetAfterFilterChange();
   };
 
   const handleToggleSale = () => {
     setSaleOnly(prev => !prev);
-    setCurrentPage(1);
-    scrollToTop();
+    resetAfterFilterChange();
   };
 
   const handleSelectGenre = (genre: string) => {
     setSelectedGenre(prev => (prev === genre ? '' : genre));
-    setCurrentPage(1);
-    scrollToTop();
+    resetAfterFilterChange();
   };
 
   const handleClearFilters = () => {
     setPlayableOnly(false);
     setSaleOnly(false);
     setSelectedGenre('');
-    setCurrentPage(1);
+    resetAfterFilterChange();
+  };
+
+  const closeFilterSheet = () => {
+    setFilterSheetOpen(false);
     scrollToTop();
   };
 
@@ -609,9 +620,9 @@ function CloudScreen({navigation, route}) {
     });
   }
 
-  if (currentTitles.current.length > 0) {
-    totalPage.current = Math.ceil(currentTitles.current.length / pageSize);
-  }
+  // Always recompute (0 when a filter empties the list) so a stale page count
+  // can't keep the load-more footer spinning under an empty result.
+  totalPage.current = Math.ceil(currentTitles.current.length / pageSize);
 
   const endIdx = currentPage * pageSize;
   let showTitles = currentTitles.current.slice(0, endIdx);
@@ -785,7 +796,7 @@ function CloudScreen({navigation, route}) {
       <Portal>
         <Modal
           visible={filterSheetOpen}
-          onDismiss={() => setFilterSheetOpen(false)}
+          onDismiss={closeFilterSheet}
           contentContainerStyle={styles.filterSheet}>
           <Card>
             <Card.Content>
@@ -818,9 +829,7 @@ function CloudScreen({navigation, route}) {
                 <Button mode="text" onPress={handleClearFilters}>
                   {t('Clear')}
                 </Button>
-                <Button
-                  mode="contained"
-                  onPress={() => setFilterSheetOpen(false)}>
+                <Button mode="contained" onPress={closeFilterSheet}>
                   {t('Apply')}
                 </Button>
               </View>
