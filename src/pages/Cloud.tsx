@@ -32,11 +32,7 @@ import {
   getStoreUrl,
   getPrice,
 } from '../utils/storePrice';
-import {
-  getFreshPriceCache,
-  savePriceCache,
-  PRICE_TTL_MS,
-} from '../store/priceStore';
+import {getFreshPriceCache, savePriceCache} from '../store/priceStore';
 import {getSystemRegion} from '../utils/locale';
 import {getTitleProductId} from '../store/shortcutStore';
 
@@ -52,6 +48,7 @@ function CloudScreen({navigation, route}) {
   const currentLanguage = i18n.language;
   // Read here (not just inside the price effect) so a change re-runs the effect.
   const gameLanguage = getSettings().preferred_game_language;
+  const deviceRegion = getSystemRegion();
 
   // log.info('streamingTokens:', streamingTokens);
 
@@ -74,8 +71,17 @@ function CloudScreen({navigation, route}) {
   const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
   const [actionTitle, setActionTitle] = React.useState<any>(null);
   // Signature (market + title set) we have already fetched or are fetching
-  // prices for. Cleared on failure so a later reload can retry.
+  // prices for. Cleared on failure so a scheduled retry can refetch.
   const priceSigRef = React.useRef<string>('');
+  const [priceRetry, setPriceRetry] = React.useState(0);
+  const retryTimerRef = React.useRef<any>(null);
+  React.useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+      }
+    };
+  }, []);
 
   const currentTitles = React.useRef([]);
   const totalPage = React.useRef(0);
@@ -284,10 +290,7 @@ function CloudScreen({navigation, route}) {
       return;
     }
 
-    const {market, language} = deriveMarketLanguage(
-      gameLanguage,
-      getSystemRegion(),
-    );
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
     const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
     // Signature over the whole (stably ordered) id set so any change — not just
     // count/endpoints — invalidates it. Cheap 32-bit rolling hash.
@@ -297,10 +300,7 @@ function CloudScreen({navigation, route}) {
       // eslint-disable-next-line no-bitwise
       hash = (Math.imul(hash, 31) + idsKey.charCodeAt(i)) | 0;
     }
-    // Include a TTL bucket so an app left mounted past the cache window
-    // refetches (the bucket flips) instead of showing stale prices forever.
-    const ttlBucket = Math.floor(Date.now() / PRICE_TTL_MS);
-    const sig = `${market}:${storeIds.length}:${hash}:${ttlBucket}`;
+    const sig = `${market}:${storeIds.length}:${hash}`;
 
     // Same market + same title set as the in-flight/last request — nothing to
     // do. Also de-dupes the cache->network double render for an unchanged set.
@@ -316,6 +316,16 @@ function CloudScreen({navigation, route}) {
       return;
     }
 
+    const scheduleRetry = () => {
+      if (retryTimerRef.current) {
+        return;
+      }
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        setPriceRetry(x => x + 1);
+      }, 15000);
+    };
+
     let cancelled = false;
     fetchPrices(storeIds, market, language)
       .then(({prices, ok}) => {
@@ -324,14 +334,15 @@ function CloudScreen({navigation, route}) {
         }
         if (!ok) {
           // A batch failed — merge in whatever arrived (so already-shown prices
-          // aren't dropped) but don't cache the partial result, and free the
-          // claim so a later reload retries the rest.
+          // aren't dropped) but don't cache the partial result, free the claim,
+          // and schedule a retry so recovery doesn't wait for an unrelated change.
           if (Object.keys(prices).length > 0) {
             setPriceMap(prev => ({...prev, ...prices}));
           }
           if (priceSigRef.current === sig) {
             priceSigRef.current = '';
           }
+          scheduleRetry();
           return;
         }
         savePriceCache(prices, market, sig);
@@ -341,12 +352,13 @@ function CloudScreen({navigation, route}) {
         if (!cancelled && priceSigRef.current === sig) {
           priceSigRef.current = '';
         }
+        scheduleRetry();
       });
 
     return () => {
       cancelled = true;
     };
-  }, [titles, gameLanguage]);
+  }, [titles, gameLanguage, deviceRegion, priceRetry]);
 
   // Rows re-render when favorites or fetched prices change.
   const listExtraData = React.useMemo(

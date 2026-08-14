@@ -278,7 +278,7 @@ export const discountPercent = (info: PriceInfo): number => {
 
 // A short, human sale-end label ("~ 8/24"), or empty when there's no usable
 // date. Guards against the API's far-future sentinel dates.
-export const formatSaleEnd = (info: PriceInfo): string => {
+export const formatSaleEnd = (info: PriceInfo, locale?: string): string => {
   if (!info.onSale || !info.saleEndDate) {
     return '';
   }
@@ -300,8 +300,21 @@ export const formatSaleEnd = (info: PriceInfo): string => {
   if (time <= now || time - now > oneYear) {
     return '';
   }
-  // Use the UTC calendar day, matching the store's sale window boundary, so
-  // the shown date doesn't slip by a day near local midnight.
+  // Format in the app locale (so day/month order is right) but pinned to UTC,
+  // matching the store's sale window boundary. Fall back to a numeric M/D when
+  // Intl date formatting isn't available.
+  try {
+    const formatted = new Intl.DateTimeFormat(locale || undefined, {
+      month: 'numeric',
+      day: 'numeric',
+      timeZone: 'UTC',
+    }).format(end);
+    if (formatted) {
+      return formatted;
+    }
+  } catch (e) {
+    // Intl unavailable — fall through to the numeric format.
+  }
   const month = end.getUTCMonth() + 1;
   const day = end.getUTCDate();
   return `${month}/${day}`;

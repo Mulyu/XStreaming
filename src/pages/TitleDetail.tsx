@@ -55,7 +55,7 @@ const warnTitles: any = [];
 const webviewTitles: any = [];
 
 function TitleDetail({navigation, route}) {
-  const {t} = useTranslation();
+  const {t, i18n} = useTranslation();
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const dispatch = useDispatch();
   const [titleItem, setTitleItem] = React.useState<any>(null);
@@ -65,8 +65,10 @@ function TitleDetail({navigation, route}) {
   // const streamingTokens = useSelector(state => state.streamingTokens);
   const [showUsbWarnModal, setShowUsbWarnShowModal] = React.useState(false);
   const [price, setPrice] = React.useState<PriceInfo | null>(null);
-  // Read here so a game-language change re-runs the price effect below.
+  // Read here so a game-language / device-region change re-runs the price
+  // effect below.
   const gameLanguage = getSettings().preferred_game_language;
+  const deviceRegion = getSystemRegion();
   const autoStartHandledRef = React.useRef(false);
   const isLandscape = screenWidth > screenHeight;
   const isLargeScreen = Platform.isTV || isLandscape;
@@ -193,10 +195,7 @@ function TitleDetail({navigation, route}) {
       setPrice(null);
       return;
     }
-    const {market, language} = deriveMarketLanguage(
-      gameLanguage,
-      getSystemRegion(),
-    );
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
     // Reuse the list's cached price only when it's fresh for this market.
     const priceCache = getFreshPriceCache(market);
     if (priceCache) {
@@ -217,7 +216,7 @@ function TitleDetail({navigation, route}) {
     return () => {
       cancelled = true;
     };
-  }, [titleItem, gameLanguage]);
+  }, [titleItem, gameLanguage, deviceRegion]);
 
   const handleOpenStore = () => {
     const productId = titleItem?.productId || getTitleProductId(titleItem);
@@ -374,7 +373,8 @@ function TitleDetail({navigation, route}) {
   const priceDiscount = price ? discountPercent(price) : 0;
   // Show sale styling only for a real (>=1%) discount.
   const showDetailSale = !!price && price.onSale && priceDiscount > 0;
-  const saleEndLabel = price && showDetailSale ? formatSaleEnd(price) : '';
+  const saleEndLabel =
+    price && showDetailSale ? formatSaleEnd(price, i18n.language) : '';
   const canOpenStore = !!(
     titleItem &&
     (titleItem.productId || getTitleProductId(titleItem))
