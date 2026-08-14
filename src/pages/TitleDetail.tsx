@@ -9,6 +9,7 @@ import {
   Platform,
   Pressable,
   ToastAndroid,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import {
@@ -32,6 +33,18 @@ import {
 } from '../store/shortcutStore';
 import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../utils/debug';
+import {
+  PriceInfo,
+  fetchPricesWithRetry,
+  deriveMarketLanguage,
+  getStoreUrl,
+  getPrice,
+  formatPrice,
+  discountPercent,
+  formatSaleEnd,
+} from '../utils/storePrice';
+import {getSystemRegion} from '../utils/locale';
+import {getFreshPriceCache} from '../store/priceStore';
 import games from '../mock/games.json';
 
 const {UsbRumbleManager, FullScreenManager, ShortcutManager} = NativeModules;
@@ -42,7 +55,7 @@ const warnTitles: any = [];
 const webviewTitles: any = [];
 
 function TitleDetail({navigation, route}) {
-  const {t} = useTranslation();
+  const {t, i18n} = useTranslation();
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const dispatch = useDispatch();
   const [titleItem, setTitleItem] = React.useState<any>(null);
@@ -51,6 +64,11 @@ function TitleDetail({navigation, route}) {
   const [shortcutLoadFailed, setShortcutLoadFailed] = React.useState(false);
   // const streamingTokens = useSelector(state => state.streamingTokens);
   const [showUsbWarnModal, setShowUsbWarnShowModal] = React.useState(false);
+  const [price, setPrice] = React.useState<PriceInfo | null>(null);
+  // Read here so a game-language / device-region change re-runs the price
+  // effect below.
+  const gameLanguage = getSettings().preferred_game_language;
+  const deviceRegion = getSystemRegion();
   const autoStartHandledRef = React.useRef(false);
   const isLandscape = screenWidth > screenHeight;
   const isLargeScreen = Platform.isTV || isLandscape;
@@ -163,6 +181,49 @@ function TitleDetail({navigation, route}) {
         usbController,
       },
     });
+  };
+
+  // Store price for this title. Prefer the list's cached price for an instant
+  // render; otherwise fetch just this one from DisplayCatalog.
+  React.useEffect(() => {
+    if (!titleItem) {
+      setPrice(null);
+      return;
+    }
+    const productId = titleItem.productId || getTitleProductId(titleItem);
+    if (!productId) {
+      setPrice(null);
+      return;
+    }
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
+    // Reuse the list's cached price only when it's fresh for this market.
+    const priceCache = getFreshPriceCache(market);
+    if (priceCache) {
+      const cached = getPrice(priceCache.priceMap, productId);
+      if (cached) {
+        setPrice(cached);
+        return;
+      }
+    }
+    // Cache miss: clear any previous title's price so it can't flash while the
+    // fetch is in flight.
+    setPrice(null);
+    let cancelled = false;
+    fetchPricesWithRetry([productId], market, language).then(({prices}) => {
+      if (!cancelled) {
+        setPrice(getPrice(prices, productId));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [titleItem, gameLanguage, deviceRegion]);
+
+  const handleOpenStore = () => {
+    const productId = titleItem?.productId || getTitleProductId(titleItem);
+    if (productId) {
+      Linking.openURL(getStoreUrl(productId)).catch(() => {});
+    }
   };
 
   // Launched from a home-screen shortcut with autoStart: skip the detail
@@ -310,6 +371,23 @@ function TitleDetail({navigation, route}) {
     description = games[titleItem.XboxTitleId].short_description;
   }
 
+  const priceDiscount = price ? discountPercent(price) : 0;
+  // Show sale styling only for a real (>=1%) discount.
+  const showDetailSale = !!price && price.onSale && priceDiscount > 0;
+  // Map the app's custom locale codes to BCP-47 so Intl formats correctly.
+  const dateLocale =
+    i18n.language === 'zht'
+      ? 'zh-Hant'
+      : i18n.language === 'zh'
+      ? 'zh-Hans'
+      : i18n.language;
+  const saleEndLabel =
+    price && showDetailSale ? formatSaleEnd(price, dateLocale) : '';
+  const canOpenStore = !!(
+    titleItem &&
+    (titleItem.productId || getTitleProductId(titleItem))
+  );
+
   const renderLargeActionButton = (
     label: string,
     onPress: () => void,
@@ -436,6 +514,15 @@ function TitleDetail({navigation, route}) {
                   </Text>
                 </View>
                 <View style={styles.titleActions}>
+                  {canOpenStore && (
+                    <IconButton
+                      icon="open-in-new"
+                      size={isLargeScreen ? 24 : 22}
+                      accessibilityLabel={t('View in store')}
+                      style={styles.titleActionButton}
+                      onPress={handleOpenStore}
+                    />
+                  )}
                   {canAddTitleShortcut && (
                     <IconButton
                       icon="plus-box-outline"
@@ -454,6 +541,32 @@ function TitleDetail({navigation, route}) {
                   />
                 </View>
               </View>
+
+              {price && (
+                <View style={styles.priceBlock}>
+                  <Text
+                    style={[
+                      styles.priceNow,
+                      showDetailSale && styles.priceNowSale,
+                    ]}>
+                    {formatPrice(price.listPrice, price.currencyCode)}
+                  </Text>
+                  {showDetailSale && (
+                    <Text style={styles.priceWas}>
+                      {formatPrice(price.msrp, price.currencyCode)}
+                    </Text>
+                  )}
+                  {showDetailSale && (
+                    <Text style={styles.priceOff}>-{priceDiscount}%</Text>
+                  )}
+                </View>
+              )}
+
+              {saleEndLabel ? (
+                <Text style={styles.saleEnds}>
+                  {t('Sale ends')} {saleEndLabel}
+                </Text>
+              ) : null}
 
               {isByorg && (
                 <View style={styles.tagsWrap}>
@@ -578,6 +691,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
+  },
+  priceBlock: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  priceNow: {
+    fontSize: 20,
+    fontWeight: '900',
+    marginRight: 10,
+  },
+  priceNowSale: {
+    color: '#e5342b',
+  },
+  priceWas: {
+    fontSize: 14,
+    color: '#9096a8',
+    textDecorationLine: 'line-through',
+    marginRight: 10,
+  },
+  priceOff: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
+    backgroundColor: '#e5342b',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  saleEnds: {
+    fontSize: 12,
+    color: '#e5342b',
+    fontWeight: '600',
+    marginTop: 4,
   },
   tagContainer: {
     borderColor: '#999999',

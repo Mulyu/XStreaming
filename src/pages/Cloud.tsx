@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import {Text, Portal, Modal, Card, IconButton, Icon} from 'react-native-paper';
@@ -18,11 +19,22 @@ import Empty from '../components/Empty';
 // import mockData from '../mock/data';
 import {debugFactory} from '../utils/debug';
 import {useTranslation} from 'react-i18next';
+import {getSettings} from '../store/settingStore';
 import {
   getXcloudData,
   saveXcloudData,
   isxCloudDataValid,
 } from '../store/xcloudStore';
+import {
+  PriceInfo,
+  fetchPricesWithRetry,
+  deriveMarketLanguage,
+  getStoreUrl,
+  getPrice,
+} from '../utils/storePrice';
+import {getFreshPriceCache, savePriceCache} from '../store/priceStore';
+import {getSystemRegion} from '../utils/locale';
+import {getTitleProductId} from '../store/shortcutStore';
 
 const log = debugFactory('CloudScreen');
 
@@ -34,6 +46,9 @@ function CloudScreen({navigation, route}) {
   const starTitles = useSelector((state: any) => state.stars || []);
 
   const currentLanguage = i18n.language;
+  // Read here (not just inside the price effect) so a change re-runs the effect.
+  const gameLanguage = getSettings().preferred_game_language;
+  const deviceRegion = getSystemRegion();
 
   // log.info('streamingTokens:', streamingTokens);
 
@@ -53,6 +68,17 @@ function CloudScreen({navigation, route}) {
   const [selectedGenre, setSelectedGenre] = React.useState('');
   const flatListRef = React.useRef<any>(null);
   const isFetchGame = React.useRef(false);
+  const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
+  const [actionTitle, setActionTitle] = React.useState<any>(null);
+  // Signature (market + title set) we have already fetched or are fetching
+  // prices for. Cleared on failure so a later change can refetch.
+  const priceSigRef = React.useRef<string>('');
+  const isMountedRef = React.useRef(true);
+  React.useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const currentTitles = React.useRef([]);
   const totalPage = React.useRef(0);
@@ -201,9 +227,9 @@ function CloudScreen({navigation, route}) {
     (starTitles.includes(titleItem.XCloudTitleId) ||
       starTitles.includes(titleItem.titleId));
 
-  // Long-press on a list card toggles the favorite (star) state. Stars are
-  // keyed by XCloudTitleId to match the detail-screen toggle, and persisted
-  // to the xcloud cache so the choice survives restarts.
+  // Toggle the favorite (star) state. Stars are keyed by XCloudTitleId to
+  // match the detail-screen toggle, and persisted to the xcloud cache so the
+  // choice survives restarts.
   const handleToggleStar = (titleItem: any) => {
     const starId = titleItem?.XCloudTitleId || titleItem?.titleId;
     if (!starId) {
@@ -227,6 +253,93 @@ function CloudScreen({navigation, route}) {
       saveXcloudData(cacheData);
     }
   };
+
+  // Long-press on a list card opens a small action sheet (favorite + store).
+  const handleOpenActions = (titleItem: any) => {
+    setActionTitle(titleItem);
+  };
+
+  const closeActions = () => setActionTitle(null);
+
+  const handleActionToggleStar = () => {
+    if (actionTitle) {
+      handleToggleStar(actionTitle);
+    }
+    closeActions();
+  };
+
+  const handleActionOpenStore = () => {
+    const storeId = actionTitle && getTitleProductId(actionTitle);
+    closeActions();
+    if (storeId) {
+      Linking.openURL(getStoreUrl(storeId)).catch(() => {});
+    }
+  };
+
+  // Fetch Store prices for the loaded titles, batched and cached in a
+  // dedicated store (so it doesn't reset the catalog cache age). The request
+  // is keyed by a signature of market + title set, so a market/region change or
+  // the catalog growing (cache -> network refresh) refetches, while a stable
+  // set is fetched only once. Results are applied only if the claim is still
+  // current at resolve time, so a superseded fetch can't overwrite newer prices
+  // and the common cache->network double render (identical sig) isn't orphaned.
+  React.useEffect(() => {
+    if (!titles || titles.length === 0) {
+      return;
+    }
+
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
+    const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
+    // Signature over the whole (stably ordered) id set so any change — not just
+    // count/endpoints — invalidates it. Cheap 32-bit rolling hash.
+    const idsKey = storeIds.join('|');
+    let hash = 0;
+    for (let i = 0; i < idsKey.length; i++) {
+      // eslint-disable-next-line no-bitwise
+      hash = (Math.imul(hash, 31) + idsKey.charCodeAt(i)) | 0;
+    }
+    const sig = `${market}:${storeIds.length}:${hash}`;
+
+    // Same market + same title set as the in-flight/last request — nothing to
+    // do. Also de-dupes the cache->network double render for an unchanged set.
+    if (priceSigRef.current === sig) {
+      return;
+    }
+    priceSigRef.current = sig;
+
+    // Reuse the cache only when it covers exactly this market + title set.
+    const cache = getFreshPriceCache(market);
+    if (cache && cache.sig === sig) {
+      setPriceMap(cache.priceMap);
+      return;
+    }
+
+    // fetchPricesWithRetry handles the bounded backoff internally.
+    fetchPricesWithRetry(storeIds, market, language).then(({prices, ok}) => {
+      // Drop the result if a newer request superseded this one, or we unmounted.
+      if (priceSigRef.current !== sig || !isMountedRef.current) {
+        return;
+      }
+      if (ok) {
+        savePriceCache(prices, market, sig);
+        setPriceMap(prices);
+      } else {
+        // Retries exhausted — merge in whatever arrived (don't drop already
+        // shown prices), don't cache the partial, and free the claim so a
+        // later market/title-set change refetches.
+        if (Object.keys(prices).length > 0) {
+          setPriceMap(prev => ({...prev, ...prices}));
+        }
+        priceSigRef.current = '';
+      }
+    });
+  }, [titles, gameLanguage, deviceRegion]);
+
+  // Rows re-render when favorites or fetched prices change.
+  const listExtraData = React.useMemo(
+    () => ({starTitles, priceMap}),
+    [starTitles, priceMap],
+  );
 
   const handleOpenSearch = () => {
     navigation.navigate('Search', {
@@ -329,6 +442,54 @@ function CloudScreen({navigation, route}) {
               <Text variant="bodyMedium" style={{marginTop: 10}}>
                 以上指引仅供参考，具体效果以实际为准，如加速器无法加速，请反馈至对应的加速器应用商，请勿反馈至XStreaming。
               </Text>
+            </Card.Content>
+          </Card>
+        </Modal>
+      </Portal>
+    );
+  };
+
+  const renderActionSheet = () => {
+    if (!actionTitle) {
+      return null;
+    }
+    const starred = isTitleStarred(actionTitle);
+    const canStore = !!getTitleProductId(actionTitle);
+    return (
+      <Portal>
+        <Modal
+          visible={!!actionTitle}
+          onDismiss={closeActions}
+          contentContainerStyle={styles.actionSheet}>
+          <Card>
+            <Card.Content>
+              <Text
+                variant="titleSmall"
+                numberOfLines={1}
+                style={styles.actionSheetTitle}>
+                {actionTitle.ProductTitle}
+              </Text>
+              <Pressable
+                onPress={handleActionToggleStar}
+                android_ripple={{color: 'rgba(150,150,150,0.2)'}}
+                style={styles.actionRow}>
+                <Icon
+                  source={starred ? 'cards-heart' : 'cards-heart-outline'}
+                  size={22}
+                />
+                <Text style={styles.actionLabel}>
+                  {starred ? t('Remove from favorites') : t('Add to favorites')}
+                </Text>
+              </Pressable>
+              {canStore && (
+                <Pressable
+                  onPress={handleActionOpenStore}
+                  android_ripple={{color: 'rgba(150,150,150,0.2)'}}
+                  style={styles.actionRow}>
+                  <Icon source="open-in-new" size={22} />
+                  <Text style={styles.actionLabel}>{t('View in store')}</Text>
+                </Pressable>
+              )}
             </Card.Content>
           </Card>
         </Modal>
@@ -683,7 +844,7 @@ function CloudScreen({navigation, route}) {
                   data={showTitles}
                   numColumns={numColumns}
                   key={numColumns}
-                  extraData={starTitles}
+                  extraData={listExtraData}
                   contentContainerStyle={[
                     styles.listContainer,
                     isLargeScreen && styles.listContainerLarge,
@@ -698,8 +859,9 @@ function CloudScreen({navigation, route}) {
                         <TitleItem
                           titleItem={item}
                           onPress={handleViewDetail}
-                          onLongPress={handleToggleStar}
+                          onLongPress={handleOpenActions}
                           isFavorite={isTitleStarred(item)}
+                          price={getPrice(priceMap, item.productId)}
                           compact={isLargeScreen}
                         />
                       </View>
@@ -716,6 +878,8 @@ function CloudScreen({navigation, route}) {
       )}
 
       {renderTutorial()}
+
+      {renderActionSheet()}
 
       {isLimited && (
         <View style={styles.container}>
@@ -736,6 +900,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  actionSheet: {
+    marginHorizontal: '8%',
+  },
+  actionSheetTitle: {
+    marginBottom: 8,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  actionLabel: {
+    fontSize: 15,
   },
   tips: {
     textAlign: 'center',

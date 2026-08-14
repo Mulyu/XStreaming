@@ -255,7 +255,8 @@ export default {
     Default: 'Standard',
     SDL: 'SDL',
     GamepadTestTitle: 'Gamepad-Test',
-    GamepadTestDescription: 'Tasten, Sticks, Trigger und Vibration des aktuellen Gamepads testen',
+    GamepadTestDescription:
+      'Tasten, Sticks, Trigger und Vibration des aktuellen Gamepads testen',
     GamepadKernelTitle: 'Aktueller Kernel',
     GamepadTestRumble: 'Vibration testen',
     GamepadTestButtons: 'Tasten',
@@ -508,5 +509,10 @@ export default {
       'Der Makroschalter befindet sich unter Einstellungen -> Virtuelle Makrotaste. Diese Seite bearbeitet nur die Aktionsfolge.',
     'Enable macro button and edit its action sequence in one place.':
       'Makrotaste aktivieren und Aktionsfolge an einem Ort bearbeiten.',
+    'Game Pass': 'Game Pass',
+    'View in store': 'Im Store ansehen',
+    'Add to favorites': 'Zu Favoriten hinzufügen',
+    'Remove from favorites': 'Aus Favoriten entfernen',
+    'Sale ends': 'Angebot endet',
   },
 };

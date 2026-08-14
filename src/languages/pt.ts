@@ -36,7 +36,8 @@ export default {
     'Login has expired or not logged in, please log in again':
       'O login expirou ou você não entrou. Faça login novamente.',
     AuthFailDesc: 'Falha na autenticação. Por favor, entre novamente. Erro:',
-    XalAuthFailDesc: 'Falha na autenticação XAL. Por favor, tente o login MSAL. Erro:',
+    XalAuthFailDesc:
+      'Falha na autenticação XAL. Por favor, tente o login MSAL. Erro:',
     'Loading...': 'Carregando...',
     'Start stream': 'Iniciar streaming',
     'Power on and start stream': 'Ligar e iniciar streaming',
@@ -108,7 +109,7 @@ export default {
       'Se o controle apresentar drift, configure a zona morta central do joystick para reduzir o problema.',
     'Joystick edge compensation': 'Compensação da borda do joystick',
     "If your joystick's maximum value doesn't reach the expected level, you can set maximum value compensation":
-      "Se o valor máximo do seu joystick não atingir o nível esperado, configure a compensação de valor máximo.",
+      'Se o valor máximo do seu joystick não atingir o nível esperado, configure a compensação de valor máximo.',
     'Set region': 'Definir região',
     'Changing the region allows you to use XGPU services without a proxy':
       'Alterar a região permite usar serviços XGPU sem proxy.',
@@ -141,7 +142,8 @@ export default {
     'Always display the virtual gamepad': 'Sempre exibir o controle virtual',
     'Select gamepad kernal, you can not use virtual gamepad in Web kernal':
       'Selecione o kernel do controle. O controle virtual não está disponível no kernel Web.',
-    'Config opacity of virtual gamepad': 'Configurar opacidade do controle virtual',
+    'Config opacity of virtual gamepad':
+      'Configurar opacidade do controle virtual',
     'Display settings': 'Configurações de imagem',
     'Set parameters such as screen clarity and saturation':
       'Definir parâmetros como nitidez e saturação',
@@ -255,7 +257,8 @@ export default {
     Default: 'Padrão',
     SDL: 'SDL',
     GamepadTestTitle: 'Teste do controle',
-    GamepadTestDescription: 'Teste botões, analógicos, gatilhos e vibração do controle atual',
+    GamepadTestDescription:
+      'Teste botões, analógicos, gatilhos e vibração do controle atual',
     GamepadKernelTitle: 'Kernel atual',
     GamepadTestRumble: 'Testar vibração',
     GamepadTestButtons: 'Botões',
@@ -306,7 +309,8 @@ export default {
       'Forçar o uso do giroscópio do dispositivo/controle para simular o analógico direito.',
     gyroTips: 'O giroscópio do controle só é suportado no Android 12+',
     gyroTypeTitle: 'Tipo de gatilho do giroscópio',
-    gyroTypeDesc: 'Definir o gatilho do giroscópio para pressionar LT/LB ou global.',
+    gyroTypeDesc:
+      'Definir o gatilho do giroscópio para pressionar LT/LB ou global.',
     'LT press': 'Pressionar LT',
     'LB press': 'Pressionar LB',
     'LT/LB press': 'Pressionar LT ou LB',
@@ -365,7 +369,8 @@ export default {
     Audio_volume_desc:
       'Se o volume máximo padrão não for suficiente, amplifique a fonte de áudio aqui. Volume excessivo pode prejudicar a audição.',
     Audio_stereo_title: 'Saída estéreo',
-    Audio_stereo_desc: 'Se o seu dispositivo tiver latência de áudio, desative isso.',
+    Audio_stereo_desc:
+      'Se o seu dispositivo tiver latência de áudio, desative isso.',
     Audio_rumble_title: 'Vibração por áudio (experimental)',
     Audio_rumble_desc:
       'Quando ativado, o controle vibra quando o áudio excede um limite.',
@@ -455,7 +460,8 @@ export default {
       'Ativar o modo local para dois jogadores. Certifique-se de que nenhum controle esteja conectado no console e que dois controles estejam conectados localmente. Nem todos os jogos funcionam; use conforme necessário.',
     CoopTips: 'Entrou no modo co-op',
     Microphone_title: 'Ativar microfone (experimental)',
-    Microphone_desc: 'O menu rápido pode alternar o microfone entre ligado/desligado.',
+    Microphone_desc:
+      'O menu rápido pode alternar o microfone entre ligado/desligado.',
     'Native touch': 'Toque nativo (experimental)',
     'Enable native touch input':
       'Ativar entrada de toque nativa (a proporção da tela não pode ser personalizada após a ativação).',
@@ -507,5 +513,10 @@ export default {
       'O interruptor do macro fica em Configurações -> Botão macro virtual. Esta página edita apenas a sequência de ações.',
     'Enable macro button and edit its action sequence in one place.':
       'Ative o botão macro e edite sua sequência de ações em um só lugar.',
+    'Game Pass': 'Game Pass',
+    'View in store': 'Ver na loja',
+    'Add to favorites': 'Adicionar aos favoritos',
+    'Remove from favorites': 'Remover dos favoritos',
+    'Sale ends': 'A promoção termina',
   },
 };

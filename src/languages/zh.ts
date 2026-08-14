@@ -503,5 +503,10 @@ export default {
     TitleShortcutMissingProduct: '当前游戏缺少 productId，无法添加到桌面。',
     TitleShortcutFailed: '添加桌面快捷方式失败',
     TitleShortcutExpired: '快捷方式数据不可用，请刷新云游戏列表后重试。',
+    'Game Pass': 'Game Pass',
+    'View in store': '在商店中查看',
+    'Add to favorites': '添加到收藏',
+    'Remove from favorites': '从收藏中移除',
+    'Sale ends': '促销结束',
   },
 };
