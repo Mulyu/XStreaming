@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import {Text, Portal, Modal, Card, IconButton, Icon} from 'react-native-paper';
@@ -18,11 +19,21 @@ import Empty from '../components/Empty';
 // import mockData from '../mock/data';
 import {debugFactory} from '../utils/debug';
 import {useTranslation} from 'react-i18next';
+import {getSettings} from '../store/settingStore';
 import {
   getXcloudData,
   saveXcloudData,
   isxCloudDataValid,
 } from '../store/xcloudStore';
+import {
+  PriceInfo,
+  fetchPrices,
+  deriveMarketLanguage,
+  getStoreUrl,
+} from '../utils/storePrice';
+
+// Refetch Store prices at most once per this window (sales change slowly).
+const PRICE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const log = debugFactory('CloudScreen');
 
@@ -53,6 +64,9 @@ function CloudScreen({navigation, route}) {
   const [selectedGenre, setSelectedGenre] = React.useState('');
   const flatListRef = React.useRef<any>(null);
   const isFetchGame = React.useRef(false);
+  const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
+  const [actionTitle, setActionTitle] = React.useState<any>(null);
+  const pricesFetched = React.useRef(false);
 
   const currentTitles = React.useRef([]);
   const totalPage = React.useRef(0);
@@ -201,9 +215,9 @@ function CloudScreen({navigation, route}) {
     (starTitles.includes(titleItem.XCloudTitleId) ||
       starTitles.includes(titleItem.titleId));
 
-  // Long-press on a list card toggles the favorite (star) state. Stars are
-  // keyed by XCloudTitleId to match the detail-screen toggle, and persisted
-  // to the xcloud cache so the choice survives restarts.
+  // Toggle the favorite (star) state. Stars are keyed by XCloudTitleId to
+  // match the detail-screen toggle, and persisted to the xcloud cache so the
+  // choice survives restarts.
   const handleToggleStar = (titleItem: any) => {
     const starId = titleItem?.XCloudTitleId || titleItem?.titleId;
     if (!starId) {
@@ -227,6 +241,75 @@ function CloudScreen({navigation, route}) {
       saveXcloudData(cacheData);
     }
   };
+
+  // Long-press on a list card opens a small action sheet (favorite + store).
+  const handleOpenActions = (titleItem: any) => {
+    setActionTitle(titleItem);
+  };
+
+  const closeActions = () => setActionTitle(null);
+
+  const handleActionToggleStar = () => {
+    if (actionTitle) {
+      handleToggleStar(actionTitle);
+    }
+    closeActions();
+  };
+
+  const handleActionOpenStore = () => {
+    const storeId = actionTitle?.productId;
+    closeActions();
+    if (storeId) {
+      Linking.openURL(getStoreUrl(storeId)).catch(() => {});
+    }
+  };
+
+  // Fetch Store prices for the loaded titles once per session (or when the
+  // cached prices are stale), batched and cached. Never blocks the list.
+  React.useEffect(() => {
+    if (!titles || titles.length === 0 || pricesFetched.current) {
+      return;
+    }
+
+    const cache = getXcloudData();
+    const cachedFresh =
+      cache?.priceMap &&
+      cache?.priceUpdatedAt &&
+      Date.now() - cache.priceUpdatedAt < PRICE_TTL_MS;
+
+    if (cachedFresh) {
+      pricesFetched.current = true;
+      setPriceMap(cache.priceMap);
+      return;
+    }
+
+    pricesFetched.current = true;
+    const settings = getSettings();
+    const {market, language} = deriveMarketLanguage(
+      settings.preferred_game_language,
+    );
+    const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
+
+    fetchPrices(storeIds, market, language)
+      .then(map => {
+        if (map && Object.keys(map).length > 0) {
+          setPriceMap(map);
+          const existing = getXcloudData() || {};
+          saveXcloudData({
+            ...existing,
+            priceMap: map,
+            priceUpdatedAt: Date.now(),
+          });
+        }
+      })
+      .catch(() => {});
+  }, [titles]);
+
+  // Rows re-render when favorites or fetched prices change.
+  const listExtraData = React.useMemo(
+    () => ({starTitles, priceMap}),
+    [starTitles, priceMap],
+  );
 
   const handleOpenSearch = () => {
     navigation.navigate('Search', {
@@ -329,6 +412,54 @@ function CloudScreen({navigation, route}) {
               <Text variant="bodyMedium" style={{marginTop: 10}}>
                 以上指引仅供参考，具体效果以实际为准，如加速器无法加速，请反馈至对应的加速器应用商，请勿反馈至XStreaming。
               </Text>
+            </Card.Content>
+          </Card>
+        </Modal>
+      </Portal>
+    );
+  };
+
+  const renderActionSheet = () => {
+    if (!actionTitle) {
+      return null;
+    }
+    const starred = isTitleStarred(actionTitle);
+    const canStore = !!actionTitle.productId;
+    return (
+      <Portal>
+        <Modal
+          visible={!!actionTitle}
+          onDismiss={closeActions}
+          contentContainerStyle={styles.actionSheet}>
+          <Card>
+            <Card.Content>
+              <Text
+                variant="titleSmall"
+                numberOfLines={1}
+                style={styles.actionSheetTitle}>
+                {actionTitle.ProductTitle}
+              </Text>
+              <Pressable
+                onPress={handleActionToggleStar}
+                android_ripple={{color: 'rgba(150,150,150,0.2)'}}
+                style={styles.actionRow}>
+                <Icon
+                  source={starred ? 'cards-heart' : 'cards-heart-outline'}
+                  size={22}
+                />
+                <Text style={styles.actionLabel}>
+                  {starred ? t('Remove from favorites') : t('Add to favorites')}
+                </Text>
+              </Pressable>
+              {canStore && (
+                <Pressable
+                  onPress={handleActionOpenStore}
+                  android_ripple={{color: 'rgba(150,150,150,0.2)'}}
+                  style={styles.actionRow}>
+                  <Icon source="open-in-new" size={22} />
+                  <Text style={styles.actionLabel}>{t('View in store')}</Text>
+                </Pressable>
+              )}
             </Card.Content>
           </Card>
         </Modal>
@@ -683,7 +814,7 @@ function CloudScreen({navigation, route}) {
                   data={showTitles}
                   numColumns={numColumns}
                   key={numColumns}
-                  extraData={starTitles}
+                  extraData={listExtraData}
                   contentContainerStyle={[
                     styles.listContainer,
                     isLargeScreen && styles.listContainerLarge,
@@ -698,8 +829,9 @@ function CloudScreen({navigation, route}) {
                         <TitleItem
                           titleItem={item}
                           onPress={handleViewDetail}
-                          onLongPress={handleToggleStar}
+                          onLongPress={handleOpenActions}
                           isFavorite={isTitleStarred(item)}
+                          price={priceMap[item.productId]}
                           compact={isLargeScreen}
                         />
                       </View>
@@ -716,6 +848,8 @@ function CloudScreen({navigation, route}) {
       )}
 
       {renderTutorial()}
+
+      {renderActionSheet()}
 
       {isLimited && (
         <View style={styles.container}>
@@ -736,6 +870,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  actionSheet: {
+    marginHorizontal: '8%',
+  },
+  actionSheetTitle: {
+    marginBottom: 8,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  actionLabel: {
+    fontSize: 15,
   },
   tips: {
     textAlign: 'center',

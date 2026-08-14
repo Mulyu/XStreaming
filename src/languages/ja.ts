@@ -459,5 +459,10 @@ export default {
       '設定で有効化可能',
     'Enable macro button and edit its action sequence in one place.':
       'マクロ設定',
+    'Game Pass': 'Game Pass',
+    'View in store': 'ストアで見る',
+    'Add to favorites': 'お気に入りに追加',
+    'Remove from favorites': 'お気に入りから解除',
+    'Sale ends': 'セール終了',
   },
 };

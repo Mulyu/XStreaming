@@ -9,6 +9,7 @@ import {
   Platform,
   Pressable,
   ToastAndroid,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import {
@@ -32,6 +33,15 @@ import {
 } from '../store/shortcutStore';
 import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../utils/debug';
+import {
+  PriceInfo,
+  fetchPrices,
+  deriveMarketLanguage,
+  getStoreUrl,
+  formatPrice,
+  discountPercent,
+  formatSaleEnd,
+} from '../utils/storePrice';
 import games from '../mock/games.json';
 
 const {UsbRumbleManager, FullScreenManager, ShortcutManager} = NativeModules;
@@ -51,6 +61,7 @@ function TitleDetail({navigation, route}) {
   const [shortcutLoadFailed, setShortcutLoadFailed] = React.useState(false);
   // const streamingTokens = useSelector(state => state.streamingTokens);
   const [showUsbWarnModal, setShowUsbWarnShowModal] = React.useState(false);
+  const [price, setPrice] = React.useState<PriceInfo | null>(null);
   const autoStartHandledRef = React.useRef(false);
   const isLandscape = screenWidth > screenHeight;
   const isLargeScreen = Platform.isTV || isLandscape;
@@ -163,6 +174,47 @@ function TitleDetail({navigation, route}) {
         usbController,
       },
     });
+  };
+
+  // Store price for this title. Prefer the list's cached price for an instant
+  // render; otherwise fetch just this one from DisplayCatalog.
+  React.useEffect(() => {
+    if (!titleItem) {
+      setPrice(null);
+      return;
+    }
+    const productId = titleItem.productId || getTitleProductId(titleItem);
+    if (!productId) {
+      setPrice(null);
+      return;
+    }
+    const cached = getXcloudData()?.priceMap?.[productId];
+    if (cached) {
+      setPrice(cached);
+      return;
+    }
+    let cancelled = false;
+    const _settings = getSettings();
+    const {market, language} = deriveMarketLanguage(
+      _settings.preferred_game_language,
+    );
+    fetchPrices([productId], market, language)
+      .then(map => {
+        if (!cancelled) {
+          setPrice(map[productId] || null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [titleItem]);
+
+  const handleOpenStore = () => {
+    const productId = titleItem?.productId || getTitleProductId(titleItem);
+    if (productId) {
+      Linking.openURL(getStoreUrl(productId)).catch(() => {});
+    }
   };
 
   // Launched from a home-screen shortcut with autoStart: skip the detail
@@ -436,6 +488,13 @@ function TitleDetail({navigation, route}) {
                   </Text>
                 </View>
                 <View style={styles.titleActions}>
+                  <IconButton
+                    icon="open-in-new"
+                    size={isLargeScreen ? 24 : 22}
+                    accessibilityLabel={t('View in store')}
+                    style={styles.titleActionButton}
+                    onPress={handleOpenStore}
+                  />
                   {canAddTitleShortcut && (
                     <IconButton
                       icon="plus-box-outline"
@@ -454,6 +513,34 @@ function TitleDetail({navigation, route}) {
                   />
                 </View>
               </View>
+
+              {price && (
+                <View style={styles.priceBlock}>
+                  <Text
+                    style={[
+                      styles.priceNow,
+                      price.onSale && styles.priceNowSale,
+                    ]}>
+                    {formatPrice(price.listPrice, price.currencyCode)}
+                  </Text>
+                  {price.onSale && (
+                    <Text style={styles.priceWas}>
+                      {formatPrice(price.msrp, price.currencyCode)}
+                    </Text>
+                  )}
+                  {price.onSale && discountPercent(price) > 0 && (
+                    <Text style={styles.priceOff}>
+                      -{discountPercent(price)}%
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {price?.onSale && formatSaleEnd(price) ? (
+                <Text style={styles.saleEnds}>
+                  {t('Sale ends')} {formatSaleEnd(price)}
+                </Text>
+              ) : null}
 
               {isByorg && (
                 <View style={styles.tagsWrap}>
@@ -578,6 +665,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
+  },
+  priceBlock: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  priceNow: {
+    fontSize: 20,
+    fontWeight: '900',
+    marginRight: 10,
+  },
+  priceNowSale: {
+    color: '#e5342b',
+  },
+  priceWas: {
+    fontSize: 14,
+    color: '#9096a8',
+    textDecorationLine: 'line-through',
+    marginRight: 10,
+  },
+  priceOff: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
+    backgroundColor: '#e5342b',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  saleEnds: {
+    fontSize: 12,
+    color: '#e5342b',
+    fontWeight: '600',
+    marginTop: 4,
   },
   tagContainer: {
     borderColor: '#999999',

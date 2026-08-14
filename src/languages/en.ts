@@ -524,6 +524,11 @@ export default {
     'Enable macro button and edit its action sequence in one place.':
       'Enable macro button and edit its action sequence in one place.',
     'Add to desktop': 'Add to home screen',
+    'Game Pass': 'Game Pass',
+    'View in store': 'View in Store',
+    'Add to favorites': 'Add to favorites',
+    'Remove from favorites': 'Remove from favorites',
+    'Sale ends': 'Sale ends',
     TitleShortcutRequested: 'Shortcut add request sent',
     TitleShortcutUnavailable:
       'The current device or launcher does not support adding this shortcut.',

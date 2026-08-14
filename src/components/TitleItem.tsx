@@ -7,12 +7,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {Text, useTheme} from 'react-native-paper';
+import {useTranslation} from 'react-i18next';
+import {PriceInfo, formatPrice, discountPercent} from '../utils/storePrice';
 
 type Props = {
   titleItem: any;
   onPress: (titleItem: any) => any;
   onLongPress?: (titleItem: any) => any;
   isFavorite?: boolean;
+  price?: PriceInfo | null;
   compact?: boolean;
 };
 
@@ -21,14 +24,18 @@ const TitleItem: React.FC<Props> = ({
   onPress,
   onLongPress,
   isFavorite = false,
+  price = null,
   compact = false,
 }) => {
   const theme = useTheme();
+  const {t} = useTranslation();
   const [loading, setLoading] = React.useState(true);
 
   // Playable now: the user is entitled to this title (Game Pass / XGPU library).
   const isPlayable = titleItem?.details?.hasEntitlement === true;
   const hasImage = !!(titleItem?.Image_Tile || titleItem?.Image_Poster);
+  const onSale = !!price?.onSale;
+  const off = price ? discountPercent(price) : 0;
 
   const handlePress = () => {
     onPress && onPress(titleItem);
@@ -106,6 +113,17 @@ const TitleItem: React.FC<Props> = ({
               </Text>
             </View>
           )}
+          {hasImage && onSale && off > 0 && (
+            <View style={[styles.ribbon, compact && styles.ribbonCompact]}>
+              <Text
+                style={[
+                  styles.ribbonText,
+                  compact && styles.ribbonTextCompact,
+                ]}>
+                -{off}%
+              </Text>
+            </View>
+          )}
         </View>
         <View
           style={[
@@ -118,6 +136,33 @@ const TitleItem: React.FC<Props> = ({
             ellipsizeMode="tail">
             {titleItem.ProductTitle}
           </Text>
+
+          {(isPlayable || price) && (
+            <View style={styles.priceRow}>
+              {isPlayable && (
+                <Text style={[styles.gpTag, compact && styles.gpTagCompact]}>
+                  {t('Game Pass')}
+                </Text>
+              )}
+              {price && (
+                <>
+                  <Text
+                    style={[
+                      styles.price,
+                      compact && styles.priceCompact,
+                      onSale && styles.priceSale,
+                    ]}>
+                    {formatPrice(price.listPrice, price.currencyCode)}
+                  </Text>
+                  {onSale && (
+                    <Text style={[styles.msrp, compact && styles.msrpCompact]}>
+                      {formatPrice(price.msrp, price.currencyCode)}
+                    </Text>
+                  )}
+                </>
+              )}
+            </View>
+          )}
         </View>
       </View>
     </Pressable>
@@ -215,6 +260,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 14,
   },
+  ribbon: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#e5342b',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  ribbonCompact: {
+    top: 4,
+    right: 4,
+    borderRadius: 5,
+    paddingHorizontal: 5,
+  },
+  ribbonText: {
+    color: '#ffffff',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '800',
+  },
+  ribbonTextCompact: {
+    fontSize: 10,
+    lineHeight: 13,
+  },
   descriptionContainer: {
     padding: 10,
   },
@@ -229,6 +299,47 @@ const styles = StyleSheet.create({
   },
   descriptionCompact: {
     fontSize: 11,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 6,
+  },
+  gpTag: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#107C10',
+    backgroundColor: 'rgba(16, 124, 16, 0.12)',
+    borderColor: 'rgba(16, 124, 16, 0.30)',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    marginRight: 6,
+    overflow: 'hidden',
+  },
+  gpTagCompact: {
+    fontSize: 9,
+  },
+  price: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    marginRight: 6,
+  },
+  priceCompact: {
+    fontSize: 11,
+  },
+  priceSale: {
+    color: '#e5342b',
+  },
+  msrp: {
+    fontSize: 11,
+    color: '#9096a8',
+    textDecorationLine: 'line-through',
+  },
+  msrpCompact: {
+    fontSize: 10,
   },
 });
 
