@@ -8,6 +8,9 @@ const STORE_KEY = 'user.xcloud.prices';
 export type PriceCache = {
   priceMap: Record<string, PriceInfo>;
   market: string;
+  // Signature of the title set the map was fetched for, so the list can tell
+  // whether the cache still covers the current catalog (see Cloud).
+  sig?: string;
   updatedAt: number;
 };
 
@@ -42,10 +45,12 @@ export const getFreshPriceCache = (market: string): PriceCache | null => {
 export const savePriceCache = (
   priceMap: Record<string, PriceInfo>,
   market: string,
+  sig?: string,
 ) => {
   const cache: PriceCache = {
     priceMap,
     market,
+    sig,
     updatedAt: new Date().getTime(),
   };
   try {

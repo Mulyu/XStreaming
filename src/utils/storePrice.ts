@@ -13,16 +13,24 @@ const CATALOG_URL = 'https://displaycatalog.mp.microsoft.com/v7.0/products';
 // still chunk conservatively so a single oversized URL can't fail the batch.
 const BATCH_SIZE = 100;
 
-// Currencies that are conventionally written without minor units.
+// ISO 4217 currencies with zero minor units.
 const ZERO_DECIMAL_CURRENCIES = [
   'JPY',
   'KRW',
   'CLP',
   'VND',
-  'HUF',
   'ISK',
-  'TWD',
-  'COP',
+  'PYG',
+  'UGX',
+  'RWF',
+  'XAF',
+  'XOF',
+  'XPF',
+  'DJF',
+  'GNF',
+  'KMF',
+  'BIF',
+  'VUV',
 ];
 
 // Currencies written with three minor units.
@@ -274,7 +282,10 @@ export const formatSaleEnd = (info: PriceInfo): string => {
   if (!info.onSale || !info.saleEndDate) {
     return '';
   }
-  const end = new Date(info.saleEndDate);
+  // DisplayCatalog returns .NET timestamps with up to 7 fractional-second
+  // digits, which some engines reject; trim to milliseconds before parsing.
+  const normalized = info.saleEndDate.replace(/(\.\d{3})\d+(?=Z|[+-]|$)/, '$1');
+  const end = new Date(normalized);
   const time = end.getTime();
   if (!Number.isFinite(time)) {
     return '';

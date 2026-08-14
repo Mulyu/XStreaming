@@ -68,15 +68,9 @@ function CloudScreen({navigation, route}) {
   const isFetchGame = React.useRef(false);
   const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
   const [actionTitle, setActionTitle] = React.useState<any>(null);
-  // The market we have already fetched (or are fetching) prices for. Cleared
-  // on failure so a later reload can retry; drives cache validity + refetch.
-  const pricedMarketRef = React.useRef<string>('');
-  const isMountedRef = React.useRef(true);
-  React.useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  // Signature (market + title set) we have already fetched or are fetching
+  // prices for. Cleared on failure so a later reload can retry.
+  const priceSigRef = React.useRef<string>('');
 
   const currentTitles = React.useRef([]);
   const totalPage = React.useRef(0);
@@ -274,10 +268,12 @@ function CloudScreen({navigation, route}) {
     }
   };
 
-  // Fetch Store prices for the loaded titles, batched and cached (in a
-  // dedicated store so it doesn't reset the catalog cache age). Fetched once
-  // per market; the cache records its market and re-running with a different
-  // market (e.g. after a language change) refetches the correct currency.
+  // Fetch Store prices for the loaded titles, batched and cached in a
+  // dedicated store (so it doesn't reset the catalog cache age). The request
+  // is keyed by a signature of market + title set, so a language/region change
+  // or the catalog growing (cache -> network refresh) refetches, while a stable
+  // set is fetched only once. The cancel flag drops a superseded in-flight
+  // result so it can't overwrite newer prices.
   React.useEffect(() => {
     if (!titles || titles.length === 0) {
       return;
@@ -287,52 +283,54 @@ function CloudScreen({navigation, route}) {
       gameLanguage,
       getSystemRegion(),
     );
+    const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
+    const sig = `${market}:${storeIds.length}:${storeIds[0] || ''}:${
+      storeIds[storeIds.length - 1] || ''
+    }`;
 
-    // Already fetched (or fetching) this market — nothing to do. This also
-    // de-dupes the cache->network titles double-render into a single request.
-    if (pricedMarketRef.current === market) {
+    // Same market + same title set as the in-flight/last request — nothing to
+    // do. Also de-dupes the cache->network double render for an unchanged set.
+    if (priceSigRef.current === sig) {
       return;
     }
+    priceSigRef.current = sig;
 
+    // Reuse the cache only when it covers exactly this market + title set.
     const cache = getFreshPriceCache(market);
-    if (cache) {
-      pricedMarketRef.current = market;
+    if (cache && cache.sig === sig) {
       setPriceMap(cache.priceMap);
       return;
     }
 
-    // Claim this market synchronously so concurrent renders don't double-fetch
-    // and a market that returns no prices isn't retried every render.
-    pricedMarketRef.current = market;
-    const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
-
-    const releaseClaim = () => {
-      if (pricedMarketRef.current === market) {
-        pricedMarketRef.current = '';
-      }
-    };
-
+    let cancelled = false;
     fetchPrices(storeIds, market, language)
       .then(({prices, ok}) => {
-        if (!ok) {
-          // Network failed for at least one batch — show whatever arrived but
-          // don't cache a partial result, and free the claim so a later
-          // reload retries the rest.
-          if (isMountedRef.current && Object.keys(prices).length > 0) {
-            setPriceMap(prices);
-          }
-          releaseClaim();
+        if (cancelled) {
           return;
         }
-        // Persist first so the result survives even if we unmounted mid-flight.
-        savePriceCache(prices, market);
-        if (isMountedRef.current) {
-          setPriceMap(prices);
+        if (!ok) {
+          // A batch failed — show whatever arrived but don't cache the partial
+          // result, and free the claim so a later reload retries the rest.
+          if (Object.keys(prices).length > 0) {
+            setPriceMap(prices);
+          }
+          if (priceSigRef.current === sig) {
+            priceSigRef.current = '';
+          }
+          return;
         }
+        savePriceCache(prices, market, sig);
+        setPriceMap(prices);
       })
       .catch(() => {
-        releaseClaim();
+        if (!cancelled && priceSigRef.current === sig) {
+          priceSigRef.current = '';
+        }
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [titles, gameLanguage]);
 
   // Rows re-render when favorites or fetched prices change.

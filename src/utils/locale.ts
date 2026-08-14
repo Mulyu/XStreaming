@@ -93,6 +93,10 @@ export const parseRegion = (tag?: string | null): string => {
   return '';
 };
 
-// The device's region/country code (e.g. "JP", "US"), or '' if unknown. Used
-// as the best proxy for the user's Store market when pricing titles.
-export const getSystemRegion = (): string => parseRegion(getRawSystemLocale());
+// The device's ISO 3166 alpha-2 country code (e.g. "JP", "US"), or '' if
+// unknown. Used as the best proxy for the user's Store market when pricing
+// titles; a numeric UN M49 group (e.g. "419") is treated as unknown.
+export const getSystemRegion = (): string => {
+  const region = parseRegion(getRawSystemLocale());
+  return /^[A-Z]{2}$/.test(region) ? region : '';
+};
