@@ -48,6 +48,8 @@ function CloudScreen({navigation, route}) {
   const starTitles = useSelector((state: any) => state.stars || []);
 
   const currentLanguage = i18n.language;
+  // Read here (not just inside the price effect) so a change re-runs the effect.
+  const gameLanguage = getSettings().preferred_game_language;
 
   // log.info('streamingTokens:', streamingTokens);
 
@@ -284,9 +286,8 @@ function CloudScreen({navigation, route}) {
       return;
     }
 
-    const settings = getSettings();
     const {market, language} = deriveMarketLanguage(
-      settings.preferred_game_language,
+      gameLanguage,
       getSystemRegion(),
     );
 
@@ -313,21 +314,34 @@ function CloudScreen({navigation, route}) {
     pricedMarketRef.current = market;
     const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
 
+    const releaseClaim = () => {
+      if (pricedMarketRef.current === market) {
+        pricedMarketRef.current = '';
+      }
+    };
+
     fetchPrices(storeIds, market, language)
-      .then(map => {
-        if (!isMountedRef.current || !map || Object.keys(map).length === 0) {
+      .then(({prices, ok}) => {
+        if (!ok) {
+          // Network failed for at least one batch — show whatever arrived but
+          // don't cache a partial result, and free the claim so a later
+          // reload retries the rest.
+          if (isMountedRef.current && Object.keys(prices).length > 0) {
+            setPriceMap(prices);
+          }
+          releaseClaim();
           return;
         }
-        setPriceMap(map);
-        savePriceCache(map, market);
+        // Persist first so the result survives even if we unmounted mid-flight.
+        savePriceCache(prices, market);
+        if (isMountedRef.current) {
+          setPriceMap(prices);
+        }
       })
       .catch(() => {
-        // Allow a later reload to retry after a transient failure.
-        if (pricedMarketRef.current === market) {
-          pricedMarketRef.current = '';
-        }
+        releaseClaim();
       });
-  }, [titles, currentLanguage]);
+  }, [titles, gameLanguage, currentLanguage]);
 
   // Rows re-render when favorites or fetched prices change.
   const listExtraData = React.useMemo(

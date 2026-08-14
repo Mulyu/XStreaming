@@ -207,9 +207,9 @@ function TitleDetail({navigation, route}) {
     }
     let cancelled = false;
     fetchPrices([productId], market, language)
-      .then(map => {
+      .then(({prices}) => {
         if (!cancelled) {
-          setPrice(getPrice(map, productId));
+          setPrice(getPrice(prices, productId));
         }
       })
       .catch(() => {});

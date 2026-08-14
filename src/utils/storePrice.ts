@@ -25,6 +25,17 @@ const ZERO_DECIMAL_CURRENCIES = [
   'COP',
 ];
 
+// Currencies written with three minor units.
+const THREE_DECIMAL_CURRENCIES = [
+  'KWD',
+  'BHD',
+  'OMR',
+  'JOD',
+  'TND',
+  'IQD',
+  'LYD',
+];
+
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$',
   JPY: '¥',
@@ -91,9 +102,10 @@ const parseAmount = (value: any): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-// Pick the cheapest purchasable price for the base game. Availabilities whose
-// Actions include "Purchase" and carry a positive ListPrice are real store
-// offers; a discounted offer surfaces as a lower ListPrice than MSRP.
+// Pick the cheapest purchasable offer as the title's "starting" price.
+// Availabilities whose Actions include "Purchase" and carry a positive
+// ListPrice are real store offers; a discounted offer surfaces as a lower
+// ListPrice than MSRP, and onSale/saleEnd are taken from that same offer.
 export const extractPrice = (product: any): PriceInfo | null => {
   const skus = product?.DisplaySkuAvailabilities;
   if (!Array.isArray(skus)) {
@@ -148,25 +160,37 @@ export const extractPrice = (product: any): PriceInfo | null => {
   };
 };
 
-// Fetch prices for many Store ids, batched. Resolves to a map keyed by
-// productId; ids without a purchasable price are simply omitted. Never
-// rejects — a failed batch just contributes nothing.
+export type FetchPricesResult = {
+  // Prices keyed by canonical uppercase Store id; ids without a purchasable
+  // price are omitted.
+  prices: Record<string, PriceInfo>;
+  // true only when every batch responded, so callers can tell "this market
+  // genuinely has no store prices" from "the network failed" and retry.
+  ok: boolean;
+};
+
+// Fetch prices for many Store ids, batched concurrently. Never rejects — a
+// failed batch contributes nothing and flips `ok` to false.
 export const fetchPrices = async (
   storeIds: string[],
   market = 'US',
   language = 'en-US',
-): Promise<Record<string, PriceInfo>> => {
+): Promise<FetchPricesResult> => {
   const ids = Array.from(
     new Set((storeIds || []).filter(id => typeof id === 'string' && id)),
   );
-  const result: Record<string, PriceInfo> = {};
+  const prices: Record<string, PriceInfo> = {};
+
+  if (ids.length === 0) {
+    return {prices, ok: true};
+  }
 
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += BATCH_SIZE) {
     chunks.push(ids.slice(i, i + BATCH_SIZE));
   }
 
-  // Batches are independent, so fetch them concurrently.
+  let ok = true;
   await Promise.all(
     chunks.map(async chunk => {
       try {
@@ -186,17 +210,18 @@ export const fetchPrices = async (
             const info = extractPrice(product);
             if (info && product?.ProductId) {
               // Key by the canonical uppercase big-id so lookups are case-safe.
-              result[String(product.ProductId).toUpperCase()] = info;
+              prices[String(product.ProductId).toUpperCase()] = info;
             }
           });
         }
       } catch (e) {
+        ok = false;
         log.info('fetchPrices batch failed:', e);
       }
     }),
   );
 
-  return result;
+  return {prices, ok};
 };
 
 // Look up a price by Store id, tolerant of id case differences.
@@ -218,8 +243,13 @@ export const formatPrice = (amount: number, currencyCode: string): string => {
   if (!Number.isFinite(amount)) {
     return '';
   }
-  const zeroDecimal = ZERO_DECIMAL_CURRENCIES.includes(currencyCode);
-  const fixed = zeroDecimal ? Math.round(amount).toString() : amount.toFixed(2);
+  let decimals = 2;
+  if (ZERO_DECIMAL_CURRENCIES.includes(currencyCode)) {
+    decimals = 0;
+  } else if (THREE_DECIMAL_CURRENCIES.includes(currencyCode)) {
+    decimals = 3;
+  }
+  const fixed = amount.toFixed(decimals);
   const [intPart, decPart] = fixed.split('.');
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const number = decPart ? `${grouped}.${decPart}` : grouped;
