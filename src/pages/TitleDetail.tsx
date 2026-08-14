@@ -38,10 +38,12 @@ import {
   fetchPrices,
   deriveMarketLanguage,
   getStoreUrl,
+  getPrice,
   formatPrice,
   discountPercent,
   formatSaleEnd,
 } from '../utils/storePrice';
+import {getSystemRegion} from '../utils/locale';
 import games from '../mock/games.json';
 
 const {UsbRumbleManager, FullScreenManager, ShortcutManager} = NativeModules;
@@ -188,20 +190,25 @@ function TitleDetail({navigation, route}) {
       setPrice(null);
       return;
     }
-    const cached = getXcloudData()?.priceMap?.[productId];
-    if (cached) {
-      setPrice(cached);
-      return;
-    }
-    let cancelled = false;
     const _settings = getSettings();
     const {market, language} = deriveMarketLanguage(
       _settings.preferred_game_language,
+      getSystemRegion(),
     );
+    const cacheData = getXcloudData();
+    // Reuse the list's cached price only when it was fetched for this market.
+    if (cacheData?.priceMarket === market) {
+      const cached = getPrice(cacheData.priceMap, productId);
+      if (cached) {
+        setPrice(cached);
+        return;
+      }
+    }
+    let cancelled = false;
     fetchPrices([productId], market, language)
       .then(map => {
         if (!cancelled) {
-          setPrice(map[productId] || null);
+          setPrice(getPrice(map, productId));
         }
       })
       .catch(() => {});
@@ -362,6 +369,10 @@ function TitleDetail({navigation, route}) {
     description = games[titleItem.XboxTitleId].short_description;
   }
 
+  const priceDiscount = price ? discountPercent(price) : 0;
+  // Show sale styling only for a real (>=1%) discount.
+  const showDetailSale = !!price?.onSale && priceDiscount > 0;
+
   const renderLargeActionButton = (
     label: string,
     onPress: () => void,
@@ -519,24 +530,22 @@ function TitleDetail({navigation, route}) {
                   <Text
                     style={[
                       styles.priceNow,
-                      price.onSale && styles.priceNowSale,
+                      showDetailSale && styles.priceNowSale,
                     ]}>
                     {formatPrice(price.listPrice, price.currencyCode)}
                   </Text>
-                  {price.onSale && (
+                  {showDetailSale && (
                     <Text style={styles.priceWas}>
                       {formatPrice(price.msrp, price.currencyCode)}
                     </Text>
                   )}
-                  {price.onSale && discountPercent(price) > 0 && (
-                    <Text style={styles.priceOff}>
-                      -{discountPercent(price)}%
-                    </Text>
+                  {showDetailSale && (
+                    <Text style={styles.priceOff}>-{priceDiscount}%</Text>
                   )}
                 </View>
               )}
 
-              {price?.onSale && formatSaleEnd(price) ? (
+              {price && showDetailSale && formatSaleEnd(price) ? (
                 <Text style={styles.saleEnds}>
                   {t('Sale ends')} {formatSaleEnd(price)}
                 </Text>

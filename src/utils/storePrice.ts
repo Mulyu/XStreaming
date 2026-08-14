@@ -45,14 +45,17 @@ export type PriceInfo = {
 export const getStoreUrl = (storeId: string): string =>
   `https://www.xbox.com/games/store/-/${storeId}`;
 
-// Derive the pricing market + language from the user's preferred game
-// language (e.g. "ja-JP" -> market JP, language ja-JP). Falls back to US/en-US.
+// Derive the pricing market + language. The market (which decides currency)
+// should follow the user's Store region, so we prefer the device region and
+// only fall back to the game-language's region, then US. The language param is
+// used to localize titles and comes from the preferred game language.
 export const deriveMarketLanguage = (
   preferredGameLanguage?: string,
+  deviceRegion?: string,
 ): {market: string; language: string} => {
   const language = preferredGameLanguage || 'en-US';
-  const region = language.split('-')[1];
-  const market = region ? region.toUpperCase() : 'US';
+  const languageRegion = language.split('-')[1];
+  const market = (deviceRegion || languageRegion || 'US').toUpperCase();
   return {market, language};
 };
 
@@ -149,7 +152,8 @@ export const fetchPrices = async (
         products.forEach((product: any) => {
           const info = extractPrice(product);
           if (info && product?.ProductId) {
-            result[product.ProductId] = info;
+            // Key by the canonical uppercase big-id so lookups are case-safe.
+            result[String(product.ProductId).toUpperCase()] = info;
           }
         });
       }
@@ -161,11 +165,19 @@ export const fetchPrices = async (
   return result;
 };
 
-// Format an amount for display, e.g. 7750 JPY -> "¥7,750", 19.99 USD -> "$19.99".
-export const formatPrice = (amount: number, currencyCode: string): string => {
-  if (!Number.isFinite(amount)) {
-    return '';
+// Look up a price by Store id, tolerant of id case differences.
+export const getPrice = (
+  map: Record<string, PriceInfo> | null | undefined,
+  storeId: string | null | undefined,
+): PriceInfo | null => {
+  if (!map || !storeId) {
+    return null;
   }
+  return map[storeId] || map[String(storeId).toUpperCase()] || null;
+};
+
+// Manual formatter used when Intl currency formatting is unavailable.
+const formatPriceManual = (amount: number, currencyCode: string): string => {
   const zeroDecimal = ZERO_DECIMAL_CURRENCIES.includes(currencyCode);
   const fixed = zeroDecimal ? Math.round(amount).toString() : amount.toFixed(2);
   const [intPart, decPart] = fixed.split('.');
@@ -176,6 +188,33 @@ export const formatPrice = (amount: number, currencyCode: string): string => {
     return `${symbol}${number}`;
   }
   return currencyCode ? `${number} ${currencyCode}` : number;
+};
+
+// Format an amount for display, e.g. 7750 JPY -> "¥7,750", 19.99 USD -> "$19.99".
+// Prefer Intl.NumberFormat (correct symbol placement, minor units and grouping
+// for every currency) and fall back to a manual formatter where the runtime's
+// Intl lacks currency support.
+export const formatPrice = (amount: number, currencyCode: string): string => {
+  if (!Number.isFinite(amount)) {
+    return '';
+  }
+  if (currencyCode) {
+    try {
+      const formatter = new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: currencyCode,
+      });
+      const formatted = formatter.format(amount);
+      // Some Hermes builds return the raw number without a currency marker;
+      // fall through to the manual formatter when that happens.
+      if (formatted && /[^\d.,\s]/.test(formatted)) {
+        return formatted;
+      }
+    } catch (e) {
+      // Intl currency support missing — use the manual formatter below.
+    }
+  }
+  return formatPriceManual(amount, currencyCode);
 };
 
 // Discount percent as a positive integer (e.g. 50 for 50% off).

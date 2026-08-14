@@ -57,7 +57,7 @@ export const normalizeAppLocale = (locale?: string | null): SupportedLocale => {
   return 'en';
 };
 
-export const getSystemLocale = (): SupportedLocale => {
+const getRawSystemLocale = (): string => {
   const settings = NativeModules.SettingsManager?.settings;
   const iosLocale =
     settings?.AppleLocale ||
@@ -67,5 +67,17 @@ export const getSystemLocale = (): SupportedLocale => {
     NativeModules.PlatformConstants?.locale ||
     NativeModules.PlatformConstants?.reactNativeVersion?.locale;
 
-  return normalizeAppLocale(Platform.OS === 'ios' ? iosLocale : androidLocale);
+  return String(Platform.OS === 'ios' ? iosLocale : androidLocale || '');
+};
+
+export const getSystemLocale = (): SupportedLocale => {
+  return normalizeAppLocale(getRawSystemLocale());
+};
+
+// The device's region/country code (e.g. "JP", "US"), or '' if unknown. Used
+// as the best proxy for the user's Store market when pricing titles.
+export const getSystemRegion = (): string => {
+  const raw = getRawSystemLocale().replace('_', '-');
+  const region = raw.split('-')[1];
+  return region ? region.toUpperCase() : '';
 };

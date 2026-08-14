@@ -34,8 +34,10 @@ const TitleItem: React.FC<Props> = ({
   // Playable now: the user is entitled to this title (Game Pass / XGPU library).
   const isPlayable = titleItem?.details?.hasEntitlement === true;
   const hasImage = !!(titleItem?.Image_Tile || titleItem?.Image_Poster);
-  const onSale = !!price?.onSale;
   const off = price ? discountPercent(price) : 0;
+  // Only treat it as "on sale" for display when the discount is at least 1%,
+  // so a price that rounds to 0% off doesn't show a near-identical struck price.
+  const showSale = !!price?.onSale && off > 0;
 
   const handlePress = () => {
     onPress && onPress(titleItem);
@@ -113,7 +115,7 @@ const TitleItem: React.FC<Props> = ({
               </Text>
             </View>
           )}
-          {hasImage && onSale && off > 0 && (
+          {hasImage && showSale && (
             <View style={[styles.ribbon, compact && styles.ribbonCompact]}>
               <Text
                 style={[
@@ -150,11 +152,11 @@ const TitleItem: React.FC<Props> = ({
                     style={[
                       styles.price,
                       compact && styles.priceCompact,
-                      onSale && styles.priceSale,
+                      showSale && styles.priceSale,
                     ]}>
                     {formatPrice(price.listPrice, price.currencyCode)}
                   </Text>
-                  {onSale && (
+                  {showSale && (
                     <Text style={[styles.msrp, compact && styles.msrpCompact]}>
                       {formatPrice(price.msrp, price.currencyCode)}
                     </Text>

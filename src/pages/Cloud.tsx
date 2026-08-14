@@ -30,7 +30,9 @@ import {
   fetchPrices,
   deriveMarketLanguage,
   getStoreUrl,
+  getPrice,
 } from '../utils/storePrice';
+import {getSystemRegion} from '../utils/locale';
 
 // Refetch Store prices at most once per this window (sales change slowly).
 const PRICE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -66,7 +68,8 @@ function CloudScreen({navigation, route}) {
   const isFetchGame = React.useRef(false);
   const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
   const [actionTitle, setActionTitle] = React.useState<any>(null);
-  const pricesFetched = React.useRef(false);
+  // The market we currently hold prices for; drives cache validity + refetch.
+  const pricedMarketRef = React.useRef<string>('');
 
   const currentTitles = React.useRef([]);
   const totalPage = React.useRef(0);
@@ -264,45 +267,61 @@ function CloudScreen({navigation, route}) {
     }
   };
 
-  // Fetch Store prices for the loaded titles once per session (or when the
-  // cached prices are stale), batched and cached. Never blocks the list.
+  // Fetch Store prices for the loaded titles, batched and cached. Prices are
+  // fetched once per market per session; the cache records its market so a
+  // language/region change refetches instead of showing the wrong currency. A
+  // failed fetch leaves the market ref unset so a later reload retries.
   React.useEffect(() => {
-    if (!titles || titles.length === 0 || pricesFetched.current) {
+    if (!titles || titles.length === 0) {
+      return;
+    }
+
+    const settings = getSettings();
+    const {market, language} = deriveMarketLanguage(
+      settings.preferred_game_language,
+      getSystemRegion(),
+    );
+
+    if (pricedMarketRef.current === market) {
       return;
     }
 
     const cache = getXcloudData();
     const cachedFresh =
       cache?.priceMap &&
+      cache?.priceMarket === market &&
       cache?.priceUpdatedAt &&
       Date.now() - cache.priceUpdatedAt < PRICE_TTL_MS;
 
     if (cachedFresh) {
-      pricesFetched.current = true;
+      pricedMarketRef.current = market;
       setPriceMap(cache.priceMap);
       return;
     }
 
-    pricesFetched.current = true;
-    const settings = getSettings();
-    const {market, language} = deriveMarketLanguage(
-      settings.preferred_game_language,
-    );
+    let cancelled = false;
     const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
 
     fetchPrices(storeIds, market, language)
       .then(map => {
-        if (map && Object.keys(map).length > 0) {
-          setPriceMap(map);
-          const existing = getXcloudData() || {};
-          saveXcloudData({
-            ...existing,
-            priceMap: map,
-            priceUpdatedAt: Date.now(),
-          });
+        if (cancelled || !map || Object.keys(map).length === 0) {
+          return;
         }
+        pricedMarketRef.current = market;
+        setPriceMap(map);
+        const existing = getXcloudData() || {};
+        saveXcloudData({
+          ...existing,
+          priceMap: map,
+          priceMarket: market,
+          priceUpdatedAt: Date.now(),
+        });
       })
       .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [titles]);
 
   // Rows re-render when favorites or fetched prices change.
@@ -831,7 +850,7 @@ function CloudScreen({navigation, route}) {
                           onPress={handleViewDetail}
                           onLongPress={handleOpenActions}
                           isFavorite={isTitleStarred(item)}
-                          price={priceMap[item.productId]}
+                          price={getPrice(priceMap, item.productId)}
                           compact={isLargeScreen}
                         />
                       </View>
