@@ -464,5 +464,11 @@ export default {
     'Add to favorites': 'お気に入りに追加',
     'Remove from favorites': 'お気に入りから解除',
     'Sale ends': 'セール終了',
+    'On sale': 'セール中',
+    Filters: 'フィルター',
+    Clear: 'クリア',
+    Apply: '適用',
+    Genre: 'ジャンル',
+    'Tap to filter': 'タップで絞り込み',
   },
 };
