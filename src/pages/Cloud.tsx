@@ -284,9 +284,15 @@ function CloudScreen({navigation, route}) {
       getSystemRegion(),
     );
     const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
-    const sig = `${market}:${storeIds.length}:${storeIds[0] || ''}:${
-      storeIds[storeIds.length - 1] || ''
-    }`;
+    // Signature over the whole (stably ordered) id set so any change — not just
+    // count/endpoints — invalidates it. Cheap 32-bit rolling hash.
+    const idsKey = storeIds.join('|');
+    let hash = 0;
+    for (let i = 0; i < idsKey.length; i++) {
+      // eslint-disable-next-line no-bitwise
+      hash = (Math.imul(hash, 31) + idsKey.charCodeAt(i)) | 0;
+    }
+    const sig = `${market}:${storeIds.length}:${hash}`;
 
     // Same market + same title set as the in-flight/last request — nothing to
     // do. Also de-dupes the cache->network double render for an unchanged set.
@@ -309,10 +315,11 @@ function CloudScreen({navigation, route}) {
           return;
         }
         if (!ok) {
-          // A batch failed — show whatever arrived but don't cache the partial
-          // result, and free the claim so a later reload retries the rest.
+          // A batch failed — merge in whatever arrived (so already-shown prices
+          // aren't dropped) but don't cache the partial result, and free the
+          // claim so a later reload retries the rest.
           if (Object.keys(prices).length > 0) {
-            setPriceMap(prices);
+            setPriceMap(prev => ({...prev, ...prices}));
           }
           if (priceSigRef.current === sig) {
             priceSigRef.current = '';

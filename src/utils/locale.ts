@@ -81,11 +81,23 @@ export const parseRegion = (tag?: string | null): string => {
   if (!tag) {
     return '';
   }
-  const parts = String(tag).replace(/_/g, '-').split('-');
+  // Drop any POSIX "@modifier" and normalize separators.
+  const base = String(tag).split('@')[0].replace(/_/g, '-');
+  const parts = base.split('-');
+  // Keep only the core language[-script-region] subtags: a single-character
+  // subtag after the language starts a BCP-47 extension/private-use section
+  // (e.g. the "u" in en-US-u-ca-gregory), and everything after it is not region.
+  const core: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (i >= 1 && parts[i].length === 1) {
+      break;
+    }
+    core.push(parts[i]);
+  }
   // Region follows language (and optional script) in BCP-47 order; scan from
   // the end so a 4-letter script subtag (e.g. "Hant") is never mistaken for it.
-  for (let i = parts.length - 1; i >= 1; i--) {
-    const part = parts[i];
+  for (let i = core.length - 1; i >= 1; i--) {
+    const part = core[i];
     if (/^[A-Za-z]{2}$/.test(part) || /^\d{3}$/.test(part)) {
       return part.toUpperCase();
     }
