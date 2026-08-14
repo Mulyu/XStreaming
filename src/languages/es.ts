@@ -17,19 +17,27 @@ export default {
     NoLogin: 'No has iniciado sesión. Inicia sesión.',
     'Fetching user info...': 'Obteniendo información del usuario...',
     'Fetching consoles...': 'Obteniendo información de consolas...',
-    'Login successful, refreshing login credentials...': 'Inicio de sesión correcto, actualizando credenciales...',
+    'Login successful, refreshing login credentials...':
+      'Inicio de sesión correcto, actualizando credenciales...',
     'Checking login status...': 'Comprobando inicio de sesión...',
-    MsalAuthTip: 'Escanea el código QR o abre el enlace del navegador, introduce el código de autorización antes de que caduque y toca Listo cuando termine la autorización.',
+    MsalAuthTip:
+      'Escanea el código QR o abre el enlace del navegador, introduce el código de autorización antes de que caduque y toca Listo cuando termine la autorización.',
     MsalAuthTimeout: 'El código de autorización ha caducado. Actualiza.',
     Copied: 'Copiado',
-    NoConsoles: 'No se encontraron consolas en esta cuenta. Si tienes una Xbox, asegúrate de que el juego remoto esté habilitado e iniciado sesión.',
+    NoConsoles:
+      'No se encontraron consolas en esta cuenta. Si tienes una Xbox, asegúrate de que el juego remoto esté habilitado e iniciado sesión.',
     Warning: 'Aviso',
-    WaitingForServerToRegister: 'No se puede establecer streaming porque la consola no está conectada a los servidores de Xbox. Intenta reiniciar la consola.',
-    XboxstreaminghelperErr: 'La función de streaming de la consola no funciona correctamente. Reinicia la consola. Error:',
-    DisabledStreamingErr: 'El streaming está deshabilitado en la consola. Revisa los ajustes de funciones remotas.',
-    'Login has expired or not logged in, please log in again': 'La sesión ha caducado o no has iniciado sesión. Inicia sesión de nuevo.',
+    WaitingForServerToRegister:
+      'No se puede establecer streaming porque la consola no está conectada a los servidores de Xbox. Intenta reiniciar la consola.',
+    XboxstreaminghelperErr:
+      'La función de streaming de la consola no funciona correctamente. Reinicia la consola. Error:',
+    DisabledStreamingErr:
+      'El streaming está deshabilitado en la consola. Revisa los ajustes de funciones remotas.',
+    'Login has expired or not logged in, please log in again':
+      'La sesión ha caducado o no has iniciado sesión. Inicia sesión de nuevo.',
     AuthFailDesc: 'La autenticación ha fallado. Inicia sesión de nuevo. Error:',
-    XalAuthFailDesc: 'La autenticación XAL ha fallado. Intenta el inicio de sesión MSAL. Error:',
+    XalAuthFailDesc:
+      'La autenticación XAL ha fallado. Intenta el inicio de sesión MSAL. Error:',
     'Loading...': 'Cargando...',
     'Start stream': 'Iniciar streaming',
     'Power on and start stream': 'Encender e iniciar streaming',
@@ -56,45 +64,63 @@ export default {
     'App language': 'Idioma de la app',
     'Set language of XStreaming': 'Configurar idioma de XStreaming',
     Resolution: 'Resolución',
-    'Set resolution, support 720P/1080P/1080P(HQ)': 'Configurar resolución (720P/1080P)',
-    resolutionTips: '1080P(HQ) requiere una conexión rápida. El streaming de consola admite hasta 1080P.',
+    'Set resolution, support 720P/1080P/1080P(HQ)':
+      'Configurar resolución (720P/1080P)',
+    resolutionTips:
+      '1080P(HQ) requiere una conexión rápida. El streaming de consola admite hasta 1080P.',
     'Host stream bitrate': 'Bitrate de consola',
     'Cloud stream bitrate': 'Bitrate de nube',
     'Audio bitrate': 'Bitrate de audio',
     'Set the streaming audio bitrate': 'Configurar bitrate de audio',
-    'Set the host streaming bitrate (Note: Higher bitrate is not always better; the final bitrate will be determined by streaming negotiation)': 'Configurar bitrate de consola (un bitrate mayor no siempre es mejor)',
-    'Set the cloud streaming bitrate (Note: Higher bitrate is not always better; the final bitrate will be determined by streaming negotiation)': 'Configurar bitrate de nube',
+    'Set the host streaming bitrate (Note: Higher bitrate is not always better; the final bitrate will be determined by streaming negotiation)':
+      'Configurar bitrate de consola (un bitrate mayor no siempre es mejor)',
+    'Set the cloud streaming bitrate (Note: Higher bitrate is not always better; the final bitrate will be determined by streaming negotiation)':
+      'Configurar bitrate de nube',
     Codec: 'Códec',
-    'If your device supports newer codecs, it can reduce the video bandwidth requirements': 'Los códecs nuevos pueden reducir el consumo de datos.',
+    'If your device supports newer codecs, it can reduce the video bandwidth requirements':
+      'Los códecs nuevos pueden reducir el consumo de datos.',
     Vibration: 'Vibración',
     'Video stream format': 'Formato de imagen',
-    'Select video stream format, if you want video fullscreen, please select Stretch or Zoom': 'Selecciona el formato. Para pantalla completa elige Estirar o Zoom.',
-    'In Native mode, only scaling can be set for the rendering engine.': 'En modo nativo solo se puede configurar el escalado.',
+    'Select video stream format, if you want video fullscreen, please select Stretch or Zoom':
+      'Selecciona el formato. Para pantalla completa elige Estirar o Zoom.',
+    'In Native mode, only scaling can be set for the rendering engine.':
+      'En modo nativo solo se puede configurar el escalado.',
     'Aspect ratio': 'Relación de aspecto',
-    'Native: Use native gamepad kernal to vibrate': 'Nativo: usar kernel del sistema para vibración',
-    "Device: Use Phone/Pad's vibrate": 'Dispositivo: usar vibración del teléfono',
-    'Webview: Use Chromium kernal to vibrate': 'WebView: usar kernel de Chromium para vibración',
+    'Native: Use native gamepad kernal to vibrate':
+      'Nativo: usar kernel del sistema para vibración',
+    "Device: Use Phone/Pad's vibrate":
+      'Dispositivo: usar vibración del teléfono',
+    'Webview: Use Chromium kernal to vibrate':
+      'WebView: usar kernel de Chromium para vibración',
     Stretch: 'Estirar',
     Zoom: 'Zoom',
     'Gamepad kernal': 'Kernel del mando',
-    'If your controller supports vibration, you can set whether it vibrates during the game': 'Configura si el mando vibra durante el juego.',
+    'If your controller supports vibration, you can set whether it vibrates during the game':
+      'Configura si el mando vibra durante el juego.',
     'Vibration mode': 'Modo de vibración',
-    'By default, the WebView kernel is used for vibration. If the controller does not vibrate, try using the native vibration mode': 'Si el mando no vibra, prueba el modo nativo.',
+    'By default, the WebView kernel is used for vibration. If the controller does not vibrate, try using the native vibration mode':
+      'Si el mando no vibra, prueba el modo nativo.',
     'Vibration intensity': 'Intensidad de vibración',
-    'Config vibration intensity of controller': 'Configurar intensidad de vibración del mando',
+    'Config vibration intensity of controller':
+      'Configurar intensidad de vibración del mando',
     'Joystick dead zone': 'Zona muerta del joystick',
-    'Config joystick dead zone': 'Configura la zona muerta para evitar el drift.',
+    'Config joystick dead zone':
+      'Configura la zona muerta para evitar el drift.',
     'Joystick edge compensation': 'Compensación de borde',
-    "If your joystick's maximum value doesn't reach the expected level, you can set maximum value compensation": "Si el joystick no llega al máximo, configura la compensación.",
+    "If your joystick's maximum value doesn't reach the expected level, you can set maximum value compensation":
+      'Si el joystick no llega al máximo, configura la compensación.',
     'Set region': 'Configurar región',
-    'Changing the region allows you to use XGPU services without a proxy': 'Cambiar la región permite usar XGPU sin proxy.',
-    'The signaling server is a server for stream negotiation. If the host cannot connect, please try modifying this option': 'Si no conecta, intenta cambiar el servidor de señalización.',
+    'Changing the region allows you to use XGPU services without a proxy':
+      'Cambiar la región permite usar XGPU sin proxy.',
+    'The signaling server is a server for stream negotiation. If the host cannot connect, please try modifying this option':
+      'Si no conecta, intenta cambiar el servidor de señalización.',
     'Prioritize using IPv6 connection': 'Priorizar conexión IPv6',
     'Preferred language of game': 'Idioma del juego',
     'Set language of cloud game': 'Configurar idioma del juego en la nube',
     'Key mapping': 'Asignación de botones',
     'Mapping key of gamepad': 'Configurar asignación de botones',
-    'Currently no network connection, please connect and try again': 'Sin conexión a internet.',
+    'Currently no network connection, please connect and try again':
+      'Sin conexión a internet.',
     Logout: 'Cerrar sesión',
     'Do you want to logout?': '¿Quieres cerrar sesión?',
     'Current user': 'Usuario actual',
@@ -103,39 +129,54 @@ export default {
     PoweredOnSentText: 'Comando de encendido enviado',
     PoweredOffSentText: 'Comando de apagado enviado',
     Theme: 'Tema',
-    'Set the app theme to take effect on the next launch': 'El tema se aplicará en el próximo inicio.',
+    'Set the app theme to take effect on the next launch':
+      'El tema se aplicará en el próximo inicio.',
     'Theme primary color': 'Color principal',
-    'Choose app primary color, takes effect on next launch': 'Elige el color principal de la app.',
-    'Choose from preset palette for best readability': 'Elige de la paleta para mejor legibilidad.',
+    'Choose app primary color, takes effect on next launch':
+      'Elige el color principal de la app.',
+    'Choose from preset palette for best readability':
+      'Elige de la paleta para mejor legibilidad.',
     'Signal server': 'Servidor de señalización',
     'Virtual gamepad': 'Mando virtual',
     'Always display the virtual gamepad': 'Mostrar siempre el mando virtual',
-    'Select gamepad kernal, you can not use virtual gamepad in Web kernal': 'El mando virtual no funciona con el kernel Web.',
+    'Select gamepad kernal, you can not use virtual gamepad in Web kernal':
+      'El mando virtual no funciona con el kernel Web.',
     'Config opacity of virtual gamepad': 'Opacidad del mando virtual',
     'Display settings': 'Ajustes de pantalla',
-    'Set parameters such as screen clarity and saturation': 'Configura nitidez y saturación.',
-    'Display settings is not working in native render engine.': 'Los ajustes de pantalla no funcionan en modo nativo.',
-    'Override native Xbox gamepad support': 'Sobrescribir soporte nativo de Xbox',
+    'Set parameters such as screen clarity and saturation':
+      'Configura nitidez y saturación.',
+    'Display settings is not working in native render engine.':
+      'Los ajustes de pantalla no funcionan en modo nativo.',
+    'Override native Xbox gamepad support':
+      'Sobrescribir soporte nativo de Xbox',
     bind_usb_device_description: 'Permitir que XStreaming controle mandos USB.',
     bind_usb_device_tips: 'Solo para mandos conectados por cable OTG.',
     'Power on when streaming': 'Encender al transmitir',
     power_on_description: 'Encender la consola al iniciar streaming.',
     'Low Latency Mode': 'Modo de baja latencia',
-    low_latency_mode_description: 'Usa el modo de rendimiento Wi-Fi para mejor streaming.',
-    'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy': 'La posición de los botones puede variar ligeramente.',
+    low_latency_mode_description:
+      'Usa el modo de rendimiento Wi-Fi para mejor streaming.',
+    'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
+      'La posición de los botones puede variar ligeramente.',
     'Customize virtual buttons': 'Personalizar botones virtuales',
     'Customize buttons of virtual gamepad': 'Editar diseño del mando virtual.',
     'Edit Virtual Gamepad': 'Editar mando virtual',
-    'Click on an element to set its size and display': 'Pulsa un elemento para ajustar tamaño y visibilidad.',
-    'Drag elements to adjust their position': 'Arrastra para ajustar la posición.',
+    'Click on an element to set its size and display':
+      'Pulsa un elemento para ajustar tamaño y visibilidad.',
+    'Drag elements to adjust their position':
+      'Arrastra para ajustar la posición.',
     'Name can not be empty': 'El nombre no puede estar vacío',
     'Show performance': 'Mostrar rendimiento',
-    'Always display the performance panel': 'Mostrar siempre el panel de rendimiento',
+    'Always display the performance panel':
+      'Mostrar siempre el panel de rendimiento',
     'Performance show style': 'Estilo de rendimiento',
     'Setting performance show style': 'Configurar estilo (horizontal/vertical)',
-    'It has been detected that you are using the wired connection mode with the Overwrite Android driver. If the USB connection is disconnected during the game, please exit the game and reconnect the controller; otherwise, the controller buttons will become unresponsive': 'Si el USB se desconecta, sal del juego y reconecta el mando.',
-    'If you are using an Xbox One/S/X controller and encounter unresponsive buttons when entering the game, please press the home button on the controller first': 'Si los botones no responden, pulsa primero el botón Home.',
-    'After replacing the Android controller driver, controller button mapping is temporarily not supported': 'La asignación no está disponible tras cambiar el driver.',
+    'It has been detected that you are using the wired connection mode with the Overwrite Android driver. If the USB connection is disconnected during the game, please exit the game and reconnect the controller; otherwise, the controller buttons will become unresponsive':
+      'Si el USB se desconecta, sal del juego y reconecta el mando.',
+    'If you are using an Xbox One/S/X controller and encounter unresponsive buttons when entering the game, please press the home button on the controller first':
+      'Si los botones no responden, pulsa primero el botón Home.',
+    'After replacing the Android controller driver, controller button mapping is temporarily not supported':
+      'La asignación no está disponible tras cambiar el driver.',
     'Short Trigger': 'Gatillo corto',
     ShortTriggerDesc: 'Acorta el recorrido del gatillo para respuesta rápida.',
     'Auto Sprint': 'Sprint automático',
@@ -146,7 +187,8 @@ export default {
     Horizon: 'Horizontal',
     Vertical: 'Vertical',
     'Auto check update': 'Actualización automática',
-    'Whether check XStreaming updates automatically': '¿Buscar actualizaciones automáticamente?',
+    'Whether check XStreaming updates automatically':
+      '¿Buscar actualizaciones automáticamente?',
     BasesSettings: 'Ajustes básicos',
     DisplaySettings: 'Ajustes de pantalla',
     GamepadSettings: 'Ajustes del mando',
@@ -190,7 +232,8 @@ export default {
     'Virtual Opacity': 'Opacidad virtual',
     virtual_joystick_title: 'Diseño de joystick virtual',
     virtual_joystick_desc: 'Configura el joystick en modo fijo o libre.',
-    virtual_joystick_tips: 'En modo libre puedes tocar cualquier parte para mover el stick.',
+    virtual_joystick_tips:
+      'En modo libre puedes tocar cualquier parte para mover el stick.',
     Fixed: 'Fijo',
     Free: 'Libre',
     On: 'Activado',
@@ -203,7 +246,8 @@ export default {
     Default: 'Predeterminado',
     SDL: 'SDL',
     GamepadTestTitle: 'Prueba del mando',
-    GamepadTestDescription: 'Prueba botones, sticks, gatillos y vibración del mando actual',
+    GamepadTestDescription:
+      'Prueba botones, sticks, gatillos y vibración del mando actual',
     GamepadKernelTitle: 'Kernel actual',
     GamepadTestRumble: 'Probar vibración',
     GamepadTestButtons: 'Botones',
@@ -287,9 +331,11 @@ export default {
     all_axies: 'Todos los ejes',
     xy_axies: 'Intercambiar X/Y',
     DualSense_adaptive_trigger_left: 'Gatillo izquierdo DualSense',
-    DualSense_adaptive_trigger_left_desc: 'Ajusta la resistencia del gatillo izquierdo.',
+    DualSense_adaptive_trigger_left_desc:
+      'Ajusta la resistencia del gatillo izquierdo.',
     DualSense_adaptive_trigger_right: 'Gatillo derecho DualSense',
-    DualSense_adaptive_trigger_right_desc: 'Ajusta la resistencia del gatillo derecho.',
+    DualSense_adaptive_trigger_right_desc:
+      'Ajusta la resistencia del gatillo derecho.',
     Resistance: 'Resistencia',
     Trigger: 'Gatillo',
     'Automatic Trigger': 'Gatillo automático',
@@ -310,7 +356,8 @@ export default {
     'Modify controller response rate': 'Ajusta la velocidad de respuesta.',
     'Connecting...': 'Conectando...',
     'Disconnecting...': 'Desconectando...',
-    'Configuration obtained successfully, initiating offer...': 'Configuración obtenida, iniciando...',
+    'Configuration obtained successfully, initiating offer...':
+      'Configuración obtenida, iniciando...',
     'Remote offer retrieved successfully...': 'Oferta remota recibida...',
     'Ready to send ICE...': 'Listo para enviar ICE...',
     'Exchange ICE successfully...': 'Intercambio ICE correcto...',
@@ -347,7 +394,8 @@ export default {
     Sensor: 'Sensor',
     Details: 'Detalles',
     'Clear Cache': 'Limpiar caché',
-    'Clear XStreaming Cache Data(Keep login data)': 'Limpiar caché (mantiene login)',
+    'Clear XStreaming Cache Data(Keep login data)':
+      'Limpiar caché (mantiene login)',
     History: 'Historial',
     HistoryTitle: 'Historial de actualizaciones',
     HistoryDesc: 'Ver historial de cambios.',
@@ -361,7 +409,8 @@ export default {
     inner_server_title: 'Servidor TURN interno',
     inner_server_desc: 'Usa el servidor oficial.',
     'Auto toggle hold buttons': 'Alternar botones mantenidos',
-    'Select what buttons become toggle holdable': 'Elige qué botones se mantienen.',
+    'Select what buttons become toggle holdable':
+      'Elige qué botones se mantienen.',
     HoldButtonsSettingsDesc: 'Configura botones de pulsación larga.',
     'Hold Buttons': 'Mantener botones',
     FSR_desc: 'Mejora la imagen con FSR.',
@@ -382,8 +431,10 @@ export default {
     'Enable virtual macro button': 'Activar botón de macro.',
     'Virtual macro settings': 'Ajustes de macro',
     'Configure short/long press macro actions': 'Configura acciones de macro.',
-    'Enable macro button and edit its action sequence': 'Activa y edita la secuencia de macro.',
-    'Configure one macro button with separate short/long press action chains for accessibility play styles.': 'Configura cadenas de macro.',
+    'Enable macro button and edit its action sequence':
+      'Activa y edita la secuencia de macro.',
+    'Configure one macro button with separate short/long press action chains for accessibility play styles.':
+      'Configura cadenas de macro.',
     'Macro button': 'Botón de macro',
     'Enable or disable': 'Activar o desactivar',
     'Long press threshold': 'Umbral de pulsación larga',
@@ -401,7 +452,8 @@ export default {
     'Hold duration': 'Duración',
     'Wait after action': 'Esperar después',
     'Loop macro': 'Bucle de macro',
-    'Press macro once to loop, press again to stop': 'Pulsa para iniciar/parar bucle.',
+    'Press macro once to loop, press again to stop':
+      'Pulsa para iniciar/parar bucle.',
     'Loop interval': 'Intervalo de bucle',
     'Action type': 'Tipo de acción',
     'Button macro': 'Macro de botón',
@@ -413,8 +465,16 @@ export default {
     'Move duration': 'Duración del movimiento',
     'Macro action sequence': 'Secuencia de macro',
     'Tap + to add sequence step': 'Pulsa + para añadir paso.',
-    'Configure one continuous macro chain. Steps execute from top to bottom when pressing macro button.': 'Configura una cadena continua.',
-    'Macro switch is in Settings -> Virtual macro button. This page only edits the action sequence.': 'El interruptor está en Ajustes.',
-    'Enable macro button and edit its action sequence in one place.': 'Configura y edita macros.',
+    'Configure one continuous macro chain. Steps execute from top to bottom when pressing macro button.':
+      'Configura una cadena continua.',
+    'Macro switch is in Settings -> Virtual macro button. This page only edits the action sequence.':
+      'El interruptor está en Ajustes.',
+    'Enable macro button and edit its action sequence in one place.':
+      'Configura y edita macros.',
+    'Game Pass': 'Game Pass',
+    'View in store': 'Ver en la tienda',
+    'Add to favorites': 'Añadir a favoritos',
+    'Remove from favorites': 'Quitar de favoritos',
+    'Sale ends': 'La oferta termina',
   },
 };

@@ -475,5 +475,10 @@ export default {
       'मैक्रो स्विच सेटिंग्स में है।',
     'Enable macro button and edit its action sequence in one place.':
       'एक ही जगह से मैक्रो सेट करें।',
+    'Game Pass': 'Game Pass',
+    'View in store': 'स्टोर में देखें',
+    'Add to favorites': 'पसंदीदा में जोड़ें',
+    'Remove from favorites': 'पसंदीदा से हटाएं',
+    'Sale ends': 'सेल समाप्त',
   },
 };

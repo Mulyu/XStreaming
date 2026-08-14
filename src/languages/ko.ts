@@ -455,5 +455,10 @@ export default {
       '설정에서 매크로 활성화 가능',
     'Enable macro button and edit its action sequence in one place.':
       '매크로 설정 및 편집',
+    'Game Pass': 'Game Pass',
+    'View in store': '스토어에서 보기',
+    'Add to favorites': '즐겨찾기에 추가',
+    'Remove from favorites': '즐겨찾기에서 제거',
+    'Sale ends': '세일 종료',
   },
 };

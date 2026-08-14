@@ -73,6 +73,9 @@ function CloudScreen({navigation, route}) {
   // Signature (market + title set) we have already fetched or are fetching
   // prices for. Cleared on failure so a scheduled retry can refetch.
   const priceSigRef = React.useRef<string>('');
+  // The last signature we actually started a fetch for; used to reset the
+  // failure backoff on a genuine market/title-set change (vs a retry re-entry).
+  const lastFetchSigRef = React.useRef<string>('');
   const [priceRetry, setPriceRetry] = React.useState(0);
   const retryTimerRef = React.useRef<any>(null);
   const retryCountRef = React.useRef(0);
@@ -311,12 +314,17 @@ function CloudScreen({navigation, route}) {
     if (priceSigRef.current === sig) {
       return;
     }
-    // A genuine change (not a retry, which re-enters with priceSigRef '')
-    // resets the failure backoff.
-    if (priceSigRef.current !== '') {
-      retryCountRef.current = 0;
-    }
     priceSigRef.current = sig;
+    // A genuine market/title-set change (vs a retry re-entry, which repeats the
+    // same sig) resets the failure backoff and drops any pending retry timer.
+    if (lastFetchSigRef.current !== sig) {
+      retryCountRef.current = 0;
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      lastFetchSigRef.current = sig;
+    }
 
     // Reuse the cache only when it covers exactly this market + title set.
     const cache = getFreshPriceCache(market);

@@ -480,5 +480,10 @@ export default {
       '巨集按鍵開關在設定頁的「虛擬巨集按鍵」中控制，此頁面僅編輯動作序列。',
     'Enable macro button and edit its action sequence in one place.':
       '在同一頁面中啟用巨集按鍵並編輯動作序列。',
+    'Game Pass': 'Game Pass',
+    'View in store': '在商店中查看',
+    'Add to favorites': '加入收藏',
+    'Remove from favorites': '從收藏中移除',
+    'Sale ends': '特價結束',
   },
 };
