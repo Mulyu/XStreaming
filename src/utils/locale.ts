@@ -57,6 +57,18 @@ export const normalizeAppLocale = (locale?: string | null): SupportedLocale => {
   return 'en';
 };
 
+// Map the app's custom locale codes to a BCP-47 tag suitable for Intl APIs
+// (Intl silently ignores unknown codes like "zht" and falls back to default).
+export const toBcp47Locale = (appLocale?: string): string | undefined => {
+  if (appLocale === 'zht') {
+    return 'zh-Hant';
+  }
+  if (appLocale === 'zh') {
+    return 'zh-Hans';
+  }
+  return appLocale || undefined;
+};
+
 const getRawSystemLocale = (): string => {
   const settings = NativeModules.SettingsManager?.settings;
   const iosLocale =
