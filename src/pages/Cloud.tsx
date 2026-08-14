@@ -27,7 +27,7 @@ import {
 } from '../store/xcloudStore';
 import {
   PriceInfo,
-  fetchPrices,
+  fetchPricesWithRetry,
   deriveMarketLanguage,
   getStoreUrl,
   getPrice,
@@ -71,21 +71,12 @@ function CloudScreen({navigation, route}) {
   const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
   const [actionTitle, setActionTitle] = React.useState<any>(null);
   // Signature (market + title set) we have already fetched or are fetching
-  // prices for. Cleared on failure so a scheduled retry can refetch.
+  // prices for. Cleared on failure so a later change can refetch.
   const priceSigRef = React.useRef<string>('');
-  // The last signature we actually started a fetch for; used to reset the
-  // failure backoff on a genuine market/title-set change (vs a retry re-entry).
-  const lastFetchSigRef = React.useRef<string>('');
-  const [priceRetry, setPriceRetry] = React.useState(0);
-  const retryTimerRef = React.useRef<any>(null);
-  const retryCountRef = React.useRef(0);
   const isMountedRef = React.useRef(true);
   React.useEffect(() => {
     return () => {
       isMountedRef.current = false;
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-      }
     };
   }, []);
 
@@ -315,61 +306,34 @@ function CloudScreen({navigation, route}) {
       return;
     }
     priceSigRef.current = sig;
-    // A genuine market/title-set change (vs a retry re-entry, which repeats the
-    // same sig) resets the failure backoff and drops any pending retry timer.
-    if (lastFetchSigRef.current !== sig) {
-      retryCountRef.current = 0;
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-      lastFetchSigRef.current = sig;
-    }
 
     // Reuse the cache only when it covers exactly this market + title set.
     const cache = getFreshPriceCache(market);
     if (cache && cache.sig === sig) {
-      retryCountRef.current = 0;
       setPriceMap(cache.priceMap);
       return;
     }
 
-    const scheduleRetry = () => {
-      if (retryTimerRef.current || retryCountRef.current >= 3) {
-        return;
-      }
-      const attempt = retryCountRef.current;
-      retryCountRef.current = attempt + 1;
-      const delay = 15000 * Math.pow(2, attempt); // 15s, 30s, 60s
-      retryTimerRef.current = setTimeout(() => {
-        retryTimerRef.current = null;
-        if (isMountedRef.current) {
-          setPriceRetry(x => x + 1);
-        }
-      }, delay);
-    };
-
-    fetchPrices(storeIds, market, language).then(({prices, ok}) => {
+    // fetchPricesWithRetry handles the bounded backoff internally.
+    fetchPricesWithRetry(storeIds, market, language).then(({prices, ok}) => {
       // Drop the result if a newer request superseded this one, or we unmounted.
       if (priceSigRef.current !== sig || !isMountedRef.current) {
         return;
       }
-      if (!ok) {
-        // A batch failed — merge in whatever arrived (so already-shown prices
-        // aren't dropped) but don't cache the partial result, free the claim,
-        // and schedule a bounded retry so recovery doesn't wait for a change.
+      if (ok) {
+        savePriceCache(prices, market, sig);
+        setPriceMap(prices);
+      } else {
+        // Retries exhausted — merge in whatever arrived (don't drop already
+        // shown prices), don't cache the partial, and free the claim so a
+        // later market/title-set change refetches.
         if (Object.keys(prices).length > 0) {
           setPriceMap(prev => ({...prev, ...prices}));
         }
         priceSigRef.current = '';
-        scheduleRetry();
-        return;
       }
-      retryCountRef.current = 0;
-      savePriceCache(prices, market, sig);
-      setPriceMap(prices);
     });
-  }, [titles, gameLanguage, deviceRegion, priceRetry]);
+  }, [titles, gameLanguage, deviceRegion]);
 
   // Rows re-render when favorites or fetched prices change.
   const listExtraData = React.useMemo(

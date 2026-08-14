@@ -232,6 +232,27 @@ export const fetchPrices = async (
   return {prices, ok};
 };
 
+const delay = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+// fetchPrices, retrying the whole request (with backoff) while a batch fails.
+// Resolves with the last result; ok is false only if every attempt had a
+// failed batch. Callers apply the prices and, on ok:false, may refetch later.
+export const fetchPricesWithRetry = async (
+  storeIds: string[],
+  market = 'US',
+  language = 'en-US',
+  attempts = 3,
+  baseDelayMs = 15000,
+): Promise<FetchPricesResult> => {
+  let result = await fetchPrices(storeIds, market, language);
+  for (let attempt = 1; !result.ok && attempt < attempts; attempt++) {
+    await delay(baseDelayMs * Math.pow(2, attempt - 1));
+    result = await fetchPrices(storeIds, market, language);
+  }
+  return result;
+};
+
 // Look up a price by Store id, tolerant of id case differences.
 export const getPrice = (
   map: Record<string, PriceInfo> | null | undefined,
