@@ -10,7 +10,16 @@ import {
   Linking,
   useWindowDimensions,
 } from 'react-native';
-import {Text, Portal, Modal, Card, IconButton, Icon} from 'react-native-paper';
+import {
+  Text,
+  Portal,
+  Modal,
+  Card,
+  IconButton,
+  Icon,
+  Switch,
+  Button,
+} from 'react-native-paper';
 import Spinner from '../components/Spinner';
 import {useSelector, useDispatch} from 'react-redux';
 import TitleItem from '../components/TitleItem';
@@ -65,7 +74,9 @@ function CloudScreen({navigation, route}) {
   const [recentTitles, setRecentTitles] = React.useState([]);
   const [keyword, setKeyword] = React.useState('');
   const [playableOnly, setPlayableOnly] = React.useState(false);
+  const [saleOnly, setSaleOnly] = React.useState(false);
   const [selectedGenre, setSelectedGenre] = React.useState('');
+  const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
   const flatListRef = React.useRef<any>(null);
   const isFetchGame = React.useRef(false);
   const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
@@ -400,11 +411,28 @@ function CloudScreen({navigation, route}) {
     scrollToTop();
   };
 
+  const handleToggleSale = () => {
+    setSaleOnly(prev => !prev);
+    setCurrentPage(1);
+    scrollToTop();
+  };
+
   const handleSelectGenre = (genre: string) => {
     setSelectedGenre(prev => (prev === genre ? '' : genre));
     setCurrentPage(1);
     scrollToTop();
   };
+
+  const handleClearFilters = () => {
+    setPlayableOnly(false);
+    setSaleOnly(false);
+    setSelectedGenre('');
+    setCurrentPage(1);
+    scrollToTop();
+  };
+
+  const activeFilterCount =
+    (playableOnly ? 1 : 0) + (saleOnly ? 1 : 0) + (selectedGenre ? 1 : 0);
 
   const renderTutorial = () => {
     return (
@@ -556,6 +584,12 @@ function CloudScreen({navigation, route}) {
     );
   }
 
+  if (saleOnly) {
+    currentTitles.current = currentTitles.current.filter(
+      (item: any) => getPrice(priceMap, item.productId)?.onSale === true,
+    );
+  }
+
   if (selectedGenre) {
     currentTitles.current = currentTitles.current.filter((item: any) => {
       const cats = item?.LocalizedCategories || item?.Categories;
@@ -641,52 +675,155 @@ function CloudScreen({navigation, route}) {
     );
   };
 
-  const renderFilterBar = () => {
-    const renderChip = (
-      key: string,
-      label: string,
-      active: boolean,
-      onPress: () => void,
-    ) => (
+  const renderGenreChip = (
+    key: string,
+    label: string,
+    active: boolean,
+    onPress: () => void,
+  ) => (
+    <Pressable
+      key={key}
+      focusable={true}
+      onPress={onPress}
+      android_ripple={{color: 'rgba(16, 124, 16, 0.16)'}}
+      style={[
+        styles.filterChip,
+        styles.genreGridChip,
+        active && styles.filterChipSelected,
+      ]}>
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.filterChipText,
+          active && styles.filterChipTextSelected,
+        ]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+
+  const renderActivePill = (
+    key: string,
+    label: string,
+    danger: boolean,
+    onRemove: () => void,
+  ) => (
+    <View
+      key={key}
+      style={[
+        styles.activePill,
+        danger ? styles.activePillRed : styles.activePillGreen,
+      ]}>
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.activePillText,
+          danger ? styles.activePillTextRed : styles.activePillTextGreen,
+        ]}>
+        {label}
+      </Text>
       <Pressable
-        key={key}
-        focusable={true}
-        onPress={onPress}
-        android_ripple={{color: 'rgba(16, 124, 16, 0.16)'}}
-        style={[styles.filterChip, active && styles.filterChipSelected]}>
+        onPress={onRemove}
+        hitSlop={8}
+        android_ripple={{color: 'rgba(150,150,150,0.25)', borderless: true}}
+        style={styles.activePillClose}>
         <Text
-          numberOfLines={1}
           style={[
-            styles.filterChipText,
-            active && styles.filterChipTextSelected,
+            styles.activePillCloseText,
+            danger ? styles.activePillTextRed : styles.activePillTextGreen,
           ]}>
-          {label}
+          ✕
         </Text>
       </Pressable>
-    );
+    </View>
+  );
 
+  // A single "Filters" entry point plus the currently applied filters as
+  // removable pills — scales as filters grow without crowding the top bar.
+  const renderFilterBar = () => {
     return (
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filterBar}
         contentContainerStyle={styles.filterBarContent}>
-        {renderChip(
-          '__playable',
-          `${playableOnly ? '✓ ' : ''}${t('Playable')}`,
-          playableOnly,
-          handleTogglePlayable,
-        )}
-        <View style={styles.filterDivider} />
-        {renderChip('__all', t('All'), selectedGenre === '', () =>
-          handleSelectGenre(''),
-        )}
-        {genres.map(genre =>
-          renderChip(genre, genre, selectedGenre === genre, () =>
-            handleSelectGenre(genre),
-          ),
+        <Pressable
+          focusable={true}
+          onPress={() => setFilterSheetOpen(true)}
+          android_ripple={{color: 'rgba(150,150,150,0.2)'}}
+          style={styles.filterButton}>
+          <Icon source="tune-variant" size={16} />
+          <Text style={styles.filterButtonText}>{t('Filters')}</Text>
+          {activeFilterCount > 0 && (
+            <View style={styles.filterCountBadge}>
+              <Text style={styles.filterCountText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </Pressable>
+
+        {playableOnly &&
+          renderActivePill('__p', t('Playable'), false, handleTogglePlayable)}
+        {saleOnly &&
+          renderActivePill('__s', t('On sale'), true, handleToggleSale)}
+        {selectedGenre !== '' &&
+          renderActivePill('__g', selectedGenre, false, () =>
+            handleSelectGenre(selectedGenre),
+          )}
+        {activeFilterCount === 0 && (
+          <Text style={styles.filterHint}>{t('Tap to filter')}</Text>
         )}
       </ScrollView>
+    );
+  };
+
+  const renderFilterSheet = () => {
+    return (
+      <Portal>
+        <Modal
+          visible={filterSheetOpen}
+          onDismiss={() => setFilterSheetOpen(false)}
+          contentContainerStyle={styles.filterSheet}>
+          <Card>
+            <Card.Content>
+              <Text style={styles.sheetHeader}>{t('Show')}</Text>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>{t('Playable')}</Text>
+                <Switch
+                  value={playableOnly}
+                  onValueChange={handleTogglePlayable}
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>{t('On sale')}</Text>
+                <Switch value={saleOnly} onValueChange={handleToggleSale} />
+              </View>
+
+              <Text style={styles.sheetHeader}>{t('Genre')}</Text>
+              <View style={styles.genreGrid}>
+                {renderGenreChip('__all', t('All'), selectedGenre === '', () =>
+                  handleSelectGenre(''),
+                )}
+                {genres.map(genre =>
+                  renderGenreChip(genre, genre, selectedGenre === genre, () =>
+                    handleSelectGenre(genre),
+                  ),
+                )}
+              </View>
+
+              <View style={styles.sheetActions}>
+                <Button mode="text" onPress={handleClearFilters}>
+                  {t('Clear')}
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={() => setFilterSheetOpen(false)}>
+                  {t('Apply')}
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        </Modal>
+      </Portal>
     );
   };
 
@@ -881,6 +1018,8 @@ function CloudScreen({navigation, route}) {
 
       {renderActionSheet()}
 
+      {renderFilterSheet()}
+
       {isLimited && (
         <View style={styles.container}>
           <View>
@@ -1038,13 +1177,115 @@ const styles = StyleSheet.create({
   filterChipTextSelected: {
     color: '#FFFFFF',
   },
-  filterDivider: {
-    width: 1,
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(140, 140, 150, 0.4)',
+    marginRight: 8,
+    gap: 6,
+  },
+  filterButtonText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  filterCountBadge: {
+    minWidth: 18,
     height: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: '#107C10',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterCountText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  filterHint: {
+    fontSize: 12,
+    color: '#9096a8',
+  },
+  activePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 30,
+    paddingLeft: 11,
+    paddingRight: 5,
+    borderRadius: 15,
+    borderWidth: 1,
     marginRight: 6,
-    marginLeft: 2,
-    alignSelf: 'center',
+    gap: 6,
+  },
+  activePillGreen: {
+    backgroundColor: 'rgba(16, 124, 16, 0.12)',
+    borderColor: 'rgba(16, 124, 16, 0.30)',
+  },
+  activePillRed: {
+    backgroundColor: 'rgba(229, 52, 43, 0.12)',
+    borderColor: 'rgba(229, 52, 43, 0.30)',
+  },
+  activePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    maxWidth: 120,
+  },
+  activePillTextGreen: {
+    color: '#3aa33a',
+  },
+  activePillTextRed: {
+    color: '#e5342b',
+  },
+  activePillClose: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activePillCloseText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  filterSheet: {
+    marginHorizontal: '6%',
+  },
+  sheetHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: '#9096a8',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  switchLabel: {
+    fontSize: 15,
+  },
+  genreGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+  },
+  genreGridChip: {
+    marginRight: 0,
+  },
+  sheetActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 18,
   },
   searchButton: {
     position: 'absolute',

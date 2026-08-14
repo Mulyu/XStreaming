@@ -537,5 +537,11 @@ export default {
     TitleShortcutFailed: 'Failed to add shortcut',
     TitleShortcutExpired:
       'Shortcut data is unavailable. Please refresh the cloud game list and try again.',
+    'On sale': 'On sale',
+    Filters: 'Filters',
+    Clear: 'Clear',
+    Apply: 'Apply',
+    Genre: 'Genre',
+    'Tap to filter': 'Tap to filter',
   },
 };

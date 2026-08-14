@@ -485,5 +485,11 @@ export default {
     'Add to favorites': '加入收藏',
     'Remove from favorites': '從收藏中移除',
     'Sale ends': '特價結束',
+    'On sale': '特價中',
+    Filters: '篩選',
+    Clear: '清除',
+    Apply: '套用',
+    Genre: '類型',
+    'Tap to filter': '點擊篩選',
   },
 };

@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {Text, useTheme} from 'react-native-paper';
-import {useTranslation} from 'react-i18next';
 import {PriceInfo, formatPrice, discountPercent} from '../utils/storePrice';
 
 type Props = {
@@ -28,7 +27,6 @@ const TitleItem: React.FC<Props> = ({
   compact = false,
 }) => {
   const theme = useTheme();
-  const {t} = useTranslation();
   const [loading, setLoading] = React.useState(true);
 
   // Playable now: the user is entitled to this title (Game Pass / XGPU library).
@@ -139,29 +137,20 @@ const TitleItem: React.FC<Props> = ({
             {titleItem.ProductTitle}
           </Text>
 
-          {(isPlayable || price) && (
+          {price && (
             <View style={styles.priceRow}>
-              {isPlayable && (
-                <Text style={[styles.gpTag, compact && styles.gpTagCompact]}>
-                  {t('Game Pass')}
+              <Text
+                style={[
+                  styles.price,
+                  compact && styles.priceCompact,
+                  showSale && styles.priceSale,
+                ]}>
+                {formatPrice(price.listPrice, price.currencyCode)}
+              </Text>
+              {showSale && (
+                <Text style={[styles.msrp, compact && styles.msrpCompact]}>
+                  {formatPrice(price.msrp, price.currencyCode)}
                 </Text>
-              )}
-              {price && (
-                <>
-                  <Text
-                    style={[
-                      styles.price,
-                      compact && styles.priceCompact,
-                      showSale && styles.priceSale,
-                    ]}>
-                    {formatPrice(price.listPrice, price.currencyCode)}
-                  </Text>
-                  {showSale && (
-                    <Text style={[styles.msrp, compact && styles.msrpCompact]}>
-                      {formatPrice(price.msrp, price.currencyCode)}
-                    </Text>
-                  )}
-                </>
               )}
             </View>
           )}
@@ -307,22 +296,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     marginTop: 6,
-  },
-  gpTag: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#107C10',
-    backgroundColor: 'rgba(16, 124, 16, 0.12)',
-    borderColor: 'rgba(16, 124, 16, 0.30)',
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    marginRight: 6,
-    overflow: 'hidden',
-  },
-  gpTagCompact: {
-    fontSize: 9,
   },
   price: {
     fontSize: 12.5,

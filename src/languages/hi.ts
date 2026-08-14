@@ -480,5 +480,11 @@ export default {
     'Add to favorites': 'पसंदीदा में जोड़ें',
     'Remove from favorites': 'पसंदीदा से हटाएं',
     'Sale ends': 'सेल समाप्त',
+    'On sale': 'सेल में',
+    Filters: 'फ़िल्टर',
+    Clear: 'साफ़ करें',
+    Apply: 'लागू करें',
+    Genre: 'शैली',
+    'Tap to filter': 'फ़िल्टर करने के लिए टैप करें',
   },
 };

@@ -508,5 +508,11 @@ export default {
     'Add to favorites': '添加到收藏',
     'Remove from favorites': '从收藏中移除',
     'Sale ends': '促销结束',
+    'On sale': '促销中',
+    Filters: '筛选',
+    Clear: '清除',
+    Apply: '应用',
+    Genre: '类型',
+    'Tap to filter': '点击筛选',
   },
 };

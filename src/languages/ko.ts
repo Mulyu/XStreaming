@@ -460,5 +460,11 @@ export default {
     'Add to favorites': '즐겨찾기에 추가',
     'Remove from favorites': '즐겨찾기에서 제거',
     'Sale ends': '세일 종료',
+    'On sale': '세일 중',
+    Filters: '필터',
+    Clear: '초기화',
+    Apply: '적용',
+    Genre: '장르',
+    'Tap to filter': '탭하여 필터',
   },
 };

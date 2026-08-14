@@ -518,5 +518,11 @@ export default {
     'Add to favorites': 'Adicionar aos favoritos',
     'Remove from favorites': 'Remover dos favoritos',
     'Sale ends': 'A promoção termina',
+    'On sale': 'Em promoção',
+    Filters: 'Filtros',
+    Clear: 'Limpar',
+    Apply: 'Aplicar',
+    Genre: 'Gênero',
+    'Tap to filter': 'Toque para filtrar',
   },
 };
