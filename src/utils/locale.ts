@@ -67,7 +67,7 @@ const getRawSystemLocale = (): string => {
     NativeModules.PlatformConstants?.locale ||
     NativeModules.PlatformConstants?.reactNativeVersion?.locale;
 
-  return String(Platform.OS === 'ios' ? iosLocale : androidLocale || '');
+  return String((Platform.OS === 'ios' ? iosLocale : androidLocale) || '');
 };
 
 export const getSystemLocale = (): SupportedLocale => {

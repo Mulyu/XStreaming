@@ -44,7 +44,7 @@ import {
   formatSaleEnd,
 } from '../utils/storePrice';
 import {getSystemRegion} from '../utils/locale';
-import {getPriceCache} from '../store/priceStore';
+import {getFreshPriceCache} from '../store/priceStore';
 import games from '../mock/games.json';
 
 const {UsbRumbleManager, FullScreenManager, ShortcutManager} = NativeModules;
@@ -65,6 +65,8 @@ function TitleDetail({navigation, route}) {
   // const streamingTokens = useSelector(state => state.streamingTokens);
   const [showUsbWarnModal, setShowUsbWarnShowModal] = React.useState(false);
   const [price, setPrice] = React.useState<PriceInfo | null>(null);
+  // Read here so a game-language change re-runs the price effect below.
+  const gameLanguage = getSettings().preferred_game_language;
   const autoStartHandledRef = React.useRef(false);
   const isLandscape = screenWidth > screenHeight;
   const isLargeScreen = Platform.isTV || isLandscape;
@@ -191,14 +193,13 @@ function TitleDetail({navigation, route}) {
       setPrice(null);
       return;
     }
-    const _settings = getSettings();
     const {market, language} = deriveMarketLanguage(
-      _settings.preferred_game_language,
+      gameLanguage,
       getSystemRegion(),
     );
-    const priceCache = getPriceCache();
-    // Reuse the list's cached price only when it was fetched for this market.
-    if (priceCache?.market === market) {
+    // Reuse the list's cached price only when it's fresh for this market.
+    const priceCache = getFreshPriceCache(market);
+    if (priceCache) {
       const cached = getPrice(priceCache.priceMap, productId);
       if (cached) {
         setPrice(cached);
@@ -216,7 +217,7 @@ function TitleDetail({navigation, route}) {
     return () => {
       cancelled = true;
     };
-  }, [titleItem]);
+  }, [titleItem, gameLanguage]);
 
   const handleOpenStore = () => {
     const productId = titleItem?.productId || getTitleProductId(titleItem);

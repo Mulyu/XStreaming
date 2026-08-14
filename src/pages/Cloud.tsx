@@ -32,11 +32,8 @@ import {
   getStoreUrl,
   getPrice,
 } from '../utils/storePrice';
-import {getPriceCache, savePriceCache} from '../store/priceStore';
+import {getFreshPriceCache, savePriceCache} from '../store/priceStore';
 import {getSystemRegion} from '../utils/locale';
-
-// Refetch Store prices at most once per this window (sales change slowly).
-const PRICE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const log = debugFactory('CloudScreen');
 
@@ -297,13 +294,8 @@ function CloudScreen({navigation, route}) {
       return;
     }
 
-    const cache = getPriceCache();
-    const cachedFresh =
-      cache &&
-      cache.market === market &&
-      Date.now() - cache.updatedAt < PRICE_TTL_MS;
-
-    if (cachedFresh) {
+    const cache = getFreshPriceCache(market);
+    if (cache) {
       pricedMarketRef.current = market;
       setPriceMap(cache.priceMap);
       return;
@@ -341,7 +333,7 @@ function CloudScreen({navigation, route}) {
       .catch(() => {
         releaseClaim();
       });
-  }, [titles, gameLanguage, currentLanguage]);
+  }, [titles, gameLanguage]);
 
   // Rows re-render when favorites or fetched prices change.
   const listExtraData = React.useMemo(
