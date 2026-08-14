@@ -371,7 +371,8 @@ function TitleDetail({navigation, route}) {
 
   const priceDiscount = price ? discountPercent(price) : 0;
   // Show sale styling only for a real (>=1%) discount.
-  const showDetailSale = !!price?.onSale && priceDiscount > 0;
+  const showDetailSale = !!price && price.onSale && priceDiscount > 0;
+  const saleEndLabel = price && showDetailSale ? formatSaleEnd(price) : '';
 
   const renderLargeActionButton = (
     label: string,
@@ -545,9 +546,9 @@ function TitleDetail({navigation, route}) {
                 </View>
               )}
 
-              {price && showDetailSale && formatSaleEnd(price) ? (
+              {saleEndLabel ? (
                 <Text style={styles.saleEnds}>
-                  {t('Sale ends')} {formatSaleEnd(price)}
+                  {t('Sale ends')} {saleEndLabel}
                 </Text>
               ) : null}
 

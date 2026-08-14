@@ -1,5 +1,6 @@
 import axios from 'axios';
 import {debugFactory} from './debug';
+import {parseRegion} from './locale';
 
 const log = debugFactory('storePrice');
 
@@ -13,7 +14,16 @@ const CATALOG_URL = 'https://displaycatalog.mp.microsoft.com/v7.0/products';
 const BATCH_SIZE = 100;
 
 // Currencies that are conventionally written without minor units.
-const ZERO_DECIMAL_CURRENCIES = ['JPY', 'KRW', 'CLP', 'VND', 'HUF', 'ISK'];
+const ZERO_DECIMAL_CURRENCIES = [
+  'JPY',
+  'KRW',
+  'CLP',
+  'VND',
+  'HUF',
+  'ISK',
+  'TWD',
+  'COP',
+];
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$',
@@ -26,10 +36,20 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   HKD: 'HK$',
   AUD: 'A$',
   CAD: 'CA$',
+  NZD: 'NZ$',
+  SGD: 'S$',
   BRL: 'R$',
   INR: '₹',
   RUB: '₽',
   MXN: 'MX$',
+  ZAR: 'R',
+  TRY: '₺',
+  THB: '฿',
+  PHP: '₱',
+  PLN: 'zł',
+  ILS: '₪',
+  SAR: '﷼',
+  AED: 'د.إ',
 };
 
 export type PriceInfo = {
@@ -54,7 +74,7 @@ export const deriveMarketLanguage = (
   deviceRegion?: string,
 ): {market: string; language: string} => {
   const language = preferredGameLanguage || 'en-US';
-  const languageRegion = language.split('-')[1];
+  const languageRegion = parseRegion(language);
   const market = (deviceRegion || languageRegion || 'US').toUpperCase();
   return {market, language};
 };
@@ -176,8 +196,14 @@ export const getPrice = (
   return map[storeId] || map[String(storeId).toUpperCase()] || null;
 };
 
-// Manual formatter used when Intl currency formatting is unavailable.
-const formatPriceManual = (amount: number, currencyCode: string): string => {
+// Format an amount for display, e.g. 7750 JPY -> "¥7,750", 19.99 USD -> "$19.99".
+// Deterministic (so the list and detail always agree) and independent of the
+// runtime's Intl support: known currencies get their symbol, others fall back
+// to a readable "<amount> <CODE>".
+export const formatPrice = (amount: number, currencyCode: string): string => {
+  if (!Number.isFinite(amount)) {
+    return '';
+  }
   const zeroDecimal = ZERO_DECIMAL_CURRENCIES.includes(currencyCode);
   const fixed = zeroDecimal ? Math.round(amount).toString() : amount.toFixed(2);
   const [intPart, decPart] = fixed.split('.');
@@ -188,33 +214,6 @@ const formatPriceManual = (amount: number, currencyCode: string): string => {
     return `${symbol}${number}`;
   }
   return currencyCode ? `${number} ${currencyCode}` : number;
-};
-
-// Format an amount for display, e.g. 7750 JPY -> "¥7,750", 19.99 USD -> "$19.99".
-// Prefer Intl.NumberFormat (correct symbol placement, minor units and grouping
-// for every currency) and fall back to a manual formatter where the runtime's
-// Intl lacks currency support.
-export const formatPrice = (amount: number, currencyCode: string): string => {
-  if (!Number.isFinite(amount)) {
-    return '';
-  }
-  if (currencyCode) {
-    try {
-      const formatter = new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: currencyCode,
-      });
-      const formatted = formatter.format(amount);
-      // Some Hermes builds return the raw number without a currency marker;
-      // fall through to the manual formatter when that happens.
-      if (formatted && /[^\d.,\s]/.test(formatted)) {
-        return formatted;
-      }
-    } catch (e) {
-      // Intl currency support missing — use the manual formatter below.
-    }
-  }
-  return formatPriceManual(amount, currencyCode);
 };
 
 // Discount percent as a positive integer (e.g. 50 for 50% off).

@@ -68,8 +68,15 @@ function CloudScreen({navigation, route}) {
   const isFetchGame = React.useRef(false);
   const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
   const [actionTitle, setActionTitle] = React.useState<any>(null);
-  // The market we currently hold prices for; drives cache validity + refetch.
+  // The market we have already fetched (or are fetching) prices for. Cleared
+  // on failure so a later reload can retry; drives cache validity + refetch.
   const pricedMarketRef = React.useRef<string>('');
+  const isMountedRef = React.useRef(true);
+  React.useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const currentTitles = React.useRef([]);
   const totalPage = React.useRef(0);
@@ -269,8 +276,7 @@ function CloudScreen({navigation, route}) {
 
   // Fetch Store prices for the loaded titles, batched and cached. Prices are
   // fetched once per market per session; the cache records its market so a
-  // language/region change refetches instead of showing the wrong currency. A
-  // failed fetch leaves the market ref unset so a later reload retries.
+  // language/region change refetches instead of showing the wrong currency.
   React.useEffect(() => {
     if (!titles || titles.length === 0) {
       return;
@@ -282,6 +288,8 @@ function CloudScreen({navigation, route}) {
       getSystemRegion(),
     );
 
+    // Already fetched (or fetching) this market — nothing to do. This also
+    // de-dupes the cache->network titles double-render into a single request.
     if (pricedMarketRef.current === market) {
       return;
     }
@@ -299,15 +307,16 @@ function CloudScreen({navigation, route}) {
       return;
     }
 
-    let cancelled = false;
+    // Claim this market synchronously so concurrent renders don't double-fetch
+    // and a market that returns no prices isn't retried every render.
+    pricedMarketRef.current = market;
     const storeIds = titles.map((item: any) => item.productId).filter(Boolean);
 
     fetchPrices(storeIds, market, language)
       .then(map => {
-        if (cancelled || !map || Object.keys(map).length === 0) {
+        if (!isMountedRef.current || !map || Object.keys(map).length === 0) {
           return;
         }
-        pricedMarketRef.current = market;
         setPriceMap(map);
         const existing = getXcloudData() || {};
         saveXcloudData({
@@ -317,11 +326,12 @@ function CloudScreen({navigation, route}) {
           priceUpdatedAt: Date.now(),
         });
       })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => {
+        // Allow a later reload to retry after a transient failure.
+        if (pricedMarketRef.current === market) {
+          pricedMarketRef.current = '';
+        }
+      });
   }, [titles]);
 
   // Rows re-render when favorites or fetched prices change.
