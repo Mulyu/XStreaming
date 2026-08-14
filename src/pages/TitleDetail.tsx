@@ -44,6 +44,7 @@ import {
   formatSaleEnd,
 } from '../utils/storePrice';
 import {getSystemRegion} from '../utils/locale';
+import {getPriceCache} from '../store/priceStore';
 import games from '../mock/games.json';
 
 const {UsbRumbleManager, FullScreenManager, ShortcutManager} = NativeModules;
@@ -195,10 +196,10 @@ function TitleDetail({navigation, route}) {
       _settings.preferred_game_language,
       getSystemRegion(),
     );
-    const cacheData = getXcloudData();
+    const priceCache = getPriceCache();
     // Reuse the list's cached price only when it was fetched for this market.
-    if (cacheData?.priceMarket === market) {
-      const cached = getPrice(cacheData.priceMap, productId);
+    if (priceCache?.market === market) {
+      const cached = getPrice(priceCache.priceMap, productId);
       if (cached) {
         setPrice(cached);
         return;
@@ -373,6 +374,10 @@ function TitleDetail({navigation, route}) {
   // Show sale styling only for a real (>=1%) discount.
   const showDetailSale = !!price && price.onSale && priceDiscount > 0;
   const saleEndLabel = price && showDetailSale ? formatSaleEnd(price) : '';
+  const canOpenStore = !!(
+    titleItem &&
+    (titleItem.productId || getTitleProductId(titleItem))
+  );
 
   const renderLargeActionButton = (
     label: string,
@@ -500,13 +505,15 @@ function TitleDetail({navigation, route}) {
                   </Text>
                 </View>
                 <View style={styles.titleActions}>
-                  <IconButton
-                    icon="open-in-new"
-                    size={isLargeScreen ? 24 : 22}
-                    accessibilityLabel={t('View in store')}
-                    style={styles.titleActionButton}
-                    onPress={handleOpenStore}
-                  />
+                  {canOpenStore && (
+                    <IconButton
+                      icon="open-in-new"
+                      size={isLargeScreen ? 24 : 22}
+                      accessibilityLabel={t('View in store')}
+                      style={styles.titleActionButton}
+                      onPress={handleOpenStore}
+                    />
+                  )}
                   {canAddTitleShortcut && (
                     <IconButton
                       icon="plus-box-outline"

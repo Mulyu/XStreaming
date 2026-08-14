@@ -74,8 +74,15 @@ export const deriveMarketLanguage = (
   deviceRegion?: string,
 ): {market: string; language: string} => {
   const language = preferredGameLanguage || 'en-US';
-  const languageRegion = parseRegion(language);
-  const market = (deviceRegion || languageRegion || 'US').toUpperCase();
+  // DisplayCatalog's market must be an ISO 3166 alpha-2 country; drop anything
+  // else (e.g. a UN M49 group like "419" from an es-419 device locale).
+  const alpha2 = (region?: string): string =>
+    region && /^[A-Za-z]{2}$/.test(region) ? region : '';
+  const market = (
+    alpha2(deviceRegion) ||
+    alpha2(parseRegion(language)) ||
+    'US'
+  ).toUpperCase();
   return {market, language};
 };
 
@@ -154,33 +161,40 @@ export const fetchPrices = async (
   );
   const result: Record<string, PriceInfo> = {};
 
+  const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-    const chunk = ids.slice(i, i + BATCH_SIZE);
-    try {
-      const res = await axios.get(CATALOG_URL, {
-        params: {
-          bigIds: chunk.join(','),
-          market,
-          languages: language,
-          fieldsTemplate: 'details',
-        },
-        headers: {'MS-CV': '0'},
-        timeout: 15000,
-      });
-      const products = res?.data?.Products;
-      if (Array.isArray(products)) {
-        products.forEach((product: any) => {
-          const info = extractPrice(product);
-          if (info && product?.ProductId) {
-            // Key by the canonical uppercase big-id so lookups are case-safe.
-            result[String(product.ProductId).toUpperCase()] = info;
-          }
-        });
-      }
-    } catch (e) {
-      log.info('fetchPrices batch failed:', e);
-    }
+    chunks.push(ids.slice(i, i + BATCH_SIZE));
   }
+
+  // Batches are independent, so fetch them concurrently.
+  await Promise.all(
+    chunks.map(async chunk => {
+      try {
+        const res = await axios.get(CATALOG_URL, {
+          params: {
+            bigIds: chunk.join(','),
+            market,
+            languages: language,
+            fieldsTemplate: 'details',
+          },
+          headers: {'MS-CV': '0'},
+          timeout: 15000,
+        });
+        const products = res?.data?.Products;
+        if (Array.isArray(products)) {
+          products.forEach((product: any) => {
+            const info = extractPrice(product);
+            if (info && product?.ProductId) {
+              // Key by the canonical uppercase big-id so lookups are case-safe.
+              result[String(product.ProductId).toUpperCase()] = info;
+            }
+          });
+        }
+      } catch (e) {
+        log.info('fetchPrices batch failed:', e);
+      }
+    }),
+  );
 
   return result;
 };
@@ -241,7 +255,9 @@ export const formatSaleEnd = (info: PriceInfo): string => {
   if (time <= now || time - now > oneYear) {
     return '';
   }
-  const month = end.getMonth() + 1;
-  const day = end.getDate();
+  // Use the UTC calendar day, matching the store's sale window boundary, so
+  // the shown date doesn't slip by a day near local midnight.
+  const month = end.getUTCMonth() + 1;
+  const day = end.getUTCDate();
   return `${month}/${day}`;
 };

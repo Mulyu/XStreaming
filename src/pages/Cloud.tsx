@@ -32,6 +32,7 @@ import {
   getStoreUrl,
   getPrice,
 } from '../utils/storePrice';
+import {getPriceCache, savePriceCache} from '../store/priceStore';
 import {getSystemRegion} from '../utils/locale';
 
 // Refetch Store prices at most once per this window (sales change slowly).
@@ -274,9 +275,10 @@ function CloudScreen({navigation, route}) {
     }
   };
 
-  // Fetch Store prices for the loaded titles, batched and cached. Prices are
-  // fetched once per market per session; the cache records its market so a
-  // language/region change refetches instead of showing the wrong currency.
+  // Fetch Store prices for the loaded titles, batched and cached (in a
+  // dedicated store so it doesn't reset the catalog cache age). Fetched once
+  // per market; the cache records its market and re-running with a different
+  // market (e.g. after a language change) refetches the correct currency.
   React.useEffect(() => {
     if (!titles || titles.length === 0) {
       return;
@@ -294,12 +296,11 @@ function CloudScreen({navigation, route}) {
       return;
     }
 
-    const cache = getXcloudData();
+    const cache = getPriceCache();
     const cachedFresh =
-      cache?.priceMap &&
-      cache?.priceMarket === market &&
-      cache?.priceUpdatedAt &&
-      Date.now() - cache.priceUpdatedAt < PRICE_TTL_MS;
+      cache &&
+      cache.market === market &&
+      Date.now() - cache.updatedAt < PRICE_TTL_MS;
 
     if (cachedFresh) {
       pricedMarketRef.current = market;
@@ -318,13 +319,7 @@ function CloudScreen({navigation, route}) {
           return;
         }
         setPriceMap(map);
-        const existing = getXcloudData() || {};
-        saveXcloudData({
-          ...existing,
-          priceMap: map,
-          priceMarket: market,
-          priceUpdatedAt: Date.now(),
-        });
+        savePriceCache(map, market);
       })
       .catch(() => {
         // Allow a later reload to retry after a transient failure.
@@ -332,7 +327,7 @@ function CloudScreen({navigation, route}) {
           pricedMarketRef.current = '';
         }
       });
-  }, [titles]);
+  }, [titles, currentLanguage]);
 
   // Rows re-render when favorites or fetched prices change.
   const listExtraData = React.useMemo(
