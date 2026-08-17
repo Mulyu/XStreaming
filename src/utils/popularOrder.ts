@@ -9,12 +9,12 @@ const log = debugFactory('popularOrder');
 const POPULAR_SIGL_ID = '6a589fa0-d493-472b-8e20-3813699d7056';
 const SIGLS_URL = 'https://catalog.gamepass.com/sigls/v2';
 
-// Fetch the popularity-ordered Store ids (uppercased). The first array element
-// is collection metadata, not a product, so it's skipped. Resolves to [] on
-// any failure — callers fall back to their default order.
-export const fetchPopularOrder = async (
-  market = 'US',
-  language = 'en-US',
+const delay = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+const fetchPopularOrderOnce = async (
+  market: string,
+  language: string,
 ): Promise<string[]> => {
   try {
     const res = await axios.get(SIGLS_URL, {
@@ -41,6 +41,27 @@ export const fetchPopularOrder = async (
     log.info('fetchPopularOrder failed:', e);
     return [];
   }
+};
+
+// Fetch the popularity-ordered Store ids (uppercased), retrying with backoff so
+// a single transient failure doesn't disable the sort. Resolves to [] only when
+// every attempt fails — callers then fall back to their default order.
+export const fetchPopularOrder = async (
+  market = 'US',
+  language = 'en-US',
+  attempts = 3,
+  baseDelayMs = 10000,
+): Promise<string[]> => {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const order = await fetchPopularOrderOnce(market, language);
+    if (order.length > 0) {
+      return order;
+    }
+    if (attempt < attempts - 1) {
+      await delay(baseDelayMs * Math.pow(2, attempt));
+    }
+  }
+  return [];
 };
 
 // Build a productId -> rank (0-based) map for fast sorting.

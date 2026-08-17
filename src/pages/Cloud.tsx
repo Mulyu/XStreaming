@@ -60,6 +60,12 @@ type SortMode = 'reco' | 'popular' | 'rating';
 const RATING_PRIOR_MEAN = 3.5;
 const RATING_PRIOR_WEIGHT = 50;
 
+// Stable empties so the list memo only depends on price/rating/popular data
+// when a control actually uses it (avoids recompute on unrelated arrivals).
+const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
+const EMPTY_RATING_MAP: Record<string, RatingInfo> = {};
+const EMPTY_RANK: Record<string, number> = {};
+
 const log = debugFactory('CloudScreen');
 
 function CloudScreen({navigation, route}) {
@@ -341,13 +347,16 @@ function CloudScreen({navigation, route}) {
     }
     priceSigRef.current = sig;
 
-    // Reuse the cache only when it covers exactly this market + title set AND
-    // carries ratings (pre-rating caches lack ratingMap, so refetch to fill it).
+    // Reuse the cache when it covers exactly this market + title set. Always
+    // show the cached prices immediately; only skip the network fetch when the
+    // cache also carries ratings (pre-rating caches fall through to fetch them).
     const cache = getFreshPriceCache(market);
-    if (cache && cache.sig === sig && cache.ratingMap) {
+    if (cache && cache.sig === sig) {
       setPriceMap(cache.priceMap);
-      setRatingMap(cache.ratingMap);
-      return;
+      if (cache.ratingMap) {
+        setRatingMap(cache.ratingMap);
+        return;
+      }
     }
 
     // fetchPricesWithRetry handles the bounded backoff internally.
@@ -637,6 +646,12 @@ function CloudScreen({navigation, route}) {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [titles]);
 
+  // Only depend on price/rating/popular data when a control actually consumes
+  // it, so async price/rating arrivals don't recompute the list otherwise.
+  const priceMapForFilter = saleOnly ? priceMap : EMPTY_PRICE_MAP;
+  const popularRankForSort = popularReady ? popularRank : EMPTY_RANK;
+  const ratingMapForSort = ratingReady ? ratingMap : EMPTY_RATING_MAP;
+
   // The filtered + sorted list. Memoized so unrelated re-renders (opening the
   // sheet, a favorite toggle, etc.) don't re-run the whole pipeline; pagination
   // (currentPage/pageSize) is applied afterwards and deliberately excluded.
@@ -674,7 +689,7 @@ function CloudScreen({navigation, route}) {
     if (saleOnly) {
       // Match the card's sale threshold (>=1% off).
       list = list.filter((item: any) => {
-        const p = getPrice(priceMap, item.productId);
+        const p = getPrice(priceMapForFilter, item.productId);
         return !!p?.onSale && discountPercent(p) > 0;
       });
     }
@@ -700,7 +715,7 @@ function CloudScreen({navigation, route}) {
     // Sort (copy first so a shared source array is never mutated).
     if (popularReady) {
       const rankOf = (item: any) => {
-        const r = popularRank[(item.productId || '').toUpperCase()];
+        const r = popularRankForSort[(item.productId || '').toUpperCase()];
         return r === undefined ? Number.MAX_SAFE_INTEGER : r;
       };
       list = [...list].sort((a: any, b: any) => rankOf(a) - rankOf(b));
@@ -708,7 +723,7 @@ function CloudScreen({navigation, route}) {
       // Weight the average by sample size (Bayesian shrink to a neutral prior)
       // so a single 5-star review doesn't outrank a highly-rated popular game.
       const scoreOf = (item: any) => {
-        const r = ratingMap[(item.productId || '').toUpperCase()];
+        const r = ratingMapForSort[(item.productId || '').toUpperCase()];
         if (!r) {
           return -1;
         }
@@ -731,11 +746,11 @@ function CloudScreen({navigation, route}) {
     saleOnly,
     selectedGenre,
     keyword,
-    priceMap,
+    priceMapForFilter,
     popularReady,
     ratingReady,
-    popularRank,
-    ratingMap,
+    popularRankForSort,
+    ratingMapForSort,
   ]);
 
   // Always recompute (0 when a filter empties the list) so a stale page count
