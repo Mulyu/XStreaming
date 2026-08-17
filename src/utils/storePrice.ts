@@ -79,6 +79,11 @@ export type PriceInfo = {
   saleEndDate?: string; // ISO string, only present while on sale
 };
 
+export type RatingInfo = {
+  average: number; // Store user rating, 1-5
+  count: number; // number of ratings (a popularity proxy)
+};
+
 // Build the public Store page URL for a title. productId === StoreId for
 // xCloud catalog titles, so no extra API call is needed.
 export const getStoreUrl = (storeId: string): string =>
@@ -168,10 +173,38 @@ export const extractPrice = (product: any): PriceInfo | null => {
   };
 };
 
+// Store user rating from the same DisplayCatalog response as the price.
+export const extractRating = (product: any): RatingInfo | null => {
+  const usage = product?.MarketProperties?.[0]?.UsageData;
+  if (!Array.isArray(usage)) {
+    return null;
+  }
+  let best: RatingInfo | null = null;
+  for (const u of usage) {
+    const count = parseAmount(u?.RatingCount);
+    const average = parseAmount(u?.AverageRating);
+    // Need both a real score and a sample; a missing average parses to 0.
+    if (count <= 0 || average <= 0) {
+      continue;
+    }
+    // Prefer the AllTime aggregate; otherwise keep the largest sample.
+    if (u?.AggregateTimeSpan === 'AllTime') {
+      best = {average, count};
+      break;
+    }
+    if (!best || count > best.count) {
+      best = {average, count};
+    }
+  }
+  return best;
+};
+
 export type FetchPricesResult = {
   // Prices keyed by canonical uppercase Store id; ids without a purchasable
   // price are omitted.
   prices: Record<string, PriceInfo>;
+  // Store ratings keyed by the same uppercase Store id.
+  ratings: Record<string, RatingInfo>;
   // true only when every batch responded, so callers can tell "this market
   // genuinely has no store prices" from "the network failed" and retry.
   ok: boolean;
@@ -188,9 +221,10 @@ export const fetchPrices = async (
     new Set((storeIds || []).filter(id => typeof id === 'string' && id)),
   );
   const prices: Record<string, PriceInfo> = {};
+  const ratings: Record<string, RatingInfo> = {};
 
   if (ids.length === 0) {
-    return {prices, ok: true};
+    return {prices, ratings, ok: true};
   }
 
   const chunks: string[][] = [];
@@ -215,10 +249,18 @@ export const fetchPrices = async (
         const products = res?.data?.Products;
         if (Array.isArray(products)) {
           products.forEach((product: any) => {
+            if (!product?.ProductId) {
+              return;
+            }
+            // Key by the canonical uppercase big-id so lookups are case-safe.
+            const key = String(product.ProductId).toUpperCase();
             const info = extractPrice(product);
-            if (info && product?.ProductId) {
-              // Key by the canonical uppercase big-id so lookups are case-safe.
-              prices[String(product.ProductId).toUpperCase()] = info;
+            if (info) {
+              prices[key] = info;
+            }
+            const rating = extractRating(product);
+            if (rating) {
+              ratings[key] = rating;
             }
           });
         }
@@ -229,10 +271,10 @@ export const fetchPrices = async (
     }),
   );
 
-  return {prices, ok};
+  return {prices, ratings, ok};
 };
 
-const delay = (ms: number): Promise<void> =>
+export const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 
 // fetchPrices, retrying the whole request (with backoff) while a batch fails.
@@ -310,6 +352,11 @@ export const discountPercent = (info: PriceInfo): number => {
   }
   return Math.round((1 - info.listPrice / info.msrp) * 100);
 };
+
+// The canonical "counts as on sale for display/filtering" rule: on sale with a
+// discount that rounds to at least 1%, so a sub-1% price isn't shown struck.
+export const isSaleForDisplay = (info?: PriceInfo | null): boolean =>
+  !!info?.onSale && discountPercent(info) > 0;
 
 // A short, human sale-end label ("~ 8/24"), or empty when there's no usable
 // date. Guards against the API's far-future sentinel dates.
