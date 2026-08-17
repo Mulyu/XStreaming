@@ -391,10 +391,12 @@ function CloudScreen({navigation, route}) {
     );
   }, [titles, gameLanguage, deviceRegion]);
 
-  // Rows re-render when favorites, prices, ratings, or popularity change.
+  // Rows only render the favorite heart and the price, so only those inputs
+  // force a row re-render; sort/rating/popular changes reorder the data array
+  // (showTitles) instead, which FlatList already reacts to.
   const listExtraData = React.useMemo(
-    () => ({starTitles, priceMap, ratingMap, popularRank, sortMode}),
-    [starTitles, priceMap, ratingMap, popularRank, sortMode],
+    () => ({starTitles, priceMap}),
+    [starTitles, priceMap],
   );
 
   // Load the "Most popular on cloud" order (same list as the web popular
@@ -422,11 +424,13 @@ function CloudScreen({navigation, route}) {
       if (popularMarketRef.current !== market || !isMountedRef.current) {
         return;
       }
-      if (order.length === 0) {
-        // Failed — free the claim so a later change can retry.
+      if (order === null) {
+        // Every attempt failed — free the claim so a later change can retry.
         popularMarketRef.current = '';
         return;
       }
+      // Success (order may be a legitimately empty list). Cache it either way
+      // so an empty market isn't refetched on every change.
       savePopularOrder(order, market);
       setPopularRank(buildPopularRank(order));
     });

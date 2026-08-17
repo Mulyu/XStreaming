@@ -45,14 +45,15 @@ const fetchPopularOrderOnce = async (
 };
 
 // Fetch the popularity-ordered Store ids (uppercased), retrying with backoff so
-// a single transient failure doesn't disable the sort. A legitimately empty
-// response is returned immediately (no retry); resolves to [] on give-up too.
+// a single transient failure doesn't disable the sort. Returns the list (which
+// may be a legitimately empty []) on success, or null when every attempt failed
+// — so the caller can negative-cache an empty market but retry a real failure.
 export const fetchPopularOrder = async (
   market = 'US',
   language = 'en-US',
   attempts = 3,
   baseDelayMs = 10000,
-): Promise<string[]> => {
+): Promise<string[] | null> => {
   for (let attempt = 0; attempt < attempts; attempt++) {
     const order = await fetchPopularOrderOnce(market, language);
     if (order !== null) {
@@ -62,7 +63,7 @@ export const fetchPopularOrder = async (
       await delay(baseDelayMs * Math.pow(2, attempt));
     }
   }
-  return [];
+  return null;
 };
 
 // Build a productId -> rank (0-based) map for fast sorting.
