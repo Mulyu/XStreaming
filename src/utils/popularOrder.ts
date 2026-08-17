@@ -31,9 +31,9 @@ const fetchPopularOrderOnce = async (
     if (!Array.isArray(data)) {
       return [];
     }
-    // Index 0 is the collection metadata ({siglId,title,...}); products follow.
+    // The leading collection-metadata element ({siglId,title,...}) has no `id`,
+    // so filtering on a string id drops it without assuming its position.
     return data
-      .slice(1)
       .map((entry: any) => entry?.id)
       .filter((id: any) => typeof id === 'string' && id)
       .map((id: string) => id.toUpperCase());
