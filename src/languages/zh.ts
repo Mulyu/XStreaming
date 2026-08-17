@@ -513,7 +513,6 @@ export default {
     Clear: '清除',
     Apply: '应用',
     Genre: '类型',
-    'Tap to filter': '点击筛选',
     Sort: '排序',
     Recommended: '推荐',
     Popular: '热门',

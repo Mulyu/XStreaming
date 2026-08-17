@@ -485,7 +485,6 @@ export default {
     Clear: 'साफ़ करें',
     Apply: 'लागू करें',
     Genre: 'शैली',
-    'Tap to filter': 'फ़िल्टर करने के लिए टैप करें',
     Sort: 'क्रमबद्ध करें',
     Recommended: 'अनुशंसित',
     Popular: 'लोकप्रिय',

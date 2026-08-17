@@ -465,7 +465,6 @@ export default {
     Clear: '초기화',
     Apply: '적용',
     Genre: '장르',
-    'Tap to filter': '탭하여 필터',
     Sort: '정렬',
     Recommended: '추천순',
     Popular: '인기순',

@@ -523,7 +523,6 @@ export default {
     Clear: 'Limpar',
     Apply: 'Aplicar',
     Genre: 'Gênero',
-    'Tap to filter': 'Toque para filtrar',
     Sort: 'Ordenar',
     Recommended: 'Recomendado',
     Popular: 'Popular',

@@ -181,8 +181,12 @@ export const extractRating = (product: any): RatingInfo | null => {
   }
   let best: RatingInfo | null = null;
   for (const u of usage) {
-    const average = parseAmount(u?.AverageRating);
     const count = parseAmount(u?.RatingCount);
+    if (count <= 0) {
+      continue;
+    }
+    const average = parseAmount(u?.AverageRating);
+    // Prefer the AllTime aggregate; otherwise keep the largest sample.
     if (u?.AggregateTimeSpan === 'AllTime') {
       best = {average, count};
       break;
@@ -190,9 +194,6 @@ export const extractRating = (product: any): RatingInfo | null => {
     if (!best || count > best.count) {
       best = {average, count};
     }
-  }
-  if (!best || best.count <= 0) {
-    return null;
   }
   return best;
 };

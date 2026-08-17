@@ -519,7 +519,6 @@ export default {
     Clear: 'Zurücksetzen',
     Apply: 'Anwenden',
     Genre: 'Genre',
-    'Tap to filter': 'Zum Filtern tippen',
     Sort: 'Sortieren',
     Recommended: 'Empfohlen',
     Popular: 'Beliebt',

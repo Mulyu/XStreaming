@@ -337,11 +337,12 @@ function CloudScreen({navigation, route}) {
     }
     priceSigRef.current = sig;
 
-    // Reuse the cache only when it covers exactly this market + title set.
+    // Reuse the cache only when it covers exactly this market + title set AND
+    // carries ratings (pre-rating caches lack ratingMap, so refetch to fill it).
     const cache = getFreshPriceCache(market);
-    if (cache && cache.sig === sig) {
+    if (cache && cache.sig === sig && cache.ratingMap) {
       setPriceMap(cache.priceMap);
-      setRatingMap(cache.ratingMap || {});
+      setRatingMap(cache.ratingMap);
       return;
     }
 
@@ -708,7 +709,7 @@ function CloudScreen({navigation, route}) {
     currentTitles.current = [...currentTitles.current].sort(
       (a: any, b: any) => rankOf(a) - rankOf(b),
     );
-  } else if (sortMode === 'rating') {
+  } else if (sortMode === 'rating' && Object.keys(ratingMap).length > 0) {
     const ratingOf = (item: any) =>
       ratingMap[(item.productId || '').toUpperCase()];
     currentTitles.current = [...currentTitles.current].sort(
@@ -1330,10 +1331,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '800',
-  },
-  filterHint: {
-    fontSize: 12,
-    color: '#9096a8',
   },
   activePill: {
     flexDirection: 'row',

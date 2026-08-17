@@ -542,7 +542,6 @@ export default {
     Clear: 'Clear',
     Apply: 'Apply',
     Genre: 'Genre',
-    'Tap to filter': 'Tap to filter',
     Sort: 'Sort',
     Recommended: 'Recommended',
     Popular: 'Popular',

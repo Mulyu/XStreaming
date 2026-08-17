@@ -469,7 +469,6 @@ export default {
     Clear: 'クリア',
     Apply: '適用',
     Genre: 'ジャンル',
-    'Tap to filter': 'タップで絞り込み',
     Sort: '並び替え',
     Recommended: 'おすすめ順',
     Popular: '人気順',
