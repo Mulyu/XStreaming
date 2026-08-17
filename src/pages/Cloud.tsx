@@ -65,6 +65,7 @@ const RATING_PRIOR_WEIGHT = 50;
 const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
 const EMPTY_RATING_MAP: Record<string, RatingInfo> = {};
 const EMPTY_RANK: Record<string, number> = {};
+const EMPTY_LIST: any[] = [];
 
 const log = debugFactory('CloudScreen');
 
@@ -359,6 +360,10 @@ function CloudScreen({navigation, route}) {
       }
     }
 
+    // Drop a previous market's ratings while the new ones load, so the rating
+    // sort never orders the new market's titles by the old market's ratings.
+    setRatingMap({});
+
     // fetchPricesWithRetry handles the bounded backoff internally.
     fetchPricesWithRetry(storeIds, market, language).then(
       ({prices, ratings, ok}) => {
@@ -646,8 +651,11 @@ function CloudScreen({navigation, route}) {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [titles]);
 
-  // Only depend on price/rating/popular data when a control actually consumes
-  // it, so async price/rating arrivals don't recompute the list otherwise.
+  // Only depend on data when the active view/control actually consumes it, so
+  // an async arrival into an unused source doesn't recompute the list.
+  const viewKey = `${current}`;
+  const recentForView = viewKey === '0' ? recentTitles : EMPTY_LIST;
+  const newForView = viewKey === '2' ? newTitles : EMPTY_LIST;
   const priceMapForFilter = saleOnly ? priceMap : EMPTY_PRICE_MAP;
   const popularRankForSort = popularReady ? popularRank : EMPTY_RANK;
   const ratingMapForSort = ratingReady ? ratingMap : EMPTY_RATING_MAP;
@@ -658,9 +666,9 @@ function CloudScreen({navigation, route}) {
   const filteredTitles = React.useMemo(() => {
     // View (0 recent / 1 star / 2 newest / 3 all).
     let list: any[];
-    switch (`${current}`) {
+    switch (viewKey) {
       case '0':
-        list = recentTitles;
+        list = recentForView;
         break;
       case '1':
         list = (titles as any[]).filter(
@@ -670,7 +678,7 @@ function CloudScreen({navigation, route}) {
         );
         break;
       case '2':
-        list = newTitles;
+        list = newForView;
         break;
       case '3':
         list = titles;
@@ -712,13 +720,17 @@ function CloudScreen({navigation, route}) {
       );
     }
 
-    // Sort (copy first so a shared source array is never mutated).
+    // Sort. Decorate each item with its key once (not per comparison), sort a
+    // copy, then undecorate — never mutating the shared source array.
     if (popularReady) {
-      const rankOf = (item: any) => {
+      const keyOf = (item: any) => {
         const r = popularRankForSort[(item.productId || '').toUpperCase()];
         return r === undefined ? Number.MAX_SAFE_INTEGER : r;
       };
-      list = [...list].sort((a: any, b: any) => rankOf(a) - rankOf(b));
+      list = list
+        .map((item: any) => ({item, key: keyOf(item)}))
+        .sort((a, b) => a.key - b.key)
+        .map(d => d.item);
     } else if (ratingReady) {
       // Weight the average by sample size (Bayesian shrink to a neutral prior)
       // so a single 5-star review doesn't outrank a highly-rated popular game.
@@ -732,14 +744,17 @@ function CloudScreen({navigation, route}) {
           (r.count + RATING_PRIOR_WEIGHT)
         );
       };
-      list = [...list].sort((a: any, b: any) => scoreOf(b) - scoreOf(a));
+      list = list
+        .map((item: any) => ({item, key: scoreOf(item)}))
+        .sort((a, b) => b.key - a.key)
+        .map(d => d.item);
     }
 
     return list;
   }, [
-    current,
-    recentTitles,
-    newTitles,
+    viewKey,
+    recentForView,
+    newForView,
     titles,
     starTitles,
     playableOnly,
@@ -784,16 +799,19 @@ function CloudScreen({navigation, route}) {
     label: string,
     active: boolean,
     onPress: () => void,
+    disabled = false,
   ) => (
     <Pressable
       key={key}
-      focusable={true}
-      onPress={onPress}
+      focusable={!disabled}
+      disabled={disabled}
+      onPress={disabled ? undefined : onPress}
       android_ripple={{color: 'rgba(16, 124, 16, 0.16)'}}
       style={[
         styles.filterChip,
         styles.genreGridChip,
         active && styles.filterChipSelected,
+        disabled && styles.filterChipDisabled,
       ]}>
       <Text
         numberOfLines={1}
@@ -914,14 +932,22 @@ function CloudScreen({navigation, route}) {
 
                 <Text style={styles.sheetHeader}>{t('Sort')}</Text>
                 <View style={styles.genreGrid}>
-                  {sortOptions.map(s =>
-                    renderGenreChip(
+                  {sortOptions.map(s => {
+                    // Popular/Rating stay disabled until their data is loaded,
+                    // so the user can't pick a sort that wouldn't take effect.
+                    const disabled =
+                      (s.value === 'popular' &&
+                        Object.keys(popularRank).length === 0) ||
+                      (s.value === 'rating' &&
+                        Object.keys(ratingMap).length === 0);
+                    return renderGenreChip(
                       `sort_${s.value}`,
                       s.label,
                       sortMode === s.value,
                       () => handleSelectSort(s.value),
-                    ),
-                  )}
+                      disabled,
+                    );
+                  })}
                 </View>
 
                 <Text style={styles.sheetHeader}>{t('Refine')}</Text>
@@ -1244,6 +1270,9 @@ const styles = StyleSheet.create({
   filterChipSelected: {
     backgroundColor: '#107C10',
     borderColor: '#107C10',
+  },
+  filterChipDisabled: {
+    opacity: 0.4,
   },
   filterChipText: {
     fontSize: 12,

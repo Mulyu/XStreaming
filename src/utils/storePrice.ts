@@ -274,7 +274,7 @@ export const fetchPrices = async (
   return {prices, ratings, ok};
 };
 
-const delay = (ms: number): Promise<void> =>
+export const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 
 // fetchPrices, retrying the whole request (with backoff) while a batch fails.

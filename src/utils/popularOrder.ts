@@ -1,5 +1,6 @@
 import axios from 'axios';
 import {debugFactory} from './debug';
+import {delay} from './storePrice';
 
 const log = debugFactory('popularOrder');
 
@@ -9,13 +10,13 @@ const log = debugFactory('popularOrder');
 const POPULAR_SIGL_ID = '6a589fa0-d493-472b-8e20-3813699d7056';
 const SIGLS_URL = 'https://catalog.gamepass.com/sigls/v2';
 
-const delay = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms));
-
+// Returns the ordered ids, or null on a transient failure (so the caller can
+// tell "this market has no list" from "the request failed" and only retry the
+// latter).
 const fetchPopularOrderOnce = async (
   market: string,
   language: string,
-): Promise<string[]> => {
+): Promise<string[] | null> => {
   try {
     const res = await axios.get(SIGLS_URL, {
       params: {
@@ -39,13 +40,13 @@ const fetchPopularOrderOnce = async (
       .map((id: string) => id.toUpperCase());
   } catch (e) {
     log.info('fetchPopularOrder failed:', e);
-    return [];
+    return null;
   }
 };
 
 // Fetch the popularity-ordered Store ids (uppercased), retrying with backoff so
-// a single transient failure doesn't disable the sort. Resolves to [] only when
-// every attempt fails — callers then fall back to their default order.
+// a single transient failure doesn't disable the sort. A legitimately empty
+// response is returned immediately (no retry); resolves to [] on give-up too.
 export const fetchPopularOrder = async (
   market = 'US',
   language = 'en-US',
@@ -54,8 +55,8 @@ export const fetchPopularOrder = async (
 ): Promise<string[]> => {
   for (let attempt = 0; attempt < attempts; attempt++) {
     const order = await fetchPopularOrderOnce(market, language);
-    if (order.length > 0) {
-      return order;
+    if (order !== null) {
+      return order; // success (possibly a legitimate empty list)
     }
     if (attempt < attempts - 1) {
       await delay(baseDelayMs * Math.pow(2, attempt));
