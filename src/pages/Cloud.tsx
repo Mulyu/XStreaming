@@ -55,6 +55,11 @@ import {getTitleProductId} from '../store/shortcutStore';
 
 type SortMode = 'reco' | 'popular' | 'rating';
 
+// Bayesian prior for the rating sort: shrink low-sample averages toward a
+// neutral mean so a lone 5-star review can't top a highly-rated popular game.
+const RATING_PRIOR_MEAN = 3.5;
+const RATING_PRIOR_WEIGHT = 50;
+
 const log = debugFactory('CloudScreen');
 
 function CloudScreen({navigation, route}) {
@@ -110,7 +115,6 @@ function CloudScreen({navigation, route}) {
     };
   }, []);
 
-  const currentTitles = React.useRef([]);
   const totalPage = React.useRef(0);
   const isLandscape = screenWidth > screenHeight;
   const isLargeScreen = Platform.isTV || isLandscape;
@@ -514,9 +518,11 @@ function CloudScreen({navigation, route}) {
 
   // A non-default sort only counts as "active" once its data is available,
   // so the badge/pill don't claim a sort the list hasn't actually applied.
-  const sortApplies =
-    (sortMode === 'popular' && Object.keys(popularRank).length > 0) ||
-    (sortMode === 'rating' && Object.keys(ratingMap).length > 0);
+  const popularReady =
+    sortMode === 'popular' && Object.keys(popularRank).length > 0;
+  const ratingReady =
+    sortMode === 'rating' && Object.keys(ratingMap).length > 0;
+  const sortApplies = popularReady || ratingReady;
   const activeFilterCount =
     (playableOnly ? 1 : 0) +
     (saleOnly ? 1 : 0) +
@@ -631,111 +637,113 @@ function CloudScreen({navigation, route}) {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [titles]);
 
-  /**
-   * 0 - recent
-   * 1 - star
-   * 2 - newest
-   * 3 - all
-   */
-  switch (`${current}`) {
-    case '0':
-      currentTitles.current = recentTitles;
-      break;
-    case '1':
-      const _starTitles: any = [];
-      titles.forEach(item => {
-        // Get star games
-        if (
-          starTitles.includes(item.XCloudTitleId) ||
-          starTitles.includes(item.titleId)
-        ) {
-          _starTitles.push(item);
-        }
+  // The filtered + sorted list. Memoized so unrelated re-renders (opening the
+  // sheet, a favorite toggle, etc.) don't re-run the whole pipeline; pagination
+  // (currentPage/pageSize) is applied afterwards and deliberately excluded.
+  const filteredTitles = React.useMemo(() => {
+    // View (0 recent / 1 star / 2 newest / 3 all).
+    let list: any[];
+    switch (`${current}`) {
+      case '0':
+        list = recentTitles;
+        break;
+      case '1':
+        list = (titles as any[]).filter(
+          (item: any) =>
+            starTitles.includes(item.XCloudTitleId) ||
+            starTitles.includes(item.titleId),
+        );
+        break;
+      case '2':
+        list = newTitles;
+        break;
+      case '3':
+        list = titles;
+        break;
+      default:
+        list = [];
+        break;
+    }
+
+    // "Playable" is a filter now: keep only entitled titles.
+    if (playableOnly) {
+      list = list.filter(
+        (item: any) => item.details && item.details.hasEntitlement === true,
+      );
+    }
+    if (saleOnly) {
+      // Match the card's sale threshold (>=1% off).
+      list = list.filter((item: any) => {
+        const p = getPrice(priceMap, item.productId);
+        return !!p?.onSale && discountPercent(p) > 0;
       });
-      currentTitles.current = _starTitles;
-      break;
-    case '2':
-      currentTitles.current = newTitles;
-      break;
-    case '3':
-      currentTitles.current = titles;
-      break;
-    default:
-      currentTitles.current = [];
-      break;
-  }
-
-  // "Playable" moved from a tab to a filter: keep only titles the user is
-  // entitled to (positive signal, avoids permission errors on launch).
-  if (playableOnly) {
-    currentTitles.current = currentTitles.current.filter(
-      (item: any) => item.details && item.details.hasEntitlement === true,
-    );
-  }
-
-  if (saleOnly) {
-    // Match the card's sale threshold (>=1% off), so the filter never surfaces
-    // a title whose card shows no sale indicator.
-    currentTitles.current = currentTitles.current.filter((item: any) => {
-      const p = getPrice(priceMap, item.productId);
-      return !!p?.onSale && discountPercent(p) > 0;
-    });
-  }
-
-  if (selectedGenre) {
-    currentTitles.current = currentTitles.current.filter((item: any) => {
-      const cats = item?.LocalizedCategories || item?.Categories;
-      // Compare against trimmed values — the genre chips are built from
-      // c.trim(), so a whitespace-padded category would otherwise never match.
-      return (
-        Array.isArray(cats) &&
-        cats.some(
-          (c: any) => typeof c === 'string' && c.trim() === selectedGenre,
-        )
+    }
+    if (selectedGenre) {
+      list = list.filter((item: any) => {
+        const cats = item?.LocalizedCategories || item?.Categories;
+        // Compare trimmed — the genre chips are built from c.trim().
+        return (
+          Array.isArray(cats) &&
+          cats.some(
+            (c: any) => typeof c === 'string' && c.trim() === selectedGenre,
+          )
+        );
+      });
+    }
+    if (keyword.length > 0) {
+      list = list.filter(
+        (title: any) =>
+          title.ProductTitle.toUpperCase().indexOf(keyword.toUpperCase()) > -1,
       );
-    });
-  }
+    }
 
-  if (keyword.length > 0) {
-    currentTitles.current = currentTitles.current.filter((title: any) => {
-      return (
-        title.ProductTitle.toUpperCase().indexOf(keyword.toUpperCase()) > -1
-      );
-    });
-  }
-
-  // Sort. Copy first — currentTitles.current may still reference a shared
-  // source array (e.g. titles) when no filter created a new one.
-  if (sortMode === 'popular' && Object.keys(popularRank).length > 0) {
-    const rankOf = (item: any) => {
-      const r = popularRank[(item.productId || '').toUpperCase()];
-      return r === undefined ? Number.MAX_SAFE_INTEGER : r;
-    };
-    currentTitles.current = [...currentTitles.current].sort(
-      (a: any, b: any) => rankOf(a) - rankOf(b),
-    );
-  } else if (sortMode === 'rating' && Object.keys(ratingMap).length > 0) {
-    const ratingOf = (item: any) =>
-      ratingMap[(item.productId || '').toUpperCase()];
-    currentTitles.current = [...currentTitles.current].sort(
-      (a: any, b: any) => {
-        const ra = ratingOf(a);
-        const rb = ratingOf(b);
-        const avgDiff = (rb?.average ?? -1) - (ra?.average ?? -1);
-        if (avgDiff !== 0) {
-          return avgDiff;
+    // Sort (copy first so a shared source array is never mutated).
+    if (popularReady) {
+      const rankOf = (item: any) => {
+        const r = popularRank[(item.productId || '').toUpperCase()];
+        return r === undefined ? Number.MAX_SAFE_INTEGER : r;
+      };
+      list = [...list].sort((a: any, b: any) => rankOf(a) - rankOf(b));
+    } else if (ratingReady) {
+      // Weight the average by sample size (Bayesian shrink to a neutral prior)
+      // so a single 5-star review doesn't outrank a highly-rated popular game.
+      const scoreOf = (item: any) => {
+        const r = ratingMap[(item.productId || '').toUpperCase()];
+        if (!r) {
+          return -1;
         }
-        return (rb?.count ?? 0) - (ra?.count ?? 0);
-      },
-    );
-  }
+        return (
+          (r.average * r.count + RATING_PRIOR_MEAN * RATING_PRIOR_WEIGHT) /
+          (r.count + RATING_PRIOR_WEIGHT)
+        );
+      };
+      list = [...list].sort((a: any, b: any) => scoreOf(b) - scoreOf(a));
+    }
+
+    return list;
+  }, [
+    current,
+    recentTitles,
+    newTitles,
+    titles,
+    starTitles,
+    playableOnly,
+    saleOnly,
+    selectedGenre,
+    keyword,
+    priceMap,
+    popularReady,
+    ratingReady,
+    popularRank,
+    ratingMap,
+  ]);
 
   // Always recompute (0 when a filter empties the list) so a stale page count
   // can't keep the load-more footer spinning under an empty result.
-  totalPage.current = Math.ceil(currentTitles.current.length / pageSize);
+  totalPage.current = Math.ceil(filteredTitles.length / pageSize);
 
   const endIdx = currentPage * pageSize;
-  let showTitles = currentTitles.current.slice(0, endIdx);
+  let showTitles = filteredTitles.slice(0, endIdx);
 
   // Views (formerly the top tab strip) now live in the controls sheet.
   const viewOptions = [
