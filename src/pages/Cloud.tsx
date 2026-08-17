@@ -497,9 +497,8 @@ function CloudScreen({navigation, route}) {
   };
 
   const handleClearFilters = () => {
-    // Clear every control in the sheet, including the View (back to All), so
-    // "Clear" is consistent with the unified sheet's contents.
-    setCurrent('3');
+    // Clear the sort and filters but keep the current View — View is the
+    // primary list selection (like a tab), not a refinement to reset.
     setPlayableOnly(false);
     setSaleOnly(false);
     setSelectedGenre('');
@@ -515,11 +514,16 @@ function CloudScreen({navigation, route}) {
     }
   };
 
+  // A non-default sort only counts as "active" once its data is available,
+  // so the badge/pill don't claim a sort the list hasn't actually applied.
+  const sortApplies =
+    (sortMode === 'popular' && Object.keys(popularRank).length > 0) ||
+    (sortMode === 'rating' && Object.keys(ratingMap).length > 0);
   const activeFilterCount =
     (playableOnly ? 1 : 0) +
     (saleOnly ? 1 : 0) +
     (selectedGenre ? 1 : 0) +
-    (sortMode !== 'reco' ? 1 : 0);
+    (sortApplies ? 1 : 0);
 
   const renderTutorial = () => {
     return (
@@ -849,7 +853,7 @@ function CloudScreen({navigation, route}) {
           )}
         </Pressable>
 
-        {sortMode !== 'reco' &&
+        {sortApplies &&
           renderActivePill('__sort', activeSortLabel, false, () =>
             handleSelectSort('reco'),
           )}
@@ -1196,69 +1200,6 @@ const styles = StyleSheet.create({
     maxWidth: 620,
     flex: 0,
     width: 620,
-  },
-  tabs: {
-    height: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 124, 16, 0.45)',
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-  },
-  tabsLarge: {
-    height: 40,
-  },
-  tab: {
-    flex: 1,
-    height: '100%',
-    minWidth: 64,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(16, 124, 16, 0.24)',
-  },
-  tabMobileScroll: {
-    flexGrow: 0,
-    flexShrink: 0,
-    minWidth: 72,
-    paddingHorizontal: 14,
-  },
-  tabsScrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-  },
-  tabLarge: {
-    minWidth: 86,
-    paddingHorizontal: 12,
-  },
-  tabSelected: {
-    backgroundColor: '#107C10',
-  },
-  tabFocused: {
-    borderColor: '#FFFFFF',
-    borderWidth: 2,
-  },
-  tabPressed: {
-    opacity: 0.78,
-  },
-  tabText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
-    letterSpacing: 0,
-    color: '#107C10',
-    includeFontPadding: false,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-  },
-  tabTextLarge: {
-    fontSize: 12,
-  },
-  tabTextSelected: {
-    color: '#FFFFFF',
   },
   filterBar: {
     flexGrow: 0,
