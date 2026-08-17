@@ -41,7 +41,7 @@ import {
   deriveMarketLanguage,
   getStoreUrl,
   getPrice,
-  discountPercent,
+  isSaleForDisplay,
 } from '../utils/storePrice';
 import {fetchPopularOrder, buildPopularRank} from '../utils/popularOrder';
 import {
@@ -699,11 +699,10 @@ function CloudScreen({navigation, route}) {
       );
     }
     if (saleOnly) {
-      // Match the card's sale threshold (>=1% off).
-      list = list.filter((item: any) => {
-        const p = getPrice(priceMapForFilter, item.productId);
-        return !!p?.onSale && discountPercent(p) > 0;
-      });
+      // Match the card's sale threshold (shared isSaleForDisplay rule).
+      list = list.filter((item: any) =>
+        isSaleForDisplay(getPrice(priceMapForFilter, item.productId)),
+      );
     }
     if (selectedGenre) {
       list = list.filter((item: any) => {
@@ -718,9 +717,10 @@ function CloudScreen({navigation, route}) {
       });
     }
     if (keyword.length > 0) {
+      const upper = keyword.toUpperCase();
       list = list.filter(
         (title: any) =>
-          title.ProductTitle.toUpperCase().indexOf(keyword.toUpperCase()) > -1,
+          (title.ProductTitle || '').toUpperCase().indexOf(upper) > -1,
       );
     }
 

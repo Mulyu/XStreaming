@@ -30,7 +30,9 @@ const fetchPopularOrderOnce = async (
     });
     const data = res?.data;
     if (!Array.isArray(data)) {
-      return [];
+      // Unexpected shape (e.g. a 200 error body) — treat as a failure to retry,
+      // not a legitimately empty list.
+      return null;
     }
     // The leading collection-metadata element ({siglId,title,...}) has no `id`,
     // so filtering on a string id drops it without assuming its position.

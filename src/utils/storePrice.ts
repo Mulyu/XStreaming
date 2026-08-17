@@ -353,6 +353,11 @@ export const discountPercent = (info: PriceInfo): number => {
   return Math.round((1 - info.listPrice / info.msrp) * 100);
 };
 
+// The canonical "counts as on sale for display/filtering" rule: on sale with a
+// discount that rounds to at least 1%, so a sub-1% price isn't shown struck.
+export const isSaleForDisplay = (info?: PriceInfo | null): boolean =>
+  !!info?.onSale && discountPercent(info) > 0;
+
 // A short, human sale-end label ("~ 8/24"), or empty when there's no usable
 // date. Guards against the API's far-future sentinel dates.
 export const formatSaleEnd = (info: PriceInfo, locale?: string): string => {
