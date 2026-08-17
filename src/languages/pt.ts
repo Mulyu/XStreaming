@@ -524,5 +524,12 @@ export default {
     Apply: 'Aplicar',
     Genre: 'Gênero',
     'Tap to filter': 'Toque para filtrar',
+    Sort: 'Ordenar',
+    Recommended: 'Recomendado',
+    Popular: 'Popular',
+    Rating: 'Avaliação',
+    View: 'Visualização',
+    Refine: 'Refinar',
+    Done: 'Concluído',
   },
 };

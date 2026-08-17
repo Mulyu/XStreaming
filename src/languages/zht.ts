@@ -491,5 +491,12 @@ export default {
     Apply: '套用',
     Genre: '類型',
     'Tap to filter': '點擊篩選',
+    Sort: '排序',
+    Recommended: '推薦',
+    Popular: '熱門',
+    Rating: '評分',
+    View: '檢視',
+    Refine: '篩選',
+    Done: '完成',
   },
 };

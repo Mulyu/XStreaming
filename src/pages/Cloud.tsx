@@ -36,15 +36,24 @@ import {
 } from '../store/xcloudStore';
 import {
   PriceInfo,
+  RatingInfo,
   fetchPricesWithRetry,
   deriveMarketLanguage,
   getStoreUrl,
   getPrice,
   discountPercent,
 } from '../utils/storePrice';
-import {getFreshPriceCache, savePriceCache} from '../store/priceStore';
+import {fetchPopularOrder, buildPopularRank} from '../utils/popularOrder';
+import {
+  getFreshPriceCache,
+  savePriceCache,
+  getFreshPopularOrder,
+  savePopularOrder,
+} from '../store/priceStore';
 import {getSystemRegion} from '../utils/locale';
 import {getTitleProductId} from '../store/shortcutStore';
+
+type SortMode = 'reco' | 'popular' | 'rating';
 
 const log = debugFactory('CloudScreen');
 
@@ -77,7 +86,15 @@ function CloudScreen({navigation, route}) {
   const [playableOnly, setPlayableOnly] = React.useState(false);
   const [saleOnly, setSaleOnly] = React.useState(false);
   const [selectedGenre, setSelectedGenre] = React.useState('');
+  const [sortMode, setSortMode] = React.useState<SortMode>('reco');
   const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
+  const [ratingMap, setRatingMap] = React.useState<Record<string, RatingInfo>>(
+    {},
+  );
+  const [popularRank, setPopularRank] = React.useState<Record<string, number>>(
+    {},
+  );
+  const popularMarketRef = React.useRef<string>('');
   const filterChangedInSheetRef = React.useRef(false);
   const flatListRef = React.useRef<any>(null);
   const isFetchGame = React.useRef(false);
@@ -324,35 +341,79 @@ function CloudScreen({navigation, route}) {
     const cache = getFreshPriceCache(market);
     if (cache && cache.sig === sig) {
       setPriceMap(cache.priceMap);
+      setRatingMap(cache.ratingMap || {});
       return;
     }
 
     // fetchPricesWithRetry handles the bounded backoff internally.
-    fetchPricesWithRetry(storeIds, market, language).then(({prices, ok}) => {
-      // Drop the result if a newer request superseded this one, or we unmounted.
-      if (priceSigRef.current !== sig || !isMountedRef.current) {
-        return;
-      }
-      if (ok) {
-        savePriceCache(prices, market, sig);
-        setPriceMap(prices);
-      } else {
-        // Retries exhausted — merge in whatever arrived (don't drop already
-        // shown prices), don't cache the partial, and free the claim so a
-        // later market/title-set change refetches.
-        if (Object.keys(prices).length > 0) {
-          setPriceMap(prev => ({...prev, ...prices}));
+    fetchPricesWithRetry(storeIds, market, language).then(
+      ({prices, ratings, ok}) => {
+        // Drop the result if a newer request superseded this one, or unmounted.
+        if (priceSigRef.current !== sig || !isMountedRef.current) {
+          return;
         }
-        priceSigRef.current = '';
-      }
-    });
+        if (ok) {
+          savePriceCache(prices, ratings, market, sig);
+          setPriceMap(prices);
+          setRatingMap(ratings);
+        } else {
+          // Retries exhausted — merge in whatever arrived (don't drop already
+          // shown data), don't cache the partial, and free the claim so a
+          // later market/title-set change refetches.
+          if (Object.keys(prices).length > 0) {
+            setPriceMap(prev => ({...prev, ...prices}));
+          }
+          if (Object.keys(ratings).length > 0) {
+            setRatingMap(prev => ({...prev, ...ratings}));
+          }
+          priceSigRef.current = '';
+        }
+      },
+    );
   }, [titles, gameLanguage, deviceRegion]);
 
-  // Rows re-render when favorites or fetched prices change.
+  // Rows re-render when favorites, prices, ratings, or popularity change.
   const listExtraData = React.useMemo(
-    () => ({starTitles, priceMap}),
-    [starTitles, priceMap],
+    () => ({starTitles, priceMap, ratingMap, popularRank, sortMode}),
+    [starTitles, priceMap, ratingMap, popularRank, sortMode],
   );
+
+  // Load the "Most popular on cloud" order (same list as the web popular
+  // gallery) once per market, cached, for the popularity sort.
+  React.useEffect(() => {
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
+    if (popularMarketRef.current === market) {
+      return;
+    }
+    popularMarketRef.current = market;
+
+    const cached = getFreshPopularOrder(market);
+    if (cached) {
+      setPopularRank(buildPopularRank(cached));
+      return;
+    }
+
+    let cancelled = false;
+    fetchPopularOrder(market, language).then(order => {
+      if (cancelled) {
+        return;
+      }
+      if (order.length === 0) {
+        // Failed — free the claim so a later change can retry.
+        if (popularMarketRef.current === market) {
+          popularMarketRef.current = '';
+        }
+        return;
+      }
+      savePopularOrder(order, market);
+      if (isMountedRef.current) {
+        setPopularRank(buildPopularRank(order));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [gameLanguage, deviceRegion]);
 
   const handleOpenSearch = () => {
     navigation.navigate('Search', {
@@ -397,16 +458,6 @@ function CloudScreen({navigation, route}) {
     }
   };
 
-  const handleSelectCategories = val => {
-    setCurrent(val);
-    setLoading(true);
-    setCurrentPage(1);
-    scrollToTop();
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  };
-
   // Reset paging after a filter change. Only scroll when the change came from
   // the inline bar; while the sheet is open the list is covered, so we defer
   // the scroll until the sheet closes — and only if a filter actually changed.
@@ -434,10 +485,21 @@ function CloudScreen({navigation, route}) {
     resetAfterFilterChange();
   };
 
+  const handleSelectView = (val: string) => {
+    setCurrent(val);
+    resetAfterFilterChange();
+  };
+
+  const handleSelectSort = (mode: SortMode) => {
+    setSortMode(mode);
+    resetAfterFilterChange();
+  };
+
   const handleClearFilters = () => {
     setPlayableOnly(false);
     setSaleOnly(false);
     setSelectedGenre('');
+    setSortMode('reco');
     resetAfterFilterChange();
   };
 
@@ -450,7 +512,10 @@ function CloudScreen({navigation, route}) {
   };
 
   const activeFilterCount =
-    (playableOnly ? 1 : 0) + (saleOnly ? 1 : 0) + (selectedGenre ? 1 : 0);
+    (playableOnly ? 1 : 0) +
+    (saleOnly ? 1 : 0) +
+    (selectedGenre ? 1 : 0) +
+    (sortMode !== 'reco' ? 1 : 0);
 
   const renderTutorial = () => {
     return (
@@ -633,75 +698,57 @@ function CloudScreen({navigation, route}) {
     });
   }
 
+  // Sort. Copy first — currentTitles.current may still reference a shared
+  // source array (e.g. titles) when no filter created a new one.
+  if (sortMode === 'popular' && Object.keys(popularRank).length > 0) {
+    const rankOf = (item: any) => {
+      const r = popularRank[(item.productId || '').toUpperCase()];
+      return r === undefined ? Number.MAX_SAFE_INTEGER : r;
+    };
+    currentTitles.current = [...currentTitles.current].sort(
+      (a: any, b: any) => rankOf(a) - rankOf(b),
+    );
+  } else if (sortMode === 'rating') {
+    const ratingOf = (item: any) =>
+      ratingMap[(item.productId || '').toUpperCase()];
+    currentTitles.current = [...currentTitles.current].sort(
+      (a: any, b: any) => {
+        const ra = ratingOf(a);
+        const rb = ratingOf(b);
+        const avgDiff = (rb?.average ?? -1) - (ra?.average ?? -1);
+        if (avgDiff !== 0) {
+          return avgDiff;
+        }
+        return (rb?.count ?? 0) - (ra?.count ?? 0);
+      },
+    );
+  }
+
   // Always recompute (0 when a filter empties the list) so a stale page count
   // can't keep the load-more footer spinning under an empty result.
   totalPage.current = Math.ceil(currentTitles.current.length / pageSize);
 
   const endIdx = currentPage * pageSize;
   let showTitles = currentTitles.current.slice(0, endIdx);
-  const segmentedButtons = [
-    {
-      value: '0',
-      label: t('Recently'),
-    },
-    {
-      value: '1',
-      label: t('Stars'),
-    },
-    {
-      value: '2',
-      label: t('Newest'),
-    },
-    {
-      value: '3',
-      label: t('All'),
-    },
+
+  // Views (formerly the top tab strip) now live in the controls sheet.
+  const viewOptions = [
+    {value: '0', label: t('Recently')},
+    {value: '1', label: t('Stars')},
+    {value: '2', label: t('Newest')},
+    {value: '3', label: t('All')},
   ];
-
-  const renderCategoryTabs = () => {
-    const tabNodes = segmentedButtons.map(item => {
-      const selected = `${current}` === item.value;
-      return (
-        <Pressable
-          key={item.value}
-          focusable={true}
-          onPress={() => handleSelectCategories(item.value)}
-          android_ripple={{color: 'rgba(16, 124, 16, 0.16)'}}
-          style={({focused, pressed}) => [
-            styles.tab,
-            isLargeScreen ? styles.tabLarge : styles.tabMobileScroll,
-            selected && styles.tabSelected,
-            focused && styles.tabFocused,
-            pressed && styles.tabPressed,
-          ]}>
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.tabText,
-              isLargeScreen && styles.tabTextLarge,
-              selected && styles.tabTextSelected,
-            ]}>
-            {item.label}
-          </Text>
-        </Pressable>
-      );
-    });
-
-    if (isLargeScreen) {
-      return <View style={[styles.tabs, styles.tabsLarge]}>{tabNodes}</View>;
-    }
-
-    // Mobile: allow the tab strip to scroll horizontally so all tabs stay
-    // fully usable on narrow phones instead of being clipped by the row.
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabsScrollContent}>
-        <View style={styles.tabs}>{tabNodes}</View>
-      </ScrollView>
-    );
-  };
+  const currentViewLabel =
+    viewOptions.find(v => v.value === `${current}`)?.label || t('All');
+  const sortOptions: {value: SortMode; label: string}[] = [
+    {value: 'reco', label: t('Recommended')},
+    {value: 'popular', label: t('Popular')},
+    {value: 'rating', label: t('Rating')},
+  ];
+  const activeSortLabel =
+    sortMode !== 'reco'
+      ? sortOptions.find(s => s.value === sortMode)?.label || ''
+      : '';
 
   const renderGenreChip = (
     key: string,
@@ -766,8 +813,8 @@ function CloudScreen({navigation, route}) {
     </View>
   );
 
-  // A single "Filters" entry point plus the currently applied filters as
-  // removable pills — scales as filters grow without crowding the top bar.
+  // Control bar: the current view + a single "Filters" entry point, then the
+  // applied sort/filters as removable pills. Everything opens the same sheet.
   const renderFilterBar = () => {
     return (
       <ScrollView
@@ -775,6 +822,15 @@ function CloudScreen({navigation, route}) {
         showsHorizontalScrollIndicator={false}
         style={styles.filterBar}
         contentContainerStyle={styles.filterBarContent}>
+        <Pressable
+          focusable={true}
+          onPress={() => setFilterSheetOpen(true)}
+          android_ripple={{color: 'rgba(255,255,255,0.18)'}}
+          style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>{currentViewLabel}</Text>
+          <Icon source="chevron-down" size={16} color="#FFFFFF" />
+        </Pressable>
+
         <Pressable
           focusable={true}
           onPress={() => setFilterSheetOpen(true)}
@@ -789,6 +845,10 @@ function CloudScreen({navigation, route}) {
           )}
         </Pressable>
 
+        {sortMode !== 'reco' &&
+          renderActivePill('__sort', activeSortLabel, false, () =>
+            handleSelectSort('reco'),
+          )}
         {playableOnly &&
           renderActivePill('__p', t('Playable'), false, handleTogglePlayable)}
         {saleOnly &&
@@ -797,9 +857,6 @@ function CloudScreen({navigation, route}) {
           renderActivePill('__g', selectedGenre, false, () =>
             handleSelectGenre(selectedGenre),
           )}
-        {activeFilterCount === 0 && (
-          <Text style={styles.filterHint}>{t('Tap to filter')}</Text>
-        )}
       </ScrollView>
     );
   };
@@ -812,41 +869,70 @@ function CloudScreen({navigation, route}) {
           onDismiss={closeFilterSheet}
           contentContainerStyle={styles.filterSheet}>
           <Card>
-            <Card.Content>
-              <Text style={styles.sheetHeader}>{t('Show')}</Text>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>{t('Playable')}</Text>
-                <Switch
-                  value={playableOnly}
-                  onValueChange={handleTogglePlayable}
-                />
-              </View>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>{t('On sale')}</Text>
-                <Switch value={saleOnly} onValueChange={handleToggleSale} />
-              </View>
+            <ScrollView style={styles.filterSheetScroll}>
+              <Card.Content>
+                <Text style={styles.sheetHeader}>{t('View')}</Text>
+                <View style={styles.genreGrid}>
+                  {viewOptions.map(v =>
+                    renderGenreChip(
+                      `view_${v.value}`,
+                      v.label,
+                      `${current}` === v.value,
+                      () => handleSelectView(v.value),
+                    ),
+                  )}
+                </View>
 
-              <Text style={styles.sheetHeader}>{t('Genre')}</Text>
-              <View style={styles.genreGrid}>
-                {renderGenreChip('__all', t('All'), selectedGenre === '', () =>
-                  handleSelectGenre(''),
-                )}
-                {genres.map(genre =>
-                  renderGenreChip(genre, genre, selectedGenre === genre, () =>
-                    handleSelectGenre(genre),
-                  ),
-                )}
-              </View>
+                <Text style={styles.sheetHeader}>{t('Sort')}</Text>
+                <View style={styles.genreGrid}>
+                  {sortOptions.map(s =>
+                    renderGenreChip(
+                      `sort_${s.value}`,
+                      s.label,
+                      sortMode === s.value,
+                      () => handleSelectSort(s.value),
+                    ),
+                  )}
+                </View>
 
-              <View style={styles.sheetActions}>
-                <Button mode="text" onPress={handleClearFilters}>
-                  {t('Clear')}
-                </Button>
-                <Button mode="contained" onPress={closeFilterSheet}>
-                  {t('Apply')}
-                </Button>
-              </View>
-            </Card.Content>
+                <Text style={styles.sheetHeader}>{t('Refine')}</Text>
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>{t('Playable')}</Text>
+                  <Switch
+                    value={playableOnly}
+                    onValueChange={handleTogglePlayable}
+                  />
+                </View>
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>{t('On sale')}</Text>
+                  <Switch value={saleOnly} onValueChange={handleToggleSale} />
+                </View>
+
+                <Text style={styles.sheetHeader}>{t('Genre')}</Text>
+                <View style={styles.genreGrid}>
+                  {renderGenreChip(
+                    '__all',
+                    t('All'),
+                    selectedGenre === '',
+                    () => handleSelectGenre(''),
+                  )}
+                  {genres.map(genre =>
+                    renderGenreChip(genre, genre, selectedGenre === genre, () =>
+                      handleSelectGenre(genre),
+                    ),
+                  )}
+                </View>
+
+                <View style={styles.sheetActions}>
+                  <Button mode="text" onPress={handleClearFilters}>
+                    {t('Clear')}
+                  </Button>
+                  <Button mode="contained" onPress={closeFilterSheet}>
+                    {t('Done')}
+                  </Button>
+                </View>
+              </Card.Content>
+            </ScrollView>
           </Card>
         </Modal>
       </Portal>
@@ -967,7 +1053,7 @@ function CloudScreen({navigation, route}) {
                   styles.segmentedWrap,
                   isLargeScreen && styles.segmentedWrapLarge,
                 ]}>
-                {renderCategoryTabs()}
+                {renderFilterBar()}
               </View>
               <IconButton
                 icon="magnify"
@@ -980,8 +1066,6 @@ function CloudScreen({navigation, route}) {
                 onPress={handleOpenSearch}
               />
             </View>
-
-            {renderFilterBar()}
 
             {renderMobileSearchButton()}
 
@@ -1203,6 +1287,21 @@ const styles = StyleSheet.create({
   filterChipTextSelected: {
     color: '#FFFFFF',
   },
+  viewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: '#107C10',
+    marginRight: 8,
+    gap: 5,
+  },
+  viewButtonText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1278,6 +1377,9 @@ const styles = StyleSheet.create({
   },
   filterSheet: {
     marginHorizontal: '6%',
+  },
+  filterSheetScroll: {
+    maxHeight: 480,
   },
   sheetHeader: {
     fontSize: 11,

@@ -486,5 +486,12 @@ export default {
     Apply: 'लागू करें',
     Genre: 'शैली',
     'Tap to filter': 'फ़िल्टर करने के लिए टैप करें',
+    Sort: 'क्रमबद्ध करें',
+    Recommended: 'अनुशंसित',
+    Popular: 'लोकप्रिय',
+    Rating: 'रेटिंग',
+    View: 'दृश्य',
+    Refine: 'परिष्कृत करें',
+    Done: 'पूर्ण',
   },
 };

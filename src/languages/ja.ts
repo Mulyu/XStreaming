@@ -470,5 +470,12 @@ export default {
     Apply: '適用',
     Genre: 'ジャンル',
     'Tap to filter': 'タップで絞り込み',
+    Sort: '並び替え',
+    Recommended: 'おすすめ順',
+    Popular: '人気順',
+    Rating: '評価順',
+    View: '表示',
+    Refine: '絞り込み',
+    Done: '完了',
   },
 };

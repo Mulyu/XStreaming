@@ -514,5 +514,12 @@ export default {
     Apply: '应用',
     Genre: '类型',
     'Tap to filter': '点击筛选',
+    Sort: '排序',
+    Recommended: '推荐',
+    Popular: '热门',
+    Rating: '评分',
+    View: '视图',
+    Refine: '筛选',
+    Done: '完成',
   },
 };

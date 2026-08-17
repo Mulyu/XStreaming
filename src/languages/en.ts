@@ -543,5 +543,12 @@ export default {
     Apply: 'Apply',
     Genre: 'Genre',
     'Tap to filter': 'Tap to filter',
+    Sort: 'Sort',
+    Recommended: 'Recommended',
+    Popular: 'Popular',
+    Rating: 'Rating',
+    View: 'View',
+    Refine: 'Refine',
+    Done: 'Done',
   },
 };
