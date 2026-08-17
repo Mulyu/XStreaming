@@ -540,7 +540,6 @@ export default {
     'On sale': 'On sale',
     Filters: 'Filters',
     Clear: 'Clear',
-    Apply: 'Apply',
     Genre: 'Genre',
     Sort: 'Sort',
     Recommended: 'Recommended',

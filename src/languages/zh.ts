@@ -511,7 +511,6 @@ export default {
     'On sale': '促销中',
     Filters: '筛选',
     Clear: '清除',
-    Apply: '应用',
     Genre: '类型',
     Sort: '排序',
     Recommended: '推荐',

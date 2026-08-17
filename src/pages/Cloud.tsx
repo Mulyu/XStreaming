@@ -380,7 +380,9 @@ function CloudScreen({navigation, route}) {
   );
 
   // Load the "Most popular on cloud" order (same list as the web popular
-  // gallery) once per market, cached, for the popularity sort.
+  // gallery) once per market, cached, for the popularity sort. Applies the
+  // result only if the market is still current at resolve time (rather than a
+  // cleanup cancel), so a same-market re-render doesn't orphan the fetch.
   React.useEffect(() => {
     const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
     if (popularMarketRef.current === market) {
@@ -394,26 +396,22 @@ function CloudScreen({navigation, route}) {
       return;
     }
 
-    let cancelled = false;
+    // Drop a previous market's ranks while the new market loads, so the old
+    // order is never applied to the new market's titles.
+    setPopularRank({});
     fetchPopularOrder(market, language).then(order => {
-      if (cancelled) {
+      // Superseded by a newer market, or unmounted — drop the result.
+      if (popularMarketRef.current !== market || !isMountedRef.current) {
         return;
       }
       if (order.length === 0) {
         // Failed — free the claim so a later change can retry.
-        if (popularMarketRef.current === market) {
-          popularMarketRef.current = '';
-        }
+        popularMarketRef.current = '';
         return;
       }
       savePopularOrder(order, market);
-      if (isMountedRef.current) {
-        setPopularRank(buildPopularRank(order));
-      }
+      setPopularRank(buildPopularRank(order));
     });
-    return () => {
-      cancelled = true;
-    };
   }, [gameLanguage, deviceRegion]);
 
   const handleOpenSearch = () => {

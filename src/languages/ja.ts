@@ -467,7 +467,6 @@ export default {
     'On sale': 'セール中',
     Filters: 'フィルター',
     Clear: 'クリア',
-    Apply: '適用',
     Genre: 'ジャンル',
     Sort: '並び替え',
     Recommended: 'おすすめ順',

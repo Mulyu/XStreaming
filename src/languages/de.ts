@@ -517,7 +517,6 @@ export default {
     'On sale': 'Im Angebot',
     Filters: 'Filter',
     Clear: 'Zurücksetzen',
-    Apply: 'Anwenden',
     Genre: 'Genre',
     Sort: 'Sortieren',
     Recommended: 'Empfohlen',

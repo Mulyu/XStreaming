@@ -483,7 +483,6 @@ export default {
     'On sale': 'सेल में',
     Filters: 'फ़िल्टर',
     Clear: 'साफ़ करें',
-    Apply: 'लागू करें',
     Genre: 'शैली',
     Sort: 'क्रमबद्ध करें',
     Recommended: 'अनुशंसित',

@@ -479,7 +479,6 @@ export default {
     'On sale': 'En oferta',
     Filters: 'Filtros',
     Clear: 'Borrar',
-    Apply: 'Aplicar',
     Genre: 'Género',
     Sort: 'Ordenar',
     Recommended: 'Recomendado',

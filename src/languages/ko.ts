@@ -463,7 +463,6 @@ export default {
     'On sale': '세일 중',
     Filters: '필터',
     Clear: '초기화',
-    Apply: '적용',
     Genre: '장르',
     Sort: '정렬',
     Recommended: '추천순',

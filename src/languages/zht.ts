@@ -488,7 +488,6 @@ export default {
     'On sale': '特價中',
     Filters: '篩選',
     Clear: '清除',
-    Apply: '套用',
     Genre: '類型',
     Sort: '排序',
     Recommended: '推薦',

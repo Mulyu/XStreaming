@@ -521,7 +521,6 @@ export default {
     'On sale': 'Em promoção',
     Filters: 'Filtros',
     Clear: 'Limpar',
-    Apply: 'Aplicar',
     Genre: 'Gênero',
     Sort: 'Ordenar',
     Recommended: 'Recomendado',
