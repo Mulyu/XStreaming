@@ -497,6 +497,9 @@ function CloudScreen({navigation, route}) {
   };
 
   const handleClearFilters = () => {
+    // Clear every control in the sheet, including the View (back to All), so
+    // "Clear" is consistent with the unified sheet's contents.
+    setCurrent('3');
     setPlayableOnly(false);
     setSaleOnly(false);
     setSelectedGenre('');
