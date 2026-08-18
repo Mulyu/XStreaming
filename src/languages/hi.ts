@@ -511,5 +511,6 @@ export default {
     'Spatial sound': 'स्थानिक ध्वनि',
     'Cloud saves': 'क्लाउड सेव',
     'Leaving soon': 'जल्द हटेगा',
+    'Leaving Game Pass soon': 'जल्द ही Game Pass से हटेगा',
   },
 };

@@ -495,5 +495,6 @@ export default {
     'Spatial sound': '立体音響',
     'Cloud saves': 'クラウドセーブ',
     'Leaving soon': 'もうすぐ削除',
+    'Leaving Game Pass soon': 'まもなく Game Pass から削除されます',
   },
 };

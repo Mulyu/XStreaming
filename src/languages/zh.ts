@@ -539,5 +539,6 @@ export default {
     'Spatial sound': '空间音效',
     'Cloud saves': '云存档',
     'Leaving soon': '即将下架',
+    'Leaving Game Pass soon': '即将从 Game Pass 下架',
   },
 };

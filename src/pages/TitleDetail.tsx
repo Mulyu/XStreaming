@@ -49,7 +49,12 @@ import {
   formatSaleEnd,
 } from '../utils/storePrice';
 import {getSystemRegion, toBcp47Locale} from '../utils/locale';
-import {getFreshPriceCache} from '../store/priceStore';
+import {fetchLeavingSoon} from '../utils/leavingSoon';
+import {
+  getFreshPriceCache,
+  getFreshLeavingSoon,
+  saveLeavingSoon,
+} from '../store/priceStore';
 import games from '../mock/games.json';
 
 const {UsbRumbleManager, FullScreenManager, ShortcutManager} = NativeModules;
@@ -98,6 +103,7 @@ function TitleDetail({navigation, route}) {
   const [price, setPrice] = React.useState<PriceInfo | null>(null);
   const [rating, setRating] = React.useState<RatingInfo | null>(null);
   const [details, setDetails] = React.useState<TitleDetails | null>(null);
+  const [isLeavingSoon, setIsLeavingSoon] = React.useState(false);
   const [descExpanded, setDescExpanded] = React.useState(false);
   // Fullscreen media viewer: a screenshot image or a trailer video.
   const [viewer, setViewer] = React.useState<{
@@ -265,6 +271,38 @@ function TitleDetail({navigation, route}) {
       setPrice(p);
       setRating(r);
       setDetails(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [titleItem, gameLanguage, deviceRegion]);
+
+  // Whether this title is in the Game Pass "Leaving soon" collection, to show a
+  // notice. Uses the list's cached set for an instant answer, else fetches it.
+  React.useEffect(() => {
+    setIsLeavingSoon(false);
+    const productId = titleItem && getTitleProductId(titleItem);
+    if (!productId) {
+      return;
+    }
+    const key = String(productId).toUpperCase();
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
+    const cached = getFreshLeavingSoon(market);
+    if (cached) {
+      setIsLeavingSoon(cached.includes(key));
+      return;
+    }
+    let cancelled = false;
+    fetchLeavingSoon(market, language).then(ids => {
+      if (!ids) {
+        return;
+      }
+      // Persist so other title-detail visits (and the list) reuse this fetch
+      // instead of re-downloading the whole collection per title.
+      saveLeavingSoon(ids, market);
+      if (!cancelled) {
+        setIsLeavingSoon(ids.includes(key));
+      }
     });
     return () => {
       cancelled = true;
@@ -669,6 +707,21 @@ function TitleDetail({navigation, route}) {
               </View>
 
               <View style={styles.body}>
+                {/* leaving soon notice */}
+                {isLeavingSoon && (
+                  <View style={styles.leavingBanner}>
+                    <Ionicons name="time" size={20} color="#1a1205" />
+                    <View style={styles.leavingBannerText}>
+                      <Text style={styles.leavingBannerTitle}>
+                        {t('Leaving soon')}
+                      </Text>
+                      <Text style={styles.leavingBannerSub}>
+                        {t('Leaving Game Pass soon')}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
                 {/* quick actions */}
                 <View style={styles.quickRow}>
                   {canOpenStore && (
@@ -982,6 +1035,20 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 18,
   },
+  leavingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255, 157, 30, 0.14)',
+    borderColor: 'rgba(255, 157, 30, 0.55)',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  leavingBannerText: {flex: 1, minWidth: 0},
+  leavingBannerTitle: {fontSize: 14, fontWeight: '800', color: '#ff9d1e'},
+  leavingBannerSub: {fontSize: 12.5, color: '#cdd3ce', marginTop: 2},
   quickRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
