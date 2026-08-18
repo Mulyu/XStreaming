@@ -4,6 +4,7 @@ import {IconButton, useTheme} from 'react-native-paper';
 import Draggable from 'react-native-draggable';
 import {useTranslation} from 'react-i18next';
 import PreviewButton from './CustomGamepad/Button';
+import {getButtonBaseSize} from '../utils/gamepadLayout';
 
 export type PortraitGamepadControl = {
   name: string;
@@ -196,14 +197,13 @@ const isInsideControl = (item: PortraitGamepadControl, x: number, y: number) =>
 const getStickName = (name: string): StickName =>
   name === 'RightStick' ? 'right' : 'left';
 
+// Scale the button glyph to fill its portrait box. Divide by the shared
+// canonical base size so this stays correct if a base size changes (previously
+// the divisors were hardcoded to the old base sizes and drifted when those
+// changed).
 const getButtonPreviewScale = (item: PortraitGamepadControl) => {
-  if (['A', 'B', 'X', 'Y'].includes(item.name)) {
-    return item.width / 100;
-  }
-  if (item.name.indexOf('DPad') > -1) {
-    return item.width / 70;
-  }
-  return 1;
+  const base = getButtonBaseSize(item.name).width;
+  return base > 0 ? item.width / base : 1;
 };
 
 const PortraitVirtualGamepad: React.FC<Props> = ({
@@ -499,7 +499,7 @@ const PortraitVirtualGamepad: React.FC<Props> = ({
               name={item.name}
               width={item.width}
               height={item.height}
-              scale={1}
+              scale={getButtonPreviewScale(item)}
             />
           )}
           <IconButton

@@ -1,12 +1,6 @@
 import React from 'react';
 import Orientation from 'react-native-orientation-locker';
-import {
-  SafeAreaView,
-  StyleSheet,
-  NativeModules,
-  Dimensions,
-  View,
-} from 'react-native';
+import {StyleSheet, NativeModules, Dimensions, View} from 'react-native';
 import {
   Portal,
   Modal,
@@ -31,6 +25,7 @@ import {
   createDefaultMacroLayoutButton,
   ensureMacroLayoutButton,
 } from '../utils/virtualMacro';
+import {buildDefaultLayout, snapToGrid} from '../utils/gamepadLayout';
 
 const {FullScreenManager} = NativeModules;
 
@@ -66,141 +61,8 @@ function CustomGamepadScreen({navigation, route}) {
     setTimeout(() => {
       const {width, height} = Dimensions.get('window');
 
-      const nexusLeft = width * 0.5 - 20;
-      const viewLeft = width * 0.5 - 100;
-      const menuLeft = width * 0.5 + 60;
       const macroDefaultButton = createDefaultMacroLayoutButton(width, height);
-
-      const _buttons = [
-        {
-          name: 'LeftTrigger',
-          x: 30,
-          y: 40,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'RightTrigger',
-          x: width - 40,
-          y: 40,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'LeftShoulder',
-          x: 30,
-          y: 100,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'RightShoulder',
-          x: width - 40,
-          y: 100,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'A',
-          x: width - 90,
-          y: height - 60,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'B',
-          x: width - 40,
-          y: height - 110,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'X',
-          x: width - 140,
-          y: height - 110,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'Y',
-          x: width - 90,
-          y: height - 160,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'LeftThumb',
-          x: 225,
-          y: height - 80,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'RightThumb',
-          x: width - 235,
-          y: height - 70,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'View',
-          x: viewLeft,
-          y: height - 30,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'Nexus',
-          x: nexusLeft,
-          y: height - 30,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'Menu',
-          x: menuLeft,
-          y: height - 30,
-          scale: 1,
-          show: true,
-        },
-        {
-          name: 'DPadUp',
-          x: 85,
-          y: height - 155,
-          show: true,
-        },
-        {
-          name: 'DPadLeft',
-          x: 35,
-          y: height - 105,
-          show: true,
-        },
-        {
-          name: 'DPadDown',
-          x: 85,
-          y: height - 55,
-          show: true,
-        },
-        {
-          name: 'DPadRight',
-          x: 135,
-          y: height - 105,
-          show: true,
-        },
-        {
-          name: 'LeftStick',
-          x: 175,
-          y: height - 205,
-          show: true,
-        },
-        {
-          name: 'RightStick',
-          x: width - 265,
-          y: height - 195,
-          show: true,
-        },
-        macroDefaultButton,
-      ];
+      const _buttons = buildDefaultLayout(width, height);
       if (_settings[_title]) {
         const exitButtons = _settings[_title];
         setButtons(ensureMacroLayoutButton(exitButtons, macroDefaultButton));
@@ -226,12 +88,13 @@ function CustomGamepadScreen({navigation, route}) {
     };
   }, [navigation, route.params?.name]);
 
-  // Button drag
+  // Button drag — snap to a coarse grid so positions land in even steps
+  // instead of needing pixel-by-pixel fine-tuning.
   const handleDrag = (name, x, y) => {
     buttons.forEach(b => {
       if (b.name === name) {
-        b.x = Math.round(x);
-        b.y = Math.round(y);
+        b.x = snapToGrid(x);
+        b.y = snapToGrid(y);
       }
     });
     setButtons([...buttons]);
@@ -273,142 +136,7 @@ function CustomGamepadScreen({navigation, route}) {
 
   const handleReset = () => {
     const {width, height} = Dimensions.get('window');
-
-    const nexusLeft = width * 0.5 - 20;
-    const viewLeft = width * 0.5 - 100;
-    const menuLeft = width * 0.5 + 60;
-    const macroDefaultButton = createDefaultMacroLayoutButton(width, height);
-
-    const _buttons = [
-      {
-        name: 'LeftTrigger',
-        x: 30,
-        y: 40,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'RightTrigger',
-        x: width - 40,
-        y: 40,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'LeftShoulder',
-        x: 30,
-        y: 100,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'RightShoulder',
-        x: width - 40,
-        y: 100,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'A',
-        x: width - 90,
-        y: height - 60,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'B',
-        x: width - 40,
-        y: height - 110,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'X',
-        x: width - 140,
-        y: height - 110,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'Y',
-        x: width - 90,
-        y: height - 160,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'LeftThumb',
-        x: 225,
-        y: height - 80,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'RightThumb',
-        x: width - 235,
-        y: height - 80,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'View',
-        x: viewLeft,
-        y: height - 30,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'Nexus',
-        x: nexusLeft,
-        y: height - 30,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'Menu',
-        x: menuLeft,
-        y: height - 30,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'DPadUp',
-        x: 85,
-        y: height - 155,
-        show: true,
-      },
-      {
-        name: 'DPadLeft',
-        x: 35,
-        y: height - 105,
-        show: true,
-      },
-      {
-        name: 'DPadDown',
-        x: 85,
-        y: height - 55,
-        show: true,
-      },
-      {
-        name: 'DPadRight',
-        x: 135,
-        y: height - 105,
-        show: true,
-      },
-      {
-        name: 'LeftStick',
-        x: 175,
-        y: height - 205,
-        show: true,
-      },
-      {
-        name: 'RightStick',
-        x: width - 265,
-        y: height - 195,
-        show: true,
-      },
-      macroDefaultButton,
-    ];
+    const _buttons = buildDefaultLayout(width, height);
     setButtons([..._buttons]);
   };
 
@@ -449,7 +177,10 @@ function CustomGamepadScreen({navigation, route}) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    // Full-screen (not SafeAreaView): the in-game gamepad overlay is full
+    // screen, so the editor must lay out in the same coordinate space — a
+    // safe-area inset here would shift every saved position by the inset.
+    <View style={styles.container}>
       {renderWarningModal()}
 
       {showGrid && <GridBackground gridSize={20} />}
@@ -557,7 +288,7 @@ function CustomGamepadScreen({navigation, route}) {
                 onShortPressRelease={() => {
                   setCurrentButton(button.name);
                   setCurrentScale(1);
-                  setCurrentShow(button.show || true);
+                  setCurrentShow(button.show ?? true);
                   setShowModal(true);
                 }}
                 onDragRelease={(_, __, bounds) => {
@@ -578,7 +309,7 @@ function CustomGamepadScreen({navigation, route}) {
                 onShortPressRelease={() => {
                   setCurrentButton(button.name);
                   setCurrentScale(button.scale || 1);
-                  setCurrentShow(button.show || true);
+                  setCurrentShow(button.show ?? true);
                   setShowModal(true);
                 }}
                 onDragRelease={(_, __, bounds) => {
@@ -596,7 +327,7 @@ function CustomGamepadScreen({navigation, route}) {
           }
         })}
       </>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -6,6 +6,7 @@ import {SvgXml} from 'react-native-svg';
 import {useTheme} from 'react-native-paper';
 import icons from '../../common/virtualgp';
 import {VIRTUAL_MACRO_BUTTON_NAME} from '../../utils/virtualMacro';
+import {getButtonBaseSize} from '../../utils/gamepadLayout';
 import {colorizeMacroIconXml, normalizeHexColor} from '../../utils/themeColor';
 
 type Props = {
@@ -40,8 +41,6 @@ const mapping: any = {
 
 const GamepadButton: React.FC<Props> = ({
   name,
-  width = 50,
-  height = 50,
   scale = 1,
   onPressIn,
   onPressOut,
@@ -49,19 +48,9 @@ const GamepadButton: React.FC<Props> = ({
 }) => {
   const theme = useTheme();
   const primaryColor = normalizeHexColor(theme.colors.primary);
-  if (['A', 'B', 'X', 'Y'].indexOf(name) > -1) {
-    width = 60;
-    height = 60;
-  }
-  if (name.indexOf('DPad') > -1) {
-    width = 70;
-    height = 70;
-  }
-
-  if (name === VIRTUAL_MACRO_BUTTON_NAME) {
-    width = 60;
-    height = 60;
-  }
+  // Shared canonical base size — kept identical to the editor so a laid-out
+  // button occupies the same rectangle when editing and when playing.
+  const {width, height} = getButtonBaseSize(name);
 
   const mappedButtonName = mapping[name];
   if (!mappedButtonName) {
