@@ -39,7 +39,7 @@ import MsalAuth from '../components/MsalAuth';
 
 const log = debugFactory('HomeScreen');
 
-const {UsbRumbleManager} = NativeModules;
+const {UsbRumbleManager, FullScreenManager} = NativeModules;
 
 const HARMOBY_URL =
   'https://appgallery.huawei.com/app/detail?id=com.lijiahao.xstreamingoh';
@@ -97,6 +97,7 @@ function HomeScreen({navigation, route}) {
     SplashScreen.hide();
 
     const _settings = getSettings();
+    const deviceInfos = FullScreenManager.getDeviceInfos();
 
     // HarmonyOS modal
     if (
