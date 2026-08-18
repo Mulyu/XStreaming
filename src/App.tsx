@@ -44,7 +44,6 @@ import FriendsScreen from './pages/Friends';
 import AchivementScreen from './pages/Achivements';
 import AchivementDetailScreen from './pages/ArchivementDetail';
 import LoginScreen from './pages/Login';
-import StreamScreen from './pages/Stream';
 import NativeStreamScreen from './pages/NativeStream';
 import NativePortraitStreamScreen from './pages/NativePortraitStream';
 import SettingsScreen from './pages/Settings';
@@ -54,7 +53,6 @@ import DebugScreen from './pages/Debug';
 import GameMapScreen from './pages/GameMap';
 import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
-import DisplaySettingsScreen from './pages/DisplaySettings';
 import AboutScreen from './pages/About';
 import AboutZhScreen from './pages/AboutZh';
 import FeedbackScreen from './pages/Feedback';
@@ -153,9 +151,6 @@ const DebugBackgroundScreen = withPageBackground(DebugScreen);
 const GameMapBackgroundScreen = withPageBackground(GameMapScreen);
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
-const DisplaySettingsBackgroundScreen = withPageBackground(
-  DisplaySettingsScreen,
-);
 const AboutBackgroundScreen = withPageBackground(AboutScreen);
 const AboutZhBackgroundScreen = withPageBackground(AboutZhScreen);
 const FeedbackBackgroundScreen = withPageBackground(FeedbackScreen);
@@ -454,11 +449,6 @@ function App() {
                   options={{title: t('Login')}}
                 />
                 <RootStack.Screen
-                  name="Stream"
-                  component={StreamScreen}
-                  options={{headerShown: false}}
-                />
-                <RootStack.Screen
                   name="NativeStream"
                   component={NativeStreamScreen}
                   options={{headerShown: false}}
@@ -487,11 +477,6 @@ function App() {
                   name="VirtualMacroSettings"
                   component={VirtualMacroSettingsBackgroundScreen}
                   options={{title: t('Virtual macro settings')}}
-                />
-                <RootStack.Screen
-                  name="Display"
-                  component={DisplaySettingsBackgroundScreen}
-                  options={{title: t('Display')}}
                 />
                 <RootStack.Screen
                   name="Search"

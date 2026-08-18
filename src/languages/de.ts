@@ -144,10 +144,6 @@ export default {
       'Select the gamepad kernel. The virtual gamepad is unavailable with the Web kernel.',
     'Config opacity of virtual gamepad': 'Configure virtual gamepad opacity',
     'Display settings': 'Anzeigeeinstellungen',
-    'Set parameters such as screen clarity and saturation':
-      'Parameter wie Bildschärfe und Sättigung festlegen',
-    'Display settings is not working in native render engine.':
-      'Display settings do not work with the native rendering engine.',
     'Override native Xbox gamepad support':
       'Native Xbox-Gamepad-Unterstützung überschreiben',
     bind_usb_device_description:
@@ -225,7 +221,6 @@ export default {
     Auto: 'Automatisch',
     bitrate: 'Bitrate',
     Language: 'Sprache',
-    Display: 'Anzeige',
     Gamepad: 'Gamepad',
     Others: 'Sonstiges',
     RTT: 'Latenz',
@@ -392,11 +387,6 @@ export default {
       'NAT failed. If you are trying remote streaming, make sure the router is configured correctly and port forwarding is set. If remote streaming still cannot be resolved, use the official Xbox app.',
     'Reconnected failed':
       'Network changed and reconnection failed. Please reconnect.',
-    renderEngineTitle: 'Rendering engine',
-    renderEngineDesc:
-      'Wähle die Rendering-Engine Native/WebView, um den Videostream abzuspielen.',
-    renderEngineTips:
-      '\nNative: keine System-WebView-Abhängigkeit, nutzt natives Rendering mit geringerem Stromverbrauch und besserer Kompatibilität (empfohlen).\n\nWebView: nutzt die System-WebView zur Wiedergabe von Videostreams und erfordert WebView 91 oder neuer.\n\nJede Rendering-Engine hat Vor- und Nachteile. Wähle nach der tatsächlichen Leistung des Geräts.',
     'Open Microphone': 'Mikrofon öffnen',
     'Close Microphone': 'Mikrofon schließen',
     'Device testing': 'Gerätetest',

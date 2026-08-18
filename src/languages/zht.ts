@@ -142,10 +142,6 @@ export default {
       '選擇手柄驅動內核，在 Web 內核下你將無法使用虛擬手柄',
     'Config opacity of virtual gamepad': '設置虛擬按鍵透明度',
     'Display settings': '畫面設置',
-    'Set parameters such as screen clarity and saturation':
-      '設置畫面清晰度、飽和度等參數',
-    'Display settings is not working in native render engine.':
-      'Native渲染引擎下无法设置画面',
     'Override native Xbox gamepad support': '覆寫原生 Xbox 手把支援',
     bind_usb_device_description:
       '強制 XStreaming 的 USB 驅動接管所有受支援的 Xbox/DualSense 手柄',
@@ -218,7 +214,6 @@ export default {
     Auto: '自動',
     bitrate: '碼率',
     Language: '語言',
-    Display: '畫面',
     Gamepad: '手柄',
     Others: '其他',
     RTT: '延遲',
@@ -369,10 +364,6 @@ export default {
     'NAT failed':
       'NAT失敗，如果你正在嘗試遠端串流，請確認已正確設定路由器並完成連接埠轉發。如果仍無法解決遠端串流，請使用官方 Xbox 應用。',
     'Reconnected failed': '網絡發生了變化，重連失敗，請重新連接',
-    renderEngineTitle: '渲染引擎',
-    renderEngineDesc: '你可以選擇 Native/Webview 渲染引擎來播放影片串流。',
-    renderEngineTips:
-      '\nNative: 無需依賴系統 Webview，使用原生渲染，具備更低的功耗及更高的相容性(推薦)。\n\nWebview: 使用系統 Webview 播放影片串流，需要 Webview 版本 91 以上。\n\n不同的渲染引擎各有優缺點，請根據裝置實際效果選用。',
     'Open Microphone': '開啟麥克風',
     'Close Microphone': '關閉麥克風',
     'Device testing': '設備測試',

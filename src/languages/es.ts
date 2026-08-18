@@ -143,10 +143,6 @@ export default {
       'El mando virtual no funciona con el kernel Web.',
     'Config opacity of virtual gamepad': 'Opacidad del mando virtual',
     'Display settings': 'Ajustes de pantalla',
-    'Set parameters such as screen clarity and saturation':
-      'Configura nitidez y saturación.',
-    'Display settings is not working in native render engine.':
-      'Los ajustes de pantalla no funcionan en modo nativo.',
     'Override native Xbox gamepad support':
       'Sobrescribir soporte nativo de Xbox',
     bind_usb_device_description: 'Permitir que XStreaming controle mandos USB.',
@@ -217,7 +213,6 @@ export default {
     Auto: 'Auto',
     bitrate: 'bitrate',
     Language: 'Idioma',
-    Display: 'Pantalla',
     Gamepad: 'Mando',
     Others: 'Otros',
     RTT: 'RTT',
@@ -365,11 +360,6 @@ export default {
     'Streaming is closed': 'Streaming cerrado',
     'NAT failed': 'Fallo de NAT. Revisa el router.',
     'Reconnected failed': 'Fallo al reconectar.',
-    renderEngineTitle: 'Motor de renderizado',
-    renderEngineDesc:
-      'Elige el motor de renderizado Native/WebView para reproducir el vídeo.',
-    renderEngineTips:
-      '\nNative: no necesita depender de WebView del sistema, usa renderizado nativo con menor consumo y mejor compatibilidad (recomendado).\n\nWebView: usa el WebView del sistema para reproducir vídeos y requiere WebView 91 o superior.\n\nCada motor de renderizado tiene sus ventajas y desventajas. Elige según el rendimiento real de tu dispositivo.',
     'Open Microphone': 'Abrir micrófono',
     'Close Microphone': 'Cerrar micrófono',
     'Device testing': 'Prueba de dispositivo',

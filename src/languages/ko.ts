@@ -140,10 +140,6 @@ export default {
       '웹 커널에서는 가상 패드를 사용할 수 없습니다.',
     'Config opacity of virtual gamepad': '가상 패드 투명도',
     'Display settings': '디스플레이 설정',
-    'Set parameters such as screen clarity and saturation':
-      '화면 선명도 및 채도 설정',
-    'Display settings is not working in native render engine.':
-      '네이티브 엔진에서는 작동하지 않습니다.',
     'Override native Xbox gamepad support': '네이티브 패드 지원 오버라이드',
     bind_usb_device_description: 'USB 컨트롤러를 직접 제어하도록 설정합니다.',
     bind_usb_device_tips: '유선 연결 컨트롤러 전용입니다.',
@@ -210,7 +206,6 @@ export default {
     Auto: '자동',
     bitrate: '비트레이트',
     Language: '언어',
-    Display: '디스플레이',
     Gamepad: '게임패드',
     Others: '기타',
     RTT: 'RTT',
@@ -354,10 +349,6 @@ export default {
     'Streaming is closed': '스트리밍 종료',
     'NAT failed': 'NAT 실패. 라우터 설정을 확인하세요.',
     'Reconnected failed': '재연결 실패',
-    renderEngineTitle: '렌더링 엔진',
-    renderEngineDesc: 'Native/WebView 렌더링 엔진을 선택하세요.',
-    renderEngineTips:
-      '\nNative: 시스템 WebView에 의존하지 않고 네이티브 렌더링을 사용하며 전력 소모가 더 낮고 호환성이 더 좋습니다(권장).\n\nWebView: 시스템 WebView를 사용해 동영상 스트림을 재생하며 WebView 91 이상이 필요합니다.\n\n각 렌더링 엔진에는 장단점이 있습니다. 실제 기기 성능에 맞게 선택하세요.',
     'Open Microphone': '마이크 켜기',
     'Close Microphone': '마이크 끄기',
     'Device testing': '기기 테스트',

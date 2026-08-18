@@ -161,10 +161,6 @@ export default {
       '选择手柄驱动内核, 在Web内核下你将无法使用虚拟手柄',
     'Config opacity of virtual gamepad': '设置虚拟按键透明度',
     'Display settings': '画面设置',
-    'Set parameters such as screen clarity and saturation':
-      '设置画面清晰度、饱和度等参数',
-    'Display settings is not working in native render engine.':
-      'Native渲染引擎下无法设置画面',
     'Override native Xbox gamepad support': '覆盖安卓手柄支持',
     bind_usb_device_description:
       '强制XStreaming的USB驱动接管所有受支持的Xbox/DualSense手柄',
@@ -237,7 +233,6 @@ export default {
     Auto: '自动',
     bitrate: '码率',
     Language: '语言',
-    Display: '画面',
     Gamepad: '手柄',
     Others: '其他',
     RTT: '延时',
@@ -387,10 +382,6 @@ export default {
     'NAT failed':
       'NAT失败，如果你正在尝试远程串流，请保证已经正确配置路由器，并设置已经设置端口转发，如果无法解决远程串流，请使用官方Xbox应用。',
     'Reconnected failed': '网络发生了变化，重连失败，请重新连接',
-    renderEngineTitle: '渲染引擎',
-    renderEngineDesc: '选择Native/Webview渲染引擎，播放视频流',
-    renderEngineTips:
-      '\nNative: 无需依赖系统Webview，使用原生渲染，具备更低的功耗及更高的兼容性(推荐)。\n\nWebview: 使用系统Webview播放视频流，需要Webview版本91以上。\n\n不同的渲染引擎各有优缺点，请根据设备实际效果选用。',
     'Open Microphone': '打开麦克风',
     'Close Microphone': '关闭麦克风',
     'Device testing': '设备测试',
