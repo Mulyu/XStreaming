@@ -358,9 +358,9 @@ export default {
     'Reconnected failed': '再接続失敗',
     renderEngineTitle: 'エンジン',
     renderEngineDesc:
-      'Native/Nano/WebView のレンダリングエンジンを選んで動画ストリームを再生します。',
+      'Native/WebView のレンダリングエンジンを選んで動画ストリームを再生します。',
     renderEngineTips:
-      '\nNative: システム WebView に依存せず、ネイティブ描画を使用します。消費電力が低く、互換性も高いです (推奨)。\n\nNano: 自社開発の Native エンジンを使用し、Native 使用時に問題があるユーザー向けに最低限の機能のみを提供します。\n\nWebView: システム WebView を使って動画ストリームを再生します。WebView 91 以上が必要です。\n\n各レンダリングエンジンには長所と短所があります。実際の端末性能に応じて選択してください。',
+      '\nNative: システム WebView に依存せず、ネイティブ描画を使用します。消費電力が低く、互換性も高いです (推奨)。\n\nWebView: システム WebView を使って動画ストリームを再生します。WebView 91 以上が必要です。\n\n各レンダリングエンジンには長所と短所があります。実際の端末性能に応じて選択してください。',
     'Open Microphone': 'マイクオン',
     'Close Microphone': 'マイクオフ',
     'Device testing': 'テスト',

@@ -397,9 +397,9 @@ export default {
       'A rede mudou e a reconexão falhou. Por favor, reconecte.',
     renderEngineTitle: 'Motor de renderização',
     renderEngineDesc:
-      'Escolha o motor de renderização Native/Nano/WebView para reproduzir o streaming de vídeo.',
+      'Escolha o motor de renderização Native/WebView para reproduzir o streaming de vídeo.',
     renderEngineTips:
-      '\nNative: não depende do WebView do sistema, usa renderização nativa com menor consumo e melhor compatibilidade (recomendado).\n\nNano: usa um motor nativo desenvolvido internamente e oferece apenas as funções mais básicas, para usuários que encontrem problemas ao usar o Native.\n\nWebView: usa o WebView do sistema para reproduzir o streaming de vídeo e requer WebView 91 ou posterior.\n\nCada mecanismo de renderização tem seus pontos fortes e fracos. Escolha conforme o desempenho real do dispositivo.',
+      '\nNative: não depende do WebView do sistema, usa renderização nativa com menor consumo e melhor compatibilidade (recomendado).\n\nWebView: usa o WebView do sistema para reproduzir o streaming de vídeo e requer WebView 91 ou posterior.\n\nCada mecanismo de renderização tem seus pontos fortes e fracos. Escolha conforme o desempenho real do dispositivo.',
     'Open Microphone': 'Abrir microfone',
     'Close Microphone': 'Fechar microfone',
     'Device testing': 'Teste de dispositivo',

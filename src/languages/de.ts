@@ -394,9 +394,9 @@ export default {
       'Network changed and reconnection failed. Please reconnect.',
     renderEngineTitle: 'Rendering engine',
     renderEngineDesc:
-      'Wähle die Rendering-Engine Native/Nano/WebView, um den Videostream abzuspielen.',
+      'Wähle die Rendering-Engine Native/WebView, um den Videostream abzuspielen.',
     renderEngineTips:
-      '\nNative: keine System-WebView-Abhängigkeit, nutzt natives Rendering mit geringerem Stromverbrauch und besserer Kompatibilität (empfohlen).\n\nNano: nutzt eine selbst entwickelte Native-Engine und bietet nur die grundlegendsten Funktionen für Nutzer, bei denen bei der Verwendung von Native Probleme auftreten.\n\nWebView: nutzt die System-WebView zur Wiedergabe von Videostreams und erfordert WebView 91 oder neuer.\n\nJede Rendering-Engine hat Vor- und Nachteile. Wähle nach der tatsächlichen Leistung des Geräts.',
+      '\nNative: keine System-WebView-Abhängigkeit, nutzt natives Rendering mit geringerem Stromverbrauch und besserer Kompatibilität (empfohlen).\n\nWebView: nutzt die System-WebView zur Wiedergabe von Videostreams und erfordert WebView 91 oder neuer.\n\nJede Rendering-Engine hat Vor- und Nachteile. Wähle nach der tatsächlichen Leistung des Geräts.',
     'Open Microphone': 'Mikrofon öffnen',
     'Close Microphone': 'Mikrofon schließen',
     'Device testing': 'Gerätetest',
