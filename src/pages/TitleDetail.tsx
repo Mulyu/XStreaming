@@ -50,7 +50,11 @@ import {
 } from '../utils/storePrice';
 import {getSystemRegion, toBcp47Locale} from '../utils/locale';
 import {fetchLeavingSoon} from '../utils/leavingSoon';
-import {getFreshPriceCache, getFreshLeavingSoon} from '../store/priceStore';
+import {
+  getFreshPriceCache,
+  getFreshLeavingSoon,
+  saveLeavingSoon,
+} from '../store/priceStore';
 import games from '../mock/games.json';
 
 const {UsbRumbleManager, FullScreenManager, ShortcutManager} = NativeModules;
@@ -290,7 +294,13 @@ function TitleDetail({navigation, route}) {
     }
     let cancelled = false;
     fetchLeavingSoon(market, language).then(ids => {
-      if (!cancelled && ids) {
+      if (!ids) {
+        return;
+      }
+      // Persist so other title-detail visits (and the list) reuse this fetch
+      // instead of re-downloading the whole collection per title.
+      saveLeavingSoon(ids, market);
+      if (!cancelled) {
         setIsLeavingSoon(ids.includes(key));
       }
     });
