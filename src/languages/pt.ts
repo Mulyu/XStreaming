@@ -145,10 +145,6 @@ export default {
     'Config opacity of virtual gamepad':
       'Configurar opacidade do controle virtual',
     'Display settings': 'Configurações de imagem',
-    'Set parameters such as screen clarity and saturation':
-      'Definir parâmetros como nitidez e saturação',
-    'Display settings is not working in native render engine.':
-      'As configurações de imagem não funcionam com o motor de renderização nativo.',
     'Override native Xbox gamepad support':
       'Substituir suporte nativo ao controle Xbox',
     bind_usb_device_description:
@@ -227,7 +223,6 @@ export default {
     Auto: 'Auto',
     bitrate: 'bitrate',
     Language: 'Idioma',
-    Display: 'Tela',
     Gamepad: 'Controle',
     Others: 'Outros',
     RTT: 'Latência',
@@ -395,11 +390,6 @@ export default {
       'Falha no NAT. Se estiver tentando streaming remoto, verifique se o roteador está configurado corretamente e o encaminhamento de portas está definido. Se o streaming remoto ainda não funcionar, use o app oficial do Xbox.',
     'Reconnected failed':
       'A rede mudou e a reconexão falhou. Por favor, reconecte.',
-    renderEngineTitle: 'Motor de renderização',
-    renderEngineDesc:
-      'Escolha o motor de renderização Native/WebView para reproduzir o streaming de vídeo.',
-    renderEngineTips:
-      '\nNative: não depende do WebView do sistema, usa renderização nativa com menor consumo e melhor compatibilidade (recomendado).\n\nWebView: usa o WebView do sistema para reproduzir o streaming de vídeo e requer WebView 91 ou posterior.\n\nCada mecanismo de renderização tem seus pontos fortes e fracos. Escolha conforme o desempenho real do dispositivo.',
     'Open Microphone': 'Abrir microfone',
     'Close Microphone': 'Fechar microfone',
     'Device testing': 'Teste de dispositivo',

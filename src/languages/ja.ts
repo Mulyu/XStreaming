@@ -142,10 +142,6 @@ export default {
       'ウェブカーネルでは仮想パッドは使えません।',
     'Config opacity of virtual gamepad': '仮想パッドの不透明度',
     'Display settings': 'ディスプレイ設定',
-    'Set parameters such as screen clarity and saturation':
-      '鮮明度や彩度を設定।',
-    'Display settings is not working in native render engine.':
-      'ネイティブエンジンでは機能しません।',
     'Override native Xbox gamepad support': 'ネイティブパッドサポートを上書き',
     bind_usb_device_description: 'USBコントローラーを直接制御します।',
     bind_usb_device_tips: '有線接続専用です।',
@@ -212,7 +208,6 @@ export default {
     Auto: '自動',
     bitrate: 'ビットレート',
     Language: '言語',
-    Display: 'ディスプレイ',
     Gamepad: 'ゲームパッド',
     Others: 'その他',
     RTT: 'RTT',
@@ -356,11 +351,6 @@ export default {
     'Streaming is closed': '終了しました',
     'NAT failed': 'NAT失敗।ルーター設定を確認।',
     'Reconnected failed': '再接続失敗',
-    renderEngineTitle: 'エンジン',
-    renderEngineDesc:
-      'Native/WebView のレンダリングエンジンを選んで動画ストリームを再生します。',
-    renderEngineTips:
-      '\nNative: システム WebView に依存せず、ネイティブ描画を使用します。消費電力が低く、互換性も高いです (推奨)。\n\nWebView: システム WebView を使って動画ストリームを再生します。WebView 91 以上が必要です。\n\n各レンダリングエンジンには長所と短所があります。実際の端末性能に応じて選択してください。',
     'Open Microphone': 'マイクオン',
     'Close Microphone': 'マイクオフ',
     'Device testing': 'テスト',

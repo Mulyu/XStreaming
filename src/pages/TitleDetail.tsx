@@ -57,12 +57,11 @@ import {
 } from '../store/priceStore';
 import games from '../mock/games.json';
 
-const {UsbRumbleManager, FullScreenManager, ShortcutManager} = NativeModules;
+const {UsbRumbleManager, ShortcutManager} = NativeModules;
 
 const log = debugFactory('TitleDetailScreen');
 
 const warnTitles: any = [];
-const webviewTitles: any = [];
 
 // Canonical capability id -> icon + label. Labels are either translated
 // (t(...)) or kept as brand literals (4K, HDR, Dolby Atmos, ...).
@@ -168,40 +167,9 @@ function TitleDetail({navigation, route}) {
     const usbController = await UsbRumbleManager.getUsbController();
     const isUsbMode = settings.bind_usb_device && hasValidUsbDevice;
 
-    const webviewVersion = FullScreenManager.getWebViewVersion();
-    const deviceInfos = FullScreenManager.getDeviceInfos();
-    let isLagecy = false;
-    if (webviewVersion) {
-      const verArr = webviewVersion.split('.');
-      const mainVer = verArr[0];
-
-      // webview version is below 91
-      if (deviceInfos.androidVer < 12 && mainVer < 91) {
-        isLagecy = true;
-      }
-    }
-
-    let routeName = 'Stream';
-    if (settings.render_engine === 'native') {
-      routeName = settings.native_portrait_mode
-        ? 'NativePortraitStream'
-        : 'NativeStream';
-    }
-
-    // Lagecy user force to native stream
-    if (isLagecy && routeName === 'Stream') {
-      routeName = settings.native_portrait_mode
-        ? 'NativePortraitStream'
-        : 'NativeStream';
-    }
-
-    // Below titles use webview stream
-    if (
-      warnTitles.indexOf(titleId) > -1 ||
-      webviewTitles.indexOf(titleId) > -1
-    ) {
-      routeName = 'Stream';
-    }
+    const routeName = settings.native_portrait_mode
+      ? 'NativePortraitStream'
+      : 'NativeStream';
 
     let postUrl = '';
     if (titleItem.Image_Poster && titleItem.Image_Poster.URL) {
@@ -317,12 +285,7 @@ function TitleDetail({navigation, route}) {
   // Launched from a home-screen shortcut with autoStart: skip the detail
   // screen interaction and start streaming as soon as the title is ready.
   React.useEffect(() => {
-    if (
-      !route.params?.autoStart ||
-      autoStartHandledRef.current ||
-      !titleItem ||
-      !settings?.render_engine
-    ) {
+    if (!route.params?.autoStart || autoStartHandledRef.current || !titleItem) {
       return;
     }
     autoStartHandledRef.current = true;

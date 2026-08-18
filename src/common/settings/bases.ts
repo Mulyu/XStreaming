@@ -44,17 +44,6 @@ const bases = [
     })),
   },
   {
-    name: 'render_engine',
-    type: 'radio',
-    title: t('renderEngineTitle'),
-    description: t('renderEngineDesc'),
-    tips: t('renderEngineTips'),
-    data: [
-      {value: 'native', text: t('Native')},
-      {value: 'web', text: t('Webview')},
-    ],
-  },
-  {
     name: 'use_msal_login',
     type: 'radio',
     title: t('useMsalLoginTitle'),

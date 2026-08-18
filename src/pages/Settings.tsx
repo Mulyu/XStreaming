@@ -179,23 +179,6 @@ function SettingsScreen({navigation}) {
               />
             );
           })}
-
-          <SettingItem
-            title={t('Display')}
-            description={t(
-              'Set parameters such as screen clarity and saturation',
-            )}
-            onPress={() => {
-              const settings = getSettings();
-              if (settings.render_engine === 'native') {
-                Alert.alert(
-                  t('Display settings is not working in native render engine.'),
-                );
-                return;
-              }
-              navigation.navigate('Display');
-            }}
-          />
         </View>
 
         <View>

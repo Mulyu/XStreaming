@@ -143,10 +143,6 @@ export default {
       'वेब कर्नेल में वर्चुअल पैड काम नहीं करेगा।',
     'Config opacity of virtual gamepad': 'वर्चुअल पैड की पारदर्शिता',
     'Display settings': 'डिस्प्ले सेटिंग्स',
-    'Set parameters such as screen clarity and saturation':
-      'स्क्रीन की स्पष्टता और रंग सेट करें।',
-    'Display settings is not working in native render engine.':
-      'नेटिव इंजन में डिस्प्ले सेटिंग्स काम नहीं करतीं।',
     'Override native Xbox gamepad support':
       'सिस्टम कंट्रोलर सपोर्ट को ओवरराइड करें',
     bind_usb_device_description:
@@ -218,7 +214,6 @@ export default {
     Auto: 'ऑटो',
     bitrate: 'बिटरेट',
     Language: 'भाषा',
-    Display: 'डिस्प्ले',
     Gamepad: 'गेमपैड',
     Others: 'अन्य',
     RTT: 'RTT',
@@ -366,11 +361,6 @@ export default {
     'Streaming is closed': 'स्ट्रीमिंग बंद है',
     'NAT failed': 'NAT विफल। राउटर सेटिंग्स की जाँच करें।',
     'Reconnected failed': 'पुन: कनेक्शन विफल रहा।',
-    renderEngineTitle: 'रेंडरिंग इंजन',
-    renderEngineDesc:
-      'वीडियो स्ट्रीम चलाने के लिए Native/WebView रेंडरिंग इंजन चुनें।',
-    renderEngineTips:
-      '\nNative: सिस्टम WebView पर निर्भर नहीं करता, स्थानीय रेंडरिंग का उपयोग करता है, जिससे बिजली की खपत कम होती है और संगतता बेहतर होती है (अनुशंसित)।\n\nWebView: वीडियो स्ट्रीम चलाने के लिए सिस्टम WebView का उपयोग करता है और WebView 91 या उससे नया संस्करण आवश्यक है।\n\nप्रत्येक रेंडरिंग इंजन के अपने लाभ और सीमाएँ हैं। अपने डिवाइस के वास्तविक प्रदर्शन के आधार पर चुनें.',
     'Open Microphone': 'माइक्रोफोन खोलें',
     'Close Microphone': 'माइक्रोफोन बंद करें',
     'Device testing': 'डिवाइस परीक्षण',

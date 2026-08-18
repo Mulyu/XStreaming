@@ -39,7 +39,7 @@ import MsalAuth from '../components/MsalAuth';
 
 const log = debugFactory('HomeScreen');
 
-const {UsbRumbleManager, FullScreenManager} = NativeModules;
+const {UsbRumbleManager} = NativeModules;
 
 const HARMOBY_URL =
   'https://appgallery.huawei.com/app/detail?id=com.lijiahao.xstreamingoh';
@@ -97,16 +97,6 @@ function HomeScreen({navigation, route}) {
     SplashScreen.hide();
 
     const _settings = getSettings();
-    const webviewVersion = FullScreenManager.getWebViewVersion();
-    const deviceInfos = FullScreenManager.getDeviceInfos();
-    if (webviewVersion) {
-      const verArr = webviewVersion.split('.');
-      const mainVer = verArr[0];
-      if (deviceInfos.androidVer < 12 && mainVer < 91) {
-        _settings.render_engine = 'native';
-        saveSettings(_settings);
-      }
-    }
 
     // HarmonyOS modal
     if (
@@ -484,33 +474,9 @@ function HomeScreen({navigation, route}) {
     const usbController = await UsbRumbleManager.getUsbController();
     const isUsbMode = settings.bind_usb_device && hasValidUsbDevice;
 
-    const webviewVersion = FullScreenManager.getWebViewVersion();
-    const deviceInfos = FullScreenManager.getDeviceInfos();
-
-    let isLagecy = false;
-    if (webviewVersion) {
-      const verArr = webviewVersion.split('.');
-      const mainVer = verArr[0];
-
-      // webview version is below 91
-      if (deviceInfos.androidVer < 12 && mainVer < 91) {
-        isLagecy = true;
-      }
-    }
-
-    let routeName = 'Stream';
-    if (settings.render_engine === 'native') {
-      routeName = settings.native_portrait_mode
-        ? 'NativePortraitStream'
-        : 'NativeStream';
-    }
-
-    // Lagecy user force to native stream
-    if (isLagecy && routeName === 'Stream') {
-      routeName = settings.native_portrait_mode
-        ? 'NativePortraitStream'
-        : 'NativeStream';
-    }
+    const routeName = settings.native_portrait_mode
+      ? 'NativePortraitStream'
+      : 'NativeStream';
 
     navigation.navigate({
       name: routeName,
