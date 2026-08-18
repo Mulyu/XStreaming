@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {Text, useTheme} from 'react-native-paper';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import {useTranslation} from 'react-i18next';
 import {PriceInfo, formatPrice, discountPercent} from '../utils/storePrice';
 
 type Props = {
@@ -14,6 +16,7 @@ type Props = {
   onPress: (titleItem: any) => any;
   onLongPress?: (titleItem: any) => any;
   isFavorite?: boolean;
+  isLeavingSoon?: boolean;
   price?: PriceInfo | null;
   compact?: boolean;
 };
@@ -23,10 +26,12 @@ const TitleItem: React.FC<Props> = ({
   onPress,
   onLongPress,
   isFavorite = false,
+  isLeavingSoon = false,
   price = null,
   compact = false,
 }) => {
   const theme = useTheme();
+  const {t} = useTranslation();
   const [loading, setLoading] = React.useState(true);
 
   // Playable now: the user is entitled to this title (Game Pass / XGPU library).
@@ -90,14 +95,22 @@ const TitleItem: React.FC<Props> = ({
         )}
         <View>
           {renderImage()}
-          {hasImage && isPlayable && (
+          {/* Leaving soon takes the playable-badge slot: a title about to leave
+              Game Pass is more urgent to surface than "you can play it". */}
+          {hasImage && isLeavingSoon ? (
+            <View
+              style={[styles.leavingBadge, compact && styles.badgeCompact]}
+              accessibilityLabel={t('Leaving soon')}>
+              <Ionicons name="time" size={compact ? 12 : 14} color="#1a1205" />
+            </View>
+          ) : hasImage && isPlayable ? (
             <View style={[styles.badge, compact && styles.badgeCompact]}>
               <Text
                 style={[styles.badgeText, compact && styles.badgeTextCompact]}>
                 ✓
               </Text>
             </View>
-          )}
+          ) : null}
           {hasImage && isFavorite && (
             <View
               style={[
@@ -211,6 +224,17 @@ const styles = StyleSheet.create({
     width: 17,
     height: 17,
     borderRadius: 9,
+  },
+  leavingBadge: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ff9d1e',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badgeText: {
     color: '#ffffff',

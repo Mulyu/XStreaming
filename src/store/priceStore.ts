@@ -5,6 +5,7 @@ import {PriceInfo, RatingInfo} from '../utils/storePrice';
 // prices doesn't reset the catalog's own cache age.
 const STORE_KEY = 'user.xcloud.prices';
 const POPULAR_KEY = 'user.xcloud.popular';
+const LEAVING_KEY = 'user.xcloud.leavingsoon';
 
 export type PriceCache = {
   priceMap: Record<string, PriceInfo>;
@@ -18,6 +19,12 @@ export type PriceCache = {
 
 export type PopularCache = {
   order: string[];
+  market: string;
+  updatedAt: number;
+};
+
+export type LeavingSoonCache = {
+  ids: string[];
   market: string;
   updatedAt: number;
 };
@@ -103,5 +110,40 @@ export const savePopularOrder = (order: string[], market: string) => {
     storage.set(POPULAR_KEY, JSON.stringify(cache));
   } catch {
     // Ignore persistence failures; the order will simply refetch next session.
+  }
+};
+
+// Return the fresh leaving-soon Store ids for the given market, or null.
+export const getFreshLeavingSoon = (market: string): string[] | null => {
+  const data = storage.getString(LEAVING_KEY);
+  if (!data) {
+    return null;
+  }
+  try {
+    const cache = JSON.parse(data) as LeavingSoonCache;
+    if (
+      cache &&
+      cache.market === market &&
+      Array.isArray(cache.ids) &&
+      Date.now() - cache.updatedAt < PRICE_TTL_MS
+    ) {
+      return cache.ids;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+export const saveLeavingSoon = (ids: string[], market: string) => {
+  const cache: LeavingSoonCache = {
+    ids,
+    market,
+    updatedAt: new Date().getTime(),
+  };
+  try {
+    storage.set(LEAVING_KEY, JSON.stringify(cache));
+  } catch {
+    // Ignore persistence failures; the list will simply refetch next session.
   }
 };

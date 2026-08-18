@@ -494,5 +494,6 @@ export default {
     'Optimized for Series X|S': 'Series X|S 最適化',
     'Spatial sound': '立体音響',
     'Cloud saves': 'クラウドセーブ',
+    'Leaving soon': 'もうすぐ削除',
   },
 };

@@ -44,11 +44,14 @@ import {
   isSaleForDisplay,
 } from '../utils/storePrice';
 import {fetchPopularOrder, buildPopularRank} from '../utils/popularOrder';
+import {fetchLeavingSoon, buildLeavingSoonSet} from '../utils/leavingSoon';
 import {
   getFreshPriceCache,
   savePriceCache,
   getFreshPopularOrder,
   savePopularOrder,
+  getFreshLeavingSoon,
+  saveLeavingSoon,
 } from '../store/priceStore';
 import {getSystemRegion} from '../utils/locale';
 import {getTitleProductId} from '../store/shortcutStore';
@@ -107,6 +110,10 @@ function CloudScreen({navigation, route}) {
     {},
   );
   const popularMarketRef = React.useRef<string>('');
+  const [leavingSoonSet, setLeavingSoonSet] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+  const leavingMarketRef = React.useRef<string>('');
   const filterChangedInSheetRef = React.useRef(false);
   const flatListRef = React.useRef<any>(null);
   const isFetchGame = React.useRef(false);
@@ -395,8 +402,8 @@ function CloudScreen({navigation, route}) {
   // force a row re-render; sort/rating/popular changes reorder the data array
   // (showTitles) instead, which FlatList already reacts to.
   const listExtraData = React.useMemo(
-    () => ({starTitles, priceMap}),
-    [starTitles, priceMap],
+    () => ({starTitles, priceMap, leavingSoonSet}),
+    [starTitles, priceMap, leavingSoonSet],
   );
 
   // Load the "Most popular on cloud" order (same list as the web popular
@@ -433,6 +440,41 @@ function CloudScreen({navigation, route}) {
       // so an empty market isn't refetched on every change.
       savePopularOrder(order, market);
       setPopularRank(buildPopularRank(order));
+    });
+  }, [gameLanguage, deviceRegion]);
+
+  // Load the "Leaving soon" set (titles about to leave Game Pass) once per
+  // market, cached, to badge list cards. Same no-auth sigls source and
+  // resolve-time market guard as the popularity effect above.
+  React.useEffect(() => {
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
+    if (leavingMarketRef.current === market) {
+      return;
+    }
+    leavingMarketRef.current = market;
+
+    const cached = getFreshLeavingSoon(market);
+    if (cached) {
+      setLeavingSoonSet(buildLeavingSoonSet(cached));
+      return;
+    }
+
+    // Drop a previous market's set while the new market loads.
+    setLeavingSoonSet(new Set());
+    fetchLeavingSoon(market, language).then(ids => {
+      // Superseded by a newer market, or unmounted — drop the result.
+      if (leavingMarketRef.current !== market || !isMountedRef.current) {
+        return;
+      }
+      if (ids === null) {
+        // Every attempt failed — free the claim so a later change can retry.
+        leavingMarketRef.current = '';
+        return;
+      }
+      // Success (may be a legitimately empty list). Cache it either way so an
+      // empty market isn't refetched on every change.
+      saveLeavingSoon(ids, market);
+      setLeavingSoonSet(buildLeavingSoonSet(ids));
     });
   }, [gameLanguage, deviceRegion]);
 
@@ -1167,6 +1209,9 @@ function CloudScreen({navigation, route}) {
                           onPress={handleViewDetail}
                           onLongPress={handleOpenActions}
                           isFavorite={isTitleStarred(item)}
+                          isLeavingSoon={leavingSoonSet.has(
+                            String(item.productId || '').toUpperCase(),
+                          )}
                           price={getPrice(priceMap, item.productId)}
                           compact={isLargeScreen}
                         />
