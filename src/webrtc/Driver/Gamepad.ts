@@ -50,17 +50,19 @@ export default class GamepadDriver implements Driver {
     this._isVirtualButtonPressing = true;
 
     this._shadowGamepad[button] = 1;
-    this._application
-      ?.getChannelProcessor('input')
-      .queueGamepadState(this._shadowGamepad);
+    const channel = this._application?.getChannelProcessor('input');
+    channel?.queueGamepadState(this._shadowGamepad);
+    // Discrete button: send right away so a fast tap isn't delayed by (or
+    // coalesced away within) the poll interval.
+    channel?.flushGamepadInput();
   }
 
   pressButtonEnd(button: string) {
     // console.log('pressButtonEnd:', button);
     this._shadowGamepad[button] = 0;
-    this._application
-      ?.getChannelProcessor('input')
-      .queueGamepadState(this._shadowGamepad);
+    const channel = this._application?.getChannelProcessor('input');
+    channel?.queueGamepadState(this._shadowGamepad);
+    channel?.flushGamepadInput();
     this._isVirtualButtonPressing = false;
   }
 
