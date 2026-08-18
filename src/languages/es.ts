@@ -506,5 +506,6 @@ export default {
     'Optimized for Series X|S': 'Optimizado para Series X|S',
     'Spatial sound': 'Sonido espacial',
     'Cloud saves': 'Guardado en la nube',
+    'Leaving soon': 'Se retira pronto',
   },
 };

@@ -544,5 +544,6 @@ export default {
     'Optimized for Series X|S': 'Optimiert für Series X|S',
     'Spatial sound': 'Raumklang',
     'Cloud saves': 'Cloud-Speicherstände',
+    'Leaving soon': 'Bald nicht mehr verfügbar',
   },
 };

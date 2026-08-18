@@ -515,5 +515,6 @@ export default {
     'Optimized for Series X|S': 'Series X|S 最佳化',
     'Spatial sound': '空間音效',
     'Cloud saves': '雲端存檔',
+    'Leaving soon': '即將下架',
   },
 };

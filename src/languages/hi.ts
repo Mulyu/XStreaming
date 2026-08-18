@@ -510,5 +510,6 @@ export default {
     'Optimized for Series X|S': 'Series X|S के लिए ऑप्टिमाइज़्ड',
     'Spatial sound': 'स्थानिक ध्वनि',
     'Cloud saves': 'क्लाउड सेव',
+    'Leaving soon': 'जल्द हटेगा',
   },
 };

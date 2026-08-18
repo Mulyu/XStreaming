@@ -538,5 +538,6 @@ export default {
     'Optimized for Series X|S': 'Series X|S 优化',
     'Spatial sound': '空间音效',
     'Cloud saves': '云存档',
+    'Leaving soon': '即将下架',
   },
 };

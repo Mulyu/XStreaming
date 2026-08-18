@@ -548,5 +548,6 @@ export default {
     'Optimized for Series X|S': 'Otimizado para Series X|S',
     'Spatial sound': 'Som espacial',
     'Cloud saves': 'Saves na nuvem',
+    'Leaving soon': 'Saindo em breve',
   },
 };
