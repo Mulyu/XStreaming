@@ -49,6 +49,9 @@ const TitleAchievements: React.FC<Props> = ({
       return;
     }
     let cancelled = false;
+    // Clear the previous title's data so its summary can't flash while the new
+    // title's achievements load.
+    setItems([]);
     setLoading(true);
     const api = new WebApi(webToken);
     api
@@ -82,17 +85,15 @@ const TitleAchievements: React.FC<Props> = ({
   }
 
   const total = items.length;
-  const unlocked = items.filter(isAchieved).length;
+  const achievedItems = items.filter(isAchieved);
+  const unlocked = achievedItems.length;
   const totalG = items.reduce((sum, i) => sum + gamerscoreOf(i), 0);
-  const earnedG = items
-    .filter(isAchieved)
-    .reduce((sum, i) => sum + gamerscoreOf(i), 0);
-  const pct =
-    totalG > 0
-      ? Math.round((earnedG / totalG) * 100)
-      : total > 0
-      ? Math.round((unlocked / total) * 100)
-      : 0;
+  const earnedG = achievedItems.reduce((sum, i) => sum + gamerscoreOf(i), 0);
+  // Raw completion ratio drives the bar; only the label is rounded, so a title
+  // at 999/1000 G doesn't show a full bar.
+  const ratio =
+    totalG > 0 ? earnedG / totalG : total > 0 ? unlocked / total : 0;
+  const pct = Math.round(ratio * 100);
 
   const goAll = () => {
     navigation.navigate('AchivementDetail', {
@@ -131,7 +132,7 @@ const TitleAchievements: React.FC<Props> = ({
               <Text style={[styles.pct, {color: accent}]}>{pct}%</Text>
             </View>
             <ProgressBar
-              progress={pct / 100}
+              progress={ratio}
               color={accent}
               style={styles.track}
             />
