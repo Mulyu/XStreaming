@@ -100,18 +100,15 @@ public class MainApplication extends Application implements ReactApplication {
     JavaAudioDeviceModule.Builder audioDeviceModuleBuilder =
           JavaAudioDeviceModule.builder(this)
                 .setAudioAttributes(audioAttributes)
-                .setEnableVolumeLogger(false);
-
-    if (stereoEnabled) {
-        audioDeviceModuleBuilder
-              .setUseStereoInput(true)
-              .setUseStereoOutput(true);
-    } else {
-        audioDeviceModuleBuilder
-              .setUseLowLatency(true)
-              .setUseStereoInput(false)
-              .setUseStereoOutput(false);
-    }
+                .setEnableVolumeLogger(false)
+                // Always request the Android low-latency (fast path) audio
+                // output. It used to be enabled only in the mono branch, which
+                // made stereo take the higher-latency default path; low latency
+                // and stereo are independent, so keep low latency on for both
+                // and let the stereo toggle control only the channel count.
+                .setUseLowLatency(true)
+                .setUseStereoInput(stereoEnabled)
+                .setUseStereoOutput(stereoEnabled);
 
     options.audioDeviceModule = audioDeviceModuleBuilder.createAudioDeviceModule();
 
