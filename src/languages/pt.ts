@@ -549,5 +549,6 @@ export default {
     'Spatial sound': 'Som espacial',
     'Cloud saves': 'Saves na nuvem',
     'Leaving soon': 'Saindo em breve',
+    'Leaving Game Pass soon': 'Sai do Game Pass em breve',
   },
 };

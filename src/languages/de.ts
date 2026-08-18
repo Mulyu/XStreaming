@@ -545,5 +545,6 @@ export default {
     'Spatial sound': 'Raumklang',
     'Cloud saves': 'Cloud-Speicherstände',
     'Leaving soon': 'Bald nicht mehr verfügbar',
+    'Leaving Game Pass soon': 'Verlässt Game Pass bald',
   },
 };

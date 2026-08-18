@@ -491,5 +491,6 @@ export default {
     'Spatial sound': '공간 음향',
     'Cloud saves': '클라우드 세이브',
     'Leaving soon': '곧 종료',
+    'Leaving Game Pass soon': '곧 Game Pass에서 종료됩니다',
   },
 };
