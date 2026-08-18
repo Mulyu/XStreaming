@@ -23,8 +23,6 @@ export type Settings = {
   locale: string;
   locale_follow_system: boolean;
   resolution: number;
-  xhome_bitrate_mode: string;
-  xhome_bitrate: number | string;
   xcloud_bitrate_mode: string;
   xcloud_bitrate: number | string;
   audio_bitrate_mode: string;
@@ -85,10 +83,6 @@ export type Settings = {
   ipv6: boolean;
   check_update: boolean;
   power_on: boolean;
-  use_inner_turn_server: boolean;
-  server_url: string;
-  server_username: string;
-  server_credential: string;
   theme: string;
   theme_primary_color: string;
   show_menu: boolean;
@@ -103,8 +97,6 @@ const defaultSettings: Settings = {
   locale: 'en',
   locale_follow_system: true,
   resolution: 720,
-  xhome_bitrate_mode: 'auto',
-  xhome_bitrate: 20,
   xcloud_bitrate_mode: 'auto',
   xcloud_bitrate: 20,
   audio_bitrate_mode: 'auto',
@@ -162,10 +154,6 @@ const defaultSettings: Settings = {
   ipv6: false,
   check_update: true,
   power_on: false,
-  use_inner_turn_server: false,
-  server_url: '',
-  server_username: '',
-  server_credential: '',
   display_options: {
     sharpness: 5,
     saturation: 100,
