@@ -21,16 +21,13 @@ import {
   createDefaultMacroLayoutButton,
   ensureMacroLayoutButton,
 } from '../utils/virtualMacro';
+import {
+  buildDefaultLayout,
+  snapToGrid,
+  ButtonConfig,
+} from '../utils/gamepadLayout';
 
-export type ButtonConfig = {
-  name: string;
-  x: number;
-  y: number;
-  scale?: number;
-  show?: boolean;
-  width?: number;
-  height?: number;
-};
+export type {ButtonConfig};
 
 export interface VirtualGamepadEditorProps {
   visible: boolean;
@@ -41,32 +38,7 @@ export interface VirtualGamepadEditorProps {
 
 const buildDefaultButtons = (): ButtonConfig[] => {
   const {width, height} = Dimensions.get('window');
-  const nexusLeft = width * 0.5 - 20;
-  const viewLeft = width * 0.5 - 100;
-  const menuLeft = width * 0.5 + 60;
-
-  return [
-    {name: 'LeftTrigger', x: 30, y: 40, scale: 1, show: true},
-    {name: 'RightTrigger', x: width - 40, y: 40, scale: 1, show: true},
-    {name: 'LeftShoulder', x: 30, y: 100, scale: 1, show: true},
-    {name: 'RightShoulder', x: width - 40, y: 100, scale: 1, show: true},
-    {name: 'A', x: width - 90, y: height - 60, scale: 1, show: true},
-    {name: 'B', x: width - 40, y: height - 110, scale: 1, show: true},
-    {name: 'X', x: width - 140, y: height - 110, scale: 1, show: true},
-    {name: 'Y', x: width - 90, y: height - 160, scale: 1, show: true},
-    {name: 'LeftThumb', x: 225, y: height - 80, scale: 1, show: true},
-    {name: 'RightThumb', x: width - 235, y: height - 70, scale: 1, show: true},
-    {name: 'View', x: viewLeft, y: height - 30, scale: 1, show: true},
-    {name: 'Nexus', x: nexusLeft, y: height - 30, scale: 1, show: true},
-    {name: 'Menu', x: menuLeft, y: height - 30, scale: 1, show: true},
-    {name: 'DPadUp', x: 85, y: height - 155, show: true},
-    {name: 'DPadLeft', x: 35, y: height - 105, show: true},
-    {name: 'DPadDown', x: 85, y: height - 55, show: true},
-    {name: 'DPadRight', x: 135, y: height - 105, show: true},
-    {name: 'LeftStick', x: 175, y: height - 205, show: true},
-    {name: 'RightStick', x: width - 265, y: height - 195, show: true},
-    createDefaultMacroLayoutButton(width, height),
-  ];
+  return buildDefaultLayout(width, height);
 };
 
 const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
@@ -119,9 +91,11 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   }
 
   const handleDrag = (name: string, x: number, y: number) => {
+    // Snap to a coarse grid so positions land in even steps rather than needing
+    // pixel-by-pixel fine-tuning.
     const next = buttons.map(button => {
       if (button.name === name) {
-        return {...button, x: Math.round(x), y: Math.round(y)};
+        return {...button, x: snapToGrid(x), y: snapToGrid(y)};
       }
       return button;
     });

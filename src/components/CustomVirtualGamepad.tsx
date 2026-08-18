@@ -9,6 +9,7 @@ import {
   ensureMacroLayoutButton,
   VIRTUAL_MACRO_BUTTON_NAME,
 } from '../utils/virtualMacro';
+import {buildDefaultLayout} from '../utils/gamepadLayout';
 
 type Props = {
   title: string;
@@ -35,147 +36,12 @@ const CustomVirtualGamepad: React.FC<Props> = ({
   React.useEffect(() => {
     const _settings = getSettings();
     const {width, height} = Dimensions.get('window');
-
-    const nexusLeft = width * 0.5 - 20;
-    const viewLeft = width * 0.5 - 100;
-    const menuLeft = width * 0.5 + 60;
-
     const macroDefaultButton = createDefaultMacroLayoutButton(width, height);
-    const _buttons = [
-      {
-        name: 'LeftTrigger',
-        x: 30,
-        y: 40,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'RightTrigger',
-        x: width - 30,
-        y: 40,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'LeftShoulder',
-        x: 30,
-        y: 100,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'RightShoulder',
-        x: width - 30,
-        y: 110,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'A',
-        x: width - 90,
-        y: height - 60,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'B',
-        x: width - 40,
-        y: height - 110,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'X',
-        x: width - 140,
-        y: height - 110,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'Y',
-        x: width - 90,
-        y: height - 160,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'LeftThumb',
-        x: 210,
-        y: height - 80,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'RightThumb',
-        x: width - 235,
-        y: height - 70,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'View',
-        x: viewLeft,
-        y: height - 30,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'Nexus',
-        x: nexusLeft,
-        y: height - 50,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'Menu',
-        x: menuLeft,
-        y: height - 30,
-        scale: 1,
-        show: true,
-      },
-      {
-        name: 'DPadUp',
-        x: 85,
-        y: height - 145,
-        show: true,
-      },
-      {
-        name: 'DPadLeft',
-        x: 35,
-        y: height - 95,
-        show: true,
-      },
-      {
-        name: 'DPadDown',
-        x: 85,
-        y: height - 45,
-        show: true,
-      },
-      {
-        name: 'DPadRight',
-        x: 135,
-        y: height - 95,
-        show: true,
-      },
-      {
-        name: 'LeftStick',
-        x: 175,
-        y: height - 205,
-        show: true,
-      },
-      {
-        name: 'RightStick',
-        x: width - 265,
-        y: height - 195,
-        show: true,
-      },
-      macroDefaultButton,
-    ];
     if (_settings[title]) {
       const exitButtons = _settings[title];
       setButtons(ensureMacroLayoutButton(exitButtons, macroDefaultButton));
     } else {
-      setButtons(_buttons);
+      setButtons(buildDefaultLayout(width, height));
     }
   }, [title, refreshKey]);
 
