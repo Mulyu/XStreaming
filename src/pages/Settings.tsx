@@ -187,10 +187,7 @@ function SettingsScreen({navigation}) {
             )}
             onPress={() => {
               const settings = getSettings();
-              if (
-                settings.render_engine === 'native' ||
-                settings.render_engine === 'nano'
-              ) {
+              if (settings.render_engine === 'native') {
                 Alert.alert(
                   t('Display settings is not working in native render engine.'),
                 );

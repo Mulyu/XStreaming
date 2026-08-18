@@ -68,6 +68,3 @@ yarn-error.log
 /coverage
 
 server.json
-
-# Rust native build artifacts
-nano-rs/target/

@@ -503,8 +503,6 @@ function HomeScreen({navigation, route}) {
       routeName = settings.native_portrait_mode
         ? 'NativePortraitStream'
         : 'NativeStream';
-    } else if (settings.render_engine === 'nano') {
-      routeName = 'NanoStream';
     }
 
     // Lagecy user force to native stream
