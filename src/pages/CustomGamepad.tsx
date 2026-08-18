@@ -288,7 +288,7 @@ function CustomGamepadScreen({navigation, route}) {
                 onShortPressRelease={() => {
                   setCurrentButton(button.name);
                   setCurrentScale(1);
-                  setCurrentShow(button.show || true);
+                  setCurrentShow(button.show ?? true);
                   setShowModal(true);
                 }}
                 onDragRelease={(_, __, bounds) => {
@@ -309,7 +309,7 @@ function CustomGamepadScreen({navigation, route}) {
                 onShortPressRelease={() => {
                   setCurrentButton(button.name);
                   setCurrentScale(button.scale || 1);
-                  setCurrentShow(button.show || true);
+                  setCurrentShow(button.show ?? true);
                   setShowModal(true);
                 }}
                 onDragRelease={(_, __, bounds) => {
