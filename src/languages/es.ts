@@ -365,7 +365,6 @@ export default {
     'Streaming is closed': 'Streaming cerrado',
     'NAT failed': 'Fallo de NAT. Revisa el router.',
     'Reconnected failed': 'Fallo al reconectar.',
-    Nano: 'Nano (experimental)',
     renderEngineTitle: 'Motor de renderizado',
     renderEngineDesc:
       'Elige el motor de renderizado Native/Nano/WebView para reproducir el vídeo.',

@@ -387,7 +387,6 @@ export default {
     'NAT failed':
       'NAT失败，如果你正在尝试远程串流，请保证已经正确配置路由器，并设置已经设置端口转发，如果无法解决远程串流，请使用官方Xbox应用。',
     'Reconnected failed': '网络发生了变化，重连失败，请重新连接',
-    Nano: 'Nano(实验性)',
     renderEngineTitle: '渲染引擎',
     renderEngineDesc: '选择Native/Nano/Webview渲染引擎，播放视频流',
     renderEngineTips:

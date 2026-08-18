@@ -369,7 +369,6 @@ export default {
     'NAT failed':
       'NAT失敗，如果你正在嘗試遠端串流，請確認已正確設定路由器並完成連接埠轉發。如果仍無法解決遠端串流，請使用官方 Xbox 應用。',
     'Reconnected failed': '網絡發生了變化，重連失敗，請重新連接',
-    Nano: 'Nano (實驗性)',
     renderEngineTitle: '渲染引擎',
     renderEngineDesc: '你可以選擇 Native/Nano/Webview 渲染引擎來播放影片串流。',
     renderEngineTips:

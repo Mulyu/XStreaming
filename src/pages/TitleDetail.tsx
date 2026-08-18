@@ -186,8 +186,6 @@ function TitleDetail({navigation, route}) {
       routeName = settings.native_portrait_mode
         ? 'NativePortraitStream'
         : 'NativeStream';
-    } else if (settings.render_engine === 'nano') {
-      routeName = 'NativeStream';
     }
 
     // Lagecy user force to native stream
@@ -199,8 +197,8 @@ function TitleDetail({navigation, route}) {
 
     // Below titles use webview stream
     if (
-      routeName !== 'NanoStream' &&
-      (warnTitles.indexOf(titleId) > -1 || webviewTitles.indexOf(titleId) > -1)
+      warnTitles.indexOf(titleId) > -1 ||
+      webviewTitles.indexOf(titleId) > -1
     ) {
       routeName = 'Stream';
     }

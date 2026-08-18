@@ -395,7 +395,6 @@ export default {
       'Falha no NAT. Se estiver tentando streaming remoto, verifique se o roteador está configurado corretamente e o encaminhamento de portas está definido. Se o streaming remoto ainda não funcionar, use o app oficial do Xbox.',
     'Reconnected failed':
       'A rede mudou e a reconexão falhou. Por favor, reconecte.',
-    Nano: 'Nano (experimental)',
     renderEngineTitle: 'Motor de renderização',
     renderEngineDesc:
       'Escolha o motor de renderização Native/Nano/WebView para reproduzir o streaming de vídeo.',

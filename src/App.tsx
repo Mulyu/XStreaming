@@ -47,7 +47,6 @@ import LoginScreen from './pages/Login';
 import StreamScreen from './pages/Stream';
 import NativeStreamScreen from './pages/NativeStream';
 import NativePortraitStreamScreen from './pages/NativePortraitStream';
-import NanoStreamScreen from './pages/NanoStream';
 import SettingsScreen from './pages/Settings';
 import SettingDetailScreen from './pages/SettingDetail';
 import TitleDetailScreen from './pages/TitleDetail';
@@ -467,11 +466,6 @@ function App() {
                 <RootStack.Screen
                   name="NativePortraitStream"
                   component={NativePortraitStreamScreen}
-                  options={{headerShown: false}}
-                />
-                <RootStack.Screen
-                  name="NanoStream"
-                  component={NanoStreamScreen}
                   options={{headerShown: false}}
                 />
                 <RootStack.Screen

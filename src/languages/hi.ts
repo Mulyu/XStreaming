@@ -366,7 +366,6 @@ export default {
     'Streaming is closed': 'स्ट्रीमिंग बंद है',
     'NAT failed': 'NAT विफल। राउटर सेटिंग्स की जाँच करें।',
     'Reconnected failed': 'पुन: कनेक्शन विफल रहा।',
-    Nano: 'Nano (प्रयोगात्मक)',
     renderEngineTitle: 'रेंडरिंग इंजन',
     renderEngineDesc:
       'वीडियो स्ट्रीम चलाने के लिए Native/Nano/WebView रेंडरिंग इंजन चुनें।',

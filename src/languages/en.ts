@@ -407,7 +407,6 @@ export default {
       'NAT failed. If you are trying remote streaming, make sure the router is configured correctly and port forwarding is set. If remote streaming still cannot be resolved, use the official Xbox app.',
     'Reconnected failed':
       'Network changed and reconnection failed. Please reconnect.',
-    Nano: 'Nano (experimental)',
     renderEngineTitle: 'Rendering engine',
     renderEngineDesc:
       'Choose the Native/Nano/WebView rendering engine to play the video stream.',

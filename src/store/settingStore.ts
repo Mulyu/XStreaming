@@ -23,7 +23,7 @@ export type Settings = {
   locale: string;
   locale_follow_system: boolean;
   resolution: number;
-  render_engine: 'web' | 'native' | 'nano';
+  render_engine: 'web' | 'native';
   xhome_bitrate_mode: string;
   xhome_bitrate: number | string;
   xcloud_bitrate_mode: string;
@@ -227,6 +227,11 @@ export const getSettings = (): Settings => {
       'locale_follow_system',
     );
     const merged = Object.assign({}, defaultSettings, _settings);
+    // The nano render engine was removed; migrate any saved 'nano' to native so
+    // the stream still routes to a real engine.
+    if ((merged.render_engine as string) === 'nano') {
+      merged.render_engine = 'native';
+    }
     merged.locale_follow_system = hasLocaleFollowSystem
       ? !!_settings.locale_follow_system
       : false;

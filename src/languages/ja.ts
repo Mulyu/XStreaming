@@ -356,7 +356,6 @@ export default {
     'Streaming is closed': '終了しました',
     'NAT failed': 'NAT失敗।ルーター設定を確認।',
     'Reconnected failed': '再接続失敗',
-    Nano: 'Nano (実験的)',
     renderEngineTitle: 'エンジン',
     renderEngineDesc:
       'Native/Nano/WebView のレンダリングエンジンを選んで動画ストリームを再生します。',

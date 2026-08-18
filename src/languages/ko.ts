@@ -354,7 +354,6 @@ export default {
     'Streaming is closed': '스트리밍 종료',
     'NAT failed': 'NAT 실패. 라우터 설정을 확인하세요.',
     'Reconnected failed': '재연결 실패',
-    Nano: 'Nano (실험용)',
     renderEngineTitle: '렌더링 엔진',
     renderEngineDesc: 'Native/Nano/WebView 렌더링 엔진을 선택하세요.',
     renderEngineTips:
