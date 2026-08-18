@@ -50,17 +50,19 @@ export default class GamepadDriver implements Driver {
     this._isVirtualButtonPressing = true;
 
     this._shadowGamepad[button] = 1;
-    this._application
-      ?.getChannelProcessor('input')
-      .queueGamepadState(this._shadowGamepad);
+    const channel = this._application?.getChannelProcessor('input');
+    channel?.queueGamepadState(this._shadowGamepad);
+    // Discrete button: send right away so a fast tap isn't delayed by (or
+    // coalesced away within) the poll interval.
+    channel?.flushGamepadInput();
   }
 
   pressButtonEnd(button: string) {
     // console.log('pressButtonEnd:', button);
     this._shadowGamepad[button] = 0;
-    this._application
-      ?.getChannelProcessor('input')
-      .queueGamepadState(this._shadowGamepad);
+    const channel = this._application?.getChannelProcessor('input');
+    channel?.queueGamepadState(this._shadowGamepad);
+    channel?.flushGamepadInput();
     this._isVirtualButtonPressing = false;
   }
 
@@ -75,7 +77,7 @@ export default class GamepadDriver implements Driver {
     this._shadowGamepad.LeftThumbYAxis = -y;
     this._application
       ?.getChannelProcessor('input')
-      .queueGamepadState(this._shadowGamepad);
+      ?.queueGamepadState(this._shadowGamepad);
   }
 
   // right stick move
@@ -89,7 +91,7 @@ export default class GamepadDriver implements Driver {
     this._shadowGamepad.RightThumbYAxis = -y;
     this._application
       ?.getChannelProcessor('input')
-      .queueGamepadState(this._shadowGamepad);
+      ?.queueGamepadState(this._shadowGamepad);
   }
 
   // Only ran when new gamepad driver is selected
@@ -104,7 +106,7 @@ export default class GamepadDriver implements Driver {
     if (!this._isVirtualButtonPressing) {
       this._application
         ?.getChannelProcessor('input')
-        .queueGamepadStates(gpStates);
+        ?.queueGamepadStates(gpStates);
     }
 
     // requestAnimationFrame(() => { this.run() })

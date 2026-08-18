@@ -107,28 +107,45 @@ export default class InputChannel extends BaseChannel {
     const pollRate = this.getClient()._polling_rate || 62.5;
 
     this._inputInterval = setInterval(() => {
-      const metadataQueue = this.getMetadataQueue();
-      const gamepadQueue = this.getGamepadQueue();
-      const pointerQueue = this.getPointerQueue();
-
-      if (
-        metadataQueue.length !== 0 ||
-        gamepadQueue.length !== 0 ||
-        pointerQueue.length !== 0
-      ) {
-        this._inputSequenceNum++;
-        const packet = new InputPacket(this._inputSequenceNum);
-        packet.setData(
-          metadataQueue,
-          gamepadQueue,
-          pointerQueue,
-          this._serverWidth,
-          this._serverHeight,
-        );
-
-        this.send(packet.toBuffer());
-      }
+      this._flushInputQueues();
     }, 1000 / pollRate); // 16 ms = 1 frame (1000/60)
+  }
+
+  // Drain the metadata/gamepad/pointer queues into a single packet and send it.
+  // Called both from the poll interval and directly on discrete button events
+  // (see flushGamepadInput) so a fast tap isn't held back for up to a full
+  // poll period.
+  _flushInputQueues() {
+    const metadataQueue = this.getMetadataQueue();
+    const gamepadQueue = this.getGamepadQueue();
+    const pointerQueue = this.getPointerQueue();
+
+    if (
+      metadataQueue.length !== 0 ||
+      gamepadQueue.length !== 0 ||
+      pointerQueue.length !== 0
+    ) {
+      this._inputSequenceNum++;
+      const packet = new InputPacket(this._inputSequenceNum);
+      packet.setData(
+        metadataQueue,
+        gamepadQueue,
+        pointerQueue,
+        this._serverWidth,
+        this._serverHeight,
+      );
+
+      this.send(packet.toBuffer());
+    }
+  }
+
+  // Immediately send any queued input. Used for discrete gamepad button
+  // transitions (D-pad, A/B/X/Y, ...) so a quick press/release is delivered
+  // right away instead of waiting for — and possibly being coalesced by — the
+  // next poll tick. Analog stick moves intentionally stay on the poll interval
+  // to avoid flooding the channel with per-touch-move packets.
+  flushGamepadInput() {
+    this._flushInputQueues();
   }
 
   onMessage(event: any) {
@@ -212,8 +229,14 @@ export default class InputChannel extends BaseChannel {
   }
 
   queueGamepadState(input: InputFrame) {
-    if (input !== null) {
-      return this._gamepadFrames.push(input);
+    if (input !== null && input !== undefined) {
+      // Snapshot the state at queue time. Callers (e.g. the virtual gamepad
+      // driver) reuse a single mutable "shadow" object, so pushing the
+      // reference would let a later press/release mutate an already-queued
+      // frame. When a full tap lands between two poll ticks, every queued
+      // frame would then read the final (released) state and the press would
+      // never be sent. Copying decouples each queued frame from later edits.
+      return this._gamepadFrames.push({...input});
     }
   }
 

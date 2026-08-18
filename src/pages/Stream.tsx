@@ -1380,6 +1380,16 @@ function StreamScreen({navigation, route}) {
   const handleMacroPressOut = () => {};
 
   // Virtual gamepad press
+  // Post the current virtual-gamepad state to the web player immediately. It
+  // otherwise only samples gpState on the ~16ms poll, so a fast tap (or rapid
+  // repeats) could be merged into a single hold or dropped. Sending the
+  // transition right away makes each press/release its own edge. The state is
+  // JSON-serialized, so it's a snapshot and a later release can't overwrite an
+  // already-sent press.
+  const flushVirtualGpState = () => {
+    postData2Webview('gamepad', gpState);
+  };
+
   const handleButtonPressIn = name => {
     if (name === VIRTUAL_MACRO_BUTTON_NAME) {
       handleMacroPressIn();
@@ -1391,9 +1401,11 @@ function StreamScreen({navigation, route}) {
     const hold_buttons = settings.hold_buttons || [];
     if (hold_buttons.includes(name)) {
       gpState[name] = gpState[name] === 1 ? 0 : 1;
+      flushVirtualGpState();
       return;
     }
     gpState[name] = 1;
+    flushVirtualGpState();
     if (settings.vibration) {
       Vibration.vibrate(30);
     }
@@ -1410,10 +1422,12 @@ function StreamScreen({navigation, route}) {
     if (hold_buttons.includes(name)) {
       return;
     }
-    setTimeout(() => {
-      // console.log('handleButtonPressOut:', name);
-      gpState[name] = 0;
-    }, 50);
+    // Release immediately (and flush) instead of deferring 50ms. The old delay
+    // guaranteed the poll sampled the press, but it also merged rapid taps into
+    // one hold. The immediate flush on press/release delivers each edge without
+    // it.
+    gpState[name] = 0;
+    flushVirtualGpState();
   };
 
   // Virtual gamepad move joystick

@@ -2142,6 +2142,18 @@ export function NativeStreamScreenBase({
   const handleMacroPressOut = () => {};
 
   // Virtual gamepad press start
+  // Push the current virtual-gamepad state to the input channel immediately.
+  // The input driver otherwise only samples gpState on its ~16ms poll, so a
+  // fast tap (or rapid repeats) could be merged into a single hold or dropped
+  // entirely. Sending the transition right away makes each press/release its
+  // own edge. queueGamepadState snapshots the object, so a later release can't
+  // overwrite an already-queued press.
+  const flushVirtualGpState = () => {
+    const inputChannel = webrtcClient?.getChannelProcessor?.('input');
+    inputChannel?.queueGamepadState(gpState);
+    inputChannel?.flushGamepadInput?.();
+  };
+
   const handleButtonPressIn = name => {
     if (name === VIRTUAL_MACRO_BUTTON_NAME) {
       handleMacroPressIn();
@@ -2162,9 +2174,11 @@ export function NativeStreamScreenBase({
     // Hold button
     if (hold_buttons.includes(name)) {
       gpState[name] = gpState[name] === 1 ? 0 : 1;
+      flushVirtualGpState();
       return;
     }
     gpState[name] = 1;
+    flushVirtualGpState();
 
     if (settings.vibration) {
       Vibration.vibrate(30);
@@ -2193,9 +2207,12 @@ export function NativeStreamScreenBase({
     if (hold_buttons.includes(name)) {
       return;
     }
-    setTimeout(() => {
-      gpState[name] = 0;
-    }, 50);
+    // Release immediately (and flush) instead of deferring 50ms. The old delay
+    // guaranteed the ~16ms poll sampled the press, but it also merged rapid
+    // taps into one hold and let a stale timer clear a newer press. The
+    // immediate flush on press/release delivers each edge reliably without it.
+    gpState[name] = 0;
+    flushVirtualGpState();
   };
 
   // Virtual gamepad stick move
