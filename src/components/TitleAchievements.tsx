@@ -131,11 +131,7 @@ const TitleAchievements: React.FC<Props> = ({
               </Text>
               <Text style={[styles.pct, {color: accent}]}>{pct}%</Text>
             </View>
-            <ProgressBar
-              progress={ratio}
-              color={accent}
-              style={styles.track}
-            />
+            <ProgressBar progress={ratio} color={accent} style={styles.track} />
           </View>
           <Ionicons name="chevron-forward" size={20} color="#6d7472" />
         </Pressable>
