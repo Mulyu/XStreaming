@@ -254,19 +254,17 @@ function TitleDetail({navigation, route}) {
     let cancelled = false;
     fetchTitleDetails(productId, market, language, {
       isCancelled: () => cancelled,
-    }).then(({price: p, rating: r, details: d}) => {
-      if (cancelled) {
+    }).then(({price: p, rating: r, details: d, ok}) => {
+      if (cancelled || !ok) {
+        // On a hard fetch failure keep whatever the cache seeded above; only a
+        // successful response is authoritative.
         return;
       }
-      if (p) {
-        setPrice(p);
-      }
-      if (r) {
-        setRating(r);
-      }
-      if (d) {
-        setDetails(d);
-      }
+      // Apply the fresh result verbatim, including nulls: a title that lost its
+      // price/rating must not keep showing a stale cached one.
+      setPrice(p);
+      setRating(r);
+      setDetails(d);
     });
     return () => {
       cancelled = true;
@@ -359,7 +357,13 @@ function TitleDetail({navigation, route}) {
             ) : (
               <WebView
                 source={{
-                  html: `<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><video src="${viewer.uri}" controls autoplay playsinline style="width:100%;height:100%"></video></body>`,
+                  // Inject the URL as a JS string (JSON.stringify escapes quotes
+                  // and markup) rather than into an HTML attribute, so an
+                  // unexpected character in the catalog URL can't break — or
+                  // inject into — the page.
+                  html: `<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><video id="v" controls autoplay playsinline style="width:100%;height:100%"></video><script>document.getElementById('v').src=${JSON.stringify(
+                    viewer.uri,
+                  )};</script></body>`,
                 }}
                 style={styles.viewerVideo}
                 allowsInlineMediaPlayback={true}
@@ -470,6 +474,9 @@ function TitleDetail({navigation, route}) {
   const boxUri = titleItem?.Image_Poster?.URL
     ? `https:${titleItem.Image_Poster.URL}`
     : localGame?.image_urls?.box_art || '';
+  // When the hero fell back to the poster (no wide key art), don't also show the
+  // same poster as the box-art thumbnail stacked on top of itself.
+  const showBoxart = !!boxUri && boxUri !== heroUri;
 
   const priceDiscount = price ? discountPercent(price) : 0;
   const showDetailSale = !!price && price.onSale && priceDiscount > 0;
@@ -643,7 +650,7 @@ function TitleDetail({navigation, route}) {
                   </View>
                 ) : null}
                 <View style={styles.heroFoot}>
-                  {boxUri ? (
+                  {showBoxart ? (
                     <Image
                       source={{uri: boxUri}}
                       resizeMode="cover"
