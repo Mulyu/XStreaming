@@ -84,6 +84,77 @@ export type RatingInfo = {
   count: number; // number of ratings (a popularity proxy)
 };
 
+export type TrailerInfo = {
+  url: string; // playable video URL
+  preview: string; // poster image URL
+};
+
+// The rich, display-oriented fields the detail screen shows. All are pulled
+// from the same DisplayCatalog `details` response as the price, so surfacing
+// them costs no extra request.
+export type TitleDetails = {
+  developer: string;
+  publisher: string;
+  description: string; // full store description
+  releaseDate: string; // ISO 8601, or ''
+  ratingSystem: string; // e.g. "PEGI" (region-appropriate board)
+  ratingLevel: string; // e.g. "18"
+  heroImage: string; // wide key art URL, or ''
+  screenshots: string[]; // screenshot URLs
+  capabilities: string[]; // canonical capability ids (see CAPABILITY_MATCHERS)
+  trailers: TrailerInfo[];
+};
+
+// Canonical capability id -> the raw DisplayCatalog Attribute names that imply
+// it, in the order we want to show the chips. Kept here (not in the screen) so
+// the mapping lives beside the API it parses.
+const CAPABILITY_MATCHERS: Array<{id: string; attrs: string[]}> = [
+  {id: 'single', attrs: ['SinglePlayer']},
+  {id: 'multi', attrs: ['MultiPlayer']},
+  {
+    id: 'coop',
+    attrs: [
+      'CoOp',
+      'Coop',
+      'CoOperativeGaming',
+      'LocalCoOp',
+      'OnlineCoOp',
+      'SharedSplitScreen',
+    ],
+  },
+  {
+    id: 'crossplat',
+    attrs: ['CrossPlatformMultiPlayer', 'XblCrossPlatformMultiplayer'],
+  },
+  {id: 'optimized', attrs: ['ConsoleGen9Optimized', 'XboxConsoleGenOptimized']},
+  {id: '4k', attrs: ['Capability4k', '4k', '4K']},
+  {id: 'hdr', attrs: ['CapabilityHDR']},
+  {id: 'dolbyvision', attrs: ['CapabilityDolbyVision']},
+  {id: 'atmos', attrs: ['DolbyAtmos']},
+  {id: 'dtsx', attrs: ['DTSX']},
+  {id: 'spatial', attrs: ['SpatialSound']},
+  {id: 'achievements', attrs: ['XblAchievements']},
+  {id: 'cloudsaves', attrs: ['XblCloudSaves']},
+];
+
+// Preferred content-rating board per market; anything not listed falls back to
+// the order in extractRatingBoard.
+const MARKET_RATING_SYSTEM: Record<string, string> = {
+  US: 'ESRB',
+  CA: 'ESRB',
+  MX: 'ESRB',
+  AR: 'ESRB',
+  CL: 'ESRB',
+  CO: 'ESRB',
+  BR: 'DJCTQ',
+  JP: 'CERO',
+  KR: 'GRB',
+  TW: 'CSRR',
+  AU: 'COB-AU',
+  NZ: 'OFLC-NZ',
+  DE: 'USK',
+};
+
 // Build the public Store page URL for a title. productId === StoreId for
 // xCloud catalog titles, so no extra API call is needed.
 export const getStoreUrl = (storeId: string): string =>
@@ -199,6 +270,111 @@ export const extractRating = (product: any): RatingInfo | null => {
   return best;
 };
 
+// Normalize a DisplayCatalog image/video Uri, which comes back protocol-
+// relative (leading "//"). Returns '' for anything unusable.
+const absUri = (uri: any): string => {
+  if (typeof uri !== 'string' || !uri) {
+    return '';
+  }
+  if (uri.startsWith('//')) {
+    return 'https:' + uri;
+  }
+  if (uri.startsWith('http')) {
+    return uri;
+  }
+  return 'https://' + uri.replace(/^\/+/, '');
+};
+
+// Pick the region-appropriate content rating (e.g. "PEGO 18" in the EU,
+// "ESRB M" in the US) from the many boards the API returns.
+const extractRatingBoard = (
+  product: any,
+  market: string,
+): {system: string; level: string} | null => {
+  const list = product?.MarketProperties?.[0]?.ContentRatings;
+  if (!Array.isArray(list) || list.length === 0) {
+    return null;
+  }
+  const bySystem: Record<string, any> = {};
+  for (const r of list) {
+    if (r?.RatingSystem) {
+      bySystem[r.RatingSystem] = r;
+    }
+  }
+  const preferred = MARKET_RATING_SYSTEM[market];
+  const order = [
+    preferred,
+    'PEGI',
+    'ESRB',
+    'USK',
+    'IARC',
+    list[0]?.RatingSystem,
+  ];
+  for (const sys of order) {
+    const entry = sys && bySystem[sys];
+    if (entry?.RatingId) {
+      // RatingId is "SYSTEM:LEVEL", e.g. "PEGI:18".
+      const level = String(entry.RatingId).split(':')[1] || '';
+      return {system: entry.RatingSystem, level};
+    }
+  }
+  return null;
+};
+
+// Extract the rich detail fields from a single DisplayCatalog product. Returns
+// null only when the product is unusable.
+export const extractDetails = (
+  product: any,
+  market = 'US',
+): TitleDetails | null => {
+  const lp = product?.LocalizedProperties?.[0];
+  if (!lp) {
+    return null;
+  }
+
+  const images: any[] = Array.isArray(lp.Images) ? lp.Images : [];
+  const byPurpose = (purpose: string): string[] =>
+    images
+      .filter(im => im?.ImagePurpose === purpose)
+      .map(im => absUri(im?.Uri))
+      .filter(Boolean);
+  const heroImage =
+    byPurpose('SuperHeroArt')[0] || byPurpose('TitledHeroArt')[0] || '';
+  const screenshots = byPurpose('Screenshot');
+
+  const attrNames = new Set(
+    (Array.isArray(product?.Properties?.Attributes)
+      ? product.Properties.Attributes
+      : []
+    )
+      .map((a: any) => a?.Name)
+      .filter((n: any) => typeof n === 'string'),
+  );
+  const capabilities = CAPABILITY_MATCHERS.filter(m =>
+    m.attrs.some(a => attrNames.has(a)),
+  ).map(m => m.id);
+
+  const videos: any[] = Array.isArray(lp.Videos) ? lp.Videos : [];
+  const trailers: TrailerInfo[] = videos
+    .map(v => ({url: absUri(v?.Uri), preview: absUri(v?.PreviewImage?.Uri)}))
+    .filter(t => t.url);
+
+  const board = extractRatingBoard(product, market);
+
+  return {
+    developer: lp.DeveloperName || '',
+    publisher: lp.PublisherName || '',
+    description: lp.ProductDescription || lp.ShortDescription || '',
+    releaseDate: product?.MarketProperties?.[0]?.OriginalReleaseDate || '',
+    ratingSystem: board?.system || '',
+    ratingLevel: board?.level || '',
+    heroImage,
+    screenshots,
+    capabilities,
+    trailers,
+  };
+};
+
 export type FetchPricesResult = {
   // Prices keyed by canonical uppercase Store id; ids without a purchasable
   // price are omitted.
@@ -307,6 +483,75 @@ export const fetchPricesWithRetry = async (
     result = await fetchPrices(storeIds, market, language);
   }
   return result;
+};
+
+export type FetchTitleDetailsResult = {
+  price: PriceInfo | null;
+  rating: RatingInfo | null;
+  details: TitleDetails | null;
+  ok: boolean; // false only when the request failed (so callers can retry)
+};
+
+// Fetch one title's full detail (price + rating + rich fields) in a single
+// DisplayCatalog call. Used by the detail screen; the list keeps fetching just
+// price/rating in bulk so its cache stays small. Retries with backoff.
+export const fetchTitleDetails = async (
+  storeId: string,
+  market = 'US',
+  language = 'en-US',
+  {
+    attempts = 3,
+    baseDelayMs = 15000,
+    isCancelled,
+  }: {
+    attempts?: number;
+    baseDelayMs?: number;
+    isCancelled?: () => boolean;
+  } = {},
+): Promise<FetchTitleDetailsResult> => {
+  const empty: FetchTitleDetailsResult = {
+    price: null,
+    rating: null,
+    details: null,
+    ok: false,
+  };
+  if (!storeId) {
+    return {...empty, ok: true};
+  }
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (isCancelled?.()) {
+      break;
+    }
+    try {
+      const res = await axios.get(CATALOG_URL, {
+        params: {
+          bigIds: storeId,
+          market,
+          languages: language,
+          fieldsTemplate: 'details',
+        },
+        headers: {'MS-CV': '0'},
+        timeout: 15000,
+      });
+      const product = res?.data?.Products?.[0];
+      if (!product) {
+        // A valid "no such product" response — nothing to retry.
+        return {...empty, ok: true};
+      }
+      return {
+        price: extractPrice(product),
+        rating: extractRating(product),
+        details: extractDetails(product, market),
+        ok: true,
+      };
+    } catch (e) {
+      log.info('fetchTitleDetails failed:', e);
+      if (attempt < attempts - 1 && !isCancelled?.()) {
+        await delay(baseDelayMs * Math.pow(2, attempt));
+      }
+    }
+  }
+  return empty;
 };
 
 // Look up a price by Store id, tolerant of id case differences.
