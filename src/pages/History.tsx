@@ -5,6 +5,9 @@ import axios from 'axios';
 import Spinner from '../components/Spinner';
 
 const formatMdString = md => {
+  if (!md) {
+    return '';
+  }
   return md
     .replace(/##\s/g, '')
     .replace(/\r\n---\r\n/g, '\n')
