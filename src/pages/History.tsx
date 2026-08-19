@@ -20,7 +20,7 @@ function HistoryScreen() {
   React.useEffect(() => {
     setLoading(true);
     axios
-      .get('https://api.github.com/repos/Geocld/XStreaming/releases', {
+      .get('https://api.github.com/repos/Mulyu/XStreaming/releases', {
         timeout: 30 * 1000,
       })
       .then(res => {

@@ -39,7 +39,6 @@ import customDarkTheme from './theme/index.dark';
 
 import HomeScreen from './pages/Home';
 import CloudScreen from './pages/Cloud';
-import FriendsScreen from './pages/Friends';
 import AchivementScreen from './pages/Achivements';
 import AchivementDetailScreen from './pages/ArchivementDetail';
 import LoginScreen from './pages/Login';
@@ -48,20 +47,15 @@ import NativePortraitStreamScreen from './pages/NativePortraitStream';
 import SettingsScreen from './pages/Settings';
 import SettingDetailScreen from './pages/SettingDetail';
 import TitleDetailScreen from './pages/TitleDetail';
-import DebugScreen from './pages/Debug';
 import GameMapScreen from './pages/GameMap';
 import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
-import AboutScreen from './pages/About';
-import AboutZhScreen from './pages/AboutZh';
-import FeedbackScreen from './pages/Feedback';
 import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';
 import CustomGamepadScreen from './pages/CustomGamepad';
 import HoldButtonsScreen from './pages/HoldButtons';
 import VirtualMacroSettingsScreen from './pages/VirtualMacroSettings';
 import Ds5SettingsScreen from './pages/Ds5Settings';
 import GamepadTestScreen from './pages/GamepadTest';
-import ThanksScreen from './pages/Thanks';
 import HistoryScreen from './pages/History';
 import updater from './utils/updater';
 import {
@@ -133,7 +127,6 @@ const withPageBackground = (ScreenComponent: any) => {
 
 const HomeBackgroundScreen = withPageBackground(HomeScreen);
 const CloudBackgroundScreen = withPageBackground(CloudScreen);
-const FriendsBackgroundScreen = withPageBackground(FriendsScreen);
 const AchivementBackgroundScreen = withPageBackground(AchivementScreen);
 const AchivementDetailBackgroundScreen = withPageBackground(
   AchivementDetailScreen,
@@ -142,13 +135,9 @@ const LoginBackgroundScreen = withPageBackground(LoginScreen);
 const SettingsBackgroundScreen = withPageBackground(SettingsScreen);
 const SettingDetailBackgroundScreen = withPageBackground(SettingDetailScreen);
 const TitleDetailBackgroundScreen = withPageBackground(TitleDetailScreen);
-const DebugBackgroundScreen = withPageBackground(DebugScreen);
 const GameMapBackgroundScreen = withPageBackground(GameMapScreen);
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
-const AboutBackgroundScreen = withPageBackground(AboutScreen);
-const AboutZhBackgroundScreen = withPageBackground(AboutZhScreen);
-const FeedbackBackgroundScreen = withPageBackground(FeedbackScreen);
 const VirtualGamepadSettingsBackgroundScreen = withPageBackground(
   VirtualGamepadSettingsScreen,
 );
@@ -158,7 +147,6 @@ const VirtualMacroSettingsBackgroundScreen = withPageBackground(
 );
 const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const GamepadTestBackgroundScreen = withPageBackground(GamepadTestScreen);
-const ThanksBackgroundScreen = withPageBackground(ThanksScreen);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 const SearchBackgroundScreen = withPageBackground(SearchScreen);
 
@@ -468,34 +456,9 @@ function App() {
                   options={{title: t('Search'), headerShown: false}}
                 />
                 <RootStack.Screen
-                  name="Friends"
-                  component={FriendsBackgroundScreen}
-                  options={{title: t('Friends')}}
-                />
-                <RootStack.Screen
                   name="Achivements"
                   component={AchivementBackgroundScreen}
                   options={{title: t('Achivements')}}
-                />
-                <RootStack.Screen
-                  name="About"
-                  component={AboutBackgroundScreen}
-                  options={{title: t('About')}}
-                />
-                <RootStack.Screen
-                  name="AboutZh"
-                  component={AboutZhBackgroundScreen}
-                  options={{title: t('About')}}
-                />
-                <RootStack.Screen
-                  name="Feedback"
-                  component={FeedbackBackgroundScreen}
-                  options={{title: t('Feedback')}}
-                />
-                <RootStack.Screen
-                  name="Thanks"
-                  component={ThanksBackgroundScreen}
-                  options={{title: t('Thanks')}}
                 />
                 <RootStack.Screen
                   name="History"
@@ -525,10 +488,6 @@ function App() {
                   name="GamepadTest"
                   component={GamepadTestBackgroundScreen}
                   options={{title: t('GamepadTestTitle')}}
-                />
-                <RootStack.Screen
-                  name="Debug"
-                  component={DebugBackgroundScreen}
                 />
               </RootStack.Group>
 

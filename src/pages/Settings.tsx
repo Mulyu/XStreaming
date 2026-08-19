@@ -36,11 +36,10 @@ const {UsbRumbleManager} = NativeModules;
 const log = debugFactory('SettingsScreen');
 
 function SettingsScreen({navigation}) {
-  const {t, i18n} = useTranslation();
+  const {t} = useTranslation();
   const theme = useTheme();
   const authentication = useSelector((state: any) => state.authentication);
 
-  const currentLanguage = i18n.language;
   const titleTextStyle = React.useMemo(
     () => [styles.titleText, {color: theme.colors.primary}],
     [theme.colors.primary],
@@ -112,8 +111,6 @@ function SettingsScreen({navigation}) {
       } else {
         navigation.navigate('NativeGameMap');
       }
-    } else if (id === 'debug') {
-      navigation.navigate('Debug');
     } else {
       navigation.navigate('SettingDetail', {
         id,
@@ -359,41 +356,9 @@ function SettingsScreen({navigation}) {
           />
 
           <SettingItem
-            title={t('About')}
-            description={`${t('About XStreaming')}`}
-            onPress={() => {
-              if (currentLanguage === 'zh' || currentLanguage === 'zht') {
-                navigation.navigate('AboutZh');
-              } else {
-                navigation.navigate('About');
-              }
-            }}
-          />
-          {(currentLanguage === 'zh' || currentLanguage === 'zht') && (
-            <SettingItem
-              title={'支持及交流'}
-              description={'支持开发或交流使用心得'}
-              onPress={() => navigation.navigate('Feedback')}
-            />
-          )}
-
-          {__DEV__ && (
-            <SettingItem
-              title={'DEBUG'}
-              description={'Enter debug'}
-              onPress={() => handleItemPress('debug')}
-            />
-          )}
-
-          <SettingItem
             title={t('HistoryTitle')}
             description={`${t('HistoryDesc')}`}
             onPress={() => navigation.navigate('History')}
-          />
-
-          <SettingItem
-            title={t('Thanks')}
-            onPress={() => navigation.navigate('Thanks')}
           />
 
           {isAuthed ? (
