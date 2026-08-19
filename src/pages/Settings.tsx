@@ -19,8 +19,6 @@ import {debugFactory} from '../utils/debug';
 import {clearStreamToken} from '../store/streamTokenStore';
 import {clearWebToken} from '../store/webTokenStore';
 import {clearXcloudData} from '../store/xcloudStore';
-import {clearConsolesData} from '../store/consolesStore';
-import {clearServerData} from '../store/serverStore';
 
 import bases from '../common/settings/bases';
 import display from '../common/settings/display';
@@ -28,9 +26,7 @@ import gamepad from '../common/settings/gamepad';
 import vgamepad from '../common/settings/vgamepad';
 import audio from '../common/settings/audio';
 import xcloud from '../common/settings/xcloud';
-import xhome from '../common/settings/xhome';
 import sensor from '../common/settings/sensor';
-import server from '../common/settings/server';
 import others from '../common/settings/others';
 
 import pkg from '../../package.json';
@@ -91,8 +87,6 @@ function SettingsScreen({navigation}) {
             clearStreamToken();
             clearWebToken();
             clearXcloudData();
-            clearConsolesData();
-            clearServerData();
             authentication._tokenStore.clear();
             CookieManager.clearAll();
             setTimeout(() => {
@@ -129,8 +123,6 @@ function SettingsScreen({navigation}) {
 
   const handleClearCache = () => {
     clearXcloudData();
-    clearConsolesData();
-    clearServerData();
     resetSettings();
     ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
     setTimeout(() => {
@@ -292,25 +284,6 @@ function SettingsScreen({navigation}) {
         <View>
           <View style={styles.contentTitle}>
             <Text variant="titleLarge" style={titleTextStyle}>
-              {t('XchomeSettings')}
-            </Text>
-          </View>
-
-          {xhome.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-        </View>
-
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
               {t('SensorSettings')}
             </Text>
           </View>
@@ -364,30 +337,6 @@ function SettingsScreen({navigation}) {
         <View>
           <View style={styles.contentTitle}>
             <Text variant="titleLarge" style={titleTextStyle}>
-              🌐 {t('TurnServerSettings')}
-            </Text>
-          </View>
-
-          {server.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-          <SettingItem
-            title={t('TURN server')}
-            description={t('Custom TURN server')}
-            onPress={() => navigation.navigate('Server')}
-          />
-        </View>
-
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
               {t('Others')}
             </Text>
           </View>
@@ -407,18 +356,6 @@ function SettingsScreen({navigation}) {
             title={t('Clear Cache')}
             description={t('Clear XStreaming Cache Data(Keep login data)')}
             onPress={() => handleClearCache()}
-          />
-
-          <SettingItem
-            title={t('ConfigTransfer')}
-            description={t('ConfigTransferDescription')}
-            onPress={() => navigation.navigate('Transfer')}
-          />
-
-          <SettingItem
-            title={t('Device testing')}
-            description={t('Testing current device and controller')}
-            onPress={() => navigation.navigate('DeviceInfos')}
           />
 
           <SettingItem

@@ -85,18 +85,6 @@ const display = [
     ],
   },
   {
-    name: 'xhome_bitrate_mode',
-    type: 'radio',
-    title: t('Host stream bitrate'),
-    description: t(
-      'Set the host streaming bitrate (Note: Higher bitrate is not always better; the final bitrate will be determined by streaming negotiation)',
-    ),
-    data: [
-      {value: 'auto', text: t('Auto')},
-      {value: 'custom', text: t('Custom')},
-    ],
-  },
-  {
     name: 'xcloud_bitrate_mode',
     type: 'radio',
     title: t('Cloud stream bitrate'),

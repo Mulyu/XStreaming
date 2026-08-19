@@ -13,7 +13,6 @@ import ChatChannel from './Channel/Chat';
 import GamepadDriver from './Driver/Gamepad';
 
 import {getSettings} from '../store/settingStore';
-import {getServerData} from '../store/serverStore';
 
 // import server from '../../server.json';
 
@@ -127,41 +126,9 @@ class webRTCClient {
   }
 
   init() {
-    const settings = getSettings();
     this._resetAudioLevelTracking();
     this._resetVideoTrackState();
 
-    // Use custom STUN/TURN server
-    if (
-      settings.server_url &&
-      settings.server_username &&
-      settings.server_credential
-    ) {
-      this._webrtcConfiguration.iceServers &&
-        this._webrtcConfiguration.iceServers.push({
-          urls: settings.server_url,
-          // @ts-ignore
-          username: settings.server_username,
-          credential: settings.server_credential,
-        });
-    } else if (settings.use_inner_turn_server) {
-      // Use inner TURN server
-      const innerServer = getServerData();
-      if (
-        innerServer &&
-        innerServer.url &&
-        innerServer.username &&
-        innerServer.credential
-      ) {
-        this._webrtcConfiguration.iceServers &&
-          this._webrtcConfiguration.iceServers.push({
-            urls: innerServer.url,
-            // @ts-ignore
-            username: innerServer.username,
-            credential: innerServer.credential,
-          });
-      }
-    }
     this._webrtcClient = new RTCPeerConnection(this._webrtcConfiguration);
 
     this._openDataChannels();

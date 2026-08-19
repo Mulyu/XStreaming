@@ -23,7 +23,6 @@ import {getSettings, saveSettings} from '../store/settingStore';
 import {clearStreamToken} from '../store/streamTokenStore';
 import {clearWebToken} from '../store/webTokenStore';
 import {clearXcloudData} from '../store/xcloudStore';
-import {clearConsolesData} from '../store/consolesStore';
 
 import bases from '../common/settings/bases';
 import display from '../common/settings/display';
@@ -31,9 +30,7 @@ import gamepad from '../common/settings/gamepad';
 import vgamepad from '../common/settings/vgamepad';
 import audio from '../common/settings/audio';
 import xcloud from '../common/settings/xcloud';
-import xhome from '../common/settings/xhome';
 import sensor from '../common/settings/sensor';
-import server from '../common/settings/server';
 import others from '../common/settings/others';
 import {
   DEFAULT_THEME_PRIMARY_COLOR,
@@ -52,12 +49,10 @@ function SettingDetailScreen({navigation, route}) {
   const [value2, setValue2] = React.useState<any>('');
   const [currentMetas, setCurrentMetas] = React.useState<any>(null);
   const [settings, setSettings] = React.useState<any>({});
-  const regions = React.useRef<any>([]);
   const xgpuRegions = React.useRef<any>([]);
 
   const authentication = useSelector((state: any) => state.authentication);
   const streamingTokens = useSelector((state: any) => state.streamingTokens);
-  regions.current = streamingTokens.xHomeToken?.getRegions() || [];
 
   if (streamingTokens.xCloudToken) {
     xgpuRegions.current = streamingTokens.xCloudToken?.getRegions() || [];
@@ -97,9 +92,7 @@ function SettingDetailScreen({navigation, route}) {
         ...vgamepad,
         ...audio,
         ...xcloud,
-        ...xhome,
         ...sensor,
-        ...server,
         ...others,
       ];
       let metas: any = {};
@@ -109,9 +102,6 @@ function SettingDetailScreen({navigation, route}) {
         }
       });
 
-      if (name === 'xhome_bitrate_mode') {
-        setValue2(_settings.xhome_bitrate);
-      }
       if (name === 'xcloud_bitrate_mode') {
         setValue2(_settings.xcloud_bitrate);
       }
@@ -119,14 +109,9 @@ function SettingDetailScreen({navigation, route}) {
         setValue2(_settings.audio_bitrate);
       }
 
-      if (name === 'signaling_home' || name === 'signaling_cloud') {
-        const rs =
-          name === 'signaling_home' ? regions.current : xgpuRegions.current;
-        const rsName =
-          name === 'signaling_home'
-            ? 'signaling_home_name'
-            : 'signaling_cloud_name';
-        const rsValue = _settings[rsName];
+      if (name === 'signaling_cloud') {
+        const rs = xgpuRegions.current;
+        const rsValue = _settings.signaling_cloud_name;
 
         let _currentVal = '';
 
@@ -166,15 +151,8 @@ function SettingDetailScreen({navigation, route}) {
     if (currentMetas.name === 'locale') {
       settings.locale = settingValue;
       settings.locale_follow_system = false;
-    } else if (
-      currentMetas.name === 'signaling_home' ||
-      currentMetas.name === 'signaling_cloud'
-    ) {
-      settings[
-        currentMetas.name === 'signaling_home'
-          ? 'signaling_home_name'
-          : 'signaling_cloud_name'
-      ] = settingValue;
+    } else if (currentMetas.name === 'signaling_cloud') {
+      settings.signaling_cloud_name = settingValue;
     } else if (settings[current] !== undefined) {
       settings[current] = settingValue;
     }
@@ -192,7 +170,6 @@ function SettingDetailScreen({navigation, route}) {
       clearStreamToken();
       clearWebToken();
       clearXcloudData();
-      clearConsolesData();
       handleSaveSettings();
       setTimeout(() => {
         restart();
@@ -201,7 +178,6 @@ function SettingDetailScreen({navigation, route}) {
       clearStreamToken();
       clearWebToken();
       clearXcloudData();
-      clearConsolesData();
       authentication._tokenStore.clear();
       CookieManager.clearAll();
       setTimeout(() => {
@@ -214,24 +190,12 @@ function SettingDetailScreen({navigation, route}) {
       current === 'native_low_latency_decoder'
     ) {
       shouldRestart = true;
-    } else if (current === 'xhome_bitrate_mode') {
-      settings.xhome_bitrate_mode = value;
-      settings.xhome_bitrate = value2;
     } else if (current === 'xcloud_bitrate_mode') {
       settings.xcloud_bitrate_mode = value;
       settings.xcloud_bitrate = value2;
     } else if (current === 'audio_bitrate_mode') {
       settings.audio_bitrate_mode = value;
       settings.audio_bitrate = value2;
-    } else if (currentMetas.name === 'signaling_home') {
-      regions.current.forEach(region => {
-        if (region.name === value) {
-          region.isDefault = true;
-        } else {
-          region.isDefault = false;
-        }
-      });
-      settings.signaling_home_name = value;
     } else if (currentMetas.name === 'signaling_cloud') {
       xgpuRegions.current.forEach(region => {
         if (region.name === value) {
@@ -269,7 +233,6 @@ function SettingDetailScreen({navigation, route}) {
       return null;
     }
     if (
-      currentMetas.name === 'xhome_bitrate_mode' ||
       currentMetas.name === 'xcloud_bitrate_mode' ||
       currentMetas.name === 'audio_bitrate_mode'
     ) {
@@ -310,14 +273,8 @@ function SettingDetailScreen({navigation, route}) {
         </>
       );
     }
-    if (
-      currentMetas.name === 'signaling_home' ||
-      currentMetas.name === 'signaling_cloud'
-    ) {
-      const servers =
-        currentMetas.name === 'signaling_home'
-          ? regions.current
-          : xgpuRegions.current;
+    if (currentMetas.name === 'signaling_cloud') {
+      const servers = xgpuRegions.current;
       return (
         <RadioButton.Group onValueChange={val => setValue(val)} value={value}>
           {servers &&
