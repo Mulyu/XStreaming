@@ -84,6 +84,21 @@ function CloudScreen({navigation, route}) {
   const gameLanguage = getSettings().preferred_game_language;
   const deviceRegion = getSystemRegion();
 
+  // Cloud is the app entry point, so it carries the entry to Settings (the old
+  // Home hub that used to hold it was collapsed into a login gate).
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <IconButton
+          icon="cog-outline"
+          size={24}
+          onPress={() => navigation.navigate('Settings')}
+          accessibilityLabel={t('Settings')}
+        />
+      ),
+    });
+  }, [navigation, t]);
+
   // log.info('streamingTokens:', streamingTokens);
 
   const [current, setCurrent] = React.useState<any>(0);
