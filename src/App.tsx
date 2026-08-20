@@ -63,7 +63,6 @@ import {
   DEFAULT_THEME_PRIMARY_COLOR,
   normalizeHexColor,
 } from './utils/themeColor';
-import XboxSymbolBackground from './components/XboxSymbolBackground';
 
 import {useTranslation} from 'react-i18next';
 
@@ -111,7 +110,6 @@ const withPageBackground = (ScreenComponent: any) => {
           styles.backgroundScreen,
           isLight ? styles.backgroundScreenLight : styles.backgroundScreenDark,
         ]}>
-        <XboxSymbolBackground isLight={isLight} />
         <View style={styles.backgroundContent}>
           <ScreenComponent {...props} />
         </View>
