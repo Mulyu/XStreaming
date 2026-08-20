@@ -94,8 +94,8 @@ const {LightTheme, DarkTheme} = adaptNavigationTheme({
   reactNavigationDark: NavigationDarkTheme,
 });
 
-const PAGE_BACKGROUND_LIGHT = '#FCFBFF';
-const PAGE_BACKGROUND_DARK = '#111320';
+const PAGE_BACKGROUND_LIGHT = '#F5F6F7';
+const PAGE_BACKGROUND_DARK = '#0E0E10';
 
 const withPageBackground = (ScreenComponent: any) => {
   const WrappedScreen = (props: any) => {

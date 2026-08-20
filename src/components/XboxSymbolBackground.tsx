@@ -117,33 +117,33 @@ const SYMBOLS: SymbolItem[] = [
 const usePalette = (isLight: boolean) => {
   if (isLight) {
     return {
-      start: '#FCFBFF',
-      mid: '#F5F1FF',
-      end: '#FFFFFF',
-      washA: '#D8CCFF',
-      washB: '#F6D9EA',
-      washC: '#DDF9F0',
+      start: '#FFFFFF',
+      mid: '#F2F5F2',
+      end: '#FAFBFA',
+      washA: '#DCEFDD',
+      washB: '#E9F2EA',
+      washC: '#E1F1E8',
       symbol: '#107C10',
       symbolAlt: '#2E7D32',
       symbolText: '#0B4D10',
-      base: '#FCFBFF',
-      hazeOpacity: 0.34,
+      base: '#F5F6F7',
+      hazeOpacity: 0.3,
       symbolBoost: 1,
     };
   }
 
   return {
-    start: '#111320',
-    mid: '#1D1A32',
-    end: '#0D1018',
-    washA: '#7662D9',
-    washB: '#9D4778',
-    washC: '#328E82',
-    symbol: '#6EEB83',
-    symbolAlt: '#20A64A',
-    symbolText: '#B8FFC4',
-    base: '#111320',
-    hazeOpacity: 0.14,
+    start: '#141519',
+    mid: '#0F1013',
+    end: '#0A0B0D',
+    washA: '#107C10',
+    washB: '#0C5A2E',
+    washC: '#14352A',
+    symbol: '#3BE06E',
+    symbolAlt: '#107C10',
+    symbolText: '#C9FFD6',
+    base: '#0E0E10',
+    hazeOpacity: 0.12,
     symbolBoost: 1.25,
   };
 };
