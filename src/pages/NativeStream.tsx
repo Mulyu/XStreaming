@@ -1468,26 +1468,15 @@ export function NativeStreamScreenBase({
           if (connectStateRef.current !== CONNECTED) {
             return;
           }
-          Alert.alert(t('Warning'), t('Streaming is closed'), [
-            {
-              text: t('Confirm'),
-              style: 'default',
-              onPress: () => {
-                exit();
-              },
-            },
-          ]);
+          // Session closed (incl. while backgrounded): auto-close the stream
+          // screen so reopening the app doesn't show a black, dead stream.
+          ToastAndroid.show(t('Streaming is closed'), ToastAndroid.SHORT);
+          exit();
         } else if (state === FAILED) {
           if (isConnected.current) {
-            Alert.alert(t('Warning'), t('Reconnected failed'), [
-              {
-                text: t('Confirm'),
-                style: 'default',
-                onPress: () => {
-                  exit();
-                },
-              },
-            ]);
+            // Dropped after being connected: auto-close the stream screen.
+            ToastAndroid.show(t('Reconnected failed'), ToastAndroid.SHORT);
+            exit();
           } else {
             Alert.alert(t('Warning'), t('NAT failed'), [
               {
