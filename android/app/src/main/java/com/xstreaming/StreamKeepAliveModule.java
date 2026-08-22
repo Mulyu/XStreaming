@@ -18,8 +18,9 @@ public class StreamKeepAliveModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void start(String title, String text) {
-        StreamKeepAliveService.start(ctx.getApplicationContext(), title, text);
+    public void start(String title, String text, String disconnectLabel) {
+        StreamKeepAliveService.start(
+                ctx.getApplicationContext(), title, text, disconnectLabel);
     }
 
     @ReactMethod
