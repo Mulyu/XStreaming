@@ -302,6 +302,11 @@ export default {
     Bottom: '下寄せ',
     'Picture in picture': 'PIPモード',
     PictureInPictureDesc: 'バックグラウンドで小窓表示',
+    'Keep alive in background': 'バックグラウンドで維持',
+    BackgroundKeepAliveDesc:
+      'PiPを使わず、通知でセッションを裏で維持します。音声は継続し、戻ると映像が再開します。通知をタップで即復帰。',
+    'Streaming in background': 'バックグラウンドでストリーミング中',
+    BackgroundKeepAliveNotification: 'タップでゲームに戻る',
     'Native portrait mode': '縦向きモード',
     NativePortraitModeDesc: '縦画面ストリーミングを使用',
     'Ultra low latency decoding': '超低遅延デコード',
