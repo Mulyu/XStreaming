@@ -26,6 +26,7 @@ import {getSettings, saveSettings} from '../store/settingStore';
 import {saveSettings as saveGamepadLayout} from '../store/gamepadStore';
 import {useTranslation} from 'react-i18next';
 import webRTCClient from '../webrtc';
+import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../utils/debug';
 import {GAMEPAD_MAPING} from '../common';
 import {XBOX_360_GAMEPAD_MAPING} from '../common/usbGamepadMaping';
@@ -768,11 +769,11 @@ export function NativeStreamScreenBase({
     };
     const stopAntiIdle = () => {
       if (antiIdleTimerRef.current) {
-        clearInterval(antiIdleTimerRef.current);
+        BackgroundTimer.clearInterval(antiIdleTimerRef.current);
         antiIdleTimerRef.current = null;
       }
       if (antiIdleResetTimerRef.current) {
-        clearTimeout(antiIdleResetTimerRef.current);
+        BackgroundTimer.clearTimeout(antiIdleResetTimerRef.current);
         antiIdleResetTimerRef.current = null;
       }
       sendAntiIdleNudge(0);
@@ -783,7 +784,8 @@ export function NativeStreamScreenBase({
       }
       const maxMinutes = Number(getSettings().anti_idle_max_minutes) || 30;
       antiIdleDeadlineRef.current = Date.now() + maxMinutes * 60 * 1000;
-      antiIdleTimerRef.current = setInterval(() => {
+      // Background-capable timer so the nudge keeps firing while backgrounded.
+      antiIdleTimerRef.current = BackgroundTimer.setInterval(() => {
         // Stop extending once the configured max duration has elapsed; the
         // session is then allowed to idle-disconnect.
         if (Date.now() >= antiIdleDeadlineRef.current) {
@@ -791,7 +793,7 @@ export function NativeStreamScreenBase({
           return;
         }
         sendAntiIdleNudge(0.12);
-        antiIdleResetTimerRef.current = setTimeout(() => {
+        antiIdleResetTimerRef.current = BackgroundTimer.setTimeout(() => {
           sendAntiIdleNudge(0);
         }, 250);
       }, 45 * 1000);
@@ -1416,16 +1418,19 @@ export function NativeStreamScreenBase({
           }, 2000);
 
           if (!frameTimer.current) {
-            frameTimer.current = setInterval(() => {
+            // Background-capable timer: RN's setInterval is paused when the app
+            // is backgrounded, which would stall the frame feedback + keepalive
+            // and let xCloud drop the session.
+            frameTimer.current = BackgroundTimer.setInterval(() => {
               sendFrame();
             }, 10 * 1000);
           }
 
-          // Start keepalive loop
+          // Start keepalive loop (background-capable, see above).
           if (!keepaliveInterval.current) {
             const keepaliveIntervalMs =
               streamApi?.getKeepaliveIntervalMs?.() ?? 20 * 1000;
-            keepaliveInterval.current = setInterval(() => {
+            keepaliveInterval.current = BackgroundTimer.setInterval(() => {
               streamApi
                 .sendKeepalive()
                 .then(result => {
@@ -1864,11 +1869,11 @@ export function NativeStreamScreenBase({
         keepAliveDisconnectListener.current.remove();
       StreamKeepAliveManager?.stop?.();
       if (antiIdleTimerRef.current) {
-        clearInterval(antiIdleTimerRef.current);
+        BackgroundTimer.clearInterval(antiIdleTimerRef.current);
         antiIdleTimerRef.current = null;
       }
       if (antiIdleResetTimerRef.current) {
-        clearTimeout(antiIdleResetTimerRef.current);
+        BackgroundTimer.clearTimeout(antiIdleResetTimerRef.current);
         antiIdleResetTimerRef.current = null;
       }
       if (timer.current) {
@@ -1880,11 +1885,11 @@ export function NativeStreamScreenBase({
         menuLongPressTimer.current = null;
       }
       if (frameTimer.current) {
-        clearInterval(frameTimer.current);
+        BackgroundTimer.clearInterval(frameTimer.current);
         frameTimer.current = null;
       }
       if (keepaliveInterval.current) {
-        clearInterval(keepaliveInterval.current);
+        BackgroundTimer.clearInterval(keepaliveInterval.current);
         keepaliveInterval.current = null;
       }
       if (performanceInterval.current) {
