@@ -12,26 +12,34 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 
+import com.facebook.react.ReactApplication;
+import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
+
 /**
  * A foreground service that keeps the app process (and therefore the WebRTC
  * stream + xCloud keepalive) alive while the app is backgrounded without PiP.
  * Tapping its ongoing notification brings the (singleTask) MainActivity back to
- * the front, resuming the live game.
+ * the front, resuming the live game; its Disconnect action ends the session.
  */
 public class StreamKeepAliveService extends Service {
     public static final String CHANNEL_ID = "stream_keepalive";
     private static final int NOTIFICATION_ID = 4711;
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_TEXT = "text";
+    public static final String EXTRA_DISCONNECT_LABEL = "disconnectLabel";
+    public static final String ACTION_DISCONNECT = "com.xstreaming.action.KEEPALIVE_DISCONNECT";
+    public static final String JS_EVENT_DISCONNECT = "StreamKeepAliveDisconnect";
     // 3h cap so a stranded service can't hold the CPU forever.
     private static final long WAKELOCK_TIMEOUT_MS = 3 * 60 * 60 * 1000L;
 
     private PowerManager.WakeLock wakeLock;
 
-    public static void start(Context context, String title, String text) {
+    public static void start(Context context, String title, String text, String disconnectLabel) {
         Intent intent = new Intent(context, StreamKeepAliveService.class);
         intent.putExtra(EXTRA_TITLE, title);
         intent.putExtra(EXTRA_TEXT, text);
+        intent.putExtra(EXTRA_DISCONNECT_LABEL, disconnectLabel);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent);
         } else {
@@ -45,13 +53,24 @@ public class StreamKeepAliveService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_DISCONNECT.equals(intent.getAction())) {
+            emitDisconnect();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         String title = intent != null ? intent.getStringExtra(EXTRA_TITLE) : null;
         String text = intent != null ? intent.getStringExtra(EXTRA_TEXT) : null;
+        String disconnectLabel =
+                intent != null ? intent.getStringExtra(EXTRA_DISCONNECT_LABEL) : null;
         if (title == null) {
             title = "XStreaming";
         }
         if (text == null) {
             text = "Keeping the game session alive";
+        }
+        if (disconnectLabel == null) {
+            disconnectLabel = "Disconnect";
         }
 
         createChannel();
@@ -65,6 +84,11 @@ public class StreamKeepAliveService extends Service {
         }
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, launch, piFlags);
 
+        Intent disconnectIntent = new Intent(this, StreamKeepAliveService.class);
+        disconnectIntent.setAction(ACTION_DISCONNECT);
+        PendingIntent disconnectPending =
+                PendingIntent.getService(this, 1, disconnectIntent, piFlags);
+
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder = new Notification.Builder(this, CHANNEL_ID);
@@ -77,6 +101,10 @@ public class StreamKeepAliveService extends Service {
                 .setSmallIcon(getApplicationInfo().icon)
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
+                .addAction(
+                        android.R.drawable.ic_menu_close_clear_cancel,
+                        disconnectLabel,
+                        disconnectPending)
                 .build();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -90,6 +118,21 @@ public class StreamKeepAliveService extends Service {
 
         acquireWakeLock();
         return START_STICKY;
+    }
+
+    private void emitDisconnect() {
+        try {
+            ReactContext reactContext = ((ReactApplication) getApplication())
+                    .getReactNativeHost()
+                    .getReactInstanceManager()
+                    .getCurrentReactContext();
+            if (reactContext != null) {
+                reactContext
+                        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                        .emit(JS_EVENT_DISCONNECT, null);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private void acquireWakeLock() {

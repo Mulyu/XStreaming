@@ -348,7 +348,10 @@ export default {
     BackgroundKeepAliveNotification: 'Tap to return to the game',
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',
     AntiIdleDesc:
-      'While backgrounded, send a tiny camera nudge so xCloud does not disconnect for inactivity. WARNING: this automates controller input to bypass the idle timeout — it may violate Xbox terms and risk your account, and the input can affect the game. Experimental, use at your own risk.',
+      'While backgrounded, send a tiny camera nudge so the session is not disconnected for inactivity. Note: the nudge moves the camera, so it can affect the game.',
+    'Anti-idle max duration (minutes)': 'Anti-idle max duration (minutes)',
+    AntiIdleMaxDesc:
+      'Keep the session awake for at most this long after backgrounding. Once it passes, the anti-idle stops and the session is allowed to disconnect.',
     'Native portrait mode': 'Native portrait mode',
     NativePortraitModeDesc:
       'After enabling this, native streaming uses a portrait page with video on top and virtual buttons below.',

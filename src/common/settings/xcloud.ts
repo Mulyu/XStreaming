@@ -69,6 +69,16 @@ const xcloud = [
       {value: true, text: t('Enable')},
     ],
   },
+  {
+    name: 'anti_idle_max_minutes',
+    type: 'slider',
+    min: 5,
+    max: 180,
+    step: 5,
+    title: t('Anti-idle max duration (minutes)'),
+    description: t('AntiIdleMaxDesc'),
+    data: [],
+  },
 ];
 
 export default xcloud;

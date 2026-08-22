@@ -11,6 +11,7 @@ import {
   PermissionsAndroid,
   Vibration,
   AppState,
+  DeviceEventEmitter,
   StatusBar,
   useWindowDimensions,
 } from 'react-native';
@@ -260,6 +261,8 @@ export function NativeStreamScreenBase({
   const audioGainEventListener = React.useRef<any>(undefined);
   const antiIdleTimerRef = React.useRef<any>(null);
   const antiIdleResetTimerRef = React.useRef<any>(null);
+  const antiIdleDeadlineRef = React.useRef<number>(0);
+  const keepAliveDisconnectListener = React.useRef<any>(undefined);
   const isRequestExit = React.useRef(false);
   const isConnected = React.useRef(false);
   const optionsDialogOpenRef = React.useRef(false);
@@ -778,7 +781,15 @@ export function NativeStreamScreenBase({
       if (antiIdleTimerRef.current) {
         return;
       }
+      const maxMinutes = Number(getSettings().anti_idle_max_minutes) || 30;
+      antiIdleDeadlineRef.current = Date.now() + maxMinutes * 60 * 1000;
       antiIdleTimerRef.current = setInterval(() => {
+        // Stop extending once the configured max duration has elapsed; the
+        // session is then allowed to idle-disconnect.
+        if (Date.now() >= antiIdleDeadlineRef.current) {
+          stopAntiIdle();
+          return;
+        }
         sendAntiIdleNudge(0.12);
         antiIdleResetTimerRef.current = setTimeout(() => {
           sendAntiIdleNudge(0);
@@ -805,10 +816,19 @@ export function NativeStreamScreenBase({
         StreamKeepAliveManager?.start?.(
           t('Streaming in background'),
           t('BackgroundKeepAliveNotification'),
+          t('Disconnect'),
         );
         if (_settings.anti_idle) {
           startAntiIdle();
         }
+      },
+    );
+
+    // The keep-alive notification's "Disconnect" action emits this event.
+    keepAliveDisconnectListener.current = DeviceEventEmitter.addListener(
+      'StreamKeepAliveDisconnect',
+      () => {
+        exit();
       },
     );
 
@@ -1840,6 +1860,8 @@ export function NativeStreamScreenBase({
       sensorEventListener.current && sensorEventListener.current.remove();
       appStateSubscription.current && appStateSubscription.current.remove();
       audioGainEventListener.current && audioGainEventListener.current.remove();
+      keepAliveDisconnectListener.current &&
+        keepAliveDisconnectListener.current.remove();
       StreamKeepAliveManager?.stop?.();
       if (antiIdleTimerRef.current) {
         clearInterval(antiIdleTimerRef.current);

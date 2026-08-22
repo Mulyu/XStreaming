@@ -309,7 +309,10 @@ export default {
     BackgroundKeepAliveNotification: 'タップでゲームに戻る',
     'Anti-idle': 'アンチアイドル（AFK切断防止）',
     AntiIdleDesc:
-      'バックグラウンド中にカメラを微小に動かし、xCloudの放置切断を防ぎます。警告: アイドルタイムアウトを回避するために入力を自動送信します。Xbox規約に抵触しアカウントに制限が及ぶ恐れがあり、入力がゲームに影響することもあります。実験的機能・自己責任でご利用ください。',
+      'バックグラウンド中にカメラを微小に動かし、放置による切断を防ぎます。注意: カメラが動くため、ゲームに影響することがあります。',
+    'Anti-idle max duration (minutes)': 'アンチアイドルの最長時間（分）',
+    AntiIdleMaxDesc:
+      'バックグラウンド化してからこの時間まで維持します。超過するとアンチアイドルを停止し、セッションの切断を許可します。',
     'Native portrait mode': '縦向きモード',
     NativePortraitModeDesc: '縦画面ストリーミングを使用',
     'Ultra low latency decoding': '超低遅延デコード',
