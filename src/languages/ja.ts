@@ -351,6 +351,11 @@ export default {
     'Streaming is closed': '終了しました',
     'NAT failed': 'NAT失敗।ルーター設定を確認।',
     'Reconnected failed': '再接続失敗',
+    Reconnecting: '再接続中…',
+    'Reconnect now': '今すぐ再接続',
+    'Auto reconnect': '自動再接続',
+    AutoReconnectDesc:
+      '切断時に、生存中のセッションへ自動的に再接続を試みます（実験的）。',
     'Open Microphone': 'マイクオン',
     'Close Microphone': 'マイクオフ',
     'Device testing': 'テスト',
