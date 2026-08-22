@@ -264,6 +264,7 @@ export function NativeStreamScreenBase({
   const antiIdleResetTimerRef = React.useRef<any>(null);
   const antiIdleDeadlineRef = React.useRef<number>(0);
   const keepAliveDisconnectListener = React.useRef<any>(undefined);
+  const batteryOptPromptRef = React.useRef(false);
   const isRequestExit = React.useRef(false);
   const isConnected = React.useRef(false);
   const optionsDialogOpenRef = React.useRef(false);
@@ -1393,6 +1394,29 @@ export function NativeStreamScreenBase({
             PermissionsAndroid.request(
               'android.permission.POST_NOTIFICATIONS' as any,
             ).catch(() => {});
+          }
+
+          // Many OEMs suspend background execution within a few minutes and cut
+          // the stream even with a foreground service; offer to whitelist the
+          // app from battery optimization (once per session, only if needed).
+          if (!batteryOptPromptRef.current) {
+            batteryOptPromptRef.current = true;
+            StreamKeepAliveManager?.isIgnoringBatteryOptimizations?.()
+              .then((ignoring: boolean) => {
+                if (!ignoring) {
+                  Alert.alert(t('Warning'), t('BatteryOptimizationPrompt'), [
+                    {text: t('Cancel'), style: 'cancel'},
+                    {
+                      text: t('Confirm'),
+                      style: 'default',
+                      onPress: () => {
+                        StreamKeepAliveManager?.requestDisableBatteryOptimization?.();
+                      },
+                    },
+                  ]);
+                }
+              })
+              .catch(() => {});
           }
 
           // Alway show virtual gamepad
