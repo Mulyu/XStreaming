@@ -51,6 +51,7 @@ export type Settings = {
   auto_sprint: boolean;
   video_format: string;
   screen_position: string;
+  anti_idle: boolean;
   native_portrait_mode: boolean;
   native_portrait_gamepad_layout: any[];
   native_low_latency_decoder: boolean;
@@ -124,6 +125,7 @@ const defaultSettings: Settings = {
   auto_sprint: false,
   video_format: '',
   screen_position: 'center',
+  anti_idle: false,
   native_portrait_mode: false,
   native_portrait_gamepad_layout: [],
   native_low_latency_decoder: false,

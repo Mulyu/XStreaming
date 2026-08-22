@@ -307,6 +307,9 @@ export default {
       'PiPを使わず、通知でセッションを裏で維持します。音声は継続し、戻ると映像が再開します。通知をタップで即復帰。',
     'Streaming in background': 'バックグラウンドでストリーミング中',
     BackgroundKeepAliveNotification: 'タップでゲームに戻る',
+    'Anti-idle': 'アンチアイドル（AFK切断防止）',
+    AntiIdleDesc:
+      'バックグラウンド中にカメラを微小に動かし、xCloudの放置切断を防ぎます。警告: アイドルタイムアウトを回避するために入力を自動送信します。Xbox規約に抵触しアカウントに制限が及ぶ恐れがあり、入力がゲームに影響することもあります。実験的機能・自己責任でご利用ください。',
     'Native portrait mode': '縦向きモード',
     NativePortraitModeDesc: '縦画面ストリーミングを使用',
     'Ultra low latency decoding': '超低遅延デコード',
