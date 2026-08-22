@@ -258,6 +258,8 @@ export function NativeStreamScreenBase({
   const audioRumbleTimer = React.useRef<any>(undefined);
   const appStateSubscription = React.useRef<any>(undefined);
   const audioGainEventListener = React.useRef<any>(undefined);
+  const antiIdleTimerRef = React.useRef<any>(null);
+  const antiIdleResetTimerRef = React.useRef<any>(null);
   const isRequestExit = React.useRef(false);
   const isConnected = React.useRef(false);
   const optionsDialogOpenRef = React.useRef(false);
@@ -748,14 +750,51 @@ export function NativeStreamScreenBase({
       syncLeftThumbButton(gpState);
     };
 
+    // Anti-idle (opt-in, experimental): while backgrounded, send a tiny
+    // self-cancelling right-stick (camera) nudge so xCloud's AFK idle timer
+    // doesn't disconnect the session. See the setting's warning.
+    const sendAntiIdleNudge = (x: number) => {
+      const inputChannel = webrtcClient?.getChannelProcessor?.('input');
+      if (!inputChannel) {
+        return;
+      }
+      const frame = createGamepadState(0);
+      frame.RightThumbXAxis = x;
+      inputChannel.queueGamepadState(frame);
+      inputChannel.flushGamepadInput?.();
+    };
+    const stopAntiIdle = () => {
+      if (antiIdleTimerRef.current) {
+        clearInterval(antiIdleTimerRef.current);
+        antiIdleTimerRef.current = null;
+      }
+      if (antiIdleResetTimerRef.current) {
+        clearTimeout(antiIdleResetTimerRef.current);
+        antiIdleResetTimerRef.current = null;
+      }
+      sendAntiIdleNudge(0);
+    };
+    const startAntiIdle = () => {
+      if (antiIdleTimerRef.current) {
+        return;
+      }
+      antiIdleTimerRef.current = setInterval(() => {
+        sendAntiIdleNudge(0.12);
+        antiIdleResetTimerRef.current = setTimeout(() => {
+          sendAntiIdleNudge(0);
+        }, 250);
+      }, 45 * 1000);
+    };
+
     const eventEmitter = new NativeEventEmitter();
     appStateSubscription.current && appStateSubscription.current.remove();
     appStateSubscription.current = AppState.addEventListener(
       'change',
       state => {
         if (state === 'active') {
-          // Back in the foreground: drop the keep-alive notification/service.
+          // Back in the foreground: drop the keep-alive service and anti-idle.
           StreamKeepAliveManager?.stop?.();
+          stopAntiIdle();
           return;
         }
         if (state !== 'background' || !isConnected.current) {
@@ -767,6 +806,9 @@ export function NativeStreamScreenBase({
           t('Streaming in background'),
           t('BackgroundKeepAliveNotification'),
         );
+        if (_settings.anti_idle) {
+          startAntiIdle();
+        }
       },
     );
 
@@ -1302,6 +1344,7 @@ export function NativeStreamScreenBase({
         // disconnect), tear down the background keep-alive notification too.
         if (state === CLOSED || state === FAILED) {
           StreamKeepAliveManager?.stop?.();
+          stopAntiIdle();
         }
         if (state === CONNECTED) {
           // Connected
@@ -1798,6 +1841,14 @@ export function NativeStreamScreenBase({
       appStateSubscription.current && appStateSubscription.current.remove();
       audioGainEventListener.current && audioGainEventListener.current.remove();
       StreamKeepAliveManager?.stop?.();
+      if (antiIdleTimerRef.current) {
+        clearInterval(antiIdleTimerRef.current);
+        antiIdleTimerRef.current = null;
+      }
+      if (antiIdleResetTimerRef.current) {
+        clearTimeout(antiIdleResetTimerRef.current);
+        antiIdleResetTimerRef.current = null;
+      }
       if (timer.current) {
         clearInterval(timer.current);
         timer.current = null;

@@ -59,6 +59,16 @@ const xcloud = [
     ),
     data: [],
   },
+  {
+    name: 'anti_idle',
+    type: 'radio',
+    title: t('Anti-idle'),
+    description: t('AntiIdleDesc'),
+    data: [
+      {value: false, text: t('Disable')},
+      {value: true, text: t('Enable')},
+    ],
+  },
 ];
 
 export default xcloud;

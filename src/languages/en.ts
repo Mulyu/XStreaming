@@ -346,6 +346,9 @@ export default {
       'Without picture-in-picture, keep the session alive in the background via a notification. Audio keeps playing and the video resumes when you return; tap the notification to jump back in.',
     'Streaming in background': 'Streaming in background',
     BackgroundKeepAliveNotification: 'Tap to return to the game',
+    'Anti-idle': 'Anti-idle (prevent AFK disconnect)',
+    AntiIdleDesc:
+      'While backgrounded, send a tiny camera nudge so xCloud does not disconnect for inactivity. WARNING: this automates controller input to bypass the idle timeout — it may violate Xbox terms and risk your account, and the input can affect the game. Experimental, use at your own risk.',
     'Native portrait mode': 'Native portrait mode',
     NativePortraitModeDesc:
       'After enabling this, native streaming uses a portrait page with video on top and virtual buttons below.',
