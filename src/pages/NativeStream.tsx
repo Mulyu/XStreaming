@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ToastAndroid,
   Platform,
+  PermissionsAndroid,
   Vibration,
   AppState,
   StatusBar,
@@ -64,6 +65,7 @@ const {
   SensorModule,
   GamepadSensorModule,
   PipManager,
+  StreamKeepAliveManager,
   NativeInputDialog,
 } = NativeModules;
 
@@ -754,18 +756,29 @@ export function NativeStreamScreenBase({
     appStateSubscription.current = AppState.addEventListener(
       'change',
       async state => {
-        if (
-          !portraitMode &&
-          state === 'background' &&
-          isConnected.current &&
-          _settings.picture_in_picture
-        ) {
+        if (state === 'active') {
+          // Back in the foreground: drop the keep-alive notification/service.
+          StreamKeepAliveManager?.stop?.();
+          return;
+        }
+        if (state !== 'background' || !isConnected.current) {
+          return;
+        }
+        if (!portraitMode && _settings.picture_in_picture) {
           try {
             const enteredPip = await PipManager?.enterPipMode?.();
             if (enteredPip) {
               return;
             }
           } catch (error) {}
+        }
+        // Not in PiP: keep the process (and the live session) alive via a
+        // foreground service whose notification resumes the game on tap.
+        if (_settings.background_keep_alive) {
+          StreamKeepAliveManager?.start?.(
+            t('Streaming in background'),
+            t('BackgroundKeepAliveNotification'),
+          );
         }
       },
     );
@@ -1329,6 +1342,19 @@ export function NativeStreamScreenBase({
           setLoadingText(`${t(CONNECTED)}`);
           setLoading(false);
           isConnected.current = true;
+
+          // Ask for notification permission up front (Android 13+) so the
+          // background keep-alive notification can actually be shown/tapped.
+          if (
+            _settings.background_keep_alive &&
+            Platform.OS === 'android' &&
+            typeof Platform.Version === 'number' &&
+            Platform.Version >= 33
+          ) {
+            PermissionsAndroid.request(
+              'android.permission.POST_NOTIFICATIONS' as any,
+            ).catch(() => {});
+          }
           PipManager?.setAutoPipEnabled?.(
             !portraitMode && !!_settings.picture_in_picture,
           );
@@ -1802,6 +1828,7 @@ export function NativeStreamScreenBase({
       pipEventListener.current && pipEventListener.current.remove();
       audioGainEventListener.current && audioGainEventListener.current.remove();
       PipManager?.setAutoPipEnabled?.(false);
+      StreamKeepAliveManager?.stop?.();
       if (timer.current) {
         clearInterval(timer.current);
         timer.current = null;

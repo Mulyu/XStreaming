@@ -341,6 +341,11 @@ export default {
     'Picture in picture': 'Picture in picture',
     PictureInPictureDesc:
       'After enabling this, switching streaming to the background enters Android picture-in-picture and keeps the video visible.',
+    'Keep alive in background': 'Keep alive in background',
+    BackgroundKeepAliveDesc:
+      'Without picture-in-picture, keep the session alive in the background via a notification. Audio keeps playing and the video resumes when you return; tap the notification to jump back in.',
+    'Streaming in background': 'Streaming in background',
+    BackgroundKeepAliveNotification: 'Tap to return to the game',
     'Native portrait mode': 'Native portrait mode',
     NativePortraitModeDesc:
       'After enabling this, native streaming uses a portrait page with video on top and virtual buttons below.',
