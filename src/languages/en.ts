@@ -346,6 +346,8 @@ export default {
       'Without picture-in-picture, keep the session alive in the background via a notification. Audio keeps playing and the video resumes when you return; tap the notification to jump back in.',
     'Streaming in background': 'Streaming in background',
     BackgroundKeepAliveNotification: 'Tap to return to the game',
+    BatteryOptimizationPrompt:
+      'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',
     AntiIdleDesc:
       'While backgrounded, send a tiny camera nudge so the session is not disconnected for inactivity. Note: the nudge moves the camera, so it can affect the game.',

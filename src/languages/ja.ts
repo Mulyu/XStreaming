@@ -307,6 +307,8 @@ export default {
       'PiPを使わず、通知でセッションを裏で維持します。音声は継続し、戻ると映像が再開します。通知をタップで即復帰。',
     'Streaming in background': 'バックグラウンドでストリーミング中',
     BackgroundKeepAliveNotification: 'タップでゲームに戻る',
+    BatteryOptimizationPrompt:
+      'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle': 'アンチアイドル（AFK切断防止）',
     AntiIdleDesc:
       'バックグラウンド中にカメラを微小に動かし、放置による切断を防ぎます。注意: カメラが動くため、ゲームに影響することがあります。',
