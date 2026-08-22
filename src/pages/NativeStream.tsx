@@ -821,7 +821,8 @@ export function NativeStreamScreenBase({
           t('BackgroundKeepAliveNotification'),
           t('Disconnect'),
         );
-        if (_settings.anti_idle) {
+        // Anti-idle is controlled solely by the max-duration slider: 0 = off.
+        if ((Number(getSettings().anti_idle_max_minutes) || 0) > 0) {
           startAntiIdle();
         }
       },

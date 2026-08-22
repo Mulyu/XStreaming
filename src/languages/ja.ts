@@ -312,9 +312,9 @@ export default {
     'Anti-idle': 'アンチアイドル（AFK切断防止）',
     AntiIdleDesc:
       'バックグラウンド中にカメラを微小に動かし、放置による切断を防ぎます。注意: カメラが動くため、ゲームに影響することがあります。',
-    'Anti-idle max duration (minutes)': 'アンチアイドルの最長時間（分）',
+    'Anti-idle max duration (minutes)': 'アンチアイドル: 維持する時間（分、0で無効）',
     AntiIdleMaxDesc:
-      'バックグラウンド化してからこの時間まで維持します。超過するとアンチアイドルを停止し、セッションの切断を許可します。',
+      'バックグラウンド中にカメラを微小に動かし、放置による切断を最長この分数まで防ぎます。超過すると停止し、切断を許可します。0でアンチアイドルを無効化。注意: カメラが動くためゲームに影響することがあります。',
     'Native portrait mode': '縦向きモード',
     NativePortraitModeDesc: '縦画面ストリーミングを使用',
     'Ultra low latency decoding': '超低遅延デコード',
