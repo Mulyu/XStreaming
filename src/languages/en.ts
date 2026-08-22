@@ -404,6 +404,10 @@ export default {
       'Network changed and reconnection failed. Please reconnect.',
     Reconnecting: 'Reconnecting…',
     'Reconnect now': 'Reconnect now',
+    'Continue playing': 'Continue playing',
+    'Previous cloud session': 'Previous cloud session',
+    Resume: 'Resume',
+    Discard: 'Discard',
     'Auto reconnect': 'Auto reconnect',
     AutoReconnectDesc:
       'Automatically try to re-attach to the live session when the stream drops (experimental).',

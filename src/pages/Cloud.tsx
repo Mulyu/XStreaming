@@ -134,6 +134,8 @@ function CloudScreen({navigation, route}) {
   const isFetchGame = React.useRef(false);
   const [priceMap, setPriceMap] = React.useState<Record<string, PriceInfo>>({});
   const [actionTitle, setActionTitle] = React.useState<any>(null);
+  // Cold-start "continue playing": a still-alive cloud session to re-attach to.
+  const [resumeSession, setResumeSession] = React.useState<any>(null);
   // Signature (market + title set) we have already fetched or are fetching
   // prices for. Cleared on failure so a later change can refetch.
   const priceSigRef = React.useRef<string>('');
@@ -280,6 +282,102 @@ function CloudScreen({navigation, route}) {
     navigation,
     dispatch,
   ]);
+
+  // Discover a still-alive cloud session on entry so we can offer to resume it
+  // (same re-attach path as in-stream reconnect). Only when auto_reconnect is on.
+  React.useEffect(() => {
+    if (!getSettings().auto_reconnect || !streamingTokens.xCloudToken) {
+      return;
+    }
+    let cancelled = false;
+    try {
+      const api = new XcloudApi(
+        streamingTokens.xCloudToken.getDefaultRegion().baseUri,
+        streamingTokens.xCloudToken.data.gsToken,
+        'cloud',
+      );
+      api
+        .getActiveSessions()
+        .then((sessions: any) => {
+          if (cancelled || !Array.isArray(sessions) || sessions.length === 0) {
+            return;
+          }
+          const s = sessions[0];
+          const id =
+            (typeof s?.sessionId === 'string' && s.sessionId) ||
+            (typeof s?.id === 'string' && s.id) ||
+            (typeof s?.sessionPath === 'string' &&
+              s.sessionPath.split('/')[3]) ||
+            '';
+          if (!id) {
+            return;
+          }
+          setResumeSession({id, titleId: s?.titleId || s?.productId || ''});
+        })
+        .catch(() => {});
+    } catch (e) {}
+    return () => {
+      cancelled = true;
+    };
+  }, [streamingTokens.xCloudToken]);
+
+  const resumeTitle = React.useMemo(() => {
+    if (!resumeSession?.titleId) {
+      return null;
+    }
+    return (
+      (titles as any[]).find(
+        (item: any) =>
+          item.titleId === resumeSession.titleId ||
+          item.XCloudTitleId === resumeSession.titleId,
+      ) || null
+    );
+  }, [resumeSession, titles]);
+
+  const handleResumeSession = () => {
+    if (!resumeSession) {
+      return;
+    }
+    const settings = getSettings();
+    const routeName = settings.native_portrait_mode
+      ? 'NativePortraitStream'
+      : 'NativeStream';
+    let postUrl = '';
+    if (resumeTitle?.Image_Poster?.URL) {
+      postUrl = `https:${resumeTitle.Image_Poster.URL}`;
+    }
+    const currentResume = resumeSession;
+    setResumeSession(null);
+    navigation.navigate({
+      name: routeName,
+      params: {
+        sessionId: resumeTitle
+          ? resumeTitle.titleId || resumeTitle.XCloudTitleId
+          : currentResume.titleId || '',
+        settings,
+        streamType: 'cloud',
+        postUrl,
+        resumeSessionId: currentResume.id,
+      },
+    });
+  };
+
+  const handleDiscardSession = () => {
+    if (!resumeSession || !streamingTokens.xCloudToken) {
+      setResumeSession(null);
+      return;
+    }
+    try {
+      const api = new XcloudApi(
+        streamingTokens.xCloudToken.getDefaultRegion().baseUri,
+        streamingTokens.xCloudToken.data.gsToken,
+        'cloud',
+      );
+      api.setSessionId(resumeSession.id);
+      api.stopStream().catch(() => {});
+    } catch (e) {}
+    setResumeSession(null);
+  };
 
   const handleViewDetail = titleItem => {
     navigation.navigate('TitleDetail', {titleItem});
@@ -1198,6 +1296,35 @@ function CloudScreen({navigation, route}) {
 
             {renderLargeKeywordPill()}
 
+            {resumeSession && (
+              <Pressable
+                onPress={handleResumeSession}
+                style={styles.resumeCard}>
+                <View style={styles.resumeInfo}>
+                  <Text style={styles.resumeKicker}>
+                    {t('Continue playing')}
+                  </Text>
+                  <Text style={styles.resumeName} numberOfLines={1}>
+                    {resumeTitle?.ProductTitle || t('Previous cloud session')}
+                  </Text>
+                </View>
+                <View style={styles.resumeActions}>
+                  <Pressable
+                    onPress={handleResumeSession}
+                    style={[styles.resumeBtn, styles.resumeBtnPrimary]}>
+                    <Text style={styles.resumeBtnPrimaryText}>
+                      {t('Resume')}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleDiscardSession}
+                    style={styles.resumeBtn}>
+                    <Text style={styles.resumeBtnText}>{t('Discard')}</Text>
+                  </Pressable>
+                </View>
+              </Pressable>
+            )}
+
             {!loading && !showTitles.length && <Empty />}
 
             {showTitles.length > 0 && (
@@ -1626,6 +1753,60 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingTop: 5,
     paddingBottom: 10,
+  },
+  resumeCard: {
+    marginHorizontal: 10,
+    marginTop: 6,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 224, 110, 0.4)',
+    backgroundColor: 'rgba(16, 124, 16, 0.14)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  resumeInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  resumeKicker: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: '#3aa33a',
+    marginBottom: 3,
+  },
+  resumeName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  resumeActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  resumeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(140, 140, 150, 0.4)',
+  },
+  resumeBtnPrimary: {
+    backgroundColor: '#107C10',
+    borderColor: '#107C10',
+  },
+  resumeBtnPrimaryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  resumeBtnText: {
+    color: '#CFD2D6',
+    fontSize: 13,
   },
 });
 

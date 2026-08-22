@@ -353,6 +353,10 @@ export default {
     'Reconnected failed': '再接続失敗',
     Reconnecting: '再接続中…',
     'Reconnect now': '今すぐ再接続',
+    'Continue playing': '続きから',
+    'Previous cloud session': '前回のクラウドセッション',
+    Resume: '復帰',
+    Discard: '破棄',
     'Auto reconnect': '自動再接続',
     AutoReconnectDesc:
       '切断時に、生存中のセッションへ自動的に再接続を試みます（実験的）。',
