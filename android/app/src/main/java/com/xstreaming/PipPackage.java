@@ -18,7 +18,6 @@ public class PipPackage implements ReactPackage {
     @Override
     public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
         List<NativeModule> modules = new ArrayList<>();
-        modules.add(new PipManager(reactContext));
         modules.add(new StreamKeepAliveModule(reactContext));
         return modules;
     }

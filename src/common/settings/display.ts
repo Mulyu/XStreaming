@@ -55,26 +55,6 @@ const display = [
     ],
   },
   {
-    name: 'picture_in_picture',
-    type: 'radio',
-    title: t('Picture in picture'),
-    description: t('PictureInPictureDesc'),
-    data: [
-      {value: false, text: t('Disable')},
-      {value: true, text: t('Enable')},
-    ],
-  },
-  {
-    name: 'background_keep_alive',
-    type: 'radio',
-    title: t('Keep alive in background'),
-    description: t('BackgroundKeepAliveDesc'),
-    data: [
-      {value: false, text: t('Disable')},
-      {value: true, text: t('Enable')},
-    ],
-  },
-  {
     name: 'native_portrait_mode',
     type: 'radio',
     title: t('Native portrait mode'),

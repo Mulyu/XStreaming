@@ -55,8 +55,6 @@ const CLOSED = 'closed';
 const FAILED = 'failed';
 const DUALSENSE = 'DualSenseController';
 const LIVE_GAMEPAD_PROFILE = 'LiveLayout';
-const PICTURE_IN_PICTURE_MODE_CHANGED = 'pictureInPictureModeChanged';
-
 const {
   FullScreenManager,
   GamepadManager,
@@ -64,7 +62,6 @@ const {
   UsbRumbleManager,
   SensorModule,
   GamepadSensorModule,
-  PipManager,
   StreamKeepAliveManager,
   NativeInputDialog,
 } = NativeModules;
@@ -227,7 +224,9 @@ export function NativeStreamScreenBase({
   const [portraitGamepadEditing, setPortraitGamepadEditing] =
     React.useState(false);
   const [openMicro, setOpenMicro] = React.useState(false);
-  const [isInPictureInPicture, setIsInPictureInPicture] = React.useState(false);
+  // Picture-in-picture was removed; keep the flag as a constant so the many
+  // render conditions that referenced it stay valid.
+  const isInPictureInPicture = false;
   const xHomeApiRef = React.useRef<any>(undefined);
   const xCloudApiRef = React.useRef<any>(undefined);
   const isRumbling = React.useRef(false);
@@ -258,7 +257,6 @@ export function NativeStreamScreenBase({
   const frameTimer = React.useRef<any>(undefined);
   const audioRumbleTimer = React.useRef<any>(undefined);
   const appStateSubscription = React.useRef<any>(undefined);
-  const pipEventListener = React.useRef<any>(undefined);
   const audioGainEventListener = React.useRef<any>(undefined);
   const isRequestExit = React.useRef(false);
   const isConnected = React.useRef(false);
@@ -751,11 +749,10 @@ export function NativeStreamScreenBase({
     };
 
     const eventEmitter = new NativeEventEmitter();
-    PipManager?.setAutoPipEnabled?.(false);
     appStateSubscription.current && appStateSubscription.current.remove();
     appStateSubscription.current = AppState.addEventListener(
       'change',
-      async state => {
+      state => {
         if (state === 'active') {
           // Back in the foreground: drop the keep-alive notification/service.
           StreamKeepAliveManager?.stop?.();
@@ -764,42 +761,15 @@ export function NativeStreamScreenBase({
         if (state !== 'background' || !isConnected.current) {
           return;
         }
-        if (!portraitMode && _settings.picture_in_picture) {
-          try {
-            const enteredPip = await PipManager?.enterPipMode?.();
-            if (enteredPip) {
-              return;
-            }
-          } catch (error) {}
-        }
-        // Not in PiP: keep the process (and the live session) alive via a
+        // Keep the process (and the live session) alive in the background via a
         // foreground service whose notification resumes the game on tap.
-        if (_settings.background_keep_alive) {
-          StreamKeepAliveManager?.start?.(
-            t('Streaming in background'),
-            t('BackgroundKeepAliveNotification'),
-          );
-        }
+        StreamKeepAliveManager?.start?.(
+          t('Streaming in background'),
+          t('BackgroundKeepAliveNotification'),
+        );
       },
     );
 
-    pipEventListener.current = eventEmitter.addListener(
-      PICTURE_IN_PICTURE_MODE_CHANGED,
-      event => {
-        const nextIsInPip = !!event?.isInPictureInPictureMode;
-        setIsInPictureInPicture(nextIsInPip);
-        if (nextIsInPip) {
-          setShowModal(false);
-          setShowGamepadEditor(false);
-          NativeInputDialog?.dismiss?.();
-          macroSequenceTimersRef.current.forEach(timeoutId =>
-            clearTimeout(timeoutId),
-          );
-          macroSequenceTimersRef.current = [];
-          closeSystemKeyboardModal();
-        }
-      },
-    );
     audioGainEventListener.current = eventEmitter.addListener(
       'NativeInputDialogAudioGainChange',
       event => {
@@ -1328,6 +1298,11 @@ export function NativeStreamScreenBase({
       });
 
       webrtcClient.setConnectedHandler(state => {
+        // If the session drops (incl. while backgrounded, e.g. xCloud's idle
+        // disconnect), tear down the background keep-alive notification too.
+        if (state === CLOSED || state === FAILED) {
+          StreamKeepAliveManager?.stop?.();
+        }
         if (state === CONNECTED) {
           // Connected
           if (!isConnected.current) {
@@ -1346,7 +1321,6 @@ export function NativeStreamScreenBase({
           // Ask for notification permission up front (Android 13+) so the
           // background keep-alive notification can actually be shown/tapped.
           if (
-            _settings.background_keep_alive &&
             Platform.OS === 'android' &&
             typeof Platform.Version === 'number' &&
             Platform.Version >= 33
@@ -1355,9 +1329,6 @@ export function NativeStreamScreenBase({
               'android.permission.POST_NOTIFICATIONS' as any,
             ).catch(() => {});
           }
-          PipManager?.setAutoPipEnabled?.(
-            !portraitMode && !!_settings.picture_in_picture,
-          );
 
           // Alway show virtual gamepad
           if (portraitMode || _settings.show_virtual_gamead) {
@@ -1825,9 +1796,7 @@ export function NativeStreamScreenBase({
       triggerEventListener.current && triggerEventListener.current.remove();
       sensorEventListener.current && sensorEventListener.current.remove();
       appStateSubscription.current && appStateSubscription.current.remove();
-      pipEventListener.current && pipEventListener.current.remove();
       audioGainEventListener.current && audioGainEventListener.current.remove();
-      PipManager?.setAutoPipEnabled?.(false);
       StreamKeepAliveManager?.stop?.();
       if (timer.current) {
         clearInterval(timer.current);
