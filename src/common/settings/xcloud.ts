@@ -60,19 +60,9 @@ const xcloud = [
     data: [],
   },
   {
-    name: 'anti_idle',
-    type: 'radio',
-    title: t('Anti-idle'),
-    description: t('AntiIdleDesc'),
-    data: [
-      {value: false, text: t('Disable')},
-      {value: true, text: t('Enable')},
-    ],
-  },
-  {
     name: 'anti_idle_max_minutes',
     type: 'slider',
-    min: 5,
+    min: 0,
     max: 180,
     step: 5,
     title: t('Anti-idle max duration (minutes)'),

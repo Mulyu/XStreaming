@@ -351,9 +351,9 @@ export default {
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',
     AntiIdleDesc:
       'While backgrounded, send a tiny camera nudge so the session is not disconnected for inactivity. Note: the nudge moves the camera, so it can affect the game.',
-    'Anti-idle max duration (minutes)': 'Anti-idle max duration (minutes)',
+    'Anti-idle max duration (minutes)': 'Anti-idle: keep awake for (minutes, 0 = off)',
     AntiIdleMaxDesc:
-      'Keep the session awake for at most this long after backgrounding. Once it passes, the anti-idle stops and the session is allowed to disconnect.',
+      'While backgrounded, send a tiny camera nudge so the session is not disconnected for inactivity, for at most this many minutes; then it stops and the session is allowed to disconnect. Set to 0 to turn anti-idle off. Note: the nudge moves the camera, so it can affect the game.',
     'Native portrait mode': 'Native portrait mode',
     NativePortraitModeDesc:
       'After enabling this, native streaming uses a portrait page with video on top and virtual buttons below.',
