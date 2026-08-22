@@ -244,7 +244,7 @@ export function NativeStreamScreenBase({
   // `auto_reconnect` setting is enabled.
   const [reconnecting, setReconnecting] = React.useState(false);
   const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
-  const resumeSessionIdRef = React.useRef('');
+  const resumeSessionIdRef = React.useRef(route.params?.resumeSessionId || '');
   const reconnectAttemptRef = React.useRef(0);
   const isReconnectingRef = React.useRef(false);
   const reconnectActionsRef = React.useRef<any>(null);

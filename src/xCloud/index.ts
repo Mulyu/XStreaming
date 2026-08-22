@@ -803,6 +803,10 @@ export default class XcloudApi {
     });
   }
 
+  setSessionId(id: string) {
+    this.sessionId = id;
+  }
+
   getActiveSessions(): Promise<any[]> {
     return new Promise<any[]>(resolve => {
       this.authedGet(`${this.host}/v5/sessions/${this.type}/active`, {
