@@ -1,11 +1,8 @@
 import React from 'react';
 import {
   View,
-  Text,
   Image,
   Alert,
-  ActivityIndicator,
-  Pressable,
   NativeModules,
   NativeEventEmitter,
   StyleSheet,
@@ -55,7 +52,6 @@ const log = debugFactory('NativeStreamScreen');
 const CONNECTED = 'connected';
 const CLOSED = 'closed';
 const FAILED = 'failed';
-const MAX_RECONNECT_ATTEMPTS = 5;
 const DUALSENSE = 'DualSenseController';
 const LIVE_GAMEPAD_PROFILE = 'LiveLayout';
 const PICTURE_IN_PICTURE_MODE_CHANGED = 'pictureInPictureModeChanged';
@@ -240,14 +236,6 @@ export function NativeStreamScreenBase({
 
   // webrtc
   const [webrtcClient, setWebrtcClient] = React.useState<any>(undefined);
-  // Auto-reconnect (session recovery) state. All of this is inert unless the
-  // `auto_reconnect` setting is enabled.
-  const [reconnecting, setReconnecting] = React.useState(false);
-  const [reconnectAttempt, setReconnectAttempt] = React.useState(0);
-  const resumeSessionIdRef = React.useRef(route.params?.resumeSessionId || '');
-  const reconnectAttemptRef = React.useRef(0);
-  const isReconnectingRef = React.useRef(false);
-  const reconnectActionsRef = React.useRef<any>(null);
   const [remote, setRemote] = React.useState<any>(null);
   const remoteStream = React.useRef<any>(null);
   const audioGainRef = React.useRef(1);
@@ -1328,11 +1316,7 @@ export function NativeStreamScreenBase({
 
       webrtcClient.setConnectedHandler(state => {
         if (state === CONNECTED) {
-          // Connected (also clears any in-progress reconnect state)
-          reconnectAttemptRef.current = 0;
-          resumeSessionIdRef.current = '';
-          isReconnectingRef.current = false;
-          setReconnecting(false);
+          // Connected
           if (!isConnected.current) {
             ToastAndroid.show(t('Connected'), ToastAndroid.SHORT);
 
@@ -1429,13 +1413,7 @@ export function NativeStreamScreenBase({
             },
           ]);
         } else if (state === FAILED) {
-          if (
-            isConnected.current &&
-            getSettings().auto_reconnect &&
-            !isRequestExit.current
-          ) {
-            reconnectActionsRef.current?.attempt?.();
-          } else if (isConnected.current) {
+          if (isConnected.current) {
             Alert.alert(t('Warning'), t('Reconnected failed'), [
               {
                 text: t('Confirm'),
@@ -1693,92 +1671,8 @@ export function NativeStreamScreenBase({
         }
       };
 
-      const pickResumeSessionId = (sessions: any, titleId?: string) => {
-        if (!Array.isArray(sessions) || sessions.length === 0) {
-          return '';
-        }
-        const parse = (s: any) => {
-          if (!s) {
-            return '';
-          }
-          if (typeof s.sessionId === 'string') {
-            return s.sessionId;
-          }
-          if (typeof s.id === 'string') {
-            return s.id;
-          }
-          if (typeof s.sessionPath === 'string') {
-            return s.sessionPath.split('/')[3] || '';
-          }
-          return '';
-        };
-        const match = sessions.find(
-          (s: any) =>
-            titleId && (s.titleId === titleId || s.productId === titleId),
-        );
-        return parse(match || sessions[0]);
-      };
-
-      // Try to recover the stream by re-attaching to the still-alive session
-      // (found via getActiveSessions), re-driving the transport handshake.
-      const attemptReconnect = async () => {
-        if (isRequestExit.current) {
-          return;
-        }
-        if (reconnectAttemptRef.current >= MAX_RECONNECT_ATTEMPTS) {
-          isReconnectingRef.current = false;
-          resumeSessionIdRef.current = '';
-          reconnectAttemptRef.current = 0;
-          setReconnecting(false);
-          Alert.alert(t('Warning'), t('Reconnected failed'), [
-            {text: t('Confirm'), style: 'default', onPress: () => exit()},
-          ]);
-          return;
-        }
-        reconnectAttemptRef.current += 1;
-        setReconnectAttempt(reconnectAttemptRef.current);
-        isReconnectingRef.current = true;
-        setReconnecting(true);
-        try {
-          const sessions = await streamApi.getActiveSessions();
-          resumeSessionIdRef.current = pickResumeSessionId(
-            sessions,
-            route.params?.sessionId,
-          );
-        } catch (e) {
-          resumeSessionIdRef.current = '';
-        }
-        // Small backoff, then re-drive the connection by recreating the client;
-        // the effect re-runs and re-attaches to the resumed session.
-        await new Promise(r => setTimeout(r, 1500));
-        if (isRequestExit.current) {
-          return;
-        }
-        isConnected.current = false;
-        connectStateRef.current = '';
-        if (webrtcClient) {
-          try {
-            webrtcClient.close();
-          } catch (e) {}
-        }
-        setWebrtcClient(undefined);
-      };
-
-      reconnectActionsRef.current = {
-        attempt: attemptReconnect,
-        retryNow: () => {
-          reconnectAttemptRef.current = 0;
-          attemptReconnect();
-        },
-        exit,
-      };
-
       streamApi
-        .startSession(
-          route.params?.sessionId,
-          _settings.resolution,
-          resumeSessionIdRef.current || undefined,
-        )
+        .startSession(route.params?.sessionId, _settings.resolution)
         .then(() => {
           setLoadingText(
             `${t('Configuration obtained successfully, initiating offer...')}`,
@@ -1811,10 +1705,6 @@ export function NativeStreamScreenBase({
                       setLoadingText(`${t('Exchange ICE successfully...')}`);
                     })
                     .catch(e => {
-                      if (isReconnectingRef.current) {
-                        reconnectActionsRef.current?.attempt?.();
-                        return;
-                      }
                       Alert.alert(
                         t('Warning'),
                         '[sendICECandidates] fail:' + e,
@@ -1832,10 +1722,6 @@ export function NativeStreamScreenBase({
                 });
               })
               .catch(e => {
-                if (isReconnectingRef.current) {
-                  reconnectActionsRef.current?.attempt?.();
-                  return;
-                }
                 Alert.alert(t('Warning'), '[sendSDPOffer] fail:' + e, [
                   {
                     text: t('Confirm'),
@@ -1849,10 +1735,6 @@ export function NativeStreamScreenBase({
           });
         })
         .catch(e => {
-          if (isReconnectingRef.current) {
-            reconnectActionsRef.current?.attempt?.();
-            return;
-          }
           if (e !== '') {
             let msg = '';
             if (typeof e === 'string') {
@@ -2873,30 +2755,6 @@ export function NativeStreamScreenBase({
         onCancel={() => setShowGamepadEditor(false)}
       />
 
-      {reconnecting && !isInPictureInPicture && (
-        <View style={styles.reconnectOverlay}>
-          <ActivityIndicator size="large" color="#3BE06E" />
-          <Text style={styles.reconnectTitle}>{t('Reconnecting')}</Text>
-          <Text style={styles.reconnectMeta}>
-            {`${reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS}`}
-          </Text>
-          <View style={styles.reconnectBtns}>
-            <Pressable
-              onPress={() => reconnectActionsRef.current?.retryNow?.()}
-              style={[styles.reconnectBtn, styles.reconnectBtnPrimary]}>
-              <Text style={styles.reconnectBtnPrimaryText}>
-                {t('Reconnect now')}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => reconnectActionsRef.current?.exit?.()}
-              style={styles.reconnectBtn}>
-              <Text style={styles.reconnectBtnText}>{t('Disconnect')}</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-
       {renderMenu()}
     </View>
   );
@@ -2906,50 +2764,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
-  },
-  reconnectOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(9, 9, 11, 0.82)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 50,
-    paddingHorizontal: 24,
-  },
-  reconnectTitle: {
-    color: '#E7E8EA',
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-  },
-  reconnectMeta: {
-    color: '#3BE06E',
-    fontSize: 13,
-    marginTop: 6,
-  },
-  reconnectBtns: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 20,
-  },
-  reconnectBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: '#2A2C31',
-  },
-  reconnectBtnPrimary: {
-    backgroundColor: '#107C10',
-    borderColor: '#107C10',
-  },
-  reconnectBtnPrimaryText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  reconnectBtnText: {
-    color: '#E7E8EA',
-    fontSize: 13,
   },
   loadingPosterContainer: {
     ...StyleSheet.absoluteFillObject,

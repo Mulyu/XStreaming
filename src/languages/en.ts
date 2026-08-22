@@ -402,15 +402,6 @@ export default {
       'NAT failed. If you are trying remote streaming, make sure the router is configured correctly and port forwarding is set. If remote streaming still cannot be resolved, use the official Xbox app.',
     'Reconnected failed':
       'Network changed and reconnection failed. Please reconnect.',
-    Reconnecting: 'Reconnecting…',
-    'Reconnect now': 'Reconnect now',
-    'Continue playing': 'Continue playing',
-    'Previous cloud session': 'Previous cloud session',
-    Resume: 'Resume',
-    Discard: 'Discard',
-    'Auto reconnect': 'Auto reconnect',
-    AutoReconnectDesc:
-      'Automatically try to re-attach to the live session when the stream drops (experimental).',
     'Open Microphone': 'Open Microphone',
     'Close Microphone': 'Close Microphone',
     'Device testing': 'Device testing',

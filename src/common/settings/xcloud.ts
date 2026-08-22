@@ -59,16 +59,6 @@ const xcloud = [
     ),
     data: [],
   },
-  {
-    name: 'auto_reconnect',
-    type: 'radio',
-    title: t('Auto reconnect'),
-    description: t('AutoReconnectDesc'),
-    data: [
-      {value: false, text: t('Disable')},
-      {value: true, text: t('Enable')},
-    ],
-  },
 ];
 
 export default xcloud;
