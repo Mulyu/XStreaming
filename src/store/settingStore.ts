@@ -82,6 +82,7 @@ export type Settings = {
   hold_buttons: [];
   ipv6: boolean;
   check_update: boolean;
+  auto_reconnect: boolean;
   power_on: boolean;
   theme: string;
   theme_primary_color: string;
@@ -153,6 +154,7 @@ const defaultSettings: Settings = {
   right_trigger_effects: [],
   ipv6: false,
   check_update: true,
+  auto_reconnect: false,
   power_on: false,
   display_options: {
     sharpness: 5,

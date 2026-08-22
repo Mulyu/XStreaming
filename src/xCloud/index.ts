@@ -154,7 +154,11 @@ export default class XcloudApi {
     return Math.max(pulse, 5) * 1000;
   }
 
-  startSession(consoleId: string, resolution: number): Promise<any> {
+  startSession(
+    consoleId: string,
+    resolution: number,
+    existingSessionId?: string,
+  ): Promise<any> {
     log.info('[startSession] consoleId:', consoleId);
     this.isStoped = false;
     let osName = 'android';
@@ -168,6 +172,42 @@ export default class XcloudApi {
       osName = 'android';
     }
     return new Promise<any>((resolve, reject) => {
+      const finishProvision = () => {
+        this.waitState()
+          .then(() => {
+            this.authedGet(
+              `${this.host}/v5/sessions/${this.type}/${this.sessionId}/configuration`,
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              },
+            ).then(result => {
+              const keepAlivePulseInSeconds = Number(
+                result.data?.keepAlivePulseInSeconds,
+              );
+              if (
+                Number.isFinite(keepAlivePulseInSeconds) &&
+                keepAlivePulseInSeconds > 0
+              ) {
+                this.keepAlivePulseInSeconds = keepAlivePulseInSeconds;
+              }
+              resolve(result.data);
+            });
+          })
+          .catch(error => {
+            reject(error);
+          });
+      };
+
+      // Resume an already-provisioned session: skip /play and go straight to
+      // /configuration so the transport can be re-attached to the same session.
+      if (existingSessionId) {
+        this.sessionId = existingSessionId;
+        finishProvision();
+        return;
+      }
+
       const _settings = getSettings();
       const deviceInfo = JSON.stringify({
         appInfo: {
