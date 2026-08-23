@@ -313,6 +313,11 @@ export default {
     'Copy from': 'コピー元',
     Add: '追加',
     'Delete current profile': '現在のプロファイルを削除',
+    'Swipe aim sensitivity (0 = off)': 'スワイプエイム感度（0で無効）',
+    SwipeAimDesc:
+      '画面右側をスワイプ視点操作エリアにします。指をなぞった速さでカメラが動く、モバイルFPS風の操作です。大きいほど速くなります。0で無効。ヒント: 使用時はコントローラープロファイルで画面上の右スティックを非表示にすると快適です。',
+    'Invert swipe aim Y': 'スワイプエイムの上下反転',
+    InvertSwipeAimYDesc: 'スワイプエイムの上下方向を反転します。',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle': 'アンチアイドル（AFK切断防止）',

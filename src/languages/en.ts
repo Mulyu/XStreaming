@@ -353,6 +353,12 @@ export default {
     'Copy from': 'Copy from',
     Add: 'Add',
     'Delete current profile': 'Delete current profile',
+    'Swipe aim sensitivity (0 = off)': 'Swipe aim sensitivity (0 = off)',
+    SwipeAimDesc:
+      'Turn the right side of the screen into a swipe-to-aim pad: drag to move the camera by how fast you swipe, like mobile shooters. Higher = faster. Set to 0 to turn it off. Tip: hide the on-screen right stick in your controller profile when using this.',
+    'Invert swipe aim Y': 'Invert swipe aim (vertical)',
+    InvertSwipeAimYDesc:
+      'Flip the up/down direction of swipe aim.',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',

@@ -146,6 +146,26 @@ ${t('Webview: Use Chromium kernal to vibrate')}`,
       {value: true, text: t('Enable')},
     ],
   },
+  {
+    name: 'swipe_aim_sensitivity',
+    type: 'slider',
+    min: 0,
+    max: 30,
+    step: 1,
+    title: t('Swipe aim sensitivity (0 = off)'),
+    description: t('SwipeAimDesc'),
+    data: [],
+  },
+  {
+    name: 'swipe_aim_invert_y',
+    type: 'radio',
+    title: t('Invert swipe aim Y'),
+    description: t('InvertSwipeAimYDesc'),
+    data: [
+      {value: false, text: t('Disable')},
+      {value: true, text: t('Enable')},
+    ],
+  },
 ];
 
 export default gamepad;
