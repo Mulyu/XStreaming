@@ -2425,15 +2425,22 @@ export function NativeStreamScreenBase({
   );
 
   const handleCreateGamepadProfile = React.useCallback(
-    (rawName: string) => {
+    (rawName: string, copyFrom = '') => {
       const name = rawName.trim();
       if (!name) {
         return;
       }
       const layouts = getGamepadLayouts();
       if (!layouts[name]) {
-        const {width, height} = Dimensions.get('window');
-        saveGamepadLayout(name, buildDefaultLayout(width, height));
+        const source = copyFrom && layouts[copyFrom];
+        const seed = Array.isArray(source)
+          ? // Copy an existing profile's layout as the starting point.
+            source.map((button: any) => ({...button}))
+          : (() => {
+              const {width, height} = Dimensions.get('window');
+              return buildDefaultLayout(width, height);
+            })();
+        saveGamepadLayout(name, seed);
       }
       refreshGamepadProfiles();
       applyActiveProfile(name);

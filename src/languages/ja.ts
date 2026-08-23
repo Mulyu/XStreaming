@@ -310,6 +310,7 @@ export default {
     BackgroundKeepAliveAntiIdle: 'セッションを維持中 · タップでゲームに戻る',
     'Touch controller profiles': 'タッチコントローラーのプロファイル',
     'New profile name': '新しいプロファイル名',
+    'Copy from': 'コピー元',
     Add: '追加',
     'Delete current profile': '現在のプロファイルを削除',
     BatteryOptimizationPrompt:
