@@ -346,6 +346,12 @@ export default {
       'Without picture-in-picture, keep the session alive in the background via a notification. Audio keeps playing and the video resumes when you return; tap the notification to jump back in.',
     'Streaming in background': 'Streaming in background',
     BackgroundKeepAliveNotification: 'Tap to return to the game',
+    BackgroundKeepAliveAntiIdle:
+      'Keeping the session awake · tap to return to the game',
+    'Touch controller profiles': 'Touch controller profiles',
+    'New profile name': 'New profile name',
+    Add: 'Add',
+    'Delete current profile': 'Delete current profile',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',
