@@ -350,6 +350,7 @@ export default {
       'Keeping the session awake · tap to return to the game',
     'Touch controller profiles': 'Touch controller profiles',
     'New profile name': 'New profile name',
+    'Copy from': 'Copy from',
     Add: 'Add',
     'Delete current profile': 'Delete current profile',
     BatteryOptimizationPrompt:

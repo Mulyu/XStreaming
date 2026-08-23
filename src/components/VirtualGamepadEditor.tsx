@@ -1,5 +1,11 @@
 import React from 'react';
-import {View, StyleSheet, Dimensions, TouchableOpacity} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {
   Portal,
@@ -11,6 +17,7 @@ import {
   Button,
   IconButton,
   TextInput,
+  Chip,
   useTheme,
 } from 'react-native-paper';
 import Draggable from 'react-native-draggable';
@@ -41,7 +48,9 @@ export interface VirtualGamepadEditorProps {
   onCancel: () => void;
   // Switch the live/active layout: '' selects the built-in Default.
   onSwitchProfile?: (name: string) => void;
-  onCreateProfile?: (name: string) => void;
+  // copyFrom: '' = seed from the built-in Default layout, else copy that
+  // existing profile's layout as the starting point.
+  onCreateProfile?: (name: string, copyFrom: string) => void;
   onDeleteProfile?: (name: string) => void;
 }
 
@@ -75,6 +84,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [showButtonModal, setShowButtonModal] = React.useState(false);
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [newProfileName, setNewProfileName] = React.useState('');
+  const [copyFrom, setCopyFrom] = React.useState('');
   const [reloadKey, setReloadKey] = React.useState(Date.now());
 
   React.useEffect(() => {
@@ -229,14 +239,23 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     onSwitchProfile?.(name);
   };
 
+  const openProfileModal = () => {
+    // Pre-select the currently active layout as the copy source so
+    // "duplicate what I'm on" is one tap.
+    setCopyFrom(activeProfile);
+    setNewProfileName('');
+    setShowProfileModal(true);
+  };
+
   const handleAddProfile = () => {
     const name = newProfileName.trim();
     if (!name) {
       return;
     }
+    const source = copyFrom;
     setNewProfileName('');
     setShowProfileModal(false);
-    onCreateProfile?.(name);
+    onCreateProfile?.(name, source);
   };
 
   const handleDeleteProfile = () => {
@@ -276,6 +295,31 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               onChangeText={setNewProfileName}
               style={styles.profileInput}
             />
+            <Text style={styles.copyFromLabel}>{t('Copy from')}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.copyFromRow}>
+              <Chip
+                compact
+                selected={copyFrom === ''}
+                showSelectedCheck
+                onPress={() => setCopyFrom('')}
+                style={styles.copyChip}>
+                {t('Default')}
+              </Chip>
+              {profiles.map(name => (
+                <Chip
+                  key={name}
+                  compact
+                  selected={copyFrom === name}
+                  showSelectedCheck
+                  onPress={() => setCopyFrom(name)}
+                  style={styles.copyChip}>
+                  {name}
+                </Chip>
+              ))}
+            </ScrollView>
             <Button
               mode="contained"
               disabled={!newProfileName.trim()}
@@ -371,56 +415,63 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
 
         {showGrid && <GridBackground gridSize={20} />}
 
-        <View style={styles.actions}>
-          <Button
-            mode="contained"
-            onPress={handleSave}
-            style={styles.actionButton}>
-            {t('Save')}
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={handleReset}
-            style={styles.actionButton}>
-            {t('Reset')}
-          </Button>
-          <Button mode="text" onPress={onCancel} style={styles.actionButton}>
-            {t('Cancel')}
-          </Button>
-        </View>
+        {/* Single centered toolbar so the controls never overlap each other
+            (previously the profile switch sat on top of Cancel) and stay clear
+            of the play-area buttons, which cluster at the corners/bottom. */}
+        <View style={styles.toolbar} pointerEvents="box-none">
+          <View style={styles.toolbarInner}>
+            {canManageProfiles ? (
+              <TouchableOpacity
+                style={styles.profileChip}
+                onPress={openProfileModal}>
+                <IconButton
+                  icon="controller-classic"
+                  size={18}
+                  style={styles.chipIcon}
+                />
+                <Text style={styles.chipText} numberOfLines={1}>
+                  {activeProfile || t('Default')}
+                </Text>
+                <IconButton
+                  icon="menu-down"
+                  size={18}
+                  style={styles.chipIcon}
+                />
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.chipText}>{profileName || t('Default')}</Text>
+            )}
 
-        <TouchableOpacity
-          style={styles.gridToggle}
-          onPress={() => setShowGrid(!showGrid)}>
-          <Text style={styles.gridToggleText}>
-            {showGrid ? 'Hide Grid' : 'Show Grid'}
-          </Text>
-        </TouchableOpacity>
+            <View style={styles.toolbarDivider} />
 
-        <View style={styles.profileBadge}>
-          {canManageProfiles ? (
-            <TouchableOpacity
-              style={styles.profileSwitch}
-              onPress={() => setShowProfileModal(true)}>
-              <IconButton
-                icon="controller-classic"
-                size={18}
-                style={styles.profileSwitchIcon}
-              />
-              <Text style={styles.profileText}>
-                {activeProfile || t('Default')}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.profileText}>
-              Profile: {profileName || 'Default'}
-            </Text>
-          )}
-          <IconButton
-            icon="close"
-            onPress={onCancel}
-            style={styles.closeButton}
-          />
+            <IconButton
+              icon={showGrid ? 'grid' : 'grid-off'}
+              size={20}
+              onPress={() => setShowGrid(!showGrid)}
+              style={styles.toolbarIcon}
+            />
+            <Button
+              compact
+              mode="outlined"
+              onPress={handleReset}
+              style={styles.toolbarButton}>
+              {t('Reset')}
+            </Button>
+            <Button
+              compact
+              mode="contained"
+              onPress={handleSave}
+              style={styles.toolbarButton}>
+              {t('Save')}
+            </Button>
+            <Button
+              compact
+              mode="text"
+              onPress={onCancel}
+              style={styles.toolbarButton}>
+              {t('Cancel')}
+            </Button>
+          </View>
         </View>
 
         {renderButtons()}
@@ -447,62 +498,64 @@ const styles = StyleSheet.create({
   divider: {
     marginTop: 10,
   },
-  actions: {
+  toolbar: {
     position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
+    top: 12,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     zIndex: 1000,
   },
-  actionButton: {
-    flex: 1,
-    marginHorizontal: 8,
-  },
-  gridToggle: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    zIndex: 1000,
-  },
-  gridToggleText: {
-    color: '#fff',
-  },
-  profileBadge: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
+  toolbarInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    maxWidth: '96%',
   },
-  profileText: {
-    color: '#fff',
+  toolbarDivider: {
+    width: 1,
+    height: 24,
+    marginHorizontal: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
-  profileSwitch: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profileSwitchIcon: {
+  toolbarIcon: {
     margin: 0,
-    marginRight: -4,
+  },
+  toolbarButton: {
+    marginHorizontal: 3,
+  },
+  profileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: 160,
+  },
+  chipIcon: {
+    margin: 0,
+    marginHorizontal: -4,
+  },
+  chipText: {
+    color: '#fff',
+    flexShrink: 1,
   },
   profileInput: {
     marginTop: 8,
   },
+  copyFromLabel: {
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  copyFromRow: {
+    paddingVertical: 2,
+  },
+  copyChip: {
+    marginRight: 6,
+  },
   profileAction: {
     marginTop: 8,
-  },
-  closeButton: {
-    marginLeft: 4,
   },
 });
 
