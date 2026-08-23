@@ -44,6 +44,7 @@ import VirtualGamepadEditor, {
 import PerfPanel from '../components/PerfPanel';
 import RTCFsrView from '../components/RTCFsrView';
 import NativeTouchOverlay from '../components/NativeTouchOverlay';
+import SwipeAimZone from '../components/SwipeAimZone';
 import PortraitVirtualGamepad, {
   PortraitGamepadControl,
 } from '../components/PortraitVirtualGamepad';
@@ -2351,6 +2352,37 @@ export function NativeStreamScreenBase({
     }
   };
 
+  // Swipe-to-aim: translate a finger drag into right-stick (camera) velocity,
+  // then recentre shortly after the finger stops moving so a still finger means
+  // "no camera movement" (relative aiming, like mobile shooters).
+  const swipeAimResetTimer = React.useRef<any>(null);
+
+  const clearSwipeAim = () => {
+    if (swipeAimResetTimer.current) {
+      clearTimeout(swipeAimResetTimer.current);
+      swipeAimResetTimer.current = null;
+    }
+    gpState.RightThumbXAxis = 0;
+    gpState.RightThumbYAxis = 0;
+    isRightstickMoving.current = false;
+    flushVirtualGpState();
+  };
+
+  const handleSwipeAim = (dx: number, dy: number) => {
+    const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+    const invertY = !!settings.swipe_aim_invert_y;
+    gpState.RightThumbXAxis = clamp(dx);
+    // Screen y is down-positive; a right stick pushed up (look up) is positive,
+    // so negate by default. Invert flips it back.
+    gpState.RightThumbYAxis = clamp(invertY ? dy : -dy);
+    isRightstickMoving.current = true;
+    flushVirtualGpState();
+    if (swipeAimResetTimer.current) {
+      clearTimeout(swipeAimResetTimer.current);
+    }
+    swipeAimResetTimer.current = setTimeout(clearSwipeAim, 60);
+  };
+
   const requestExit = React.useCallback(
     (off = false) => {
       clearMacroTimers();
@@ -2684,6 +2716,28 @@ export function NativeStreamScreenBase({
     }
   };
 
+  const renderSwipeAimZone = () => {
+    const sens = Number(settings.swipe_aim_sensitivity) || 0;
+    if (
+      portraitMode ||
+      isInPictureInPicture ||
+      settings.native_touch ||
+      connectState !== CONNECTED ||
+      sens <= 0
+    ) {
+      return null;
+    }
+    return (
+      <SwipeAimZone
+        enabled
+        // Map the 0–30 slider to a per-pixel stick factor.
+        sensitivity={sens * 0.0025}
+        onAim={handleSwipeAim}
+        onEnd={clearSwipeAim}
+      />
+    );
+  };
+
   const renderPerformancePanel = () => {
     if (!portraitMode && showPerformance && !isInPictureInPicture) {
       return (
@@ -2912,6 +2966,8 @@ export function NativeStreamScreenBase({
       {renderStreamPlayer(styles.playerContainer, styles.player)}
 
       {renderPerformancePanel()}
+
+      {renderSwipeAimZone()}
 
       {renderVirtualGamepad()}
 
