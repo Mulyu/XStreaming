@@ -8,6 +8,7 @@ import {VIRTUAL_MACRO_BUTTON_NAME} from '../utils/virtualMacro';
 
 type Props = {
   opacity: number;
+  joystickMode?: number;
   onPressIn: (name: string) => any;
   onPressOut: (name: string) => any;
   onStickMove: (id: string, position: any) => any;
@@ -15,11 +16,17 @@ type Props = {
 
 const VirtualGamepad: React.FC<Props> = ({
   opacity = 0.7,
+  joystickMode,
   onPressIn,
   onPressOut,
   onStickMove,
 }) => {
   const settings = getSettings();
+  // Per-profile override wins; fall back to the global setting.
+  const joystick =
+    joystickMode === 0 || joystickMode === 1
+      ? joystickMode
+      : settings.virtual_gamepad_joystick;
 
   const handlePressIn = (name: string) => {
     onPressIn && onPressIn(name);
@@ -101,9 +108,7 @@ const VirtualGamepad: React.FC<Props> = ({
         style={[
           styles.button,
           styles.l3,
-          settings.virtual_gamepad_joystick === 1
-            ? {bottom: 30, left: 225}
-            : {},
+          joystick === 1 ? {bottom: 30, left: 225} : {},
           {opacity},
         ]}
         buttonName="control_button_left_joystick_down"
@@ -115,9 +120,7 @@ const VirtualGamepad: React.FC<Props> = ({
         style={[
           styles.button,
           styles.r3,
-          settings.virtual_gamepad_joystick === 1
-            ? {bottom: 30, right: 225}
-            : {},
+          joystick === 1 ? {bottom: 30, right: 225} : {},
           {opacity},
         ]}
         buttonName="control_button_right_joystick_down"
@@ -183,7 +186,7 @@ const VirtualGamepad: React.FC<Props> = ({
         />
       )}
 
-      {settings.virtual_gamepad_joystick === 1 ? (
+      {joystick === 1 ? (
         <View
           // eslint-disable-next-line react-native/no-inline-styles
           style={{
@@ -206,7 +209,7 @@ const VirtualGamepad: React.FC<Props> = ({
         </View>
       ) : null}
 
-      {settings.virtual_gamepad_joystick === 1 ? (
+      {joystick === 1 ? (
         <View
           // eslint-disable-next-line react-native/no-inline-styles
           style={{
@@ -229,7 +232,7 @@ const VirtualGamepad: React.FC<Props> = ({
         </View>
       ) : null}
 
-      {settings.virtual_gamepad_joystick === 0 ? (
+      {joystick === 0 ? (
         <View style={[styles.button, styles.leftJs, {opacity}]}>
           <AnalogStick
             style={styles.analogStick}
@@ -240,7 +243,7 @@ const VirtualGamepad: React.FC<Props> = ({
         </View>
       ) : null}
 
-      {settings.virtual_gamepad_joystick === 0 ? (
+      {joystick === 0 ? (
         <View style={[styles.button, styles.rightJs, {opacity}]}>
           <AnalogStick
             style={styles.analogStick}

@@ -8,6 +8,9 @@ const log = debugFactory('touchProfileStore');
 const SWIPE_KEY = 'user.profileSwipe';
 // The profile last used for each game, keyed by the game's titleId.
 const GAME_KEY = 'user.gameLastProfile';
+// Per-profile virtual-stick mode override (0 = fixed, 1 = free). Absent = fall
+// back to the global virtual_gamepad_joystick setting.
+const JOYSTICK_KEY = 'user.profileJoystick';
 
 export type SwipeConfig = {
   sensitivity: number;
@@ -54,6 +57,19 @@ export const setSwipeConfig = (profileName: string, cfg: SwipeConfig) => {
   };
   writeMap(SWIPE_KEY, map);
   log.info('setSwipeConfig:', profileName, map[profileName || '']);
+};
+
+// Per-profile virtual-stick mode. Returns null when the profile has no
+// override, so callers can fall back to the global setting.
+export const getJoystickMode = (profileName: string): number | null => {
+  const v = readMap(JOYSTICK_KEY)[profileName || ''];
+  return v === 0 || v === 1 ? v : null;
+};
+
+export const setJoystickMode = (profileName: string, mode: number) => {
+  const map = readMap(JOYSTICK_KEY);
+  map[profileName || ''] = mode === 0 ? 0 : 1;
+  writeMap(JOYSTICK_KEY, map);
 };
 
 export const getLastProfileForGame = (gameId: string): string | null => {
