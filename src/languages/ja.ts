@@ -318,6 +318,8 @@ export default {
       '画面右側をスワイプ視点操作エリアにします。指をなぞった速さでカメラが動く、モバイルFPS風の操作です。大きいほど速くなります。0で無効。ヒント: 使用時はコントローラープロファイルで画面上の右スティックを非表示にすると快適です。',
     'Invert swipe aim Y': 'スワイプエイムの上下反転',
     InvertSwipeAimYDesc: 'スワイプエイムの上下方向を反転します。',
+    'Hidden controls appear dimmed here; tap one to show it again':
+      '非表示のコントロールはここでは半透明で表示されます。タップすると再表示できます。',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle': 'アンチアイドル（AFK切断防止）',

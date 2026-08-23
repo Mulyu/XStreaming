@@ -169,6 +169,12 @@ function CustomGamepadScreen({navigation, route}) {
                 TIPS2: {t('Click on an element to set its size and display')}
               </Text>
               <Text>TIPS3: {t('Drag elements to adjust their position')}</Text>
+              <Text>
+                TIPS4:{' '}
+                {t(
+                  'Hidden controls appear dimmed here; tap one to show it again',
+                )}
+              </Text>
             </Card.Content>
           </Card>
         </Modal>
@@ -272,18 +278,19 @@ function CustomGamepadScreen({navigation, route}) {
       </Portal>
 
       <>
+        {/* Hidden controls stay drawn (dimmed) and tappable in the editor so a
+            control set to "Hide" can be selected again and turned back on. The
+            in-game overlay respects `show` and omits them. */}
         {buttons.map(button => {
+          const hidden = !button.show;
           if (button.name === 'LeftStick' || button.name === 'RightStick') {
-            if (!button.show) {
-              return null;
-            }
             return (
               <Draggable
                 x={button.x}
                 y={button.y}
                 key={button.name + reloader}
                 renderSize={100}
-                renderColor="white"
+                renderColor={hidden ? 'rgba(255,255,255,0.25)' : 'white'}
                 isCircle
                 onShortPressRelease={() => {
                   setCurrentButton(button.name);
@@ -298,9 +305,6 @@ function CustomGamepadScreen({navigation, route}) {
               />
             );
           } else {
-            if (!button.show) {
-              return null;
-            }
             return (
               <Draggable
                 x={button.x}
@@ -316,12 +320,14 @@ function CustomGamepadScreen({navigation, route}) {
                   handleDrag(button.name, bounds.left, bounds.top);
                   setReloader(Date.now());
                 }}>
-                <GamepadButton
-                  name={button.name}
-                  width={button.width}
-                  height={button.height}
-                  scale={button.scale}
-                />
+                <View style={hidden ? styles.hiddenButton : undefined}>
+                  <GamepadButton
+                    name={button.name}
+                    width={button.width}
+                    height={button.height}
+                    scale={button.scale}
+                  />
+                </View>
               </Draggable>
             );
           }
@@ -346,6 +352,9 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginTop: 10,
+  },
+  hiddenButton: {
+    opacity: 0.3,
   },
 });
 
