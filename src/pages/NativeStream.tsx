@@ -30,6 +30,12 @@ import {
   deleteSetting as deleteGamepadProfile,
 } from '../store/gamepadStore';
 import {buildDefaultLayout} from '../utils/gamepadLayout';
+import {
+  getSwipeConfig,
+  setSwipeConfig,
+  getLastProfileForGame,
+  setLastProfileForGame,
+} from '../store/touchProfileStore';
 import {useTranslation} from 'react-i18next';
 import webRTCClient from '../webrtc';
 import BackgroundTimer from 'react-native-background-timer';
@@ -230,6 +236,7 @@ export function NativeStreamScreenBase({
   const [editorProfile, setEditorProfile] = React.useState('');
   const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
   const [gamepadLayoutVersion, setGamepadLayoutVersion] = React.useState(0);
+  const [swipeConfigVersion, setSwipeConfigVersion] = React.useState(0);
   const [audioGain, setAudioGain] = React.useState(1);
   const [portraitGamepadEditing, setPortraitGamepadEditing] =
     React.useState(false);
@@ -2352,6 +2359,14 @@ export function NativeStreamScreenBase({
     }
   };
 
+  // Swipe-aim is configured per touch-controller profile, so it follows the
+  // active profile. Re-read when the profile or its saved config changes.
+  const activeSwipe = React.useMemo(
+    () => getSwipeConfig(settings.custom_virtual_gamepad || ''),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [settings.custom_virtual_gamepad, swipeConfigVersion],
+  );
+
   // Swipe-to-aim: translate a finger drag into right-stick (camera) velocity,
   // then recentre shortly after the finger stops moving so a still finger means
   // "no camera movement" (relative aiming, like mobile shooters).
@@ -2370,7 +2385,7 @@ export function NativeStreamScreenBase({
 
   const handleSwipeAim = (dx: number, dy: number) => {
     const clamp = (v: number) => Math.max(-1, Math.min(1, v));
-    const invertY = !!settings.swipe_aim_invert_y;
+    const invertY = activeSwipe.invertY;
     gpState.RightThumbXAxis = clamp(dx);
     // Screen y is down-positive; a right stick pushed up (look up) is positive,
     // so negate by default. Invert flips it back.
@@ -2440,14 +2455,21 @@ export function NativeStreamScreenBase({
   }, [getActiveProfileName, refreshGamepadProfiles]);
 
   // Switch the live/active touch layout. '' selects the built-in Default.
-  const applyActiveProfile = React.useCallback((name: string) => {
-    const next = {...getSettings(), custom_virtual_gamepad: name};
-    saveSettings(next);
-    setSettings(next);
-    setEditorProfile(name || LIVE_GAMEPAD_PROFILE);
-    setGamepadLayoutVersion(prev => prev + 1);
-    setShowVirtualGamepad(true);
-  }, []);
+  const applyActiveProfile = React.useCallback(
+    (name: string) => {
+      const next = {...getSettings(), custom_virtual_gamepad: name};
+      saveSettings(next);
+      setSettings(next);
+      setEditorProfile(name || LIVE_GAMEPAD_PROFILE);
+      setGamepadLayoutVersion(prev => prev + 1);
+      setSwipeConfigVersion(prev => prev + 1);
+      setShowVirtualGamepad(true);
+      // Remember this as the profile last used for this game so it is restored
+      // the next time the game launches.
+      setLastProfileForGame(String(route.params?.sessionId || ''), name);
+    },
+    [route.params?.sessionId],
+  );
 
   const handleSwitchGamepadProfile = React.useCallback(
     (name: string) => {
@@ -2493,18 +2515,74 @@ export function NativeStreamScreenBase({
     [applyActiveProfile, refreshGamepadProfiles],
   );
 
-  const handleSaveGamepadLayout = (layout: ButtonConfig[]) => {
+  const handleSaveGamepadLayout = (
+    layout: ButtonConfig[],
+    swipe?: {sensitivity: number; invertY: boolean},
+  ) => {
     const profileName = editorProfile || getActiveProfileName();
     saveGamepadLayout(profileName, layout);
+    if (swipe) {
+      // Swipe-aim is per-profile; store it under the profile that will be
+      // active after this save (the render gate keys off that name).
+      setSwipeConfig(profileName, swipe);
+    }
     if (!settings.custom_virtual_gamepad) {
       settings.custom_virtual_gamepad = profileName;
     }
     saveSettings(settings);
     setSettings({...settings});
     setGamepadLayoutVersion(prev => prev + 1);
+    setSwipeConfigVersion(prev => prev + 1);
     setShowVirtualGamepad(true);
     setShowGamepadEditor(false);
+    setLastProfileForGame(
+      String(route.params?.sessionId || ''),
+      settings.custom_virtual_gamepad || '',
+    );
   };
+
+  // On launch, switch to the touch-controller profile last used for this game.
+  const profileRestoredRef = React.useRef(false);
+  React.useEffect(() => {
+    if (profileRestoredRef.current) {
+      return;
+    }
+    profileRestoredRef.current = true;
+    const gameId = String(route.params?.sessionId || '');
+    if (!gameId) {
+      return;
+    }
+    const last = getLastProfileForGame(gameId);
+    if (last === null) {
+      return;
+    }
+    // '' (Default) is always valid; a named profile must still exist.
+    if (last !== '' && !getGamepadLayouts()[last]) {
+      return;
+    }
+    const cur = getSettings();
+    if ((cur.custom_virtual_gamepad || '') === last) {
+      return;
+    }
+    const next = {...cur, custom_virtual_gamepad: last};
+    saveSettings(next);
+    setSettings(next);
+    setGamepadLayoutVersion(prev => prev + 1);
+    setSwipeConfigVersion(prev => prev + 1);
+  }, [route.params?.sessionId]);
+
+  // Once connected, remember whatever profile is active for this game, so a
+  // game the user never re-profiles still restores its current layout.
+  React.useEffect(() => {
+    if (connectState !== CONNECTED) {
+      return;
+    }
+    const gameId = String(route.params?.sessionId || '');
+    if (!gameId) {
+      return;
+    }
+    setLastProfileForGame(gameId, getSettings().custom_virtual_gamepad || '');
+  }, [connectState, route.params?.sessionId]);
 
   const savePortraitGamepadLayout = React.useCallback(
     (layout: PortraitGamepadControl[]) => {
@@ -2717,7 +2795,7 @@ export function NativeStreamScreenBase({
   };
 
   const renderSwipeAimZone = () => {
-    const sens = Number(settings.swipe_aim_sensitivity) || 0;
+    const sens = Number(activeSwipe.sensitivity) || 0;
     if (
       portraitMode ||
       isInPictureInPicture ||
@@ -2976,6 +3054,12 @@ export function NativeStreamScreenBase({
         profileName={editorProfile || getActiveProfileName()}
         profiles={gamepadProfiles}
         activeProfile={settings.custom_virtual_gamepad || ''}
+        swipeSensitivity={
+          getSwipeConfig(editorProfile || getActiveProfileName()).sensitivity
+        }
+        swipeInvertY={
+          getSwipeConfig(editorProfile || getActiveProfileName()).invertY
+        }
         onSave={handleSaveGamepadLayout}
         onCancel={() => setShowGamepadEditor(false)}
         onSwitchProfile={handleSwitchGamepadProfile}

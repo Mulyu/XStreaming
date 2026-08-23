@@ -44,7 +44,13 @@ export interface VirtualGamepadEditorProps {
   profiles?: string[];
   // Currently active selection: '' = built-in Default, else a profile name.
   activeProfile?: string;
-  onSave: (buttons: ButtonConfig[]) => void;
+  // This profile's swipe-aim config (per-profile, edited here).
+  swipeSensitivity?: number;
+  swipeInvertY?: boolean;
+  onSave: (
+    buttons: ButtonConfig[],
+    swipe: {sensitivity: number; invertY: boolean},
+  ) => void;
   onCancel: () => void;
   // Switch the live/active layout: '' selects the built-in Default.
   onSwitchProfile?: (name: string) => void;
@@ -64,6 +70,8 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   profileName,
   profiles = [],
   activeProfile = '',
+  swipeSensitivity = 0,
+  swipeInvertY = false,
   onSave,
   onCancel,
   onSwitchProfile,
@@ -85,6 +93,9 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [newProfileName, setNewProfileName] = React.useState('');
   const [copyFrom, setCopyFrom] = React.useState('');
+  const [showSwipeModal, setShowSwipeModal] = React.useState(false);
+  const [swipeSens, setSwipeSens] = React.useState(0);
+  const [swipeInvert, setSwipeInvert] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(Date.now());
 
   React.useEffect(() => {
@@ -107,10 +118,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     } else {
       setButtons(defaults.map(button => ({...button})));
     }
+    setSwipeSens(Number(swipeSensitivity) || 0);
+    setSwipeInvert(!!swipeInvertY);
     setShowGrid(true);
     setShowTips(true);
     setReloadKey(Date.now());
-  }, [visible, profileName]);
+  }, [visible, profileName, swipeSensitivity, swipeInvertY]);
 
   if (!visible) {
     return null;
@@ -149,8 +162,54 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   };
 
   const handleSave = () => {
-    onSave(buttons);
+    onSave(buttons, {sensitivity: swipeSens, invertY: swipeInvert});
   };
+
+  const renderSwipeModal = () => (
+    <Portal>
+      <Modal
+        visible={showSwipeModal}
+        onDismiss={() => setShowSwipeModal(false)}
+        contentContainerStyle={styles.modal}>
+        <Card>
+          <Card.Content>
+            <View style={styles.title}>
+              <Text>
+                {t('Swipe aim sensitivity (0 = off)')}: {swipeSens}
+              </Text>
+              <Divider style={styles.divider} />
+            </View>
+            <Slider
+              value={swipeSens}
+              minimumValue={0}
+              maximumValue={100}
+              step={1}
+              onValueChange={val => setSwipeSens(Math.round(val))}
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor="grey"
+            />
+            <View style={styles.title}>
+              <Text>{t('Invert swipe aim Y')}</Text>
+              <Divider style={styles.divider} />
+            </View>
+            <RadioButton.Group
+              onValueChange={val => setSwipeInvert(val === 'true')}
+              value={swipeInvert ? 'true' : 'false'}>
+              <RadioButton.Item label={t('Disable')} value="false" />
+              <RadioButton.Item label={t('Enable')} value="true" />
+            </RadioButton.Group>
+            <Text style={styles.swipeHint}>{t('SwipeAimDesc')}</Text>
+            <Button
+              mode="text"
+              onPress={() => setShowSwipeModal(false)}
+              style={styles.profileAction}>
+              {t('Close')}
+            </Button>
+          </Card.Content>
+        </Card>
+      </Modal>
+    </Portal>
+  );
 
   const renderButtonOptions = () => {
     return (
@@ -418,6 +477,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
         {renderTipsModal()}
         {renderButtonOptions()}
         {canManageProfiles && renderProfileModal()}
+        {renderSwipeModal()}
 
         {showGrid && <GridBackground gridSize={20} />}
 
@@ -454,6 +514,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               icon={showGrid ? 'grid' : 'grid-off'}
               size={20}
               onPress={() => setShowGrid(!showGrid)}
+              style={styles.toolbarIcon}
+            />
+            <IconButton
+              icon="crosshairs-gps"
+              size={20}
+              onPress={() => setShowSwipeModal(true)}
               style={styles.toolbarIcon}
             />
             <Button
@@ -549,6 +615,11 @@ const styles = StyleSheet.create({
   },
   hiddenButton: {
     opacity: 0.3,
+  },
+  swipeHint: {
+    marginTop: 8,
+    opacity: 0.7,
+    fontSize: 12,
   },
   profileInput: {
     marginTop: 8,

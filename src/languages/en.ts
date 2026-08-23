@@ -353,6 +353,7 @@ export default {
     'Copy from': 'Copy from',
     Add: 'Add',
     'Delete current profile': 'Delete current profile',
+    'Swipe aim': 'Swipe aim',
     'Swipe aim sensitivity (0 = off)': 'Swipe aim sensitivity (0 = off)',
     SwipeAimDesc:
       'Turn the right side of the screen into a swipe-to-aim pad: drag to move the camera by how fast you swipe, like mobile shooters. Higher = faster. Set to 0 to turn it off. Tip: hide the on-screen right stick in your controller profile when using this.',

@@ -313,6 +313,7 @@ export default {
     'Copy from': 'コピー元',
     Add: '追加',
     'Delete current profile': '現在のプロファイルを削除',
+    'Swipe aim': 'スワイプエイム',
     'Swipe aim sensitivity (0 = off)': 'スワイプエイム感度（0で無効）',
     SwipeAimDesc:
       '画面右側をスワイプ視点操作エリアにします。指をなぞった速さでカメラが動く、モバイルFPS風の操作です。大きいほど速くなります。0で無効。ヒント: 使用時はコントローラープロファイルで画面上の右スティックを非表示にすると快適です。',
