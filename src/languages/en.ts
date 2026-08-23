@@ -359,6 +359,8 @@ export default {
     'Invert swipe aim Y': 'Invert swipe aim (vertical)',
     InvertSwipeAimYDesc:
       'Flip the up/down direction of swipe aim.',
+    'Hidden controls appear dimmed here; tap one to show it again':
+      'Hidden controls appear dimmed here; tap one to show it again',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',
