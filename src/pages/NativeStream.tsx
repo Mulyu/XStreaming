@@ -33,6 +33,8 @@ import {buildDefaultLayout} from '../utils/gamepadLayout';
 import {
   getSwipeConfig,
   setSwipeConfig,
+  getJoystickMode,
+  setJoystickMode,
   getLastProfileForGame,
   setLastProfileForGame,
 } from '../store/touchProfileStore';
@@ -2367,6 +2369,18 @@ export function NativeStreamScreenBase({
     [settings.custom_virtual_gamepad, swipeConfigVersion],
   );
 
+  // Virtual-stick mode (0 = fixed, 1 = free) for the active profile; the
+  // per-profile override wins, else the global setting.
+  const activeJoystickMode = React.useMemo(() => {
+    const stored = getJoystickMode(settings.custom_virtual_gamepad || '');
+    return stored === null ? Number(settings.virtual_gamepad_joystick) : stored;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    settings.custom_virtual_gamepad,
+    settings.virtual_gamepad_joystick,
+    swipeConfigVersion,
+  ]);
+
   // Swipe-to-aim: translate a finger drag into right-stick (camera) velocity,
   // then recentre shortly after the finger stops moving so a still finger means
   // "no camera movement" (relative aiming, like mobile shooters).
@@ -2518,6 +2532,7 @@ export function NativeStreamScreenBase({
   const handleSaveGamepadLayout = (
     layout: ButtonConfig[],
     swipe?: {sensitivity: number; invertY: boolean},
+    joystickMode?: number,
   ) => {
     const profileName = editorProfile || getActiveProfileName();
     saveGamepadLayout(profileName, layout);
@@ -2525,6 +2540,9 @@ export function NativeStreamScreenBase({
       // Swipe-aim is per-profile; store it under the profile that will be
       // active after this save (the render gate keys off that name).
       setSwipeConfig(profileName, swipe);
+    }
+    if (joystickMode === 0 || joystickMode === 1) {
+      setJoystickMode(profileName, joystickMode);
     }
     if (!settings.custom_virtual_gamepad) {
       settings.custom_virtual_gamepad = profileName;
@@ -2776,6 +2794,7 @@ export function NativeStreamScreenBase({
         <CustomVirtualGamepad
           title={settings.custom_virtual_gamepad}
           opacity={settings.virtual_gamepad_opacity}
+          joystickMode={activeJoystickMode}
           onPressIn={handleButtonPressIn}
           onPressOut={handleButtonPressOut}
           onStickMove={handleStickMove}
@@ -2786,6 +2805,7 @@ export function NativeStreamScreenBase({
       return (
         <VirtualGamepad
           opacity={settings.virtual_gamepad_opacity}
+          joystickMode={activeJoystickMode}
           onPressIn={handleButtonPressIn}
           onPressOut={handleButtonPressOut}
           onStickMove={handleStickMove}
@@ -3059,6 +3079,10 @@ export function NativeStreamScreenBase({
         }
         swipeInvertY={
           getSwipeConfig(editorProfile || getActiveProfileName()).invertY
+        }
+        joystickMode={
+          getJoystickMode(editorProfile || getActiveProfileName()) ??
+          Number(settings.virtual_gamepad_joystick)
         }
         onSave={handleSaveGamepadLayout}
         onCancel={() => setShowGamepadEditor(false)}

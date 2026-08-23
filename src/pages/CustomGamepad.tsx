@@ -17,7 +17,12 @@ import Slider from '@react-native-community/slider';
 import GamepadButton from '../components/CustomGamepad/Button';
 import GridBackground from '../components/GridBackground';
 import {getSettings, saveSettings, deleteSetting} from '../store/gamepadStore';
-import {getSwipeConfig, setSwipeConfig} from '../store/touchProfileStore';
+import {
+  getSwipeConfig,
+  setSwipeConfig,
+  getJoystickMode,
+  setJoystickMode,
+} from '../store/touchProfileStore';
 import {
   getSettings as getUserSettings,
   saveSettings as saveUserSettings,
@@ -43,6 +48,7 @@ function CustomGamepadScreen({navigation, route}) {
   const [showSwipeModal, setShowSwipeModal] = React.useState(false);
   const [swipeSens, setSwipeSens] = React.useState(0);
   const [swipeInvert, setSwipeInvert] = React.useState(false);
+  const [stickMode, setStickMode] = React.useState(1);
   const [reloader, setReloader] = React.useState(Date.now());
 
   const [currentButton, setCurrentButton] = React.useState('');
@@ -62,6 +68,12 @@ function CustomGamepadScreen({navigation, route}) {
     const swipe = getSwipeConfig(_title);
     setSwipeSens(swipe.sensitivity);
     setSwipeInvert(swipe.invertY);
+    const storedStick = getJoystickMode(_title);
+    setStickMode(
+      storedStick === null
+        ? Number(getUserSettings().virtual_gamepad_joystick)
+        : storedStick,
+    );
 
     // console.log('_settings:', _settings);
     FullScreenManager.immersiveModeOn();
@@ -140,6 +152,7 @@ function CustomGamepadScreen({navigation, route}) {
     // console.log('buttons:', buttons);
     saveSettings(title, buttons);
     setSwipeConfig(title, {sensitivity: swipeSens, invertY: swipeInvert});
+    setJoystickMode(title, stickMode);
     navigation.navigate('Settings');
   };
 
@@ -251,6 +264,17 @@ function CustomGamepadScreen({navigation, route}) {
           contentContainerStyle={styles.modal}>
           <Card>
             <Card.Content>
+              <View style={styles.title}>
+                <Text>{t('virtual_joystick_title')}</Text>
+                <Divider style={styles.divider} />
+              </View>
+              <RadioButton.Group
+                onValueChange={val => setStickMode(Number(val))}
+                value={String(stickMode)}>
+                <RadioButton.Item label={t('Free')} value="1" />
+                <RadioButton.Item label={t('Fixed')} value="0" />
+              </RadioButton.Group>
+
               <View style={styles.title}>
                 <Text>
                   {t('Swipe aim sensitivity (0 = off)')}: {swipeSens}

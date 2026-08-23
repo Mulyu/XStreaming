@@ -47,9 +47,12 @@ export interface VirtualGamepadEditorProps {
   // This profile's swipe-aim config (per-profile, edited here).
   swipeSensitivity?: number;
   swipeInvertY?: boolean;
+  // This profile's virtual-stick mode (0 = fixed, 1 = free).
+  joystickMode?: number;
   onSave: (
     buttons: ButtonConfig[],
     swipe: {sensitivity: number; invertY: boolean},
+    joystickMode: number,
   ) => void;
   onCancel: () => void;
   // Switch the live/active layout: '' selects the built-in Default.
@@ -72,6 +75,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   activeProfile = '',
   swipeSensitivity = 0,
   swipeInvertY = false,
+  joystickMode = 1,
   onSave,
   onCancel,
   onSwitchProfile,
@@ -96,6 +100,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [showSwipeModal, setShowSwipeModal] = React.useState(false);
   const [swipeSens, setSwipeSens] = React.useState(0);
   const [swipeInvert, setSwipeInvert] = React.useState(false);
+  const [stickMode, setStickMode] = React.useState(1);
   const [reloadKey, setReloadKey] = React.useState(Date.now());
 
   React.useEffect(() => {
@@ -120,10 +125,11 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     }
     setSwipeSens(Number(swipeSensitivity) || 0);
     setSwipeInvert(!!swipeInvertY);
+    setStickMode(joystickMode === 0 ? 0 : 1);
     setShowGrid(true);
     setShowTips(true);
     setReloadKey(Date.now());
-  }, [visible, profileName, swipeSensitivity, swipeInvertY]);
+  }, [visible, profileName, swipeSensitivity, swipeInvertY, joystickMode]);
 
   if (!visible) {
     return null;
@@ -162,7 +168,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   };
 
   const handleSave = () => {
-    onSave(buttons, {sensitivity: swipeSens, invertY: swipeInvert});
+    onSave(buttons, {sensitivity: swipeSens, invertY: swipeInvert}, stickMode);
   };
 
   const renderSwipeModal = () => (
@@ -173,6 +179,17 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
         contentContainerStyle={styles.modal}>
         <Card>
           <Card.Content>
+            <View style={styles.title}>
+              <Text>{t('virtual_joystick_title')}</Text>
+              <Divider style={styles.divider} />
+            </View>
+            <RadioButton.Group
+              onValueChange={val => setStickMode(Number(val))}
+              value={String(stickMode)}>
+              <RadioButton.Item label={t('Free')} value="1" />
+              <RadioButton.Item label={t('Fixed')} value="0" />
+            </RadioButton.Group>
+
             <View style={styles.title}>
               <Text>
                 {t('Swipe aim sensitivity (0 = off)')}: {swipeSens}

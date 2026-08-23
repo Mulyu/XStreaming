@@ -14,6 +14,7 @@ import {buildDefaultLayout} from '../utils/gamepadLayout';
 type Props = {
   title: string;
   opacity: number;
+  joystickMode?: number;
   onPressIn: (name: string) => any;
   onPressOut: (name: string) => any;
   onStickMove: (id: string, position: any) => any;
@@ -23,6 +24,7 @@ type Props = {
 const CustomVirtualGamepad: React.FC<Props> = ({
   title,
   opacity = 0.7,
+  joystickMode,
   onPressIn,
   onPressOut,
   onStickMove,
@@ -30,6 +32,11 @@ const CustomVirtualGamepad: React.FC<Props> = ({
 }) => {
   const [buttons, setButtons] = React.useState<any>([]);
   const localSettings = getLocalSettings();
+  // Per-profile override wins; fall back to the global setting.
+  const joystick =
+    joystickMode === 0 || joystickMode === 1
+      ? joystickMode
+      : localSettings.virtual_gamepad_joystick;
 
   const {width: clientW, height: clientH} = Dimensions.get('window');
 
@@ -70,7 +77,7 @@ const CustomVirtualGamepad: React.FC<Props> = ({
           return null;
         }
         if (button.name === 'LeftStick') {
-          if (localSettings.virtual_gamepad_joystick === 1) {
+          if (joystick === 1) {
             return (
               <View
                 key={button.name}
@@ -114,7 +121,7 @@ const CustomVirtualGamepad: React.FC<Props> = ({
             );
           }
         } else if (button.name === 'RightStick') {
-          if (localSettings.virtual_gamepad_joystick === 1) {
+          if (joystick === 1) {
             return (
               <View
                 key={button.name}
