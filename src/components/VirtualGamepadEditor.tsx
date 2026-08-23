@@ -10,6 +10,7 @@ import {
   Divider,
   Button,
   IconButton,
+  TextInput,
   useTheme,
 } from 'react-native-paper';
 import Draggable from 'react-native-draggable';
@@ -32,8 +33,16 @@ export type {ButtonConfig};
 export interface VirtualGamepadEditorProps {
   visible: boolean;
   profileName: string;
+  // Saved custom-profile names (excluding the built-in Default).
+  profiles?: string[];
+  // Currently active selection: '' = built-in Default, else a profile name.
+  activeProfile?: string;
   onSave: (buttons: ButtonConfig[]) => void;
   onCancel: () => void;
+  // Switch the live/active layout: '' selects the built-in Default.
+  onSwitchProfile?: (name: string) => void;
+  onCreateProfile?: (name: string) => void;
+  onDeleteProfile?: (name: string) => void;
 }
 
 const buildDefaultButtons = (): ButtonConfig[] => {
@@ -44,8 +53,13 @@ const buildDefaultButtons = (): ButtonConfig[] => {
 const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   visible,
   profileName,
+  profiles = [],
+  activeProfile = '',
   onSave,
   onCancel,
+  onSwitchProfile,
+  onCreateProfile,
+  onDeleteProfile,
 }) => {
   const {t} = useTranslation();
   const theme = useTheme();
@@ -59,6 +73,8 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [currentScale, setCurrentScale] = React.useState(1);
   const [currentShow, setCurrentShow] = React.useState(true);
   const [showButtonModal, setShowButtonModal] = React.useState(false);
+  const [showProfileModal, setShowProfileModal] = React.useState(false);
+  const [newProfileName, setNewProfileName] = React.useState('');
   const [reloadKey, setReloadKey] = React.useState(Date.now());
 
   React.useEffect(() => {
@@ -201,6 +217,93 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     </Portal>
   );
 
+  const canManageProfiles = Boolean(
+    onSwitchProfile || onCreateProfile || onDeleteProfile,
+  );
+
+  const handleSelectProfile = (name: string) => {
+    setShowProfileModal(false);
+    if (name === activeProfile) {
+      return;
+    }
+    onSwitchProfile?.(name);
+  };
+
+  const handleAddProfile = () => {
+    const name = newProfileName.trim();
+    if (!name) {
+      return;
+    }
+    setNewProfileName('');
+    setShowProfileModal(false);
+    onCreateProfile?.(name);
+  };
+
+  const handleDeleteProfile = () => {
+    setShowProfileModal(false);
+    if (activeProfile) {
+      onDeleteProfile?.(activeProfile);
+    }
+  };
+
+  const renderProfileModal = () => (
+    <Portal>
+      <Modal
+        visible={showProfileModal}
+        onDismiss={() => setShowProfileModal(false)}
+        contentContainerStyle={styles.modal}>
+        <Card>
+          <Card.Content>
+            <View style={styles.title}>
+              <Text>{t('Touch controller profiles')}</Text>
+              <Divider style={styles.divider} />
+            </View>
+            <RadioButton.Group
+              onValueChange={handleSelectProfile}
+              value={activeProfile}>
+              <RadioButton.Item label={t('Default')} value="" />
+              {profiles.map(name => (
+                <RadioButton.Item key={name} label={name} value={name} />
+              ))}
+            </RadioButton.Group>
+
+            <Divider style={styles.divider} />
+            <TextInput
+              dense
+              mode="outlined"
+              label={t('New profile name')}
+              value={newProfileName}
+              onChangeText={setNewProfileName}
+              style={styles.profileInput}
+            />
+            <Button
+              mode="contained"
+              disabled={!newProfileName.trim()}
+              onPress={handleAddProfile}
+              style={styles.profileAction}>
+              {t('Add')}
+            </Button>
+            {activeProfile !== '' && (
+              <Button
+                mode="outlined"
+                onPress={handleDeleteProfile}
+                textColor={theme.colors.error}
+                style={styles.profileAction}>
+                {t('Delete current profile')}
+              </Button>
+            )}
+            <Button
+              mode="text"
+              onPress={() => setShowProfileModal(false)}
+              style={styles.profileAction}>
+              {t('Close')}
+            </Button>
+          </Card.Content>
+        </Card>
+      </Modal>
+    </Portal>
+  );
+
   const renderButtons = () => (
     <>
       {buttons.map(button => {
@@ -264,6 +367,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
       <View style={styles.overlay}>
         {renderTipsModal()}
         {renderButtonOptions()}
+        {canManageProfiles && renderProfileModal()}
 
         {showGrid && <GridBackground gridSize={20} />}
 
@@ -294,9 +398,24 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
         </TouchableOpacity>
 
         <View style={styles.profileBadge}>
-          <Text style={styles.profileText}>
-            Profile: {profileName || 'Default'}
-          </Text>
+          {canManageProfiles ? (
+            <TouchableOpacity
+              style={styles.profileSwitch}
+              onPress={() => setShowProfileModal(true)}>
+              <IconButton
+                icon="controller-classic"
+                size={18}
+                style={styles.profileSwitchIcon}
+              />
+              <Text style={styles.profileText}>
+                {activeProfile || t('Default')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.profileText}>
+              Profile: {profileName || 'Default'}
+            </Text>
+          )}
           <IconButton
             icon="close"
             onPress={onCancel}
@@ -367,6 +486,20 @@ const styles = StyleSheet.create({
   },
   profileText: {
     color: '#fff',
+  },
+  profileSwitch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileSwitchIcon: {
+    margin: 0,
+    marginRight: -4,
+  },
+  profileInput: {
+    marginTop: 8,
+  },
+  profileAction: {
+    marginTop: 8,
   },
   closeButton: {
     marginLeft: 4,

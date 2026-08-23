@@ -28,6 +28,9 @@ public class StreamKeepAliveService extends Service {
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_TEXT = "text";
     public static final String EXTRA_DISCONNECT_LABEL = "disconnectLabel";
+    // Epoch millis when anti-idle stops keeping the session awake; 0 = no
+    // countdown (anti-idle disabled). Drives a live notification chronometer.
+    public static final String EXTRA_DEADLINE = "deadline";
     public static final String ACTION_DISCONNECT = "com.xstreaming.action.KEEPALIVE_DISCONNECT";
     public static final String JS_EVENT_DISCONNECT = "StreamKeepAliveDisconnect";
     // 3h cap so a stranded service can't hold the CPU forever.
@@ -35,11 +38,17 @@ public class StreamKeepAliveService extends Service {
 
     private PowerManager.WakeLock wakeLock;
 
-    public static void start(Context context, String title, String text, String disconnectLabel) {
+    public static void start(
+            Context context,
+            String title,
+            String text,
+            String disconnectLabel,
+            long deadlineEpochMs) {
         Intent intent = new Intent(context, StreamKeepAliveService.class);
         intent.putExtra(EXTRA_TITLE, title);
         intent.putExtra(EXTRA_TEXT, text);
         intent.putExtra(EXTRA_DISCONNECT_LABEL, disconnectLabel);
+        intent.putExtra(EXTRA_DEADLINE, deadlineEpochMs);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent);
         } else {
@@ -63,6 +72,7 @@ public class StreamKeepAliveService extends Service {
         String text = intent != null ? intent.getStringExtra(EXTRA_TEXT) : null;
         String disconnectLabel =
                 intent != null ? intent.getStringExtra(EXTRA_DISCONNECT_LABEL) : null;
+        long deadlineEpochMs = intent != null ? intent.getLongExtra(EXTRA_DEADLINE, 0L) : 0L;
         if (title == null) {
             title = "XStreaming";
         }
@@ -95,8 +105,7 @@ public class StreamKeepAliveService extends Service {
         } else {
             builder = new Notification.Builder(this);
         }
-        Notification notification = builder
-                .setContentTitle(title)
+        builder.setContentTitle(title)
                 .setContentText(text)
                 .setSmallIcon(getApplicationInfo().icon)
                 .setContentIntent(contentIntent)
@@ -104,8 +113,23 @@ public class StreamKeepAliveService extends Service {
                 .addAction(
                         android.R.drawable.ic_menu_close_clear_cancel,
                         disconnectLabel,
-                        disconnectPending)
-                .build();
+                        disconnectPending);
+
+        // When anti-idle is keeping the session awake with a max duration, show
+        // a live count-down in the notification so the user can see how much
+        // longer the session will be kept alive before it is allowed to idle
+        // out. The chronometer updates natively (no JS wake-ups needed).
+        if (deadlineEpochMs > System.currentTimeMillis()
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            builder.setWhen(deadlineEpochMs)
+                    .setShowWhen(true)
+                    .setUsesChronometer(true)
+                    .setChronometerCountDown(true);
+        } else {
+            builder.setShowWhen(false);
+        }
+
+        Notification notification = builder.build();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(

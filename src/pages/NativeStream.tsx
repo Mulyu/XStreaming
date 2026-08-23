@@ -13,6 +13,7 @@ import {
   AppState,
   DeviceEventEmitter,
   StatusBar,
+  Dimensions,
   useWindowDimensions,
 } from 'react-native';
 import {IconButton} from 'react-native-paper';
@@ -23,7 +24,12 @@ import {useSelector} from 'react-redux';
 import XcloudApi from '../xCloud';
 import WebApi from '../web';
 import {getSettings, saveSettings} from '../store/settingStore';
-import {saveSettings as saveGamepadLayout} from '../store/gamepadStore';
+import {
+  saveSettings as saveGamepadLayout,
+  getSettings as getGamepadLayouts,
+  deleteSetting as deleteGamepadProfile,
+} from '../store/gamepadStore';
+import {buildDefaultLayout} from '../utils/gamepadLayout';
 import {useTranslation} from 'react-i18next';
 import webRTCClient from '../webrtc';
 import BackgroundTimer from 'react-native-background-timer';
@@ -221,6 +227,7 @@ export function NativeStreamScreenBase({
   const [messageSending, setMessageSending] = React.useState(false);
   const [showGamepadEditor, setShowGamepadEditor] = React.useState(false);
   const [editorProfile, setEditorProfile] = React.useState('');
+  const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
   const [gamepadLayoutVersion, setGamepadLayoutVersion] = React.useState(0);
   const [audioGain, setAudioGain] = React.useState(1);
   const [portraitGamepadEditing, setPortraitGamepadEditing] =
@@ -779,12 +786,16 @@ export function NativeStreamScreenBase({
       }
       sendAntiIdleNudge(0);
     };
-    const startAntiIdle = () => {
+    const startAntiIdle = (deadlineMs?: number) => {
       if (antiIdleTimerRef.current) {
         return;
       }
-      const maxMinutes = Number(getSettings().anti_idle_max_minutes) || 30;
-      antiIdleDeadlineRef.current = Date.now() + maxMinutes * 60 * 1000;
+      if (deadlineMs && deadlineMs > Date.now()) {
+        antiIdleDeadlineRef.current = deadlineMs;
+      } else {
+        const maxMinutes = Number(getSettings().anti_idle_max_minutes) || 30;
+        antiIdleDeadlineRef.current = Date.now() + maxMinutes * 60 * 1000;
+      }
       // Background-capable timer so the nudge keeps firing while backgrounded.
       antiIdleTimerRef.current = BackgroundTimer.setInterval(() => {
         // Stop extending once the configured max duration has elapsed; the
@@ -814,16 +825,25 @@ export function NativeStreamScreenBase({
         if (state !== 'background' || !isConnected.current) {
           return;
         }
+        // Anti-idle is controlled solely by the max-duration slider: 0 = off.
+        const antiIdleMinutes =
+          Number(getSettings().anti_idle_max_minutes) || 0;
+        const antiIdleDeadline =
+          antiIdleMinutes > 0 ? Date.now() + antiIdleMinutes * 60 * 1000 : 0;
         // Keep the process (and the live session) alive in the background via a
-        // foreground service whose notification resumes the game on tap.
+        // foreground service whose notification resumes the game on tap. When
+        // anti-idle is on, the notification shows a live count-down to the
+        // deadline so the user can see how much longer the session is kept awake.
         StreamKeepAliveManager?.start?.(
           t('Streaming in background'),
-          t('BackgroundKeepAliveNotification'),
+          antiIdleDeadline > 0
+            ? t('BackgroundKeepAliveAntiIdle')
+            : t('BackgroundKeepAliveNotification'),
           t('Disconnect'),
+          antiIdleDeadline,
         );
-        // Anti-idle is controlled solely by the max-duration slider: 0 = off.
-        if ((Number(getSettings().anti_idle_max_minutes) || 0) > 0) {
-          startAntiIdle();
+        if (antiIdleDeadline > 0) {
+          startAntiIdle(antiIdleDeadline);
         }
       },
     );
@@ -2377,10 +2397,62 @@ export function NativeStreamScreenBase({
     return settings.custom_virtual_gamepad || LIVE_GAMEPAD_PROFILE;
   }, [settings.custom_virtual_gamepad]);
 
+  const refreshGamepadProfiles = React.useCallback(() => {
+    setGamepadProfiles(Object.keys(getGamepadLayouts()));
+  }, []);
+
   const handleOpenGamepadEditor = React.useCallback(() => {
+    refreshGamepadProfiles();
     setEditorProfile(getActiveProfileName());
     setShowGamepadEditor(true);
-  }, [getActiveProfileName]);
+  }, [getActiveProfileName, refreshGamepadProfiles]);
+
+  // Switch the live/active touch layout. '' selects the built-in Default.
+  const applyActiveProfile = React.useCallback((name: string) => {
+    const next = {...getSettings(), custom_virtual_gamepad: name};
+    saveSettings(next);
+    setSettings(next);
+    setEditorProfile(name || LIVE_GAMEPAD_PROFILE);
+    setGamepadLayoutVersion(prev => prev + 1);
+    setShowVirtualGamepad(true);
+  }, []);
+
+  const handleSwitchGamepadProfile = React.useCallback(
+    (name: string) => {
+      applyActiveProfile(name);
+    },
+    [applyActiveProfile],
+  );
+
+  const handleCreateGamepadProfile = React.useCallback(
+    (rawName: string) => {
+      const name = rawName.trim();
+      if (!name) {
+        return;
+      }
+      const layouts = getGamepadLayouts();
+      if (!layouts[name]) {
+        const {width, height} = Dimensions.get('window');
+        saveGamepadLayout(name, buildDefaultLayout(width, height));
+      }
+      refreshGamepadProfiles();
+      applyActiveProfile(name);
+    },
+    [applyActiveProfile, refreshGamepadProfiles],
+  );
+
+  const handleDeleteGamepadProfile = React.useCallback(
+    (name: string) => {
+      if (!name) {
+        return;
+      }
+      deleteGamepadProfile(name);
+      refreshGamepadProfiles();
+      // Fall back to the built-in Default after removing the active profile.
+      applyActiveProfile('');
+    },
+    [applyActiveProfile, refreshGamepadProfiles],
+  );
 
   const handleSaveGamepadLayout = (layout: ButtonConfig[]) => {
     const profileName = editorProfile || getActiveProfileName();
@@ -2839,8 +2911,13 @@ export function NativeStreamScreenBase({
       <VirtualGamepadEditor
         visible={!portraitMode && showGamepadEditor && !isInPictureInPicture}
         profileName={editorProfile || getActiveProfileName()}
+        profiles={gamepadProfiles}
+        activeProfile={settings.custom_virtual_gamepad || ''}
         onSave={handleSaveGamepadLayout}
         onCancel={() => setShowGamepadEditor(false)}
+        onSwitchProfile={handleSwitchGamepadProfile}
+        onCreateProfile={handleCreateGamepadProfile}
+        onDeleteProfile={handleDeleteGamepadProfile}
       />
 
       {renderMenu()}

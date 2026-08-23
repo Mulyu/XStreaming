@@ -307,6 +307,11 @@ export default {
       'PiPを使わず、通知でセッションを裏で維持します。音声は継続し、戻ると映像が再開します。通知をタップで即復帰。',
     'Streaming in background': 'バックグラウンドでストリーミング中',
     BackgroundKeepAliveNotification: 'タップでゲームに戻る',
+    BackgroundKeepAliveAntiIdle: 'セッションを維持中 · タップでゲームに戻る',
+    'Touch controller profiles': 'タッチコントローラーのプロファイル',
+    'New profile name': '新しいプロファイル名',
+    Add: '追加',
+    'Delete current profile': '現在のプロファイルを削除',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle': 'アンチアイドル（AFK切断防止）',
