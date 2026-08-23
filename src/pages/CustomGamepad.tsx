@@ -17,6 +17,7 @@ import Slider from '@react-native-community/slider';
 import GamepadButton from '../components/CustomGamepad/Button';
 import GridBackground from '../components/GridBackground';
 import {getSettings, saveSettings, deleteSetting} from '../store/gamepadStore';
+import {getSwipeConfig, setSwipeConfig} from '../store/touchProfileStore';
 import {
   getSettings as getUserSettings,
   saveSettings as saveUserSettings,
@@ -39,6 +40,9 @@ function CustomGamepadScreen({navigation, route}) {
   const [showWarnModal, setShowWarnShowModal] = React.useState(false);
   const [showModal, setShowModal] = React.useState(false);
   const [showGrid, setShowGrid] = React.useState(false);
+  const [showSwipeModal, setShowSwipeModal] = React.useState(false);
+  const [swipeSens, setSwipeSens] = React.useState(0);
+  const [swipeInvert, setSwipeInvert] = React.useState(false);
   const [reloader, setReloader] = React.useState(Date.now());
 
   const [currentButton, setCurrentButton] = React.useState('');
@@ -54,6 +58,10 @@ function CustomGamepadScreen({navigation, route}) {
       _title = route.params?.name;
       setTitle(route.params?.name);
     }
+
+    const swipe = getSwipeConfig(_title);
+    setSwipeSens(swipe.sensitivity);
+    setSwipeInvert(swipe.invertY);
 
     // console.log('_settings:', _settings);
     FullScreenManager.immersiveModeOn();
@@ -131,6 +139,7 @@ function CustomGamepadScreen({navigation, route}) {
   const handleSave = () => {
     // console.log('buttons:', buttons);
     saveSettings(title, buttons);
+    setSwipeConfig(title, {sensitivity: swipeSens, invertY: swipeInvert});
     navigation.navigate('Settings');
   };
 
@@ -209,6 +218,14 @@ function CustomGamepadScreen({navigation, route}) {
                   background={background}
                   onPress={() => handleReset()}
                 />
+                <List.Item
+                  title={t('Swipe aim')}
+                  background={background}
+                  onPress={() => {
+                    setActionShowModal(false);
+                    setShowSwipeModal(true);
+                  }}
+                />
                 {settings[title] && (
                   <List.Item
                     title={t('Delete')}
@@ -222,6 +239,43 @@ function CustomGamepadScreen({navigation, route}) {
                   onPress={() => navigation.navigate('VirtualGamepadSettings')}
                 />
               </List.Section>
+            </Card.Content>
+          </Card>
+        </Modal>
+      </Portal>
+
+      <Portal>
+        <Modal
+          visible={showSwipeModal}
+          onDismiss={() => setShowSwipeModal(false)}
+          contentContainerStyle={styles.modal}>
+          <Card>
+            <Card.Content>
+              <View style={styles.title}>
+                <Text>
+                  {t('Swipe aim sensitivity (0 = off)')}: {swipeSens}
+                </Text>
+                <Divider style={styles.divider} />
+              </View>
+              <Slider
+                value={swipeSens}
+                minimumValue={0}
+                maximumValue={100}
+                step={1}
+                onValueChange={val => setSwipeSens(Math.round(val))}
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor="grey"
+              />
+              <View style={styles.title}>
+                <Text>{t('Invert swipe aim Y')}</Text>
+                <Divider style={styles.divider} />
+              </View>
+              <RadioButton.Group
+                onValueChange={val => setSwipeInvert(val === 'true')}
+                value={swipeInvert ? 'true' : 'false'}>
+                <RadioButton.Item label={t('Disable')} value="false" />
+                <RadioButton.Item label={t('Enable')} value="true" />
+              </RadioButton.Group>
             </Card.Content>
           </Card>
         </Modal>

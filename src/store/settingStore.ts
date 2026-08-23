@@ -52,8 +52,6 @@ export type Settings = {
   video_format: string;
   screen_position: string;
   anti_idle_max_minutes: number;
-  swipe_aim_sensitivity: number;
-  swipe_aim_invert_y: boolean;
   native_portrait_mode: boolean;
   native_portrait_gamepad_layout: any[];
   native_low_latency_decoder: boolean;
@@ -128,8 +126,6 @@ const defaultSettings: Settings = {
   video_format: '',
   screen_position: 'center',
   anti_idle_max_minutes: 30,
-  swipe_aim_sensitivity: 0,
-  swipe_aim_invert_y: false,
   native_portrait_mode: false,
   native_portrait_gamepad_layout: [],
   native_low_latency_decoder: false,
