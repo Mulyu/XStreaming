@@ -845,8 +845,12 @@ export default class XcloudApi {
     v2TitleMap: Record<string, any> = {},
   ): Promise<any[]> {
     const _settings = getSettings();
-    const lang =
-      _settings.preferred_game_language.indexOf('zh') > -1 ? 'zh-TW' : 'en-US';
+    // Localize the catalog titles with the user's preferred game language so
+    // titles match the (already localized) descriptions. The catalog uses
+    // zh-TW for Chinese; every other language is passed through as-is (falling
+    // back to en-US). Market stays US so the available title set is unchanged.
+    const preferred = _settings.preferred_game_language || 'en-US';
+    const lang = preferred.indexOf('zh') > -1 ? 'zh-TW' : preferred;
     return new Promise(resolve => {
       axios
         .post(
