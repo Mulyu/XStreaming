@@ -31,7 +31,14 @@ import {
   createDefaultMacroLayoutButton,
   ensureMacroLayoutButton,
 } from '../utils/virtualMacro';
-import {buildDefaultLayout, snapToGrid} from '../utils/gamepadLayout';
+import {
+  buildDefaultLayout,
+  snapToGrid,
+  SWIPE_AIM_NAME,
+  SWIPE_AIM_MIN,
+  createDefaultSwipePad,
+  ensureSwipePad,
+} from '../utils/gamepadLayout';
 
 const {FullScreenManager} = NativeModules;
 
@@ -85,7 +92,13 @@ function CustomGamepadScreen({navigation, route}) {
       const _buttons = buildDefaultLayout(width, height);
       if (_settings[_title]) {
         const exitButtons = _settings[_title];
-        setButtons(ensureMacroLayoutButton(exitButtons, macroDefaultButton));
+        const withMacro = ensureMacroLayoutButton(
+          exitButtons,
+          macroDefaultButton,
+        );
+        setButtons(
+          ensureSwipePad(withMacro, createDefaultSwipePad(width, height)),
+        );
       } else {
         setButtons(_buttons);
       }
@@ -125,6 +138,17 @@ function CustomGamepadScreen({navigation, route}) {
     buttons.forEach(b => {
       if (b.name === currentButton) {
         b.scale = scale;
+      }
+    });
+    setButtons([...buttons]);
+  };
+
+  // Resize the swipe-aim pad by dragging its bottom-right handle to (hx, hy).
+  const handleResizePad = (hx, hy) => {
+    buttons.forEach(b => {
+      if (b.name === SWIPE_AIM_NAME) {
+        b.width = Math.max(SWIPE_AIM_MIN, snapToGrid(hx) - b.x);
+        b.height = Math.max(SWIPE_AIM_MIN, snapToGrid(hy) - b.y);
       }
     });
     setButtons([...buttons]);
@@ -361,6 +385,44 @@ function CustomGamepadScreen({navigation, route}) {
             in-game overlay respects `show` and omits them. */}
         {buttons.map(button => {
           const hidden = !button.show;
+          if (button.name === SWIPE_AIM_NAME) {
+            const w = button.width ?? 300;
+            const h = button.height ?? 260;
+            return (
+              <React.Fragment key={button.name + reloader}>
+                <Draggable
+                  x={button.x}
+                  y={button.y}
+                  onShortPressRelease={() => {
+                    setCurrentButton(button.name);
+                    setCurrentShow(button.show ?? true);
+                    setShowSwipeModal(true);
+                  }}
+                  onDragRelease={(_, __, bounds) => {
+                    handleDrag(button.name, bounds.left, bounds.top);
+                    setReloader(Date.now());
+                  }}>
+                  <View
+                    style={[
+                      styles.pad,
+                      {width: w, height: h, opacity: hidden ? 0.35 : 1},
+                    ]}>
+                    <Text style={styles.padLabel}>◎ {t('Swipe aim')}</Text>
+                  </View>
+                </Draggable>
+                <Draggable
+                  x={button.x + w - 14}
+                  y={button.y + h - 14}
+                  renderSize={28}
+                  onDragRelease={(_, __, bounds) => {
+                    handleResizePad(bounds.left + 14, bounds.top + 14);
+                    setReloader(Date.now());
+                  }}>
+                  <View style={styles.padHandle} />
+                </Draggable>
+              </React.Fragment>
+            );
+          }
           if (button.name === 'LeftStick' || button.name === 'RightStick') {
             return (
               <Draggable
@@ -433,6 +495,28 @@ const styles = StyleSheet.create({
   },
   hiddenButton: {
     opacity: 0.3,
+  },
+  pad: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#2FD24B',
+    borderRadius: 12,
+    backgroundColor: 'rgba(47,210,75,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  padLabel: {
+    color: '#2FD24B',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  padHandle: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    backgroundColor: '#2FD24B',
+    borderWidth: 2,
+    borderColor: '#04140a',
   },
 });
 
