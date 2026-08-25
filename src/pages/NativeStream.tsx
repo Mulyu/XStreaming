@@ -29,7 +29,11 @@ import {
   getSettings as getGamepadLayouts,
   deleteSetting as deleteGamepadProfile,
 } from '../store/gamepadStore';
-import {buildDefaultLayout} from '../utils/gamepadLayout';
+import {
+  buildDefaultLayout,
+  SWIPE_AIM_NAME,
+  createDefaultSwipePad,
+} from '../utils/gamepadLayout';
 import {
   getSwipeConfig,
   setSwipeConfig,
@@ -2369,6 +2373,25 @@ export function NativeStreamScreenBase({
     [settings.custom_virtual_gamepad, swipeConfigVersion],
   );
 
+  // The swipe-aim trackpad rectangle for the active profile (from its layout;
+  // a sensible default when the profile has no SwipeAim element or is Default).
+  const activeSwipeRect = React.useMemo(() => {
+    const {width, height} = Dimensions.get('window');
+    const fallback = createDefaultSwipePad(width, height);
+    const name = settings.custom_virtual_gamepad;
+    if (name) {
+      const layout = getGamepadLayouts()[name];
+      const pad = Array.isArray(layout)
+        ? layout.find((b: any) => b?.name === SWIPE_AIM_NAME)
+        : null;
+      if (pad) {
+        return pad;
+      }
+    }
+    return fallback;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.custom_virtual_gamepad, gamepadLayoutVersion]);
+
   // Virtual-stick mode (0 = fixed, 1 = free) for the active profile; the
   // per-profile override wins, else the global setting.
   const activeJoystickMode = React.useMemo(() => {
@@ -2821,15 +2844,22 @@ export function NativeStreamScreenBase({
       isInPictureInPicture ||
       settings.native_touch ||
       connectState !== CONNECTED ||
-      sens <= 0
+      sens <= 0 ||
+      activeSwipeRect.show === false
     ) {
       return null;
     }
     return (
       <SwipeAimZone
         enabled
-        // Map the 0–30 slider to a per-pixel stick factor.
+        // Map the 0–100 slider to a per-pixel stick factor.
         sensitivity={sens * 0.0025}
+        rect={{
+          x: activeSwipeRect.x,
+          y: activeSwipeRect.y,
+          width: activeSwipeRect.width ?? 300,
+          height: activeSwipeRect.height ?? 260,
+        }}
         onAim={handleSwipeAim}
         onEnd={clearSwipeAim}
       />

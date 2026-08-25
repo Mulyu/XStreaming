@@ -1,11 +1,20 @@
 import React from 'react';
 import {View, PanResponder, StyleSheet} from 'react-native';
 
+export interface SwipeAimRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface SwipeAimZoneProps {
   enabled: boolean;
   // Multiplier applied to the per-move finger delta (in px) before it is
   // reported. Larger = faster camera turn for the same swipe.
   sensitivity: number;
+  // The trackpad rectangle (play-surface pixels). Only touches inside it aim.
+  rect: SwipeAimRect;
   // Reports the scaled finger delta (screen coordinates, y-down) for one move.
   onAim: (dx: number, dy: number) => void;
   // Fired when the aiming finger lifts, so the caller can recentre the stick.
@@ -22,6 +31,7 @@ export interface SwipeAimZoneProps {
 const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   enabled,
   sensitivity,
+  rect,
   onAim,
   onEnd,
 }) => {
@@ -63,18 +73,27 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
     return null;
   }
 
-  return <View style={styles.zone} {...responder.panHandlers} />;
+  return (
+    <View
+      style={[
+        styles.zone,
+        {
+          left: rect.x,
+          top: rect.y,
+          width: rect.width,
+          height: rect.height,
+        },
+      ]}
+      {...responder.panHandlers}
+    />
+  );
 };
 
 const styles = StyleSheet.create({
   zone: {
+    // A rectangle placed in the layout; only touches inside it drive aiming.
+    // Buttons rendered on top keep their own hit areas.
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
-    // Right portion of the screen only, so the left thumbstick / d-pad area is
-    // untouched. Buttons rendered on top keep their own hit areas.
-    width: '55%',
     zIndex: 1,
   },
 });

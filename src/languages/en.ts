@@ -356,7 +356,7 @@ export default {
     'Swipe aim': 'Swipe aim',
     'Swipe aim sensitivity (0 = off)': 'Swipe aim sensitivity (0 = off)',
     SwipeAimDesc:
-      'Turn the right side of the screen into a swipe-to-aim pad: drag to move the camera by how fast you swipe, like mobile shooters. Higher = faster. Set to 0 to turn it off. Tip: hide the on-screen right stick in your controller profile when using this.',
+      'A trackpad area you place in the layout: drag inside it to move the camera by how fast you swipe, like mobile shooters. Higher = faster. Set to 0 to turn it off. Tip: place the pad where your right thumb rests and hide the on-screen right stick.',
     'Invert swipe aim Y': 'Invert swipe aim (vertical)',
     InvertSwipeAimYDesc:
       'Flip the up/down direction of swipe aim.',

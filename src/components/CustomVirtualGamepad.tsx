@@ -9,7 +9,7 @@ import {
   ensureMacroLayoutButton,
   VIRTUAL_MACRO_BUTTON_NAME,
 } from '../utils/virtualMacro';
-import {buildDefaultLayout} from '../utils/gamepadLayout';
+import {buildDefaultLayout, SWIPE_AIM_NAME} from '../utils/gamepadLayout';
 
 type Props = {
   title: string;
@@ -68,6 +68,11 @@ const CustomVirtualGamepad: React.FC<Props> = ({
     <View style={styles.wrap} pointerEvents="box-none">
       {buttons.map((button: any) => {
         if (!button.show) {
+          return null;
+        }
+        // The swipe-aim trackpad is captured by SwipeAimZone (rendered by the
+        // stream screen), not drawn as a control here.
+        if (button.name === SWIPE_AIM_NAME) {
           return null;
         }
         if (

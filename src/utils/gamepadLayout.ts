@@ -13,6 +13,39 @@ export type ButtonConfig = {
   height?: number;
 };
 
+// The swipe-aim trackpad is a first-class layout element (a rectangle you place
+// and size), not a button. Its width/height are the rectangle's size in the
+// play surface's pixel space.
+export const SWIPE_AIM_NAME = 'SwipeAim';
+export const SWIPE_AIM_MIN = 80;
+
+export const createDefaultSwipePad = (
+  width: number,
+  height: number,
+): ButtonConfig => ({
+  name: SWIPE_AIM_NAME,
+  x: Math.round(width * 0.5),
+  y: Math.round(height * 0.2),
+  width: Math.round(width * 0.42),
+  height: Math.round(height * 0.55),
+  show: true,
+});
+
+// Ensure a layout carries a SwipeAim element (older saved layouts predate it),
+// mirroring ensureMacroLayoutButton.
+export const ensureSwipePad = (
+  buttons: ButtonConfig[],
+  fallback: ButtonConfig,
+): ButtonConfig[] => {
+  if (!Array.isArray(buttons)) {
+    return [fallback];
+  }
+  if (buttons.some(button => button?.name === SWIPE_AIM_NAME)) {
+    return buttons;
+  }
+  return [...buttons, fallback];
+};
+
 // Canonical on-screen base size (before scale) for each button. The editor and
 // the in-game renderer both derive their box size from here, so a laid-out
 // button occupies the same rectangle in both. Previously the editor used
@@ -74,5 +107,6 @@ export const buildDefaultLayout = (
     {name: 'LeftStick', x: 175, y: height - 205, show: true},
     {name: 'RightStick', x: width - 265, y: height - 195, show: true},
     createDefaultMacroLayoutButton(width, height),
+    createDefaultSwipePad(width, height),
   ];
 };
