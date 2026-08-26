@@ -3,24 +3,28 @@ import {View, Text, StyleSheet, Pressable} from 'react-native';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 
 // Rendered on the foldable cover (outer) display via the WindowAreaController
-// present-mode session. It runs on the app's single JS context, so pressing a
-// button here drives the same live stream input as the on-screen gamepad
+// present-mode session. It runs on the app's single JS context, so touching a
+// zone here drives the same live stream input as the on-screen gamepad
 // (through coverGamepadBus).
 
-type PadButton = {name: string; label: string};
+type Zone = {name: string; label: string};
 
-// L / R shoulder + trigger buttons, laid out as a left column and a right
-// column to match how the device is held.
-const LEFT: PadButton[] = [
-  {name: 'LeftTrigger', label: 'LT'},
-  {name: 'LeftShoulder', label: 'LB'},
-];
-const RIGHT: PadButton[] = [
-  {name: 'RightTrigger', label: 'RT'},
-  {name: 'RightShoulder', label: 'RB'},
+// The cover screen is split into four large touch zones (2 columns x 2 rows).
+// Left/right are mirrored vs. a normal grip because the outer screen faces the
+// other way, so the LEFT half sends the R buttons and the RIGHT half the L
+// buttons. Top row = triggers, bottom row = shoulders.
+const HALVES: Zone[][] = [
+  [
+    {name: 'RightTrigger', label: 'RT'},
+    {name: 'RightShoulder', label: 'RB'},
+  ],
+  [
+    {name: 'LeftTrigger', label: 'LT'},
+    {name: 'LeftShoulder', label: 'LB'},
+  ],
 ];
 
-function CoverButton({name, label}: PadButton) {
+function CoverZone({name, label}: Zone) {
   const [down, setDown] = React.useState(false);
   return (
     <Pressable
@@ -32,8 +36,10 @@ function CoverButton({name, label}: PadButton) {
         setDown(false);
         coverGamepadBus.pressOut(name);
       }}
-      style={[styles.button, down && styles.buttonDown]}>
-      <Text style={styles.buttonLabel}>{label}</Text>
+      style={[styles.zone, down && styles.zoneDown]}>
+      <Text style={[styles.zoneLabel, down && styles.zoneLabelDown]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -52,17 +58,14 @@ export default function CoverScreen() {
   }
 
   return (
-    <View style={styles.padWrap}>
-      <View style={styles.column}>
-        {LEFT.map(b => (
-          <CoverButton key={b.name} {...b} />
-        ))}
-      </View>
-      <View style={styles.column}>
-        {RIGHT.map(b => (
-          <CoverButton key={b.name} {...b} />
-        ))}
-      </View>
+    <View style={styles.grid}>
+      {HALVES.map((half, i) => (
+        <View key={i} style={styles.half}>
+          {half.map(zone => (
+            <CoverZone key={zone.name} {...zone} />
+          ))}
+        </View>
+      ))}
     </View>
   );
 }
@@ -77,38 +80,34 @@ const styles = StyleSheet.create({
   },
   brand: {color: '#2FD24B', fontSize: 22, fontWeight: '700', letterSpacing: 1},
   idleText: {color: '#8A9A92', fontSize: 13, marginTop: 8, textAlign: 'center'},
-  padWrap: {
+  grid: {
     flex: 1,
-    backgroundColor: '#0E1512',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    backgroundColor: '#0E1512',
   },
-  column: {
-    justifyContent: 'space-between',
-    height: '100%',
-    paddingVertical: 6,
+  half: {
+    flex: 1,
+    flexDirection: 'column',
   },
-  button: {
-    width: 92,
-    height: 60,
-    borderRadius: 14,
-    marginVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+  zone: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  buttonDown: {
-    backgroundColor: 'rgba(47,210,75,0.28)',
+  zoneDown: {
+    backgroundColor: 'rgba(47,210,75,0.26)',
     borderColor: '#2FD24B',
   },
-  buttonLabel: {
+  zoneLabel: {
+    color: '#8A9A92',
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
+  zoneLabelDown: {
     color: '#E6ECE8',
-    fontSize: 20,
-    fontWeight: '700',
   },
 });
