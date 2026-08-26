@@ -51,7 +51,7 @@ function CoverButtonView({
 export default function CoverScreen() {
   const [active, setActive] = React.useState(coverGamepadBus.isActive());
   const [layout, setLayout] = React.useState<CoverButton[]>(
-    () => coverGamepadBus.getLayout() ?? getCoverLayout(),
+    () => coverGamepadBus.getLayout() ?? getCoverLayout(''),
   );
   const [surface, setSurface] = React.useState({width: 0, height: 0});
 
@@ -64,7 +64,7 @@ export default function CoverScreen() {
   // edited since this surface was last shown).
   React.useEffect(() => {
     if (active) {
-      setLayout(coverGamepadBus.getLayout() ?? getCoverLayout());
+      setLayout(coverGamepadBus.getLayout() ?? getCoverLayout(''));
     }
   }, [active]);
 

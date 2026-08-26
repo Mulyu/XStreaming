@@ -58,6 +58,7 @@ import RTCFsrView from '../components/RTCFsrView';
 import NativeTouchOverlay from '../components/NativeTouchOverlay';
 import SwipeAimZone from '../components/SwipeAimZone';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
+import {getCoverLayout} from '../store/coverLayoutStore';
 import PortraitVirtualGamepad, {
   PortraitGamepadControl,
 } from '../components/PortraitVirtualGamepad';
@@ -2386,6 +2387,10 @@ export function NativeStreamScreenBase({
       onPressIn: name => coverPressInRef.current(name),
       onPressOut: name => coverPressOutRef.current(name),
     });
+    // Cover buttons follow the active touch-controller profile.
+    coverGamepadBus.setLayout(
+      getCoverLayout(getSettings().custom_virtual_gamepad || ''),
+    );
     coverGamepadBus.setActive(true);
     CoverDisplayManager?.getStatus?.()
       .then(handleCoverStatus)
@@ -2561,6 +2566,7 @@ export function NativeStreamScreenBase({
       setEditorProfile(name || LIVE_GAMEPAD_PROFILE);
       setGamepadLayoutVersion(prev => prev + 1);
       setSwipeConfigVersion(prev => prev + 1);
+      coverGamepadBus.setLayout(getCoverLayout(name || ''));
       setShowVirtualGamepad(true);
       // Remember this as the profile last used for this game so it is restored
       // the next time the game launches.

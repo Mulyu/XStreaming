@@ -375,6 +375,7 @@ export default {
     'Show cover controls': 'Show controls on cover screen',
     'Hide cover controls': 'Hide cover-screen controls',
     'Edit cover buttons': 'Edit cover buttons',
+    'Cover buttons': 'Cover buttons',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',
