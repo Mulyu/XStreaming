@@ -32,22 +32,36 @@ export const defaultCoverLayout = (): CoverButton[] => [
   {name: 'LeftShoulder', label: 'LB', x: 0.77, y: 0.55, size: 0.18, show: true},
 ];
 
-export const getCoverLayout = (): CoverButton[] => {
+// Cover layouts are stored per touch-controller profile ('' = Default), keyed
+// by name in one map, so the cover buttons follow the active profile like the
+// inner controls do.
+const readMap = (): Record<string, CoverButton[]> => {
   const raw = storage.getString(STORE_KEY);
   if (!raw) {
-    return defaultCoverLayout();
+    return {};
   }
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length) {
+    // Migrate the legacy single-array layout to the Default profile.
+    if (Array.isArray(parsed)) {
+      return parsed.length ? {'': parsed} : {};
+    }
+    if (parsed && typeof parsed === 'object') {
       return parsed;
     }
-    return defaultCoverLayout();
+    return {};
   } catch {
-    return defaultCoverLayout();
+    return {};
   }
 };
 
-export const saveCoverLayout = (layout: CoverButton[]) => {
-  storage.set(STORE_KEY, JSON.stringify(layout));
+export const getCoverLayout = (profileName = ''): CoverButton[] => {
+  const layout = readMap()[profileName || ''];
+  return Array.isArray(layout) && layout.length ? layout : defaultCoverLayout();
+};
+
+export const saveCoverLayout = (profileName: string, layout: CoverButton[]) => {
+  const map = readMap();
+  map[profileName || ''] = layout;
+  storage.set(STORE_KEY, JSON.stringify(map));
 };

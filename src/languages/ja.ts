@@ -334,6 +334,7 @@ export default {
     'Show cover controls': 'カバー画面にコントロールを表示',
     'Hide cover controls': 'カバー画面のコントロールを非表示',
     'Edit cover buttons': 'カバーのボタンを編集',
+    'Cover buttons': 'カバーのボタン',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',

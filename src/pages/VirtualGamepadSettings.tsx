@@ -153,6 +153,14 @@ function VirtualGamepadSettingsScreen({navigation}) {
           </Button>
         )}
         <Button
+          mode="outlined"
+          style={styles.button}
+          onPress={() =>
+            navigation.navigate('CoverLayoutEditor', {name: value})
+          }>
+          {t('Cover buttons')}
+        </Button>
+        <Button
           mode="text"
           style={styles.button}
           onPress={() => navigation.goBack()}>

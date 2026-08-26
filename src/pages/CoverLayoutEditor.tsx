@@ -35,9 +35,10 @@ const clamp = (v: number, lo: number, hi: number) =>
 // Edits the foldable cover-screen button layout from the inner screen. The
 // inner screen stands in for the cover: drag to move, tap to size/hide. While
 // open it presents the real cover so changes preview live there too.
-function CoverLayoutEditorScreen({navigation}: any) {
+function CoverLayoutEditorScreen({navigation, route}: any) {
   const {t} = useTranslation();
   const theme = useTheme();
+  const profileName = route?.params?.name ?? '';
   const {width: W, height: H} = useWindowDimensions();
   const [buttons, setButtons] = React.useState<CoverButton[]>([]);
   const [current, setCurrent] = React.useState('');
@@ -49,7 +50,7 @@ function CoverLayoutEditorScreen({navigation}: any) {
   React.useEffect(() => {
     FullScreenManager?.immersiveModeOn?.();
     Orientation.lockToLandscape();
-    const initial = getCoverLayout();
+    const initial = getCoverLayout(profileName);
     setButtons(initial);
     coverGamepadBus.setLayout(initial);
     coverGamepadBus.setActive(true);
@@ -59,11 +60,12 @@ function CoverLayoutEditorScreen({navigation}: any) {
       coverGamepadBus.setActive(false);
       // Reset the live layout to the saved one so later presents don't reuse an
       // unsaved edit.
-      coverGamepadBus.setLayout(getCoverLayout());
+      coverGamepadBus.setLayout(getCoverLayout(profileName));
       Orientation.unlockAllOrientations();
       FullScreenManager?.immersiveModeOff?.();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileName]);
 
   const apply = (next: CoverButton[]) => {
     setButtons(next);
@@ -103,7 +105,7 @@ function CoverLayoutEditorScreen({navigation}: any) {
   };
 
   const handleSave = () => {
-    saveCoverLayout(buttons);
+    saveCoverLayout(profileName, buttons);
     navigation.goBack();
   };
 

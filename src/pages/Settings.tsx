@@ -195,14 +195,6 @@ function SettingsScreen({navigation}) {
               navigation.navigate('GamepadTest');
             }}
           />
-
-          <SettingItem
-            title={t('CoverDisplayTitle')}
-            description={t('CoverDisplayDesc')}
-            onPress={() => {
-              navigation.navigate('CoverDisplayPoc');
-            }}
-          />
         </View>
 
         <View>
