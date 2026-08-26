@@ -372,6 +372,8 @@ export default {
     Dismiss: 'Dismiss',
     CoverDisplayUnavailableNote:
       'Cover-display present mode is not available on this device/state. It requires a supported foldable (One UI 6.0+ / Android 14+) that is unfolded.',
+    'Show cover controls': 'Show controls on cover screen',
+    'Hide cover controls': 'Hide cover-screen controls',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',

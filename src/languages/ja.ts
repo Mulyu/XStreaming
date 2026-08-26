@@ -331,6 +331,8 @@ export default {
     Dismiss: '閉じる',
     CoverDisplayUnavailableNote:
       'この端末/状態ではカバー表示（present）が利用できません。対応する折りたたみ端末（One UI 6.0+ / Android 14+）を展開した状態で利用できます。',
+    'Show cover controls': 'カバー画面にコントロールを表示',
+    'Hide cover controls': 'カバー画面のコントロールを非表示',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle': 'アンチアイドル（AFK切断防止）',
