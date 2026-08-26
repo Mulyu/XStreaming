@@ -374,6 +374,10 @@ export default {
       'Cover-display present mode is not available on this device/state. It requires a supported foldable (One UI 6.0+ / Android 14+) that is unfolded.',
     'Show cover controls': 'Show controls on cover screen',
     'Hide cover controls': 'Hide cover-screen controls',
+    'Edit cover buttons': 'Edit cover buttons',
+    CoverLayoutEditTitle: 'Cover buttons layout',
+    CoverLayoutEditHint:
+      'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',

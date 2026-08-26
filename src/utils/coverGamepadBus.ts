@@ -9,7 +9,9 @@ type Handlers = {onPressIn: PressHandler; onPressOut: PressHandler};
 
 let handlers: Handlers | null = null;
 let active = false;
+let liveLayout: any[] | null = null;
 const listeners = new Set<(active: boolean) => void>();
+const layoutListeners = new Set<(layout: any[]) => void>();
 
 export const coverGamepadBus = {
   // The stream screen registers its press/release handlers while connected.
@@ -37,6 +39,21 @@ export const coverGamepadBus = {
     listeners.add(l);
     return () => {
       listeners.delete(l);
+    };
+  },
+  // Live cover-button layout, pushed by the editor so the cover updates as you
+  // drag/resize on the inner screen.
+  setLayout(layout: any[]) {
+    liveLayout = layout;
+    layoutListeners.forEach(l => l(layout));
+  },
+  getLayout() {
+    return liveLayout;
+  },
+  subscribeLayout(l: (layout: any[]) => void) {
+    layoutListeners.add(l);
+    return () => {
+      layoutListeners.delete(l);
     };
   },
 };

@@ -333,6 +333,10 @@ export default {
       'この端末/状態ではカバー表示（present）が利用できません。対応する折りたたみ端末（One UI 6.0+ / Android 14+）を展開した状態で利用できます。',
     'Show cover controls': 'カバー画面にコントロールを表示',
     'Hide cover controls': 'カバー画面のコントロールを非表示',
+    'Edit cover buttons': 'カバーのボタンを編集',
+    CoverLayoutEditTitle: 'カバーのボタン配置',
+    CoverLayoutEditHint:
+      'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle': 'アンチアイドル（AFK切断防止）',
