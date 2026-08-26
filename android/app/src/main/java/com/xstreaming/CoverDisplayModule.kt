@@ -42,10 +42,35 @@ class CoverDisplayModule(reactContext: ReactApplicationContext) :
   private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
   private var presenter: WindowAreaSessionPresenter? = null
   private var coverRootView: ReactRootView? = null
+  private var lastStatus: String? = null
 
   override fun getName(): String = "CoverDisplayManager"
 
   private val presentOp = WindowAreaCapability.Operation.OPERATION_PRESENT_ON_AREA
+
+  init {
+    // Observe present-capability changes (e.g. the foldable being opened /
+    // closed) and push each new status to JS so the app can auto-enable the
+    // cover controls when the device is unfolded.
+    scope.launch {
+      try {
+        controller.windowAreaInfos.collect { infos ->
+          val status =
+              statusString(
+                  infos
+                      .asSequence()
+                      .mapNotNull { it.getCapability(presentOp) }
+                      .firstOrNull()
+                      ?.status)
+          if (status != lastStatus) {
+            lastStatus = status
+            emitStatus(status)
+          }
+        }
+      } catch (ignored: Throwable) {
+      }
+    }
+  }
 
   private fun statusString(status: WindowAreaCapability.Status?): String =
       when (status) {
@@ -150,6 +175,15 @@ class CoverDisplayModule(reactContext: ReactApplicationContext) :
       reactApplicationContext
           .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
           .emit("CoverDisplayEvent", event)
+    } catch (ignored: Throwable) {
+    }
+  }
+
+  private fun emitStatus(status: String) {
+    try {
+      reactApplicationContext
+          .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+          .emit("CoverDisplayStatus", status)
     } catch (ignored: Throwable) {
     }
   }
