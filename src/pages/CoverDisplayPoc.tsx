@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import {Button, Card, Text, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
+import {useNavigation} from '@react-navigation/native';
 
 const {CoverDisplayManager} = NativeModules;
 
@@ -16,6 +17,7 @@ const {CoverDisplayManager} = NativeModules;
 function CoverDisplayPocScreen() {
   const {t} = useTranslation();
   const theme = useTheme();
+  const navigation = useNavigation<any>();
   const [status, setStatus] = React.useState('—');
   const [sessionEvent, setSessionEvent] = React.useState('—');
 
@@ -92,6 +94,14 @@ function CoverDisplayPocScreen() {
       </Button>
       <Button mode="text" style={styles.btn} onPress={dismiss}>
         {t('Dismiss')}
+      </Button>
+
+      <Button
+        mode="outlined"
+        style={styles.btn}
+        disabled={!available}
+        onPress={() => navigation.navigate('CoverLayoutEditor')}>
+        {t('Edit cover buttons')}
       </Button>
 
       {!available && (
