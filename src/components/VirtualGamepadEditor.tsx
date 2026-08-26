@@ -24,6 +24,7 @@ import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
 import GridBackground from './GridBackground';
 import GamepadButton from './CustomGamepad/Button';
+import CoverLayoutOverlay from './CoverLayoutOverlay';
 import {getSettings as getGamepadLayouts} from '../store/gamepadStore';
 import {
   createDefaultMacroLayoutButton,
@@ -102,6 +103,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [newProfileName, setNewProfileName] = React.useState('');
   const [copyFrom, setCopyFrom] = React.useState('');
   const [showSwipeModal, setShowSwipeModal] = React.useState(false);
+  const [coverMode, setCoverMode] = React.useState(false);
   const [swipeSens, setSwipeSens] = React.useState(0);
   const [swipeInvert, setSwipeInvert] = React.useState(false);
   const [stickMode, setStickMode] = React.useState(1);
@@ -548,6 +550,15 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     </>
   );
 
+  if (coverMode) {
+    return (
+      <CoverLayoutOverlay
+        profileName={activeProfile}
+        onClose={() => setCoverMode(false)}
+      />
+    );
+  }
+
   return (
     <Portal>
       <View style={styles.overlay}>
@@ -597,6 +608,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               icon="crosshairs-gps"
               size={20}
               onPress={() => setShowSwipeModal(true)}
+              style={styles.toolbarIcon}
+            />
+            <IconButton
+              icon="monitor-cellphone"
+              size={20}
+              onPress={() => setCoverMode(true)}
               style={styles.toolbarIcon}
             />
             <Button
