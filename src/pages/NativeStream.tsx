@@ -241,6 +241,9 @@ export function NativeStreamScreenBase({
   const [coverPresented, setCoverPresented] = React.useState(false);
   const coverPressInRef = React.useRef<(name: string) => void>(() => {});
   const coverPressOutRef = React.useRef<(name: string) => void>(() => {});
+  // True while the user has explicitly hidden the cover controls this session,
+  // so we don't auto-present again until they re-enable or the device re-opens.
+  const coverHiddenRef = React.useRef(false);
   const [performance, setPerformance] = React.useState<any>({});
   const [showPerformance, setShowPerformance] = React.useState(false);
   const [messageSending, setMessageSending] = React.useState(false);
@@ -2348,21 +2351,44 @@ export function NativeStreamScreenBase({
   coverPressInRef.current = handleButtonPressIn;
   coverPressOutRef.current = handleButtonPressOut;
 
+  // React to cover present-capability changes (device opened/closed): keep the
+  // availability + presented flags in sync and auto-present the cover controls
+  // when the device is unfolded during a game, so no manual step is needed.
+  const handleCoverStatus = React.useCallback((s: string) => {
+    setCoverAvailable(s === 'AVAILABLE' || s === 'ACTIVE');
+    setCoverPresented(s === 'ACTIVE');
+    if (
+      s === 'AVAILABLE' &&
+      connectStateRef.current === CONNECTED &&
+      !coverHiddenRef.current
+    ) {
+      CoverDisplayManager?.present?.('XCoverScreen')?.catch?.(() => {});
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(
+      'CoverDisplayStatus',
+      handleCoverStatus,
+    );
+    return () => sub.remove();
+  }, [handleCoverStatus]);
+
   // While a stream is connected, expose the gamepad input to the foldable
-  // cover-display surface and tell it a game is live. Tear down on disconnect.
+  // cover-display surface and tell it a game is live; auto-present if the
+  // device is already unfolded. Tear down on disconnect.
   React.useEffect(() => {
     if (connectState !== CONNECTED) {
       return;
     }
+    coverHiddenRef.current = false;
     coverGamepadBus.setHandlers({
       onPressIn: name => coverPressInRef.current(name),
       onPressOut: name => coverPressOutRef.current(name),
     });
     coverGamepadBus.setActive(true);
     CoverDisplayManager?.getStatus?.()
-      .then((s: string) =>
-        setCoverAvailable(s === 'AVAILABLE' || s === 'ACTIVE'),
-      )
+      .then(handleCoverStatus)
       .catch(() => {});
     return () => {
       coverGamepadBus.clearHandlers();
@@ -2370,7 +2396,7 @@ export function NativeStreamScreenBase({
       CoverDisplayManager?.dismiss?.();
       setCoverPresented(false);
     };
-  }, [connectState]);
+  }, [connectState, handleCoverStatus]);
 
   // Virtual gamepad stick move
   const handleStickMove = (id, data) => {
@@ -2795,9 +2821,13 @@ export function NativeStreamScreenBase({
         break;
       case 'toggleCoverControls':
         if (coverPresented) {
+          // Manual hide: remember it so the auto-present doesn't turn it back
+          // on until the user re-enables or the device is re-opened.
+          coverHiddenRef.current = true;
           CoverDisplayManager?.dismiss?.();
           setCoverPresented(false);
         } else {
+          coverHiddenRef.current = false;
           try {
             await CoverDisplayManager?.present?.('XCoverScreen');
             setCoverPresented(true);
