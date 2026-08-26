@@ -321,6 +321,16 @@ export default {
     InvertSwipeAimYDesc: 'スワイプエイムの上下方向を反転します。',
     'Hidden controls appear dimmed here; tap one to show it again':
       '非表示のコントロールはここでは半透明で表示されます。タップすると再表示できます。',
+    CoverDisplayTitle: 'カバーディスプレイ（PoC）',
+    CoverDisplayDesc:
+      '実験的機能: 折りたたみ端末（Galaxy Z Fold等）で、メイン画面を維持したままカバー画面に別コンテンツを表示します（AndroidのDual Screen Mode）。',
+    Status: 'ステータス',
+    Session: 'セッション',
+    'Refresh status': 'ステータス更新',
+    'Present on cover': 'カバー画面に表示',
+    Dismiss: '閉じる',
+    CoverDisplayUnavailableNote:
+      'この端末/状態ではカバー表示（present）が利用できません。対応する折りたたみ端末（One UI 6.0+ / Android 14+）を展開した状態で利用できます。',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle': 'アンチアイドル（AFK切断防止）',
