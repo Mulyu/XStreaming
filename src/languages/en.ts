@@ -362,6 +362,16 @@ export default {
       'Flip the up/down direction of swipe aim.',
     'Hidden controls appear dimmed here; tap one to show it again':
       'Hidden controls appear dimmed here; tap one to show it again',
+    CoverDisplayTitle: 'Cover display (PoC)',
+    CoverDisplayDesc:
+      'Experimental: on a foldable (e.g. Galaxy Z Fold), show separate content on the cover screen while the main screen stays on, via Android Dual Screen Mode.',
+    Status: 'Status',
+    Session: 'Session',
+    'Refresh status': 'Refresh status',
+    'Present on cover': 'Present on cover screen',
+    Dismiss: 'Dismiss',
+    CoverDisplayUnavailableNote:
+      'Cover-display present mode is not available on this device/state. It requires a supported foldable (One UI 6.0+ / Android 14+) that is unfolded.',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle': 'Anti-idle (prevent AFK disconnect)',

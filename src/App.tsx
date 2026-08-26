@@ -56,6 +56,7 @@ import HoldButtonsScreen from './pages/HoldButtons';
 import VirtualMacroSettingsScreen from './pages/VirtualMacroSettings';
 import Ds5SettingsScreen from './pages/Ds5Settings';
 import GamepadTestScreen from './pages/GamepadTest';
+import CoverDisplayPocScreen from './pages/CoverDisplayPoc';
 import HistoryScreen from './pages/History';
 import updater from './utils/updater';
 import {
@@ -145,6 +146,9 @@ const VirtualMacroSettingsBackgroundScreen = withPageBackground(
 );
 const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const GamepadTestBackgroundScreen = withPageBackground(GamepadTestScreen);
+const CoverDisplayPocBackgroundScreen = withPageBackground(
+  CoverDisplayPocScreen,
+);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 const SearchBackgroundScreen = withPageBackground(SearchScreen);
 
@@ -486,6 +490,11 @@ function App() {
                   name="GamepadTest"
                   component={GamepadTestBackgroundScreen}
                   options={{title: t('GamepadTestTitle')}}
+                />
+                <RootStack.Screen
+                  name="CoverDisplayPoc"
+                  component={CoverDisplayPocBackgroundScreen}
+                  options={{title: t('CoverDisplayTitle')}}
                 />
               </RootStack.Group>
 
