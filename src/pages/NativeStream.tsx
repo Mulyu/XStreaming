@@ -39,6 +39,7 @@ import {
   setSwipeConfig,
   getJoystickMode,
   setJoystickMode,
+  getCoverEnabled,
   getLastProfileForGame,
   setLastProfileForGame,
 } from '../store/touchProfileStore';
@@ -245,6 +246,10 @@ export function NativeStreamScreenBase({
   // True while the user has explicitly hidden the cover controls this session,
   // so we don't auto-present again until they re-enable or the device re-opens.
   const coverHiddenRef = React.useRef(false);
+  // Auto-fire (turbo): button names with turbo in the active profile, and their
+  // running repeat timers.
+  const turboSetRef = React.useRef<Set<string>>(new Set());
+  const turboTimersRef = React.useRef<Record<string, any>>({});
   const [performance, setPerformance] = React.useState<any>({});
   const [showPerformance, setShowPerformance] = React.useState(false);
   const [messageSending, setMessageSending] = React.useState(false);
@@ -2286,9 +2291,42 @@ export function NativeStreamScreenBase({
     inputChannel?.flushGamepadInput?.();
   };
 
+  // Auto-fire: while held, rapidly toggle the button so it repeats.
+  const startTurbo = (name: string) => {
+    if (turboTimersRef.current[name]) {
+      return;
+    }
+    let on = true;
+    gpState[name] = 1;
+    flushVirtualGpState();
+    turboTimersRef.current[name] = setInterval(() => {
+      on = !on;
+      gpState[name] = on ? 1 : 0;
+      flushVirtualGpState();
+    }, 60);
+  };
+
+  const stopTurbo = (name: string) => {
+    const timer = turboTimersRef.current[name];
+    if (timer) {
+      clearInterval(timer);
+      delete turboTimersRef.current[name];
+    }
+    gpState[name] = 0;
+    flushVirtualGpState();
+  };
+
   const handleButtonPressIn = name => {
     if (name === VIRTUAL_MACRO_BUTTON_NAME) {
       handleMacroPressIn();
+      return;
+    }
+
+    if (turboSetRef.current.has(name)) {
+      startTurbo(name);
+      if (settings.vibration) {
+        Vibration.vibrate(30);
+      }
       return;
     }
 
@@ -2321,6 +2359,11 @@ export function NativeStreamScreenBase({
   const handleButtonPressOut = name => {
     if (name === VIRTUAL_MACRO_BUTTON_NAME) {
       handleMacroPressOut();
+      return;
+    }
+
+    if (turboTimersRef.current[name]) {
+      stopTurbo(name);
       return;
     }
 
@@ -2361,7 +2404,8 @@ export function NativeStreamScreenBase({
     if (
       s === 'AVAILABLE' &&
       connectStateRef.current === CONNECTED &&
-      !coverHiddenRef.current
+      !coverHiddenRef.current &&
+      getCoverEnabled(getSettings().custom_virtual_gamepad || '')
     ) {
       CoverDisplayManager?.present?.('XCoverScreen')?.catch?.(() => {});
     }
@@ -2457,6 +2501,29 @@ export function NativeStreamScreenBase({
     return fallback;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.custom_virtual_gamepad, gamepadLayoutVersion]);
+
+  // Rebuild the set of turbo-enabled button names for the active profile.
+  React.useEffect(() => {
+    const name = settings.custom_virtual_gamepad;
+    const layout = name ? getGamepadLayouts()[name] : null;
+    const set = new Set<string>();
+    if (Array.isArray(layout)) {
+      layout.forEach((b: any) => {
+        if (b?.turbo) {
+          set.add(b.name);
+        }
+      });
+    }
+    turboSetRef.current = set;
+  }, [settings.custom_virtual_gamepad, gamepadLayoutVersion]);
+
+  // Clear any running turbo timers when leaving the stream screen.
+  React.useEffect(() => {
+    const timers = turboTimersRef.current;
+    return () => {
+      Object.keys(timers).forEach(n => clearInterval(timers[n]));
+    };
+  }, []);
 
   // Virtual-stick mode (0 = fixed, 1 = free) for the active profile; the
   // per-profile override wins, else the global setting.

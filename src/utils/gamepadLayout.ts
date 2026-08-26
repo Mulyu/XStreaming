@@ -11,6 +11,9 @@ export type ButtonConfig = {
   show?: boolean;
   width?: number;
   height?: number;
+  // Auto-fire: while held, the button rapidly presses/releases. Stored per
+  // button in the profile's layout.
+  turbo?: boolean;
 };
 
 // The swipe-aim trackpad is a first-class layout element (a rectangle you place

@@ -1,5 +1,11 @@
 import React from 'react';
-import {View, Text, StyleSheet, useWindowDimensions} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  NativeModules,
+  useWindowDimensions,
+} from 'react-native';
 import {
   Portal,
   Modal,
@@ -7,6 +13,7 @@ import {
   Button,
   Divider,
   RadioButton,
+  Switch,
   useTheme,
 } from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
@@ -15,12 +22,15 @@ import Slider from '@react-native-community/slider';
 import GridBackground from './GridBackground';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {snapToGrid} from '../utils/gamepadLayout';
+import {getCoverEnabled, setCoverEnabled} from '../store/touchProfileStore';
 import {
   getCoverLayout,
   saveCoverLayout,
   defaultCoverLayout,
   CoverButton,
 } from '../store/coverLayoutStore';
+
+const {CoverDisplayManager} = NativeModules;
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v));
@@ -46,13 +56,27 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
   const [currentSize, setCurrentSize] = React.useState(0.18);
   const [currentShow, setCurrentShow] = React.useState(true);
   const [showModal, setShowModal] = React.useState(false);
+  const [enabled, setEnabled] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
 
   React.useEffect(() => {
     const initial = getCoverLayout(profileName);
     setButtons(initial);
+    setEnabled(getCoverEnabled(profileName));
     coverGamepadBus.setLayout(initial);
+    // Present the cover while editing so changes preview live, regardless of
+    // whether the profile has it enabled at runtime. On close the stream
+    // screen restores the enabled-based state.
+    CoverDisplayManager?.present?.('XCoverScreen')?.catch?.(() => {});
+    return () => {
+      CoverDisplayManager?.dismiss?.();
+    };
   }, [profileName]);
+
+  const toggleEnabled = (value: boolean) => {
+    setEnabled(value);
+    setCoverEnabled(profileName, value);
+  };
 
   const apply = (next: CoverButton[]) => {
     setButtons(next);
@@ -113,7 +137,10 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
         <GridBackground gridSize={20} />
 
         <View style={styles.toolbar}>
-          <Text style={styles.hint}>{t('CoverLayoutEditHint')}</Text>
+          <View style={styles.enableRow}>
+            <Switch value={enabled} onValueChange={toggleEnabled} />
+            <Text style={styles.enableLabel}>{t('Enable cover controls')}</Text>
+          </View>
           <View style={styles.toolbarBtns}>
             <Button
               compact
@@ -227,7 +254,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  hint: {color: '#8A9A92', fontSize: 12, flexShrink: 1, marginRight: 8},
+  enableRow: {flexDirection: 'row', alignItems: 'center', flexShrink: 1},
+  enableLabel: {color: '#E6ECE8', fontSize: 13, marginLeft: 8},
   toolbarBtns: {flexDirection: 'row', alignItems: 'center'},
   tbtn: {marginLeft: 6},
   padButton: {
