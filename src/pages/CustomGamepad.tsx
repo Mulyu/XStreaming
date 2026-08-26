@@ -61,6 +61,7 @@ function CustomGamepadScreen({navigation, route}) {
   const [currentButton, setCurrentButton] = React.useState('');
   const [currentScale, setCurrentScale] = React.useState(1);
   const [currentShow, setCurrentShow] = React.useState(true);
+  const [currentTurbo, setCurrentTurbo] = React.useState(false);
 
   React.useEffect(() => {
     const _settings = getSettings();
@@ -161,6 +162,16 @@ function CustomGamepadScreen({navigation, route}) {
     buttons.forEach(b => {
       if (b.name === currentButton) {
         b.show = value;
+      }
+    });
+    setButtons([...buttons]);
+  };
+
+  const handleChangeTurbo = value => {
+    setCurrentTurbo(value);
+    buttons.forEach(b => {
+      if (b.name === currentButton) {
+        b.turbo = value;
       }
     });
     setButtons([...buttons]);
@@ -374,6 +385,22 @@ function CustomGamepadScreen({navigation, route}) {
                 <RadioButton.Item label={t('Show')} value={true} />
                 <RadioButton.Item label={t('Hide')} value={false} />
               </RadioButton.Group>
+
+              {currentButton !== 'LeftStick' &&
+                currentButton !== 'RightStick' && (
+                  <>
+                    <View style={styles.title}>
+                      <Text>{t('Turbo (auto-fire)')}</Text>
+                      <Divider style={styles.divider} />
+                    </View>
+                    <RadioButton.Group
+                      onValueChange={val => handleChangeTurbo(val)}
+                      value={currentTurbo}>
+                      <RadioButton.Item label={t('Disable')} value={false} />
+                      <RadioButton.Item label={t('Enable')} value={true} />
+                    </RadioButton.Group>
+                  </>
+                )}
             </Card.Content>
           </Card>
         </Modal>
@@ -436,6 +463,7 @@ function CustomGamepadScreen({navigation, route}) {
                   setCurrentButton(button.name);
                   setCurrentScale(1);
                   setCurrentShow(button.show ?? true);
+                  setCurrentTurbo(button.turbo ?? false);
                   setShowModal(true);
                 }}
                 onDragRelease={(_, __, bounds) => {
@@ -454,6 +482,7 @@ function CustomGamepadScreen({navigation, route}) {
                   setCurrentButton(button.name);
                   setCurrentScale(button.scale || 1);
                   setCurrentShow(button.show ?? true);
+                  setCurrentTurbo(button.turbo ?? false);
                   setShowModal(true);
                 }}
                 onDragRelease={(_, __, bounds) => {

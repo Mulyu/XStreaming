@@ -11,6 +11,8 @@ const GAME_KEY = 'user.gameLastProfile';
 // Per-profile virtual-stick mode override (0 = fixed, 1 = free). Absent = fall
 // back to the global virtual_gamepad_joystick setting.
 const JOYSTICK_KEY = 'user.profileJoystick';
+// Per-profile flag: whether the cover-screen controls are enabled (default off).
+const COVER_KEY = 'user.profileCover';
 
 export type SwipeConfig = {
   sensitivity: number;
@@ -70,6 +72,16 @@ export const setJoystickMode = (profileName: string, mode: number) => {
   const map = readMap(JOYSTICK_KEY);
   map[profileName || ''] = mode === 0 ? 0 : 1;
   writeMap(JOYSTICK_KEY, map);
+};
+
+// Per-profile cover-controls enable flag (default false).
+export const getCoverEnabled = (profileName: string): boolean =>
+  !!readMap(COVER_KEY)[profileName || ''];
+
+export const setCoverEnabled = (profileName: string, enabled: boolean) => {
+  const map = readMap(COVER_KEY);
+  map[profileName || ''] = !!enabled;
+  writeMap(COVER_KEY, map);
 };
 
 export const getLastProfileForGame = (gameId: string): string | null => {

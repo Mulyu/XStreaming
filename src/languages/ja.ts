@@ -335,6 +335,8 @@ export default {
     'Hide cover controls': 'カバー画面のコントロールを非表示',
     'Edit cover buttons': 'カバーのボタンを編集',
     'Cover buttons': 'カバーのボタン',
+    'Enable cover controls': 'カバー画面で有効にする',
+    'Turbo (auto-fire)': '連射（オートファイア）',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',

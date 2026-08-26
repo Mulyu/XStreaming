@@ -98,6 +98,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [currentButton, setCurrentButton] = React.useState('');
   const [currentScale, setCurrentScale] = React.useState(1);
   const [currentShow, setCurrentShow] = React.useState(true);
+  const [currentTurbo, setCurrentTurbo] = React.useState(false);
   const [showButtonModal, setShowButtonModal] = React.useState(false);
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [newProfileName, setNewProfileName] = React.useState('');
@@ -181,6 +182,14 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     setCurrentShow(value);
     const next = buttons.map(button =>
       button.name === currentButton ? {...button, show: value} : button,
+    );
+    setButtons(next);
+  };
+
+  const handleChangeTurbo = (value: boolean) => {
+    setCurrentTurbo(value);
+    const next = buttons.map(button =>
+      button.name === currentButton ? {...button, turbo: value} : button,
     );
     setButtons(next);
   };
@@ -295,6 +304,22 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 <RadioButton.Item label={t('Show')} value="true" />
                 <RadioButton.Item label={t('Hide')} value="false" />
               </RadioButton.Group>
+
+              {currentButton !== 'LeftStick' &&
+                currentButton !== 'RightStick' && (
+                  <>
+                    <View style={styles.title}>
+                      <Text>{t('Turbo (auto-fire)')}</Text>
+                      <Divider style={styles.divider} />
+                    </View>
+                    <RadioButton.Group
+                      onValueChange={val => handleChangeTurbo(val === 'true')}
+                      value={currentTurbo ? 'true' : 'false'}>
+                      <RadioButton.Item label={t('Disable')} value="false" />
+                      <RadioButton.Item label={t('Enable')} value="true" />
+                    </RadioButton.Group>
+                  </>
+                )}
             </Card.Content>
           </Card>
         </Modal>
@@ -512,6 +537,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 setCurrentButton(button.name);
                 setCurrentScale(1);
                 setCurrentShow(button.show ?? true);
+                setCurrentTurbo(button.turbo ?? false);
                 setShowButtonModal(true);
               }}
               onDragRelease={(_, __, bounds) => {
@@ -530,6 +556,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               setCurrentButton(button.name);
               setCurrentScale(button.scale || 1);
               setCurrentShow(button.show ?? true);
+              setCurrentTurbo(button.turbo ?? false);
               setShowButtonModal(true);
             }}
             onDragRelease={(_, __, bounds) => {
