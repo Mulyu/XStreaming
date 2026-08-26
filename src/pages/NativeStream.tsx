@@ -57,6 +57,7 @@ import PerfPanel from '../components/PerfPanel';
 import RTCFsrView from '../components/RTCFsrView';
 import NativeTouchOverlay from '../components/NativeTouchOverlay';
 import SwipeAimZone from '../components/SwipeAimZone';
+import {coverGamepadBus} from '../utils/coverGamepadBus';
 import PortraitVirtualGamepad, {
   PortraitGamepadControl,
 } from '../components/PortraitVirtualGamepad';
@@ -85,6 +86,7 @@ const {
   GamepadSensorModule,
   StreamKeepAliveManager,
   NativeInputDialog,
+  CoverDisplayManager,
 } = NativeModules;
 
 let defaultMaping: any = GAMEPAD_MAPING;
@@ -235,6 +237,10 @@ export function NativeStreamScreenBase({
   const [showModal, setShowModal] = React.useState(false);
   const [showVirtualGamepad, setShowVirtualGamepad] = React.useState(false);
   const [connectState, setConnectState] = React.useState('');
+  const [coverAvailable, setCoverAvailable] = React.useState(false);
+  const [coverPresented, setCoverPresented] = React.useState(false);
+  const coverPressInRef = React.useRef<(name: string) => void>(() => {});
+  const coverPressOutRef = React.useRef<(name: string) => void>(() => {});
   const [performance, setPerformance] = React.useState<any>({});
   const [showPerformance, setShowPerformance] = React.useState(false);
   const [messageSending, setMessageSending] = React.useState(false);
@@ -2337,6 +2343,35 @@ export function NativeStreamScreenBase({
     flushVirtualGpState();
   };
 
+  // Keep stable refs to the latest press handlers so the cover-display bus can
+  // call them without re-registering every render.
+  coverPressInRef.current = handleButtonPressIn;
+  coverPressOutRef.current = handleButtonPressOut;
+
+  // While a stream is connected, expose the gamepad input to the foldable
+  // cover-display surface and tell it a game is live. Tear down on disconnect.
+  React.useEffect(() => {
+    if (connectState !== CONNECTED) {
+      return;
+    }
+    coverGamepadBus.setHandlers({
+      onPressIn: name => coverPressInRef.current(name),
+      onPressOut: name => coverPressOutRef.current(name),
+    });
+    coverGamepadBus.setActive(true);
+    CoverDisplayManager?.getStatus?.()
+      .then((s: string) =>
+        setCoverAvailable(s === 'AVAILABLE' || s === 'ACTIVE'),
+      )
+      .catch(() => {});
+    return () => {
+      coverGamepadBus.clearHandlers();
+      coverGamepadBus.setActive(false);
+      CoverDisplayManager?.dismiss?.();
+      setCoverPresented(false);
+    };
+  }, [connectState]);
+
   // Virtual gamepad stick move
   const handleStickMove = (id, data) => {
     // console.log('handleStickMove:', id, data);
@@ -2692,6 +2727,14 @@ export function NativeStreamScreenBase({
           title: t('Edit Virtual Gamepad'),
         });
       }
+      if (coverAvailable) {
+        items.push({
+          id: 'toggleCoverControls',
+          title: coverPresented
+            ? t('Hide cover controls')
+            : t('Show cover controls'),
+        });
+      }
       if (settings.enable_microphone) {
         items.push({
           id: 'toggleMicrophone',
@@ -2750,6 +2793,19 @@ export function NativeStreamScreenBase({
       case 'editVirtualGamepad':
         handleOpenGamepadEditor();
         break;
+      case 'toggleCoverControls':
+        if (coverPresented) {
+          CoverDisplayManager?.dismiss?.();
+          setCoverPresented(false);
+        } else {
+          try {
+            await CoverDisplayManager?.present?.('XCoverScreen');
+            setCoverPresented(true);
+          } catch (e) {
+            log.warn('present cover failed:', e);
+          }
+        }
+        break;
       case 'toggleMicrophone':
         await handleToggleMic();
         break;
@@ -2781,6 +2837,8 @@ export function NativeStreamScreenBase({
     clearMacroTimers,
     audioGain,
     connectState,
+    coverAvailable,
+    coverPresented,
     handleCloseModal,
     handleOpenGamepadEditor,
     handleToggleMic,
