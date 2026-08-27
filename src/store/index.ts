@@ -8,6 +8,7 @@ const initialState = {
   redirect: {},
   profile: {},
   stars: [],
+  ignores: [],
 };
 
 const reducer = (state = initialState, action: any) => {
@@ -26,6 +27,8 @@ const reducer = (state = initialState, action: any) => {
       return {...state, isLogined: action.payload};
     case 'SET_STARS':
       return {...state, stars: action.payload};
+    case 'SET_IGNORES':
+      return {...state, ignores: action.payload};
     default:
       return state;
   }

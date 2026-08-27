@@ -378,6 +378,9 @@ export default {
     'Cover buttons': 'Cover buttons',
     'Enable cover controls': 'Enable on cover screen',
     'Turbo (auto-fire)': 'Turbo (auto-fire)',
+    Ignored: 'Ignored',
+    Ignore: 'Ignore',
+    Unignore: 'Unignore',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',
