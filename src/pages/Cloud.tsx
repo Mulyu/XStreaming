@@ -78,6 +78,7 @@ function CloudScreen({navigation, route}) {
   const dispatch = useDispatch();
   const streamingTokens = useSelector((state: any) => state.streamingTokens);
   const starTitles = useSelector((state: any) => state.stars || []);
+  const ignoreTitles = useSelector((state: any) => state.ignores || []);
 
   const currentLanguage = i18n.language;
   // Read here (not just inside the price effect) so a change re-runs the effect.
@@ -251,6 +252,7 @@ function CloudScreen({navigation, route}) {
           titleMap: _titleMap,
           newTitles: _newTitles,
           starTitles: _starTitles,
+          ignoreTitles: _ignoreTitles,
           recentTitles: _recentTitles,
         } = cacheData;
 
@@ -264,6 +266,10 @@ function CloudScreen({navigation, route}) {
         dispatch({
           type: 'SET_STARS',
           payload: _starTitles,
+        });
+        dispatch({
+          type: 'SET_IGNORES',
+          payload: _ignoreTitles || [],
         });
 
         // Update silent
@@ -290,6 +296,26 @@ function CloudScreen({navigation, route}) {
     (starTitles.includes(titleItem.XCloudTitleId) ||
       starTitles.includes(titleItem.titleId));
 
+  const isTitleIgnored = (titleItem: any) =>
+    !!titleItem &&
+    (ignoreTitles.includes(titleItem.XCloudTitleId) ||
+      ignoreTitles.includes(titleItem.titleId));
+
+  const withoutTitle = (list: any[], titleItem: any) =>
+    list.filter(
+      (id: any) => id !== titleItem.XCloudTitleId && id !== titleItem.titleId,
+    );
+
+  // Persist the star/ignore lists to the xcloud cache so they survive restarts.
+  const persistLists = (nextStars: any[], nextIgnores: any[]) => {
+    const cacheData = getXcloudData();
+    if (cacheData) {
+      cacheData.starTitles = nextStars;
+      cacheData.ignoreTitles = nextIgnores;
+      saveXcloudData(cacheData);
+    }
+  };
+
   // Toggle the favorite (star) state. Stars are keyed by XCloudTitleId to
   // match the detail-screen toggle, and persisted to the xcloud cache so the
   // choice survives restarts.
@@ -298,23 +324,38 @@ function CloudScreen({navigation, route}) {
     if (!starId) {
       return;
     }
-    const newStarTitles = isTitleStarred(titleItem)
-      ? starTitles.filter(
-          (id: any) =>
-            id !== titleItem.XCloudTitleId && id !== titleItem.titleId,
-        )
-      : [...starTitles, starId];
+    const adding = !isTitleStarred(titleItem);
+    const newStarTitles = adding
+      ? [...withoutTitle(starTitles, titleItem), starId]
+      : withoutTitle(starTitles, titleItem);
+    // Favorite and ignore are mutually exclusive.
+    const newIgnoreTitles = adding
+      ? withoutTitle(ignoreTitles, titleItem)
+      : ignoreTitles;
 
-    dispatch({
-      type: 'SET_STARS',
-      payload: newStarTitles,
-    });
+    dispatch({type: 'SET_STARS', payload: newStarTitles});
+    dispatch({type: 'SET_IGNORES', payload: newIgnoreTitles});
+    persistLists(newStarTitles, newIgnoreTitles);
+  };
 
-    const cacheData = getXcloudData();
-    if (cacheData) {
-      cacheData.starTitles = newStarTitles;
-      saveXcloudData(cacheData);
+  // Toggle the ignore state. Ignored titles are hidden from the normal list
+  // views by default and can be reviewed under the "Ignored" view.
+  const handleToggleIgnore = (titleItem: any) => {
+    const ignoreId = titleItem?.XCloudTitleId || titleItem?.titleId;
+    if (!ignoreId) {
+      return;
     }
+    const adding = !isTitleIgnored(titleItem);
+    const newIgnoreTitles = adding
+      ? [...withoutTitle(ignoreTitles, titleItem), ignoreId]
+      : withoutTitle(ignoreTitles, titleItem);
+    const newStarTitles = adding
+      ? withoutTitle(starTitles, titleItem)
+      : starTitles;
+
+    dispatch({type: 'SET_IGNORES', payload: newIgnoreTitles});
+    dispatch({type: 'SET_STARS', payload: newStarTitles});
+    persistLists(newStarTitles, newIgnoreTitles);
   };
 
   // Long-press on a list card opens a small action sheet (favorite + store).
@@ -327,6 +368,13 @@ function CloudScreen({navigation, route}) {
   const handleActionToggleStar = () => {
     if (actionTitle) {
       handleToggleStar(actionTitle);
+    }
+    closeActions();
+  };
+
+  const handleActionToggleIgnore = () => {
+    if (actionTitle) {
+      handleToggleIgnore(actionTitle);
     }
     closeActions();
   };
@@ -652,6 +700,7 @@ function CloudScreen({navigation, route}) {
       return null;
     }
     const starred = isTitleStarred(actionTitle);
+    const ignored = isTitleIgnored(actionTitle);
     const canStore = !!getTitleProductId(actionTitle);
     return (
       <Portal>
@@ -677,6 +726,15 @@ function CloudScreen({navigation, route}) {
                 />
                 <Text style={styles.actionLabel}>
                   {starred ? t('Remove from favorites') : t('Add to favorites')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleActionToggleIgnore}
+                android_ripple={{color: 'rgba(150,150,150,0.2)'}}
+                style={styles.actionRow}>
+                <Icon source={ignored ? 'eye' : 'eye-off-outline'} size={22} />
+                <Text style={styles.actionLabel}>
+                  {ignored ? t('Unignore') : t('Ignore')}
                 </Text>
               </Pressable>
               {canStore && (
@@ -744,9 +802,26 @@ function CloudScreen({navigation, route}) {
       case '3':
         list = titles;
         break;
+      case '4':
+        // Ignored view: only ignored titles.
+        list = (titles as any[]).filter(
+          (item: any) =>
+            ignoreTitles.includes(item.XCloudTitleId) ||
+            ignoreTitles.includes(item.titleId),
+        );
+        break;
       default:
         list = [];
         break;
+    }
+
+    // Ignored titles are hidden from every other view by default.
+    if (viewKey !== '4' && ignoreTitles.length > 0) {
+      list = list.filter(
+        (item: any) =>
+          !ignoreTitles.includes(item.XCloudTitleId) &&
+          !ignoreTitles.includes(item.titleId),
+      );
     }
 
     // "Playable" is a filter now: keep only entitled titles.
@@ -818,6 +893,7 @@ function CloudScreen({navigation, route}) {
     newForView,
     titles,
     starTitles,
+    ignoreTitles,
     playableOnly,
     saleOnly,
     selectedGenre,
@@ -842,6 +918,7 @@ function CloudScreen({navigation, route}) {
     {value: '1', label: t('Stars')},
     {value: '2', label: t('Newest')},
     {value: '3', label: t('All')},
+    {value: '4', label: t('Ignored')},
   ];
   const currentViewLabel =
     viewOptions.find(v => v.value === `${current}`)?.label || t('All');
