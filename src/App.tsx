@@ -47,6 +47,7 @@ import NativePortraitStreamScreen from './pages/NativePortraitStream';
 import SettingsScreen from './pages/Settings';
 import SettingDetailScreen from './pages/SettingDetail';
 import TitleDetailScreen from './pages/TitleDetail';
+import DiscoveryScreen from './pages/Discovery';
 import GameMapScreen from './pages/GameMap';
 import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
@@ -133,6 +134,7 @@ const LoginBackgroundScreen = withPageBackground(LoginScreen);
 const SettingsBackgroundScreen = withPageBackground(SettingsScreen);
 const SettingDetailBackgroundScreen = withPageBackground(SettingDetailScreen);
 const TitleDetailBackgroundScreen = withPageBackground(TitleDetailScreen);
+const DiscoveryBackgroundScreen = withPageBackground(DiscoveryScreen);
 const GameMapBackgroundScreen = withPageBackground(GameMapScreen);
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
@@ -412,6 +414,11 @@ function App() {
                   name="Settings"
                   component={SettingsBackgroundScreen}
                   options={{title: t('Settings')}}
+                />
+                <RootStack.Screen
+                  name="Discovery"
+                  component={DiscoveryBackgroundScreen}
+                  options={{title: t('Discovery')}}
                 />
                 <RootStack.Screen
                   name="Login"
