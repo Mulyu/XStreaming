@@ -381,6 +381,17 @@ export default {
     Ignored: 'Ignored',
     Ignore: 'Ignore',
     Unignore: 'Unignore',
+    Discovery: 'Discovery',
+    Favorite: 'Favorite',
+    Hold: 'Hold',
+    DiscoveryRemaining: '{{count}} left',
+    DiscoveryDone: 'All sorted!',
+    DiscoveryEmpty: 'Nothing to discover',
+    DiscoveryEmptyHint:
+      'No unsorted games right now. New games will show up here as they arrive.',
+    DiscoveryReloadHint:
+      'You have sorted every game. Reload to run your favorites and held games through discovery again — ignored games stay excluded.',
+    DiscoveryReload: 'Reload',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',

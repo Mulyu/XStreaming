@@ -90,12 +90,20 @@ function CloudScreen({navigation, route}) {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <IconButton
-          icon="cog-outline"
-          size={24}
-          onPress={() => navigation.navigate('Settings')}
-          accessibilityLabel={t('Settings')}
-        />
+        <View style={styles.headerActions}>
+          <IconButton
+            icon="cards-outline"
+            size={24}
+            onPress={() => navigation.navigate('Discovery')}
+            accessibilityLabel={t('Discovery')}
+          />
+          <IconButton
+            icon="cog-outline"
+            size={24}
+            onPress={() => navigation.navigate('Settings')}
+            accessibilityLabel={t('Settings')}
+          />
+        </View>
       ),
     });
   }, [navigation, t]);
@@ -1345,6 +1353,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   actionSheet: {
     marginHorizontal: '8%',

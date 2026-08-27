@@ -340,6 +340,17 @@ export default {
     Ignored: '無視',
     Ignore: '無視する',
     Unignore: '無視を解除',
+    Discovery: 'ディスカバリー',
+    Favorite: 'お気に入り',
+    Hold: '保留',
+    DiscoveryRemaining: '残り{{count}}件',
+    DiscoveryDone: 'すべて振り分け完了！',
+    DiscoveryEmpty: 'ディスカバリーする候補がありません',
+    DiscoveryEmptyHint:
+      '未振り分けのゲームはありません。新しいゲームが追加されるとここに表示されます。',
+    DiscoveryReloadHint:
+      'すべてのゲームを振り分けました。リロードすると、お気に入りと保留のゲームをもう一度ディスカバリーできます（無視は除外）。',
+    DiscoveryReload: 'リロード',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',
