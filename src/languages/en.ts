@@ -384,7 +384,6 @@ export default {
     Discovery: 'Discovery',
     Favorite: 'Favorite',
     Hold: 'Hold',
-    DiscoveryTapDetail: 'Tap for details',
     DiscoveryRemaining: '{{count}} left',
     DiscoveryDone: 'All sorted!',
     DiscoveryEmpty: 'Nothing to discover',
@@ -393,6 +392,7 @@ export default {
     DiscoveryReloadHint:
       'You have sorted every game. Reload to run your favorites and held games through discovery again — ignored games stay excluded.',
     DiscoveryReload: 'Reload',
+    DiscoveryNoDetail: 'No description available for this game.',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',

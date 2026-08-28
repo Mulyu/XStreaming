@@ -7,6 +7,7 @@ import {
   PanResponder,
   Pressable,
   ScrollView,
+  ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
 import {Text, Icon} from 'react-native-paper';
@@ -21,8 +22,15 @@ import {
 } from '../store/discoveryStore';
 import {getSettings} from '../store/settingStore';
 import {getSystemRegion} from '../utils/locale';
-import {deriveMarketLanguage, RatingInfo} from '../utils/storePrice';
+import {
+  deriveMarketLanguage,
+  fetchTitleDetails,
+  RatingInfo,
+  TitleDetails,
+} from '../utils/storePrice';
 import {getFreshPriceCache} from '../store/priceStore';
+import {getTitleProductId} from '../store/shortcutStore';
+import games from '../mock/games.json';
 
 type Decision = 'favorite' | 'hold' | 'ignore';
 
@@ -66,14 +74,28 @@ function DiscoveryScreen() {
 
   const position = React.useRef(new Animated.ValueXY()).current;
 
+  // The catalog list only carries entitlement in `details`; the rich fields
+  // (description, screenshots, age rating, publisher, release date) are fetched
+  // per title, the same way the full detail screen does. Cache them by product
+  // id so re-opening a card doesn't refetch, and track which id is in flight.
+  const [detailsMap, setDetailsMap] = React.useState<
+    Record<string, TitleDetails | null>
+  >({});
+  const [loadingId, setLoadingId] = React.useState('');
+
+  const marketLang = React.useMemo(
+    () =>
+      deriveMarketLanguage(
+        getSettings().preferred_game_language,
+        getSystemRegion(),
+      ),
+    [],
+  );
+
   const ratingMap = React.useMemo<Record<string, RatingInfo>>(() => {
-    const {market} = deriveMarketLanguage(
-      getSettings().preferred_game_language,
-      getSystemRegion(),
-    );
-    const cache = getFreshPriceCache(market);
+    const cache = getFreshPriceCache(marketLang.market);
     return cache?.ratingMap || {};
-  }, []);
+  }, [marketLang]);
 
   // Build the queue: every catalog title not yet decided and not ignored.
   const buildQueue = React.useCallback(() => {
@@ -95,6 +117,33 @@ function DiscoveryScreen() {
     setQueue(buildQueue());
     setCounts({favorite: 0, hold: 0, ignore: 0});
   }, [buildQueue]);
+
+  // Fetch the top card's full detail the first time its sheet is opened.
+  const topCard = queue[0];
+  React.useEffect(() => {
+    if (!expanded || !topCard) {
+      return;
+    }
+    const pid = getTitleProductId(topCard);
+    // `undefined` = never fetched; `null` = fetched but empty/failed.
+    if (!pid || detailsMap[pid] !== undefined) {
+      return;
+    }
+    let cancelled = false;
+    setLoadingId(pid);
+    fetchTitleDetails(pid, marketLang.market, marketLang.language, {
+      isCancelled: () => cancelled,
+    }).then(({details, ok}) => {
+      if (cancelled) {
+        return;
+      }
+      setLoadingId(prev => (prev === pid ? '' : prev));
+      setDetailsMap(prev => ({...prev, [pid]: ok ? details : null}));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded, topCard, detailsMap, marketLang]);
 
   // Persist star/ignore lists to the xcloud cache (mirrors the Cloud screen so
   // the two stay in sync across restarts).
@@ -318,17 +367,32 @@ function DiscoveryScreen() {
   // the same fields as the full detail screen (description, screenshots, age
   // rating, publisher, release year, price) and scrolls independently.
   const renderDetailSheet = (item: any) => {
-    const details = item?.details || {};
-    const description = details.description || '';
-    const screenshots: string[] = Array.isArray(details.screenshots)
-      ? details.screenshots.filter((s: any) => typeof s === 'string')
-      : [];
-    const publisher = details.publisher || item?.PublisherName || '';
-    const developer = details.developer || '';
-    const year = details.releaseDate
-      ? String(new Date(details.releaseDate).getFullYear() || '')
-      : '';
+    const pid = getTitleProductId(item);
+    // Fetched rich detail (may be null if the fetch failed / hasn't run).
+    const fetched = pid ? detailsMap[pid] : null;
+    // A bundled short description as a fallback for the fetched full one.
+    const localGame: any = (item && (games as any)[item.XboxTitleId]) || null;
+
+    const description =
+      (fetched && fetched.description) || localGame?.short_description || '';
+    const screenshots: string[] =
+      fetched && Array.isArray(fetched.screenshots)
+        ? fetched.screenshots.filter((s: any) => typeof s === 'string')
+        : [];
+    const publisher =
+      (fetched && fetched.publisher) || item?.PublisherName || '';
+    const developer = (fetched && fetched.developer) || '';
+    const year =
+      fetched && fetched.releaseDate
+        ? String(new Date(fetched.releaseDate).getFullYear() || '')
+        : '';
     const meta = [publisher, year].filter(Boolean);
+    const ratingLevel = fetched?.ratingLevel || '';
+    const ratingSystem = fetched?.ratingSystem || '';
+
+    // Still loading, with nothing to show yet from cache/fallback.
+    const loading =
+      loadingId === pid && !description && screenshots.length === 0;
 
     return (
       <View style={styles.sheet}>
@@ -348,46 +412,59 @@ function DiscoveryScreen() {
                 {m}
               </Text>
             ))}
-            {!!details.ratingLevel && (
+            {!!ratingLevel && (
               <Text style={styles.ageTag}>
-                {details.ratingLevel}
-                {details.ratingSystem ? ` ${details.ratingSystem}` : ''}
+                {ratingLevel}
+                {ratingSystem ? ` ${ratingSystem}` : ''}
               </Text>
             )}
           </View>
           {renderRating(item)}
           {renderGenres(item)}
 
-          {!!description && (
+          {loading ? (
+            <View style={styles.sheetLoading}>
+              <ActivityIndicator color={FAV_COLOR} />
+              <Text style={styles.sheetLoadingText}>{t('Loading...')}</Text>
+            </View>
+          ) : (
             <>
-              <Text style={styles.sectionCap}>{t('Description')}</Text>
-              <Text style={styles.description}>{description}</Text>
-            </>
-          )}
+              {description ? (
+                <>
+                  <Text style={styles.sectionCap}>{t('Description')}</Text>
+                  <Text style={styles.description}>{description}</Text>
+                </>
+              ) : (
+                <Text style={styles.sheetLoadingText}>
+                  {t('DiscoveryNoDetail')}
+                </Text>
+              )}
 
-          {screenshots.length > 0 && (
-            <>
-              <Text style={styles.sectionCap}>{t('Screenshots')}</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.shotsRow}>
-                {screenshots.slice(0, 6).map((uri, idx) => (
-                  <Image
-                    key={uri || idx}
-                    source={{uri}}
-                    resizeMode="cover"
-                    style={styles.shot}
-                  />
-                ))}
-              </ScrollView>
-            </>
-          )}
+              {screenshots.length > 0 && (
+                <>
+                  <Text style={styles.sectionCap}>{t('Screenshots')}</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.shotsRow}>
+                    {screenshots.slice(0, 6).map((uri, idx) => (
+                      <Image
+                        key={uri || idx}
+                        source={{uri}}
+                        resizeMode="cover"
+                        style={styles.shot}
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              )}
 
-          {!!developer && (
-            <Text style={styles.devLine}>
-              {t('Developer')}: {developer}
-            </Text>
+              {!!developer && (
+                <Text style={styles.devLine}>
+                  {t('Developer')}: {developer}
+                </Text>
+              )}
+            </>
           )}
         </ScrollView>
       </View>
@@ -474,14 +551,6 @@ function DiscoveryScreen() {
                 onPress={() => setExpanded(e => !e)}>
                 {renderCardBody(top)}
               </Pressable>
-              {!expanded && (
-                <View style={styles.tapHint} pointerEvents="none">
-                  <Text style={styles.tapHintText}>
-                    {t('DiscoveryTapDetail')}
-                  </Text>
-                  <Icon source="chevron-up" size={14} color={FAV_COLOR} />
-                </View>
-              )}
               <Animated.View
                 style={[styles.ghost, styles.ghostFav, {opacity: favOpacity}]}>
                 <Text style={[styles.ghostText, {color: FAV_COLOR}]}>
@@ -589,26 +658,6 @@ const styles = StyleSheet.create({
   cardTap: {
     flex: 1,
   },
-  tapHint: {
-    position: 'absolute',
-    top: 12,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: 'rgba(8,18,12,0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(47,210,75,0.35)',
-  },
-  tapHintText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    color: '#B7C6BD',
-  },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -688,6 +737,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8A9A92',
     marginTop: 8,
+  },
+  sheetLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 18,
+  },
+  sheetLoadingText: {
+    fontSize: 13,
+    color: '#8A9A92',
+    marginTop: 4,
   },
   cardBehind: {
     transform: [{scale: 0.94}, {translateY: 14}],
