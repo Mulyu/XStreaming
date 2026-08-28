@@ -384,6 +384,7 @@ export default {
     Discovery: 'Discovery',
     Favorite: 'Favorite',
     Hold: 'Hold',
+    DiscoveryTapDetail: 'Tap for details',
     DiscoveryRemaining: '{{count}} left',
     DiscoveryDone: 'All sorted!',
     DiscoveryEmpty: 'Nothing to discover',

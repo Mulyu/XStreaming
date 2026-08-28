@@ -6,6 +6,7 @@ import {
   Animated,
   PanResponder,
   Pressable,
+  ScrollView,
   useWindowDimensions,
 } from 'react-native';
 import {Text, Icon} from 'react-native-paper';
@@ -56,6 +57,12 @@ function DiscoveryScreen() {
 
   const [queue, setQueue] = React.useState<any[]>([]);
   const [counts, setCounts] = React.useState({favorite: 0, hold: 0, ignore: 0});
+  // Whether the top card's detail sheet is open. While it's open the card
+  // stops responding to swipes (so the sheet can scroll freely) and judging is
+  // done with the buttons; it collapses again whenever the card advances.
+  const [expanded, setExpanded] = React.useState(false);
+  const expandedRef = React.useRef(expanded);
+  expandedRef.current = expanded;
 
   const position = React.useRef(new Animated.ValueXY()).current;
 
@@ -131,6 +138,7 @@ function DiscoveryScreen() {
 
       addDecidedTitle(id);
       setCounts(prev => ({...prev, [decision]: prev[decision] + 1}));
+      setExpanded(false);
       setQueue(prev => prev.slice(1));
     },
     [dispatch],
@@ -166,7 +174,7 @@ function DiscoveryScreen() {
     () =>
       PanResponder.create({
         onMoveShouldSetPanResponder: (_e, g) =>
-          Math.abs(g.dx) > 6 || Math.abs(g.dy) > 6,
+          !expandedRef.current && (Math.abs(g.dx) > 6 || Math.abs(g.dy) > 6),
         onPanResponderMove: (_e, g) => {
           position.setValue({x: g.dx, y: g.dy});
         },
@@ -306,6 +314,86 @@ function DiscoveryScreen() {
     </>
   );
 
+  // The detail sheet slides over the poster when the card is tapped. It reads
+  // the same fields as the full detail screen (description, screenshots, age
+  // rating, publisher, release year, price) and scrolls independently.
+  const renderDetailSheet = (item: any) => {
+    const details = item?.details || {};
+    const description = details.description || '';
+    const screenshots: string[] = Array.isArray(details.screenshots)
+      ? details.screenshots.filter((s: any) => typeof s === 'string')
+      : [];
+    const publisher = details.publisher || item?.PublisherName || '';
+    const developer = details.developer || '';
+    const year = details.releaseDate
+      ? String(new Date(details.releaseDate).getFullYear() || '')
+      : '';
+    const meta = [publisher, year].filter(Boolean);
+
+    return (
+      <View style={styles.sheet}>
+        <Pressable onPress={() => setExpanded(false)} style={styles.grabHit}>
+          <View style={styles.grab} />
+        </Pressable>
+        <ScrollView
+          style={styles.sheetScroll}
+          contentContainerStyle={styles.sheetContent}
+          showsVerticalScrollIndicator={false}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item?.ProductTitle}
+          </Text>
+          <View style={styles.metaLine}>
+            {meta.map((m: string) => (
+              <Text key={m} style={styles.metaText}>
+                {m}
+              </Text>
+            ))}
+            {!!details.ratingLevel && (
+              <Text style={styles.ageTag}>
+                {details.ratingLevel}
+                {details.ratingSystem ? ` ${details.ratingSystem}` : ''}
+              </Text>
+            )}
+          </View>
+          {renderRating(item)}
+          {renderGenres(item)}
+
+          {!!description && (
+            <>
+              <Text style={styles.sectionCap}>{t('Description')}</Text>
+              <Text style={styles.description}>{description}</Text>
+            </>
+          )}
+
+          {screenshots.length > 0 && (
+            <>
+              <Text style={styles.sectionCap}>{t('Screenshots')}</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.shotsRow}>
+                {screenshots.slice(0, 6).map((uri, idx) => (
+                  <Image
+                    key={uri || idx}
+                    source={{uri}}
+                    resizeMode="cover"
+                    style={styles.shot}
+                  />
+                ))}
+              </ScrollView>
+            </>
+          )}
+
+          {!!developer && (
+            <Text style={styles.devLine}>
+              {t('Developer')}: {developer}
+            </Text>
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
+
   const renderEmpty = () => {
     const sessionCount = counts.favorite + counts.hold + counts.ignore;
     const decidedAny = sessionCount > 0 || getDecidedTitles().length > 0;
@@ -381,7 +469,19 @@ function DiscoveryScreen() {
                   ],
                 },
               ]}>
-              {renderCardBody(top)}
+              <Pressable
+                style={styles.cardTap}
+                onPress={() => setExpanded(e => !e)}>
+                {renderCardBody(top)}
+              </Pressable>
+              {!expanded && (
+                <View style={styles.tapHint} pointerEvents="none">
+                  <Text style={styles.tapHintText}>
+                    {t('DiscoveryTapDetail')}
+                  </Text>
+                  <Icon source="chevron-up" size={14} color={FAV_COLOR} />
+                </View>
+              )}
               <Animated.View
                 style={[styles.ghost, styles.ghostFav, {opacity: favOpacity}]}>
                 <Text style={[styles.ghostText, {color: FAV_COLOR}]}>
@@ -408,6 +508,7 @@ function DiscoveryScreen() {
                   {t('Hold')}
                 </Text>
               </Animated.View>
+              {expanded && renderDetailSheet(top)}
             </Animated.View>
           </View>
 
@@ -484,6 +585,109 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(120,180,140,0.16)',
     overflow: 'hidden',
+  },
+  cardTap: {
+    flex: 1,
+  },
+  tapHint: {
+    position: 'absolute',
+    top: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: 'rgba(8,18,12,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(47,210,75,0.35)',
+  },
+  tapHintText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    color: '#B7C6BD',
+  },
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: '30%',
+    backgroundColor: '#16211C',
+    borderTopWidth: 1,
+    borderColor: 'rgba(120,180,140,0.16)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  grabHit: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  grab: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  sheetScroll: {
+    flex: 1,
+  },
+  sheetContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 90,
+    gap: 8,
+  },
+  metaLine: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+  },
+  metaText: {
+    fontSize: 12.5,
+    color: '#B7C6BD',
+    fontWeight: '600',
+  },
+  ageTag: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#E6ECE8',
+    borderWidth: 1,
+    borderColor: 'rgba(120,180,140,0.3)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  sectionCap: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: '#5C6C64',
+    marginTop: 8,
+  },
+  description: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#C7D3CC',
+  },
+  shotsRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  shot: {
+    width: 150,
+    height: 84,
+    borderRadius: 8,
+    backgroundColor: '#1C2A23',
+  },
+  devLine: {
+    fontSize: 12,
+    color: '#8A9A92',
+    marginTop: 8,
   },
   cardBehind: {
     transform: [{scale: 0.94}, {translateY: 14}],
