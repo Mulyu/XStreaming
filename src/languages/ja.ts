@@ -343,6 +343,7 @@ export default {
     Discovery: 'ディスカバリー',
     Favorite: 'お気に入り',
     Hold: '保留',
+    DiscoveryTapDetail: 'タップで詳細',
     DiscoveryRemaining: '残り{{count}}件',
     DiscoveryDone: 'すべて振り分け完了！',
     DiscoveryEmpty: 'ディスカバリーする候補がありません',
