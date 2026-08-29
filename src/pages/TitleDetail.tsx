@@ -97,6 +97,7 @@ function TitleDetail({navigation, route}) {
   const [titleItem, setTitleItem] = React.useState<any>(null);
   const [settings, setSettings] = React.useState<any>({});
   const [starTitles, setStarTitles] = React.useState<any>([]);
+  const [ignoreTitles, setIgnoreTitles] = React.useState<any>([]);
   const [shortcutLoadFailed, setShortcutLoadFailed] = React.useState(false);
   const [showUsbWarnModal, setShowUsbWarnShowModal] = React.useState(false);
   const [price, setPrice] = React.useState<PriceInfo | null>(null);
@@ -141,6 +142,7 @@ function TitleDetail({navigation, route}) {
 
     if (cacheData) {
       setStarTitles(cacheData.starTitles || []);
+      setIgnoreTitles(cacheData.ignoreTitles || []);
     }
 
     navigation.setOptions({
@@ -387,18 +389,66 @@ function TitleDetail({navigation, route}) {
       return;
     }
     const cacheData = getXcloudData();
+    const starId = titleItem.XCloudTitleId;
+    const adding = !starTitles.includes(starId);
 
-    const newStarTitles = starTitles.includes(titleItem.XCloudTitleId)
-      ? starTitles.filter(id => id !== titleItem.XCloudTitleId)
-      : [...starTitles, titleItem.XCloudTitleId];
+    const newStarTitles = adding
+      ? [...starTitles.filter(id => id !== starId), starId]
+      : starTitles.filter(id => id !== starId);
+    // Favorite and ignore are mutually exclusive.
+    const newIgnoreTitles = adding
+      ? ignoreTitles.filter(
+          id => id !== titleItem.XCloudTitleId && id !== titleItem.titleId,
+        )
+      : ignoreTitles;
+
     setStarTitles(newStarTitles);
-
-    dispatch({
-      type: 'SET_STARS',
-      payload: newStarTitles,
-    });
+    setIgnoreTitles(newIgnoreTitles);
+    dispatch({type: 'SET_STARS', payload: newStarTitles});
+    dispatch({type: 'SET_IGNORES', payload: newIgnoreTitles});
 
     if (cacheData) {
+      cacheData.starTitles = newStarTitles;
+      cacheData.ignoreTitles = newIgnoreTitles;
+      saveXcloudData(cacheData);
+    }
+  };
+
+  const handleToggleIgnore = () => {
+    if (!titleItem) {
+      return;
+    }
+    const cacheData = getXcloudData();
+    const ignoreId = titleItem.XCloudTitleId;
+    const adding = !(
+      ignoreTitles.includes(titleItem.XCloudTitleId) ||
+      ignoreTitles.includes(titleItem.titleId)
+    );
+
+    const newIgnoreTitles = adding
+      ? [
+          ...ignoreTitles.filter(
+            id => id !== titleItem.XCloudTitleId && id !== titleItem.titleId,
+          ),
+          ignoreId,
+        ]
+      : ignoreTitles.filter(
+          id => id !== titleItem.XCloudTitleId && id !== titleItem.titleId,
+        );
+    // Ignore and favorite are mutually exclusive.
+    const newStarTitles = adding
+      ? starTitles.filter(
+          id => id !== titleItem.XCloudTitleId && id !== titleItem.titleId,
+        )
+      : starTitles;
+
+    setIgnoreTitles(newIgnoreTitles);
+    setStarTitles(newStarTitles);
+    dispatch({type: 'SET_IGNORES', payload: newIgnoreTitles});
+    dispatch({type: 'SET_STARS', payload: newStarTitles});
+
+    if (cacheData) {
+      cacheData.ignoreTitles = newIgnoreTitles;
       cacheData.starTitles = newStarTitles;
       saveXcloudData(cacheData);
     }
@@ -454,6 +504,15 @@ function TitleDetail({navigation, route}) {
       starTitles.includes(titleItem.titleId))
   ) {
     isStar = true;
+  }
+
+  let isIgnored = false;
+  if (
+    titleItem &&
+    (ignoreTitles.includes(titleItem.XCloudTitleId) ||
+      ignoreTitles.includes(titleItem.titleId))
+  ) {
+    isIgnored = true;
   }
 
   const localGame = (titleItem && games[titleItem.XboxTitleId]) || undefined;
@@ -710,6 +769,14 @@ function TitleDetail({navigation, route}) {
                     accessibilityLabel={t('Stars')}
                     style={styles.quickBtn}
                     onPress={handleToggleStar}
+                  />
+                  <IconButton
+                    icon={isIgnored ? 'eye' : 'eye-off-outline'}
+                    size={22}
+                    iconColor={isIgnored ? '#E5533C' : undefined}
+                    accessibilityLabel={isIgnored ? t('Unignore') : t('Ignore')}
+                    style={styles.quickBtn}
+                    onPress={handleToggleIgnore}
                   />
                 </View>
 
