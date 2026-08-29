@@ -580,7 +580,7 @@ function DiscoveryScreen({navigation}: any) {
                     {opacity: holdOpacity},
                   ]}>
                   <Text style={[styles.ghostText, {color: HOLD_COLOR}]}>
-                    {t('Hold')}
+                    {t('DiscoveryHold')}
                   </Text>
                 </Animated.View>
                 {expanded && renderDetailSheet(top)}
@@ -609,7 +609,7 @@ function DiscoveryScreen({navigation}: any) {
                 style={[styles.actionButton, styles.actionHold]}>
                 <Icon source="pause" size={26} color={HOLD_COLOR} />
                 <Text style={[styles.actionLabel, {color: HOLD_COLOR}]}>
-                  {t('Hold')}
+                  {t('DiscoveryHold')}
                 </Text>
               </Pressable>
               <Pressable
