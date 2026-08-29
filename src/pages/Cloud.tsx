@@ -21,7 +21,6 @@ import {
   Button,
 } from 'react-native-paper';
 import Spinner from '../components/Spinner';
-import HubTabBar from '../components/HubTabBar';
 import {useSelector, useDispatch} from 'react-redux';
 import TitleItem from '../components/TitleItem';
 import XcloudApi from '../xCloud';
@@ -1324,8 +1323,6 @@ function CloudScreen({navigation, route}) {
           </View>
         </View>
       )}
-
-      <HubTabBar active="library" navigation={navigation} />
     </>
   );
 }
