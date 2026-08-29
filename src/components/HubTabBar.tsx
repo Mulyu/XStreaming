@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Pressable, StyleSheet} from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 
 const ACCENT = '#2FD24B';
@@ -20,6 +21,7 @@ const TAB_META: Record<string, {labelKey: string; icon: string}> = {
 function HubTabBar({state, navigation}: any) {
   const {t} = useTranslation();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const inactiveColor = theme.dark ? '#8A9A92' : '#6b7770';
 
   return (
@@ -31,6 +33,7 @@ function HubTabBar({state, navigation}: any) {
             theme.colors.elevation?.level2 || theme.colors.surface,
           borderTopColor:
             theme.colors.outlineVariant || 'rgba(120,180,140,0.2)',
+          paddingBottom: 9 + insets.bottom,
         },
       ]}>
       {state.routes.map((route: any, index: number) => {
