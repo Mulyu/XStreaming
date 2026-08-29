@@ -22,6 +22,7 @@ import {
 
 import {createStackNavigator} from '@react-navigation/stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
   createNavigationContainerRef,
   NavigationContainer,
@@ -127,17 +128,50 @@ const withPageBackground = (ScreenComponent: any) => {
   return WrappedScreen;
 };
 
+// Tab screens have no stack header, so they must reserve the status-bar area
+// themselves (the header used to do this). Same page background as above, plus
+// the top safe-area inset so content isn't drawn under the status bar.
+const withTabScreen = (ScreenComponent: any) => {
+  const WrappedScreen = (props: any) => {
+    const colorScheme = useColorScheme();
+    const insets = useSafeAreaInsets();
+    const settings = getSettings();
+    const isLight =
+      settings.theme === 'light' ||
+      (settings.theme === 'auto' && colorScheme === 'light');
+
+    return (
+      <View
+        style={[
+          styles.backgroundScreen,
+          isLight ? styles.backgroundScreenLight : styles.backgroundScreenDark,
+          {paddingTop: insets.top},
+        ]}>
+        <View style={styles.backgroundContent}>
+          <ScreenComponent {...props} />
+        </View>
+      </View>
+    );
+  };
+
+  WrappedScreen.displayName = `WithTabScreen(${
+    ScreenComponent.displayName || ScreenComponent.name || 'Screen'
+  })`;
+  return WrappedScreen;
+};
+
+const CloudTabScreen = withTabScreen(CloudScreen);
+const DiscoveryTabScreen = withTabScreen(DiscoveryScreen);
+const SettingsTabScreen = withTabScreen(SettingsScreen);
+
 const HomeBackgroundScreen = withPageBackground(HomeScreen);
-const CloudBackgroundScreen = withPageBackground(CloudScreen);
 const AchivementBackgroundScreen = withPageBackground(AchivementScreen);
 const AchivementDetailBackgroundScreen = withPageBackground(
   AchivementDetailScreen,
 );
 const LoginBackgroundScreen = withPageBackground(LoginScreen);
-const SettingsBackgroundScreen = withPageBackground(SettingsScreen);
 const SettingDetailBackgroundScreen = withPageBackground(SettingDetailScreen);
 const TitleDetailBackgroundScreen = withPageBackground(TitleDetailScreen);
-const DiscoveryBackgroundScreen = withPageBackground(DiscoveryScreen);
 const GameMapBackgroundScreen = withPageBackground(GameMapScreen);
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
@@ -162,9 +196,9 @@ function MainTabs() {
     <MainTab.Navigator
       screenOptions={{headerShown: false}}
       tabBar={props => <HubTabBar {...props} />}>
-      <MainTab.Screen name="Cloud" component={CloudBackgroundScreen} />
-      <MainTab.Screen name="Discovery" component={DiscoveryBackgroundScreen} />
-      <MainTab.Screen name="Settings" component={SettingsBackgroundScreen} />
+      <MainTab.Screen name="Cloud" component={CloudTabScreen} />
+      <MainTab.Screen name="Discovery" component={DiscoveryTabScreen} />
+      <MainTab.Screen name="Settings" component={SettingsTabScreen} />
     </MainTab.Navigator>
   );
 }
