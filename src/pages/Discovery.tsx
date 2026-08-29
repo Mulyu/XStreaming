@@ -30,6 +30,7 @@ import {
 } from '../utils/storePrice';
 import {getFreshPriceCache} from '../store/priceStore';
 import {getTitleProductId} from '../store/shortcutStore';
+import HubTabBar from '../components/HubTabBar';
 import games from '../mock/games.json';
 
 type Decision = 'favorite' | 'hold' | 'ignore';
@@ -50,7 +51,7 @@ const shuffle = (arr: any[]) => {
   return a;
 };
 
-function DiscoveryScreen() {
+function DiscoveryScreen({navigation}: any) {
   const {t} = useTranslation();
   const dispatch = useDispatch();
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
@@ -522,106 +523,122 @@ function DiscoveryScreen() {
   const next = queue[1];
 
   return (
-    <View style={styles.container}>
-      {top ? (
-        <>
-          <Text style={styles.remaining}>
-            {t('DiscoveryRemaining', {count: queue.length})}
-          </Text>
-          <View style={[styles.stack, {maxWidth: cardMaxWidth}]}>
-            {next && (
-              <View style={[styles.card, styles.cardBehind]}>
-                {renderCardBody(next)}
-              </View>
-            )}
-            <Animated.View
-              {...panResponder.panHandlers}
-              style={[
-                styles.card,
-                {
-                  transform: [
-                    {translateX: position.x},
-                    {translateY: position.y},
-                    {rotate},
-                  ],
-                },
-              ]}>
-              <Pressable
-                style={styles.cardTap}
-                onPress={() => setExpanded(e => !e)}>
-                {renderCardBody(top)}
-              </Pressable>
+    <View style={styles.screen}>
+      <View style={styles.container}>
+        {top ? (
+          <>
+            <Text style={styles.remaining}>
+              {t('DiscoveryRemaining', {count: queue.length})}
+            </Text>
+            <View style={[styles.stack, {maxWidth: cardMaxWidth}]}>
+              {next && (
+                <View style={[styles.card, styles.cardBehind]}>
+                  {renderCardBody(next)}
+                </View>
+              )}
               <Animated.View
-                style={[styles.ghost, styles.ghostFav, {opacity: favOpacity}]}>
-                <Text style={[styles.ghostText, {color: FAV_COLOR}]}>
-                  {t('Favorite')}
-                </Text>
-              </Animated.View>
-              <Animated.View
+                {...panResponder.panHandlers}
                 style={[
-                  styles.ghost,
-                  styles.ghostIgnore,
-                  {opacity: ignoreOpacity},
+                  styles.card,
+                  {
+                    transform: [
+                      {translateX: position.x},
+                      {translateY: position.y},
+                      {rotate},
+                    ],
+                  },
                 ]}>
-                <Text style={[styles.ghostText, {color: IGNORE_COLOR}]}>
+                <Pressable
+                  style={styles.cardTap}
+                  onPress={() => setExpanded(e => !e)}>
+                  {renderCardBody(top)}
+                </Pressable>
+                <Animated.View
+                  style={[
+                    styles.ghost,
+                    styles.ghostFav,
+                    {opacity: favOpacity},
+                  ]}>
+                  <Text style={[styles.ghostText, {color: FAV_COLOR}]}>
+                    {t('Favorite')}
+                  </Text>
+                </Animated.View>
+                <Animated.View
+                  style={[
+                    styles.ghost,
+                    styles.ghostIgnore,
+                    {opacity: ignoreOpacity},
+                  ]}>
+                  <Text style={[styles.ghostText, {color: IGNORE_COLOR}]}>
+                    {t('Ignore')}
+                  </Text>
+                </Animated.View>
+                <Animated.View
+                  style={[
+                    styles.ghost,
+                    styles.ghostHold,
+                    {opacity: holdOpacity},
+                  ]}>
+                  <Text style={[styles.ghostText, {color: HOLD_COLOR}]}>
+                    {t('Hold')}
+                  </Text>
+                </Animated.View>
+                {expanded && renderDetailSheet(top)}
+              </Animated.View>
+            </View>
+
+            <View style={[styles.actions, {maxWidth: cardMaxWidth}]}>
+              <Pressable
+                onPress={() => commitWithAnimation(top, 'ignore')}
+                android_ripple={{
+                  color: 'rgba(229,83,60,0.25)',
+                  borderless: true,
+                }}
+                style={[styles.actionButton, styles.actionIgnore]}>
+                <Icon source="close-thick" size={26} color={IGNORE_COLOR} />
+                <Text style={[styles.actionLabel, {color: IGNORE_COLOR}]}>
                   {t('Ignore')}
                 </Text>
-              </Animated.View>
-              <Animated.View
-                style={[
-                  styles.ghost,
-                  styles.ghostHold,
-                  {opacity: holdOpacity},
-                ]}>
-                <Text style={[styles.ghostText, {color: HOLD_COLOR}]}>
+              </Pressable>
+              <Pressable
+                onPress={() => commitWithAnimation(top, 'hold')}
+                android_ripple={{
+                  color: 'rgba(242,184,75,0.25)',
+                  borderless: true,
+                }}
+                style={[styles.actionButton, styles.actionHold]}>
+                <Icon source="pause" size={26} color={HOLD_COLOR} />
+                <Text style={[styles.actionLabel, {color: HOLD_COLOR}]}>
                   {t('Hold')}
                 </Text>
-              </Animated.View>
-              {expanded && renderDetailSheet(top)}
-            </Animated.View>
-          </View>
-
-          <View style={[styles.actions, {maxWidth: cardMaxWidth}]}>
-            <Pressable
-              onPress={() => commitWithAnimation(top, 'ignore')}
-              android_ripple={{color: 'rgba(229,83,60,0.25)', borderless: true}}
-              style={[styles.actionButton, styles.actionIgnore]}>
-              <Icon source="close-thick" size={26} color={IGNORE_COLOR} />
-              <Text style={[styles.actionLabel, {color: IGNORE_COLOR}]}>
-                {t('Ignore')}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => commitWithAnimation(top, 'hold')}
-              android_ripple={{
-                color: 'rgba(242,184,75,0.25)',
-                borderless: true,
-              }}
-              style={[styles.actionButton, styles.actionHold]}>
-              <Icon source="pause" size={26} color={HOLD_COLOR} />
-              <Text style={[styles.actionLabel, {color: HOLD_COLOR}]}>
-                {t('Hold')}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => commitWithAnimation(top, 'favorite')}
-              android_ripple={{color: 'rgba(47,210,75,0.25)', borderless: true}}
-              style={[styles.actionButton, styles.actionFav]}>
-              <Icon source="cards-heart" size={26} color={FAV_COLOR} />
-              <Text style={[styles.actionLabel, {color: FAV_COLOR}]}>
-                {t('Favorite')}
-              </Text>
-            </Pressable>
-          </View>
-        </>
-      ) : (
-        renderEmpty()
-      )}
+              </Pressable>
+              <Pressable
+                onPress={() => commitWithAnimation(top, 'favorite')}
+                android_ripple={{
+                  color: 'rgba(47,210,75,0.25)',
+                  borderless: true,
+                }}
+                style={[styles.actionButton, styles.actionFav]}>
+                <Icon source="cards-heart" size={26} color={FAV_COLOR} />
+                <Text style={[styles.actionLabel, {color: FAV_COLOR}]}>
+                  {t('Favorite')}
+                </Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          renderEmpty()
+        )}
+      </View>
+      <HubTabBar active="discovery" navigation={navigation} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     alignItems: 'center',

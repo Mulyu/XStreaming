@@ -352,6 +352,12 @@ export default {
       'すべてのゲームを振り分けました。リロードすると、お気に入りと保留のゲームをもう一度ディスカバリーできます（無視は除外）。',
     DiscoveryReload: 'リロード',
     DiscoveryNoDetail: 'このゲームの概要は取得できませんでした。',
+    Home: 'ホーム',
+    Library: 'ライブラリ',
+    DashboardContinue: '続きをプレイ',
+    DashboardResume: '前回のつづき',
+    DashboardDiscoverHint: 'ゲームを1枚ずつ お気に入り / 保留 / 無視 に振り分け。',
+    DashboardDiscoverStart: 'はじめる',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',
