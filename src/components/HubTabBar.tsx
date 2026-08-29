@@ -3,7 +3,7 @@ import {View, Pressable, StyleSheet} from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 
-type TabKey = 'home' | 'library' | 'discovery' | 'settings';
+type TabKey = 'library' | 'discovery' | 'settings';
 
 type Props = {
   active: TabKey;
@@ -25,7 +25,6 @@ const HubTabBar: React.FC<Props> = ({active, navigation}) => {
     label: string;
     icon: string;
   }[] = [
-    {key: 'home', route: 'Dashboard', label: t('Home'), icon: 'home'},
     {key: 'library', route: 'Cloud', label: t('Library'), icon: 'view-grid'},
     {
       key: 'discovery',
