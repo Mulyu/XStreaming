@@ -21,6 +21,7 @@ import {
 } from 'react-native-paper';
 
 import {createStackNavigator} from '@react-navigation/stack';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {
   createNavigationContainerRef,
   NavigationContainer,
@@ -71,8 +72,10 @@ import {SystemBars} from 'react-native-edge-to-edge';
 
 import './i18n';
 import SearchScreen from './pages/Search';
+import HubTabBar from './components/HubTabBar';
 
 const RootStack = createStackNavigator();
+const MainTab = createBottomTabNavigator();
 const navigationRef = createNavigationContainerRef<any>();
 
 const {UsbRumbleManager, FullScreenManager, UpdateManager, ShortcutManager} =
@@ -149,6 +152,22 @@ const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const GamepadTestBackgroundScreen = withPageBackground(GamepadTestScreen);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 const SearchBackgroundScreen = withPageBackground(SearchScreen);
+
+// The three hub screens live in a bottom-tab navigator so the tab bar persists
+// and only the content swaps between them (Library / Discovery / Settings).
+// Detail, stream and settings sub-screens are pushed on the root stack, above
+// the tabs, so they open full-screen without a tab bar.
+function MainTabs() {
+  return (
+    <MainTab.Navigator
+      screenOptions={{headerShown: false}}
+      tabBar={props => <HubTabBar {...props} />}>
+      <MainTab.Screen name="Cloud" component={CloudBackgroundScreen} />
+      <MainTab.Screen name="Discovery" component={DiscoveryBackgroundScreen} />
+      <MainTab.Screen name="Settings" component={SettingsBackgroundScreen} />
+    </MainTab.Navigator>
+  );
+}
 
 function App() {
   const {t} = useTranslation();
@@ -406,19 +425,9 @@ function App() {
                   }}
                 />
                 <RootStack.Screen
-                  name="Cloud"
-                  component={CloudBackgroundScreen}
-                  options={{title: t('Xcloud')}}
-                />
-                <RootStack.Screen
-                  name="Settings"
-                  component={SettingsBackgroundScreen}
-                  options={{title: t('Settings')}}
-                />
-                <RootStack.Screen
-                  name="Discovery"
-                  component={DiscoveryBackgroundScreen}
-                  options={{title: t('Discovery')}}
+                  name="Main"
+                  component={MainTabs}
+                  options={{headerShown: false}}
                 />
                 <RootStack.Screen
                   name="Login"

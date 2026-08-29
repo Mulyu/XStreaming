@@ -30,7 +30,6 @@ import {
 } from '../utils/storePrice';
 import {getFreshPriceCache} from '../store/priceStore';
 import {getTitleProductId} from '../store/shortcutStore';
-import HubTabBar from '../components/HubTabBar';
 import games from '../mock/games.json';
 
 type Decision = 'favorite' | 'hold' | 'ignore';
@@ -51,7 +50,7 @@ const shuffle = (arr: any[]) => {
   return a;
 };
 
-function DiscoveryScreen({navigation}: any) {
+function DiscoveryScreen() {
   const {t} = useTranslation();
   const dispatch = useDispatch();
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
@@ -630,7 +629,6 @@ function DiscoveryScreen({navigation}: any) {
           renderEmpty()
         )}
       </View>
-      <HubTabBar active="discovery" navigation={navigation} />
     </View>
   );
 }

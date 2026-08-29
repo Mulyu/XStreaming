@@ -117,9 +117,10 @@ function HomeScreen({navigation, route}) {
         setShowMsal(false);
         setLoading(false);
 
-        // Cloud (the library) is the app entry point now — replace so back
-        // exits the app instead of returning to this login gate.
-        navigation.replace('Cloud');
+        // The main tabs (Library / Discovery / Settings) are the app entry
+        // point now — replace so back exits the app instead of returning to
+        // this login gate.
+        navigation.replace('Main');
       };
 
       // Auth failed callback
@@ -356,7 +357,7 @@ function HomeScreen({navigation, route}) {
         <Button
           style={styles.mt10}
           mode="text"
-          onPress={() => navigation.navigate('Settings')}>
+          onPress={() => navigation.navigate('Main', {screen: 'Settings'})}>
           &nbsp;{t('Settings')}&nbsp;
         </Button>
       </View>
@@ -376,7 +377,7 @@ function HomeScreen({navigation, route}) {
         <Button
           style={styles.mt10}
           mode="text"
-          onPress={() => navigation.navigate('Settings')}>
+          onPress={() => navigation.navigate('Main', {screen: 'Settings'})}>
           &nbsp;{t('Settings')}&nbsp;
         </Button>
       </View>

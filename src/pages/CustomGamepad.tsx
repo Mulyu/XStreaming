@@ -188,7 +188,7 @@ function CustomGamepadScreen({navigation, route}) {
     saveSettings(title, buttons);
     setSwipeConfig(title, {sensitivity: swipeSens, invertY: swipeInvert});
     setJoystickMode(title, stickMode);
-    navigation.navigate('Settings');
+    navigation.navigate('Main', {screen: 'Settings'});
   };
 
   const handleReset = () => {
@@ -204,7 +204,7 @@ function CustomGamepadScreen({navigation, route}) {
       saveUserSettings(userSettings);
     }
     deleteSetting(title);
-    navigation.navigate('Settings');
+    navigation.navigate('Main', {screen: 'Settings'});
   };
 
   const renderWarningModal = () => {

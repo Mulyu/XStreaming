@@ -3,38 +3,23 @@ import {View, Pressable, StyleSheet} from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 
-type TabKey = 'library' | 'discovery' | 'settings';
-
-type Props = {
-  active: TabKey;
-  navigation: any;
-};
-
 const ACCENT = '#2FD24B';
 
-// Persistent bottom navigation for the four hub screens. Each tab navigates by
-// route name on the existing stack — navigating to a screen already in the
-// stack returns to it, so the stack stays shallow instead of growing per tap.
-const HubTabBar: React.FC<Props> = ({active, navigation}) => {
+// Meta for each tab route, keyed by the route name registered in the bottom-tab
+// navigator. Keeping this here (not in the navigator) lets the bar stay a pure
+// presentational component driven by the navigation state.
+const TAB_META: Record<string, {labelKey: string; icon: string}> = {
+  Cloud: {labelKey: 'Library', icon: 'view-grid'},
+  Discovery: {labelKey: 'Discovery', icon: 'cards'},
+  Settings: {labelKey: 'Settings', icon: 'cog'},
+};
+
+// Custom tabBar for the bottom-tab navigator. It renders once and persists
+// across tab switches — only the screen content above it changes — so switching
+// Library / Discovery / Settings no longer transitions the whole screen.
+function HubTabBar({state, navigation}: any) {
   const {t} = useTranslation();
   const theme = useTheme();
-
-  const tabs: {
-    key: TabKey;
-    route: string;
-    label: string;
-    icon: string;
-  }[] = [
-    {key: 'library', route: 'Cloud', label: t('Library'), icon: 'view-grid'},
-    {
-      key: 'discovery',
-      route: 'Discovery',
-      label: t('Discovery'),
-      icon: 'cards',
-    },
-    {key: 'settings', route: 'Settings', label: t('Settings'), icon: 'cog'},
-  ];
-
   const inactiveColor = theme.dark ? '#8A9A92' : '#6b7770';
 
   return (
@@ -48,32 +33,46 @@ const HubTabBar: React.FC<Props> = ({active, navigation}) => {
             theme.colors.outlineVariant || 'rgba(120,180,140,0.2)',
         },
       ]}>
-      {tabs.map(tab => {
-        const isActive = tab.key === active;
+      {state.routes.map((route: any, index: number) => {
+        const meta = TAB_META[route.name];
+        if (!meta) {
+          return null;
+        }
+        const isActive = state.index === index;
         const color = isActive ? ACCENT : inactiveColor;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isActive && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
         return (
           <Pressable
-            key={tab.key}
-            onPress={() => {
-              if (!isActive) {
-                navigation.navigate(tab.route);
-              }
-            }}
+            key={route.key}
+            onPress={onPress}
             android_ripple={{color: 'rgba(150,150,150,0.15)', borderless: true}}
             style={styles.tab}
-            accessibilityLabel={tab.label}>
+            accessibilityRole="button"
+            accessibilityState={isActive ? {selected: true} : {}}
+            accessibilityLabel={t(meta.labelKey)}>
             <Icon
-              source={isActive ? tab.icon : `${tab.icon}-outline`}
+              source={isActive ? meta.icon : `${meta.icon}-outline`}
               size={22}
               color={color}
             />
-            <Text style={[styles.label, {color}]}>{tab.label}</Text>
+            <Text style={[styles.label, {color}]}>{t(meta.labelKey)}</Text>
           </Pressable>
         );
       })}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   bar: {

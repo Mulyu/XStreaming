@@ -643,10 +643,16 @@ export function NativeStreamScreenBase({
     setLoading(false);
     Orientation.unlockAllOrientations();
     FullScreenManager.immersiveModeOff();
-    navigation.navigate({
-      name: getStreamDestination(),
-      params: {needRefresh: true},
-    });
+    // Cloud is now a tab inside the Main tab navigator; a cloud stream returns
+    // to the Library tab through Main, otherwise back to the Home gate.
+    if (getStreamDestination() === 'Cloud') {
+      navigation.navigate('Main', {
+        screen: 'Cloud',
+        params: {needRefresh: true},
+      });
+    } else {
+      navigation.navigate('Home', {needRefresh: true});
+    }
   }, [getStreamDestination, navigation]);
 
   const waitStopStream = React.useCallback(async (api: any) => {
@@ -1903,9 +1909,11 @@ export function NativeStreamScreenBase({
                 style: 'default',
                 onPress: () => {
                   Orientation.unlockAllOrientations();
-                  const dest =
-                    route.params?.streamType === 'cloud' ? 'Cloud' : 'Home';
-                  navigation.navigate(dest);
+                  if (route.params?.streamType === 'cloud') {
+                    navigation.navigate('Main', {screen: 'Cloud'});
+                  } else {
+                    navigation.navigate('Home');
+                  }
                 },
               },
             ]);
