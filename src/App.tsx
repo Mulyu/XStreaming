@@ -38,6 +38,7 @@ import customLightTheme from './theme/index';
 import customDarkTheme from './theme/index.dark';
 
 import HomeScreen from './pages/Home';
+import DashboardScreen from './pages/Dashboard';
 import CloudScreen from './pages/Cloud';
 import AchivementScreen from './pages/Achivements';
 import AchivementDetailScreen from './pages/ArchivementDetail';
@@ -125,6 +126,7 @@ const withPageBackground = (ScreenComponent: any) => {
 };
 
 const HomeBackgroundScreen = withPageBackground(HomeScreen);
+const DashboardBackgroundScreen = withPageBackground(DashboardScreen);
 const CloudBackgroundScreen = withPageBackground(CloudScreen);
 const AchivementBackgroundScreen = withPageBackground(AchivementScreen);
 const AchivementDetailBackgroundScreen = withPageBackground(
@@ -404,6 +406,11 @@ function App() {
                     headerShown: false,
                     cardStyle: styles.transparentCard,
                   }}
+                />
+                <RootStack.Screen
+                  name="Dashboard"
+                  component={DashboardBackgroundScreen}
+                  options={{headerShown: false}}
                 />
                 <RootStack.Screen
                   name="Cloud"

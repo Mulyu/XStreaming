@@ -21,6 +21,7 @@ import {
   Button,
 } from 'react-native-paper';
 import Spinner from '../components/Spinner';
+import HubTabBar from '../components/HubTabBar';
 import {useSelector, useDispatch} from 'react-redux';
 import TitleItem from '../components/TitleItem';
 import XcloudApi from '../xCloud';
@@ -85,28 +86,8 @@ function CloudScreen({navigation, route}) {
   const gameLanguage = getSettings().preferred_game_language;
   const deviceRegion = getSystemRegion();
 
-  // Cloud is the app entry point, so it carries the entry to Settings (the old
-  // Home hub that used to hold it was collapsed into a login gate).
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={styles.headerActions}>
-          <IconButton
-            icon="cards-outline"
-            size={24}
-            onPress={() => navigation.navigate('Discovery')}
-            accessibilityLabel={t('Discovery')}
-          />
-          <IconButton
-            icon="cog-outline"
-            size={24}
-            onPress={() => navigation.navigate('Settings')}
-            accessibilityLabel={t('Settings')}
-          />
-        </View>
-      ),
-    });
-  }, [navigation, t]);
+  // Discovery and Settings now live in the bottom navigation bar, so the Cloud
+  // header no longer carries those actions.
 
   // log.info('streamingTokens:', streamingTokens);
 
@@ -1343,6 +1324,8 @@ function CloudScreen({navigation, route}) {
           </View>
         </View>
       )}
+
+      <HubTabBar active="library" navigation={navigation} />
     </>
   );
 }
@@ -1353,10 +1336,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   actionSheet: {
     marginHorizontal: '8%',

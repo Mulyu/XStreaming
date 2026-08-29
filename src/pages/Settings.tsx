@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {Text, useTheme} from 'react-native-paper';
 import Spinner from '../components/Spinner';
+import HubTabBar from '../components/HubTabBar';
 import {getSettings, resetSettings} from '../store/settingStore';
 import SettingItem from '../components/SettingItem';
 import {useSelector} from 'react-redux';
@@ -131,7 +132,7 @@ function SettingsScreen({navigation}) {
     <View style={styles.container}>
       <Spinner loading={loading} text={t('Loading...')} />
 
-      <ScrollView>
+      <ScrollView style={styles.settingsScroll}>
         <View>
           <View style={styles.contentTitle}>
             <Text variant="titleLarge" style={titleTextStyle}>
@@ -379,12 +380,17 @@ function SettingsScreen({navigation}) {
           </Text>
         </View>
       </ScrollView>
+
+      <HubTabBar active="settings" navigation={navigation} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  settingsScroll: {
     flex: 1,
   },
   backdrop: {

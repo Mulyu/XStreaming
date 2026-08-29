@@ -393,6 +393,12 @@ export default {
       'You have sorted every game. Reload to run your favorites and held games through discovery again — ignored games stay excluded.',
     DiscoveryReload: 'Reload',
     DiscoveryNoDetail: 'No description available for this game.',
+    Home: 'Home',
+    Library: 'Library',
+    DashboardContinue: 'Continue playing',
+    DashboardResume: 'Pick up where you left off',
+    DashboardDiscoverHint: 'Sort games one by one into favorite / hold / ignore.',
+    DashboardDiscoverStart: 'Start',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',

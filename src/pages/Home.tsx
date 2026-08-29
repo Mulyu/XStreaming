@@ -117,9 +117,9 @@ function HomeScreen({navigation, route}) {
         setShowMsal(false);
         setLoading(false);
 
-        // Cloud is the app entry point now — replace so back exits the app
-        // instead of returning to this login gate.
-        navigation.replace('Cloud');
+        // The dashboard is the app entry point now — replace so back exits the
+        // app instead of returning to this login gate.
+        navigation.replace('Dashboard');
       };
 
       // Auth failed callback
