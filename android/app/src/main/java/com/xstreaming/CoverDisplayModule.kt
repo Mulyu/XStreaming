@@ -1,5 +1,9 @@
 package com.xstreaming
 
+import android.content.Context
+import android.view.MotionEvent
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
 import androidx.window.area.WindowAreaCapability
 import androidx.window.area.WindowAreaController
@@ -10,6 +14,7 @@ import androidx.window.core.ExperimentalWindowApi
 
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactRootView
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -133,7 +138,21 @@ class CoverDisplayModule(reactContext: ReactApplicationContext) :
                     val rootView = ReactRootView(session.context)
                     rootView.startReactApplication(manager, componentName, null)
                     coverRootView = rootView
-                    session.setContentView(rootView)
+                    // Host the cover React root inside a layout that intercepts
+                    // touches and forwards their coordinates to JS. The cover is
+                    // a second ReactRootView on the same ReactInstanceManager, so
+                    // it would otherwise share the app's single JS gesture
+                    // responder — touching the inner display would steal (and
+                    // terminate) the cover's responder, dropping any held cover
+                    // button. Intercepting natively keeps the two displays'
+                    // touch streams independent.
+                    val touchLayout = CoverTouchLayout(session.context)
+                    touchLayout.addView(
+                        rootView,
+                        FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT))
+                    session.setContentView(touchLayout)
                     emit("started")
                   }
 
@@ -168,6 +187,47 @@ class CoverDisplayModule(reactContext: ReactApplicationContext) :
   private fun cleanup() {
     coverRootView = null
     presenter = null
+  }
+
+  /**
+   * Wraps the cover React root and swallows all touches, dispatching their
+   * coordinates to JS as a "CoverTouch" event instead of letting React Native's
+   * (instance-global) gesture responder process them.
+   */
+  private inner class CoverTouchLayout(context: Context) : FrameLayout(context) {
+    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean = true
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+      emitTouches(event)
+      return true
+    }
+  }
+
+  private fun emitTouches(event: MotionEvent) {
+    val touches = Arguments.createArray()
+    val action = event.actionMasked
+    val allReleased =
+        action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL
+    if (!allReleased) {
+      val liftedIndex =
+          if (action == MotionEvent.ACTION_POINTER_UP) event.actionIndex else -1
+      for (i in 0 until event.pointerCount) {
+        if (i == liftedIndex) {
+          continue
+        }
+        val point = Arguments.createMap()
+        point.putDouble("x", event.getX(i).toDouble())
+        point.putDouble("y", event.getY(i).toDouble())
+        touches.pushMap(point)
+      }
+    }
+    val payload = Arguments.createMap()
+    payload.putArray("touches", touches)
+    try {
+      reactApplicationContext
+          .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+          .emit("CoverTouch", payload)
+    } catch (ignored: Throwable) {}
   }
 
   private fun emit(event: String) {

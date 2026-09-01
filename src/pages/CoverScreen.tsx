@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, DeviceEventEmitter} from 'react-native';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {getCoverLayout, CoverButton} from '../store/coverLayoutStore';
 
@@ -8,12 +8,15 @@ import {getCoverLayout, CoverButton} from '../store/coverLayoutStore';
 // button drives the same live stream input as the on-screen gamepad
 // (through coverGamepadBus).
 //
-// Touch handling: the container claims the whole surface as a single responder
-// and hit-tests every active touch against the buttons itself. React Native's
-// Pressable/responder grants to one view at a time, so two buttons — or a
-// button while the palm rests on the screen edge — couldn't be pressed at once.
-// Tracking the raw touch list lets several buttons register simultaneously and
-// ignores edge touches that don't land on a button.
+// Touch handling: touches are captured natively (CoverDisplayModule wraps this
+// root in a layout that swallows touch events) and delivered here as a
+// "CoverTouch" event carrying the raw active-pointer coordinates. This bypasses
+// React Native's gesture responder, which is global to the ReactInstanceManager
+// — since the cover is a second ReactRootView on that same instance, letting RN
+// process the touches would let the inner display steal (and terminate) the
+// cover's responder, dropping any held cover button while the inner display is
+// touched. Hit-testing the raw touch list also lets several buttons register at
+// once and ignores edge touches that don't land on a button.
 
 export default function CoverScreen() {
   const [active, setActive] = React.useState(coverGamepadBus.isActive());
@@ -25,6 +28,7 @@ export default function CoverScreen() {
   const pressedRef = React.useRef<Set<string>>(new Set());
   const layoutRef = React.useRef(layout);
   const surfaceRef = React.useRef(surface);
+  const updateRef = React.useRef<(touches: any[]) => void>(() => {});
   layoutRef.current = layout;
   surfaceRef.current = surface;
 
@@ -79,9 +83,20 @@ export default function CoverScreen() {
     pressedRef.current = now;
     setPressed([...now]);
   };
+  updateRef.current = updateFromTouches;
 
-  const onTouch = (e: any) => updateFromTouches(e.nativeEvent.touches || []);
-  const onRelease = () => updateFromTouches([]);
+  // Native cover-touch events (see CoverDisplayModule) carry the raw active
+  // pointers as {x, y}; map them to the hit-test's expected shape.
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('CoverTouch', (payload: any) => {
+      const touches = (payload?.touches || []).map((t: any) => ({
+        locationX: t.x,
+        locationY: t.y,
+      }));
+      updateRef.current(touches);
+    });
+    return () => sub.remove();
+  }, []);
 
   if (!active) {
     return (
@@ -98,15 +113,7 @@ export default function CoverScreen() {
       onLayout={e => {
         const {width, height} = e.nativeEvent.layout;
         setSurface({width, height});
-      }}
-      onStartShouldSetResponder={() => true}
-      onMoveShouldSetResponder={() => true}
-      onResponderGrant={onTouch}
-      onResponderStart={onTouch}
-      onResponderMove={onTouch}
-      onResponderEnd={onTouch}
-      onResponderRelease={onRelease}
-      onResponderTerminate={onRelease}>
+      }}>
       {layout.map(b => {
         if (!b.show || surface.width === 0) {
           return null;
