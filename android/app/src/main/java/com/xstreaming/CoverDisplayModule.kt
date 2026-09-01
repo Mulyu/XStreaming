@@ -198,12 +198,17 @@ class CoverDisplayModule(reactContext: ReactApplicationContext) :
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean = true
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-      emitTouches(event)
+      // MotionEvent coordinates are in pixels, but the cover React tree lays
+      // out (and JS hit-tests via onLayout) in density-independent pixels. Use
+      // this view's own density — the cover ReactRootView shares this context —
+      // so JS receives dp that line up with its measured surface.
+      emitTouches(event, resources.displayMetrics.density)
       return true
     }
   }
 
-  private fun emitTouches(event: MotionEvent) {
+  private fun emitTouches(event: MotionEvent, density: Float) {
+    val scale = if (density > 0f) density else 1f
     val touches = Arguments.createArray()
     val action = event.actionMasked
     val allReleased =
@@ -216,8 +221,8 @@ class CoverDisplayModule(reactContext: ReactApplicationContext) :
           continue
         }
         val point = Arguments.createMap()
-        point.putDouble("x", event.getX(i).toDouble())
-        point.putDouble("y", event.getY(i).toDouble())
+        point.putDouble("x", (event.getX(i) / scale).toDouble())
+        point.putDouble("y", (event.getY(i) / scale).toDouble())
         touches.pushMap(point)
       }
     }
