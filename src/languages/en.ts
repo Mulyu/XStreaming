@@ -397,6 +397,17 @@ export default {
     GfnTab: 'GeForce',
     GfnLoadFailed: 'Failed to load the GeForce NOW catalog.',
     Retry: 'Retry',
+    GfnSignIn: 'Sign in',
+    GfnSignOut: 'Sign out',
+    GfnSignedIn: 'Signed in',
+    GfnLoginTitle: 'Sign in to GeForce NOW',
+    GfnLoginInstruction:
+      'On another device, open the link below and enter this code to sign in with your NVIDIA account.',
+    GfnLoginOpen: 'Open sign-in page',
+    GfnLoginWaiting: 'Waiting for approval…',
+    GfnLoginFailed: 'Sign-in failed. Please try again.',
+    GfnLoginStartFailed: 'Could not start sign-in. Please try again.',
+    GfnLoginSuccess: 'Signed in to GeForce NOW.',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',

@@ -356,6 +356,17 @@ export default {
     GfnTab: 'GeForce',
     GfnLoadFailed: 'GeForce NOW のカタログを取得できませんでした。',
     Retry: '再試行',
+    GfnSignIn: 'サインイン',
+    GfnSignOut: 'サインアウト',
+    GfnSignedIn: 'サインイン済み',
+    GfnLoginTitle: 'GeForce NOW にサインイン',
+    GfnLoginInstruction:
+      '別のデバイスで下のリンクを開き、このコードを入力して NVIDIA アカウントでサインインしてください。',
+    GfnLoginOpen: 'サインインページを開く',
+    GfnLoginWaiting: '承認を待っています…',
+    GfnLoginFailed: 'サインインに失敗しました。もう一度お試しください。',
+    GfnLoginStartFailed: 'サインインを開始できませんでした。もう一度お試しください。',
+    GfnLoginSuccess: 'GeForce NOW にサインインしました。',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',
