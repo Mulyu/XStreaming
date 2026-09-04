@@ -353,6 +353,9 @@ export default {
     DiscoveryReload: 'リロード',
     DiscoveryNoDetail: 'このゲームの概要は取得できませんでした。',
     Library: 'ライブラリ',
+    GfnTab: 'GeForce',
+    GfnLoadFailed: 'GeForce NOW のカタログを取得できませんでした。',
+    Retry: '再試行',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',

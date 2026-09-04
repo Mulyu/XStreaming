@@ -50,6 +50,7 @@ import SettingsScreen from './pages/Settings';
 import SettingDetailScreen from './pages/SettingDetail';
 import TitleDetailScreen from './pages/TitleDetail';
 import DiscoveryScreen from './pages/Discovery';
+import GfnLibraryScreen from './pages/GfnLibrary';
 import GameMapScreen from './pages/GameMap';
 import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
@@ -161,6 +162,7 @@ const withTabScreen = (ScreenComponent: any) => {
 };
 
 const CloudTabScreen = withTabScreen(CloudScreen);
+const GfnTabScreen = withTabScreen(GfnLibraryScreen);
 const DiscoveryTabScreen = withTabScreen(DiscoveryScreen);
 const SettingsTabScreen = withTabScreen(SettingsScreen);
 
@@ -197,6 +199,7 @@ function MainTabs() {
       screenOptions={{headerShown: false}}
       tabBar={props => <HubTabBar {...props} />}>
       <MainTab.Screen name="Cloud" component={CloudTabScreen} />
+      <MainTab.Screen name="Gfn" component={GfnTabScreen} />
       <MainTab.Screen name="Discovery" component={DiscoveryTabScreen} />
       <MainTab.Screen name="Settings" component={SettingsTabScreen} />
     </MainTab.Navigator>

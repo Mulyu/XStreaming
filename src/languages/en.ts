@@ -394,6 +394,9 @@ export default {
     DiscoveryReload: 'Reload',
     DiscoveryNoDetail: 'No description available for this game.',
     Library: 'Library',
+    GfnTab: 'GeForce',
+    GfnLoadFailed: 'Failed to load the GeForce NOW catalog.',
+    Retry: 'Retry',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',
