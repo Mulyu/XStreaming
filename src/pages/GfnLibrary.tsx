@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import {Text, Icon, ActivityIndicator, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
+import {useNavigation} from '@react-navigation/native';
 import {
   GfnGame,
   fetchGfnGames,
@@ -29,12 +30,13 @@ import {
 
 const ACCENT = '#76B900'; // NVIDIA green
 
-// GeForce NOW catalog — a separate library from xCloud. For now it lists the
-// public supported-games list (no NVIDIA login required); streaming/launch will
-// come later once GFN auth + WebRTC are wired up.
+// GeForce NOW catalog — a separate library from xCloud. Lists the public
+// supported-games list; tapping a card (once signed in) launches the title via
+// CloudMatch + WebRTC on the GfnStream screen.
 function GfnLibraryScreen() {
   const {t} = useTranslation();
   const theme = useTheme();
+  const navigation = useNavigation<any>();
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const [games, setGames] = React.useState<GfnGame[]>(
     () => getCachedGfnGames() || [],
@@ -90,6 +92,18 @@ function GfnLibraryScreen() {
     setSignedIn(false);
   }, []);
 
+  const launchGame = React.useCallback(
+    (game: GfnGame) => {
+      if (!isSignedIn()) {
+        startLogin();
+        return;
+      }
+      // The public catalog id is the numeric CloudMatch app id.
+      navigation.navigate('GfnStream', {appId: game.id, title: game.title});
+    },
+    [navigation, startLogin],
+  );
+
   const load = React.useCallback((force = false) => {
     if (!force) {
       const fresh = getFreshGfnGames();
@@ -126,7 +140,10 @@ function GfnLibraryScreen() {
 
   const renderCard = ({item}: {item: GfnGame}) => (
     <View style={[styles.cell, {width: `${100 / numColumns}%`}]}>
-      <View style={styles.card}>
+      <Pressable
+        style={styles.card}
+        onPress={() => launchGame(item)}
+        android_ripple={{color: 'rgba(118,185,0,0.15)'}}>
         <View style={styles.thumbWrap}>
           {item.imageUrl ? (
             <Image
@@ -148,7 +165,7 @@ function GfnLibraryScreen() {
         <Text style={styles.cardTitle} numberOfLines={1}>
           {item.title}
         </Text>
-      </View>
+      </Pressable>
     </View>
   );
 
