@@ -6,25 +6,37 @@ import {
   Image,
   TextInput,
   Platform,
+  Pressable,
+  Modal,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import {Text, Icon, ActivityIndicator, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
+import {useNavigation} from '@react-navigation/native';
 import {
   GfnGame,
   fetchGfnGames,
   getFreshGfnGames,
   getCachedGfnGames,
 } from '../gfn/publicGames';
+import {
+  GfnDeviceChallenge,
+  requestDeviceAuthorization,
+  pollForTokens,
+  isSignedIn,
+  clearStoredTokens,
+} from '../gfn/auth';
 
 const ACCENT = '#76B900'; // NVIDIA green
 
-// GeForce NOW catalog — a separate library from xCloud. For now it lists the
-// public supported-games list (no NVIDIA login required); streaming/launch will
-// come later once GFN auth + WebRTC are wired up.
+// GeForce NOW catalog — a separate library from xCloud. Lists the public
+// supported-games list; tapping a card (once signed in) launches the title via
+// CloudMatch + WebRTC on the GfnStream screen.
 function GfnLibraryScreen() {
   const {t} = useTranslation();
   const theme = useTheme();
+  const navigation = useNavigation<any>();
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const [games, setGames] = React.useState<GfnGame[]>(
     () => getCachedGfnGames() || [],
@@ -32,6 +44,65 @@ function GfnLibraryScreen() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(false);
   const [keyword, setKeyword] = React.useState('');
+
+  const [signedIn, setSignedIn] = React.useState(() => isSignedIn());
+  const [loginVisible, setLoginVisible] = React.useState(false);
+  const [challenge, setChallenge] = React.useState<GfnDeviceChallenge | null>(
+    null,
+  );
+  // 'starting' while requesting the code, 'waiting' while polling, 'failed' on error.
+  const [loginStatus, setLoginStatus] = React.useState<
+    'starting' | 'waiting' | 'failed'
+  >('starting');
+  const cancelledRef = React.useRef(false);
+
+  const startLogin = React.useCallback(async () => {
+    cancelledRef.current = false;
+    setChallenge(null);
+    setLoginStatus('starting');
+    setLoginVisible(true);
+    try {
+      const ch = await requestDeviceAuthorization();
+      if (cancelledRef.current) {
+        return;
+      }
+      setChallenge(ch);
+      setLoginStatus('waiting');
+      await pollForTokens(ch, {shouldCancel: () => cancelledRef.current});
+      if (cancelledRef.current) {
+        return;
+      }
+      setSignedIn(true);
+      setLoginVisible(false);
+    } catch (e: any) {
+      if (cancelledRef.current || e?.message === 'cancelled') {
+        return;
+      }
+      setLoginStatus('failed');
+    }
+  }, []);
+
+  const cancelLogin = React.useCallback(() => {
+    cancelledRef.current = true;
+    setLoginVisible(false);
+  }, []);
+
+  const signOut = React.useCallback(() => {
+    clearStoredTokens();
+    setSignedIn(false);
+  }, []);
+
+  const launchGame = React.useCallback(
+    (game: GfnGame) => {
+      if (!isSignedIn()) {
+        startLogin();
+        return;
+      }
+      // The public catalog id is the numeric CloudMatch app id.
+      navigation.navigate('GfnStream', {appId: game.id, title: game.title});
+    },
+    [navigation, startLogin],
+  );
 
   const load = React.useCallback((force = false) => {
     if (!force) {
@@ -69,7 +140,10 @@ function GfnLibraryScreen() {
 
   const renderCard = ({item}: {item: GfnGame}) => (
     <View style={[styles.cell, {width: `${100 / numColumns}%`}]}>
-      <View style={styles.card}>
+      <Pressable
+        style={styles.card}
+        onPress={() => launchGame(item)}
+        android_ripple={{color: 'rgba(118,185,0,0.15)'}}>
         <View style={styles.thumbWrap}>
           {item.imageUrl ? (
             <Image
@@ -91,7 +165,7 @@ function GfnLibraryScreen() {
         <Text style={styles.cardTitle} numberOfLines={1}>
           {item.title}
         </Text>
-      </View>
+      </Pressable>
     </View>
   );
 
@@ -105,6 +179,24 @@ function GfnLibraryScreen() {
             <Text style={styles.count}>
               {filtered.length}/{games.length}
             </Text>
+          )}
+          <View style={styles.headerSpacer} />
+          {signedIn ? (
+            <Pressable
+              onPress={signOut}
+              style={styles.authChip}
+              android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
+              <Icon source="account-check" size={15} color={ACCENT} />
+              <Text style={styles.authChipText}>{t('GfnSignOut')}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={startLogin}
+              style={[styles.authChip, styles.authChipPrimary]}
+              android_ripple={{color: 'rgba(0,0,0,0.15)'}}>
+              <Icon source="login-variant" size={15} color="#0B0F0C" />
+              <Text style={styles.authChipTextPrimary}>{t('GfnSignIn')}</Text>
+            </Pressable>
           )}
         </View>
         <View style={styles.searchBox}>
@@ -145,6 +237,69 @@ function GfnLibraryScreen() {
           removeClippedSubviews
         />
       )}
+
+      <Modal
+        visible={loginVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelLogin}>
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[
+              styles.modalCard,
+              {backgroundColor: theme.colors.elevation?.level3 || '#1b201d'},
+            ]}>
+            <View style={styles.modalHeader}>
+              <Icon source="gamepad-variant" size={20} color={ACCENT} />
+              <Text style={styles.modalTitle}>{t('GfnLoginTitle')}</Text>
+            </View>
+
+            {loginStatus === 'starting' ? (
+              <View style={styles.modalCentre}>
+                <ActivityIndicator color={ACCENT} />
+              </View>
+            ) : loginStatus === 'failed' ? (
+              <View style={styles.modalCentre}>
+                <Icon source="alert-circle-outline" size={34} color="#E06666" />
+                <Text style={styles.modalMsg}>{t('GfnLoginFailed')}</Text>
+                <Pressable
+                  onPress={startLogin}
+                  style={[styles.modalBtn, styles.modalBtnPrimary]}>
+                  <Text style={styles.modalBtnTextPrimary}>{t('Retry')}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.modalInstruction}>
+                  {t('GfnLoginInstruction')}
+                </Text>
+                <View style={styles.codeBox}>
+                  <Text style={styles.codeText}>{challenge?.userCode}</Text>
+                </View>
+                <Pressable
+                  onPress={() =>
+                    challenge &&
+                    Linking.openURL(challenge.verificationUriComplete)
+                  }
+                  style={[styles.modalBtn, styles.modalBtnPrimary]}>
+                  <Icon source="open-in-new" size={16} color="#0B0F0C" />
+                  <Text style={styles.modalBtnTextPrimary}>
+                    {t('GfnLoginOpen')}
+                  </Text>
+                </Pressable>
+                <View style={styles.waitingRow}>
+                  <ActivityIndicator size={14} color="#8A9A92" />
+                  <Text style={styles.waitingText}>{t('GfnLoginWaiting')}</Text>
+                </View>
+              </>
+            )}
+
+            <Pressable onPress={cancelLogin} style={styles.modalBtn}>
+              <Text style={styles.modalBtnText}>{t('Cancel')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -155,11 +310,28 @@ const styles = StyleSheet.create({
   brandRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
   brand: {fontSize: 18, fontWeight: '800'},
   count: {
-    marginLeft: 'auto',
     fontSize: 12,
     fontWeight: '700',
     color: '#8A9A92',
   },
+  headerSpacer: {flex: 1},
+  authChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(118,185,0,0.5)',
+    backgroundColor: 'rgba(118,185,0,0.12)',
+  },
+  authChipPrimary: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  authChipText: {color: ACCENT, fontSize: 12, fontWeight: '800'},
+  authChipTextPrimary: {color: '#0B0F0C', fontSize: 12, fontWeight: '800'},
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,6 +386,62 @@ const styles = StyleSheet.create({
   },
   storeBadgeText: {color: ACCENT, fontSize: 10, fontWeight: '800'},
   cardTitle: {fontSize: 12, fontWeight: '600'},
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 16,
+    padding: 20,
+    gap: 14,
+  },
+  modalHeader: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  modalTitle: {fontSize: 16, fontWeight: '800'},
+  modalCentre: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  modalMsg: {color: '#B7C6BD', fontSize: 14, textAlign: 'center'},
+  modalInstruction: {color: '#B7C6BD', fontSize: 13, lineHeight: 19},
+  codeBox: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(118,185,0,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(118,185,0,0.4)',
+  },
+  codeText: {
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: 6,
+    color: '#E6ECE8',
+  },
+  modalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 46,
+    borderRadius: 12,
+  },
+  modalBtnPrimary: {backgroundColor: ACCENT},
+  modalBtnText: {color: '#8A9A92', fontSize: 14, fontWeight: '700'},
+  modalBtnTextPrimary: {color: '#0B0F0C', fontSize: 14, fontWeight: '800'},
+  waitingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  waitingText: {color: '#8A9A92', fontSize: 13},
 });
 
 export default GfnLibraryScreen;

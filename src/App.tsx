@@ -46,6 +46,7 @@ import AchivementDetailScreen from './pages/ArchivementDetail';
 import LoginScreen from './pages/Login';
 import NativeStreamScreen from './pages/NativeStream';
 import NativePortraitStreamScreen from './pages/NativePortraitStream';
+import GfnStreamScreen from './pages/GfnStream';
 import SettingsScreen from './pages/Settings';
 import SettingDetailScreen from './pages/SettingDetail';
 import TitleDetailScreen from './pages/TitleDetail';
@@ -479,6 +480,11 @@ function App() {
                 <RootStack.Screen
                   name="NativePortraitStream"
                   component={NativePortraitStreamScreen}
+                  options={{headerShown: false}}
+                />
+                <RootStack.Screen
+                  name="GfnStream"
+                  component={GfnStreamScreen}
                   options={{headerShown: false}}
                 />
                 <RootStack.Screen
