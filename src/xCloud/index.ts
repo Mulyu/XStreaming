@@ -942,6 +942,48 @@ export default class XcloudApi {
     });
   }
 
+  // Fetch original release dates from the Microsoft display catalog. Returns a
+  // map of productId (bigId) -> ISO date string. The Game Pass catalog
+  // (RemoteLowJade0) carries no dates, so we enrich from displaycatalog, which
+  // exposes MarketProperties[].OriginalReleaseDate. Batched (bigIds is capped),
+  // best-effort: unknown/failed products are simply omitted.
+  getReleaseDates(productIds: string[]): Promise<Record<string, string>> {
+    const unique = Array.from(new Set(productIds.filter(Boolean)));
+    const chunks: string[][] = [];
+    for (let i = 0; i < unique.length; i += 40) {
+      chunks.push(unique.slice(i, i + 40));
+    }
+    return new Promise(resolve => {
+      const result: Record<string, string> = {};
+      Promise.all(
+        chunks.map(chunk =>
+          axios
+            .get('https://displaycatalog.mp.microsoft.com/v7.0/products', {
+              params: {
+                bigIds: chunk.join(','),
+                market: 'US',
+                languages: 'en-US',
+                fieldsTemplate: 'details',
+              },
+              headers: {'MS-CV': '0'},
+              timeout: 30 * 1000,
+            })
+            .then(res => {
+              const products = res.data?.Products || [];
+              products.forEach((p: any) => {
+                const id = p.ProductId;
+                const date = p.MarketProperties?.[0]?.OriginalReleaseDate;
+                if (id && date) {
+                  result[id] = date;
+                }
+              });
+            })
+            .catch(() => {}),
+        ),
+      ).then(() => resolve(result));
+    });
+  }
+
   // Get recently play games of user
   getRecentTitles(): Promise<any[]> {
     return new Promise<any[]>(resolve => {
