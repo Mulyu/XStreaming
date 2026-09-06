@@ -14,8 +14,6 @@ import BackgroundTimer from 'react-native-background-timer';
 import {useTranslation} from 'react-i18next';
 import AnalogStick from '../components/AnalogStick';
 import {getValidGfnJwt} from '../gfn/auth';
-
-const {StreamKeepAliveManager} = NativeModules;
 import {launchGfnSession, stopGfnSession, GfnSession} from '../gfn/session';
 import {GfnWebRtcClient, GfnConnectionState} from '../gfn/webrtcClient';
 import {
@@ -37,6 +35,7 @@ import {
   GAMEPAD_DPAD_RIGHT,
 } from '../gfn/inputEncoding';
 
+const {StreamKeepAliveManager} = NativeModules;
 const ACCENT = '#76B900';
 
 // GeForce NOW streaming screen: launches a CloudMatch session for the given app
@@ -58,25 +57,32 @@ function GfnStreamScreen({route, navigation}: any) {
   const cancelledRef = React.useRef(false);
   const appStateRef = React.useRef(AppState.currentState);
   const keepAliveRef = React.useRef(false);
+  const keepAliveTextRef = React.useRef<string>('');
 
-  // Keep the process alive while queuing so polling survives backgrounding.
-  // Started while the app is foreground (Android forbids starting a foreground
-  // service from the background); safe to call repeatedly.
-  const startKeepAlive = React.useCallback(() => {
-    if (keepAliveRef.current) {
-      return;
-    }
-    keepAliveRef.current = true;
-    StreamKeepAliveManager?.start?.(
-      title,
-      t('GfnQueueKeepAlive'),
-      t('Disconnect'),
-      0,
-    );
-  }, [title, t]);
+  // Keep the process alive while queuing so polling survives backgrounding, and
+  // reflect the live queue position in the ongoing notification. The service is
+  // started while the app is foreground (Android forbids starting a foreground
+  // service from the background); later text changes update the notification in
+  // place (safe from the background).
+  const showKeepAlive = React.useCallback(
+    (text: string) => {
+      if (keepAliveTextRef.current === text && keepAliveRef.current) {
+        return;
+      }
+      keepAliveTextRef.current = text;
+      if (!keepAliveRef.current) {
+        keepAliveRef.current = true;
+        StreamKeepAliveManager?.start?.(title, text, t('Disconnect'), 0);
+      } else {
+        StreamKeepAliveManager?.update?.(title, text, t('Disconnect'));
+      }
+    },
+    [title, t],
+  );
 
   const stopKeepAlive = React.useCallback(() => {
     StreamKeepAliveManager?.cancelReady?.();
+    keepAliveTextRef.current = '';
     if (keepAliveRef.current) {
       keepAliveRef.current = false;
       StreamKeepAliveManager?.stop?.();
@@ -188,13 +194,18 @@ function GfnStreamScreen({route, navigation}: any) {
             }
             if (p.status === 1) {
               // Entered setup/queue: keep the process alive so the wait
-              // survives backgrounding (started while still foreground).
-              startKeepAlive();
-              if ((p.queuePosition ?? 0) > 1) {
-                setStatusText(t('GfnLaunchQueued', {n: p.queuePosition}));
-              } else {
-                setStatusText(t('GfnLaunchStarting'));
-              }
+              // survives backgrounding, and show the live position in the
+              // notification (updates as the queue advances).
+              const n = p.queuePosition ?? 0;
+              const queued = n > 1;
+              showKeepAlive(
+                queued
+                  ? t('GfnQueueNotifyPosition', {n})
+                  : t('GfnQueueKeepAlive'),
+              );
+              setStatusText(
+                queued ? t('GfnLaunchQueued', {n}) : t('GfnLaunchStarting'),
+              );
             }
           },
         });

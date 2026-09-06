@@ -147,53 +147,10 @@ public class StreamKeepAliveService extends Service {
             disconnectLabel = "Disconnect";
         }
 
-        createChannel();
+        createChannel(this);
 
-        Intent launch = new Intent(this, MainActivity.class);
-        launch.setFlags(
-                Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            piFlags |= PendingIntent.FLAG_IMMUTABLE;
-        }
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, launch, piFlags);
-
-        Intent disconnectIntent = new Intent(this, StreamKeepAliveService.class);
-        disconnectIntent.setAction(ACTION_DISCONNECT);
-        PendingIntent disconnectPending =
-                PendingIntent.getService(this, 1, disconnectIntent, piFlags);
-
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(this, CHANNEL_ID);
-        } else {
-            builder = new Notification.Builder(this);
-        }
-        builder.setContentTitle(title)
-                .setContentText(text)
-                .setSmallIcon(getApplicationInfo().icon)
-                .setContentIntent(contentIntent)
-                .setOngoing(true)
-                .addAction(
-                        android.R.drawable.ic_menu_close_clear_cancel,
-                        disconnectLabel,
-                        disconnectPending);
-
-        // When anti-idle is keeping the session awake with a max duration, show
-        // a live count-down in the notification so the user can see how much
-        // longer the session will be kept alive before it is allowed to idle
-        // out. The chronometer updates natively (no JS wake-ups needed).
-        if (deadlineEpochMs > System.currentTimeMillis()
-                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            builder.setWhen(deadlineEpochMs)
-                    .setShowWhen(true)
-                    .setUsesChronometer(true)
-                    .setChronometerCountDown(true);
-        } else {
-            builder.setShowWhen(false);
-        }
-
-        Notification notification = builder.build();
+        Notification notification =
+                buildOngoingNotification(this, title, text, disconnectLabel, deadlineEpochMs);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -242,10 +199,10 @@ public class StreamKeepAliveService extends Service {
         }
     }
 
-    private void createChannel() {
+    private static void createChannel(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager nm =
-                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null && nm.getNotificationChannel(CHANNEL_ID) == null) {
                 NotificationChannel channel = new NotificationChannel(
                         CHANNEL_ID,
@@ -255,6 +212,81 @@ public class StreamKeepAliveService extends Service {
                 nm.createNotificationChannel(channel);
             }
         }
+    }
+
+    // Build the ongoing keep-alive notification (tap to return, Disconnect
+    // action, optional anti-idle count-down). Shared by the initial
+    // startForeground and later text updates (e.g. live queue position).
+    private static Notification buildOngoingNotification(
+            Context context,
+            String title,
+            String text,
+            String disconnectLabel,
+            long deadlineEpochMs) {
+        Intent launch = new Intent(context, MainActivity.class);
+        launch.setFlags(
+                Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            piFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent contentIntent =
+                PendingIntent.getActivity(context, 0, launch, piFlags);
+
+        Intent disconnectIntent = new Intent(context, StreamKeepAliveService.class);
+        disconnectIntent.setAction(ACTION_DISCONNECT);
+        PendingIntent disconnectPending =
+                PendingIntent.getService(context, 1, disconnectIntent, piFlags);
+
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context, CHANNEL_ID);
+        } else {
+            builder = new Notification.Builder(context);
+        }
+        builder.setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(context.getApplicationInfo().icon)
+                .setContentIntent(contentIntent)
+                .setOngoing(true)
+                .addAction(
+                        android.R.drawable.ic_menu_close_clear_cancel,
+                        disconnectLabel != null ? disconnectLabel : "Disconnect",
+                        disconnectPending);
+
+        if (deadlineEpochMs > System.currentTimeMillis()
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            builder.setWhen(deadlineEpochMs)
+                    .setShowWhen(true)
+                    .setUsesChronometer(true)
+                    .setChronometerCountDown(true);
+        } else {
+            builder.setShowWhen(false);
+        }
+        return builder.build();
+    }
+
+    /**
+     * Update the ongoing keep-alive notification's text in place (e.g. the live
+     * GeForce NOW queue position). Safe to call from the background because it
+     * re-posts the existing notification id rather than (re)starting a service.
+     */
+    public static void updateNotification(
+            Context context, String title, String text, String disconnectLabel) {
+        NotificationManager nm =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return;
+        }
+        createChannel(context);
+        nm.notify(
+                NOTIFICATION_ID,
+                buildOngoingNotification(
+                        context,
+                        title != null ? title : "XStreaming",
+                        text != null ? text : "",
+                        disconnectLabel,
+                        0L));
     }
 
     @Override
