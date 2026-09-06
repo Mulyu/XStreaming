@@ -56,7 +56,7 @@ import {
 import {getSystemRegion} from '../utils/locale';
 import {getTitleProductId} from '../store/shortcutStore';
 
-type SortMode = 'reco' | 'popular' | 'rating';
+type SortMode = 'reco' | 'popular' | 'rating' | 'release';
 
 // Bayesian prior for the rating sort: shrink low-sample averages toward a
 // neutral mean so a lone 5-star review can't top a highly-rated popular game.
@@ -106,6 +106,9 @@ function CloudScreen({navigation, route}) {
   const [saleOnly, setSaleOnly] = React.useState(false);
   const [selectedGenre, setSelectedGenre] = React.useState('');
   const [sortMode, setSortMode] = React.useState<SortMode>('reco');
+  // True once titles carry release dates (from the display catalog), so the
+  // "Release date" sort is offered only when it can actually take effect.
+  const [releaseDatesReady, setReleaseDatesReady] = React.useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
   const [ratingMap, setRatingMap] = React.useState<Record<string, RatingInfo>>(
     {},
@@ -179,11 +182,10 @@ function CloudScreen({navigation, route}) {
 
               setTitlesMap(_titleMap);
 
-              // Build "Newest" from release dates across ALL titles (Game Pass
-              // and non-Game-Pass), newest first. The Game Pass "Recently added"
-              // collection only covered Game Pass titles; sorting the full
-              // catalog by release date includes everything. Reuse cached dates
-              // and only fetch the ones we do not have yet.
+              // Enrich titles with release dates from the Microsoft display
+              // catalog (the Game Pass hydration carries none). Used by the
+              // "Release date" sort option. Reuse cached dates; only fetch the
+              // ones we do not have yet. Does not change the "Newest" view.
               const _dateCache = getXcloudData();
               const cachedDates = (_dateCache && _dateCache.releaseDates) || {};
               const productIds = _titles
@@ -201,43 +203,54 @@ function CloudScreen({navigation, route}) {
                     item.ReleaseDate = d;
                   }
                 });
-                const _newTitles: any = _titles
-                  .filter((item: any) => item.ReleaseDate)
-                  .sort(
-                    (a: any, b: any) =>
-                      new Date(b.ReleaseDate).getTime() -
-                      new Date(a.ReleaseDate).getTime(),
-                  );
-                setNewTitles(_newTitles);
+                if (Object.keys(releaseDates).length > 0) {
+                  setReleaseDatesReady(true);
+                }
 
-                // Get recent games
-                _xCloudApi.getRecentTitles().then((recentTitleRes: any) => {
-                  const results = recentTitleRes.results || [];
-                  const _recentTitles: any = [];
-                  results.forEach(item => {
-                    if (item.details && item.details.productId) {
-                      const productId = item.details.productId;
-                      const productIdUp = productId.toUpperCase();
-                      if (_titleMap[productId] || _titleMap[productIdUp]) {
-                        _recentTitles.push(
-                          _titleMap[productId] || _titleMap[productIdUp],
-                        );
-                      }
+                // Newest = Game Pass "Recently added" collection.
+                _xCloudApi.getNewTitles().then(newTitleRes => {
+                  const _newTitles: any = [];
+                  newTitleRes.forEach((nt: any) => {
+                    if (
+                      nt.id &&
+                      _titleMap[nt.id] &&
+                      (_titleMap[nt.id].titleId ||
+                        _titleMap[nt.id].XCloudTitleId)
+                    ) {
+                      _newTitles.push(_titleMap[nt.id]);
                     }
                   });
-                  setRecentTitles(_recentTitles);
-                  setLoading(false);
-                  isFetchGame.current = true;
+                  setNewTitles(_newTitles);
 
-                  // update cache
-                  const cacheData = getXcloudData();
-                  saveXcloudData({
-                    ...cacheData,
-                    titles: _titles,
-                    titleMap: _titleMap,
-                    newTitles: _newTitles,
-                    recentTitles: _recentTitles,
-                    releaseDates,
+                  // Get recent games
+                  _xCloudApi.getRecentTitles().then((recentTitleRes: any) => {
+                    const results = recentTitleRes.results || [];
+                    const _recentTitles: any = [];
+                    results.forEach(item => {
+                      if (item.details && item.details.productId) {
+                        const productId = item.details.productId;
+                        const productIdUp = productId.toUpperCase();
+                        if (_titleMap[productId] || _titleMap[productIdUp]) {
+                          _recentTitles.push(
+                            _titleMap[productId] || _titleMap[productIdUp],
+                          );
+                        }
+                      }
+                    });
+                    setRecentTitles(_recentTitles);
+                    setLoading(false);
+                    isFetchGame.current = true;
+
+                    // update cache
+                    const cacheData = getXcloudData();
+                    saveXcloudData({
+                      ...cacheData,
+                      titles: _titles,
+                      titleMap: _titleMap,
+                      newTitles: _newTitles,
+                      recentTitles: _recentTitles,
+                      releaseDates,
+                    });
                   });
                 });
               });
@@ -267,6 +280,12 @@ function CloudScreen({navigation, route}) {
         setTitlesMap(_titleMap);
         setNewTitles(_newTitles);
         setRecentTitles(_recentTitles);
+        if (
+          Array.isArray(_titles) &&
+          _titles.some((item: any) => item && item.ReleaseDate)
+        ) {
+          setReleaseDatesReady(true);
+        }
 
         dispatch({
           type: 'SET_STARS',
@@ -650,7 +669,8 @@ function CloudScreen({navigation, route}) {
     sortMode === 'popular' && Object.keys(popularRank).length > 0;
   const ratingReady =
     sortMode === 'rating' && Object.keys(ratingMap).length > 0;
-  const sortApplies = popularReady || ratingReady;
+  const releaseReady = sortMode === 'release' && releaseDatesReady;
+  const sortApplies = popularReady || ratingReady || releaseReady;
   const activeFilterCount =
     (playableOnly ? 1 : 0) +
     (saleOnly ? 1 : 0) +
@@ -889,6 +909,18 @@ function CloudScreen({navigation, route}) {
         .map((item: any) => ({item, key: scoreOf(item)}))
         .sort((a, b) => b.key - a.key)
         .map(d => d.item);
+    } else if (releaseReady) {
+      // Newest release first; titles without a known release date sort last.
+      const timeOf = (item: any) => {
+        const ms = item.ReleaseDate
+          ? new Date(item.ReleaseDate).getTime()
+          : NaN;
+        return Number.isFinite(ms) ? ms : -Infinity;
+      };
+      list = list
+        .map((item: any) => ({item, key: timeOf(item)}))
+        .sort((a, b) => b.key - a.key)
+        .map(d => d.item);
     }
 
     return list;
@@ -906,6 +938,7 @@ function CloudScreen({navigation, route}) {
     priceMapForFilter,
     popularReady,
     ratingReady,
+    releaseReady,
     popularRankForSort,
     ratingMapForSort,
   ]);
@@ -931,6 +964,7 @@ function CloudScreen({navigation, route}) {
     {value: 'reco', label: t('Recommended')},
     {value: 'popular', label: t('Popular')},
     {value: 'rating', label: t('Rating')},
+    {value: 'release', label: t('SortReleaseDate')},
   ];
   const activeSortLabel =
     sortMode !== 'reco'
@@ -1082,7 +1116,8 @@ function CloudScreen({navigation, route}) {
                       (s.value === 'popular' &&
                         Object.keys(popularRank).length === 0) ||
                       (s.value === 'rating' &&
-                        Object.keys(ratingMap).length === 0);
+                        Object.keys(ratingMap).length === 0) ||
+                      (s.value === 'release' && !releaseDatesReady);
                     return renderGenreChip(
                       `sort_${s.value}`,
                       s.label,
