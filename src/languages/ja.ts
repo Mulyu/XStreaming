@@ -378,6 +378,10 @@ export default {
     GfnLaunchFailed: 'ストリームを開始できませんでした。',
     GfnLaunchDisconnected: 'ストリームが切断されました。',
     GfnSignInToPlay: 'サインインしてプレイ',
+    GfnQueueKeepAlive: 'GeForce NOW の順番待ち中…',
+    GfnReadyNotifyBody: '順番が来ました。タップして開始します。',
+    GfnAllGames: 'すべて',
+    GfnOwned: '所有',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',

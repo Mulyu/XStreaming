@@ -550,9 +550,15 @@ export const launchGfnSession = async (
     onProgress?: (p: GfnLaunchProgress) => void;
     shouldCancel?: () => boolean;
     maxAttempts?: number;
+    // Sleep between polls. Callers can inject a background-safe timer so the
+    // queue keeps advancing while the app is backgrounded.
+    sleep?: (ms: number) => Promise<void>;
   } = {},
 ): Promise<GfnSession> => {
   const settings = options.settings ?? DEFAULT_GFN_SETTINGS;
+  const sleep =
+    options.sleep ??
+    ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)));
   let session = await createGfnSession(appId, token, settings);
   options.onProgress?.({
     status: session.status,
@@ -560,7 +566,8 @@ export const launchGfnSession = async (
     seatSetupStep: session.seatSetupStep,
   });
 
-  const maxAttempts = options.maxAttempts ?? 180; // ~3 min at 1s
+  // Queues can be long, so poll every 2s for up to ~30 minutes.
+  const maxAttempts = options.maxAttempts ?? 900;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (options.shouldCancel?.()) {
       await stopGfnSession(session, token);
@@ -575,7 +582,7 @@ export const launchGfnSession = async (
     if (session.status > 3 && session.status !== 6) {
       throw new Error(`GFN session failed (status ${session.status})`);
     }
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await sleep(2000);
     session = await pollGfnSession(session, token);
     options.onProgress?.({
       status: session.status,

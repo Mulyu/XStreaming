@@ -26,7 +26,14 @@ import {
   pollForTokens,
   isSignedIn,
   clearStoredTokens,
+  getValidGfnJwt,
 } from '../gfn/auth';
+import {
+  fetchGfnOwnedGames,
+  getFreshOwnedGames,
+  clearOwnedGames,
+  mergeOwnedGames,
+} from '../gfn/catalog';
 
 const ACCENT = '#76B900'; // NVIDIA green
 
@@ -44,6 +51,10 @@ function GfnLibraryScreen() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(false);
   const [keyword, setKeyword] = React.useState('');
+  const [ownedGames, setOwnedGames] = React.useState<GfnGame[]>(
+    () => getFreshOwnedGames() || [],
+  );
+  const [ownedOnly, setOwnedOnly] = React.useState(false);
 
   const [signedIn, setSignedIn] = React.useState(() => isSignedIn());
   const [loginVisible, setLoginVisible] = React.useState(false);
@@ -89,8 +100,32 @@ function GfnLibraryScreen() {
 
   const signOut = React.useCallback(() => {
     clearStoredTokens();
+    clearOwnedGames();
+    setOwnedGames([]);
+    setOwnedOnly(false);
     setSignedIn(false);
   }, []);
+
+  // Fetch the signed-in user's owned library (for the Owned filter + to surface
+  // account-linked titles the public list omits).
+  const loadOwned = React.useCallback(async () => {
+    const token = await getValidGfnJwt();
+    if (!token) {
+      return;
+    }
+    try {
+      const owned = await fetchGfnOwnedGames(token);
+      if (owned.length > 0) {
+        setOwnedGames(owned);
+      }
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    if (signedIn) {
+      loadOwned();
+    }
+  }, [signedIn, loadOwned]);
 
   const launchGame = React.useCallback(
     (game: GfnGame) => {
@@ -130,13 +165,25 @@ function GfnLibraryScreen() {
     return Math.max(1, Math.min(6, Math.floor(screenWidth / target)));
   }, [isLandscape, screenWidth]);
 
+  // The public catalog with owned titles merged in (matches marked owned, and
+  // account-linked titles the public list omits appended).
+  const allGames = React.useMemo(
+    () => mergeOwnedGames(games, ownedGames),
+    [games, ownedGames],
+  );
+  const ownedCount = React.useMemo(
+    () => allGames.filter(g => g.owned).length,
+    [allGames],
+  );
+
   const filtered = React.useMemo(() => {
+    let list = ownedOnly ? allGames.filter(g => g.owned) : allGames;
     const q = keyword.trim().toLowerCase();
-    if (!q) {
-      return games;
+    if (q) {
+      list = list.filter(g => g.title.toLowerCase().includes(q));
     }
-    return games.filter(g => g.title.toLowerCase().includes(q));
-  }, [games, keyword]);
+    return list;
+  }, [allGames, ownedOnly, keyword]);
 
   const renderCard = ({item}: {item: GfnGame}) => (
     <View style={[styles.cell, {width: `${100 / numColumns}%`}]}>
@@ -161,6 +208,11 @@ function GfnLibraryScreen() {
           <View style={styles.storeBadge}>
             <Text style={styles.storeBadgeText}>{item.store}</Text>
           </View>
+          {item.owned && (
+            <View style={styles.ownedBadge}>
+              <Icon source="check-decagram" size={14} color={ACCENT} />
+            </View>
+          )}
         </View>
         <Text style={styles.cardTitle} numberOfLines={1}>
           {item.title}
@@ -175,9 +227,9 @@ function GfnLibraryScreen() {
         <View style={styles.brandRow}>
           <Icon source="gamepad-variant" size={22} color={ACCENT} />
           <Text style={styles.brand}>GeForce NOW</Text>
-          {games.length > 0 && (
+          {allGames.length > 0 && (
             <Text style={styles.count}>
-              {filtered.length}/{games.length}
+              {filtered.length}/{allGames.length}
             </Text>
           )}
           <View style={styles.headerSpacer} />
@@ -209,6 +261,37 @@ function GfnLibraryScreen() {
             style={styles.searchInput}
           />
         </View>
+        {signedIn && ownedCount > 0 && (
+          <View style={styles.filterRow}>
+            <Pressable
+              onPress={() => setOwnedOnly(false)}
+              style={[styles.filterChip, !ownedOnly && styles.filterChipOn]}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  !ownedOnly && styles.filterChipTextOn,
+                ]}>
+                {t('GfnAllGames')}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setOwnedOnly(true)}
+              style={[styles.filterChip, ownedOnly && styles.filterChipOn]}>
+              <Icon
+                source="check-decagram"
+                size={14}
+                color={ownedOnly ? '#0B0F0C' : ACCENT}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  ownedOnly && styles.filterChipTextOn,
+                ]}>
+                {t('GfnOwned')} ({ownedCount})
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </View>
 
       {loading && games.length === 0 ? (
@@ -344,6 +427,33 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(140,140,150,0.24)',
   },
   searchInput: {flex: 1, padding: 0, fontSize: 14, color: '#E6ECE8'},
+  filterRow: {flexDirection: 'row', gap: 8},
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(118,185,0,0.5)',
+  },
+  filterChipOn: {backgroundColor: ACCENT, borderColor: ACCENT},
+  filterChipText: {color: ACCENT, fontSize: 12, fontWeight: '800'},
+  filterChipTextOn: {color: '#0B0F0C'},
+  ownedBadge: {
+    position: 'absolute',
+    right: 6,
+    top: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(8,14,11,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(118,185,0,0.6)',
+  },
   centre: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10},
   centreText: {color: '#8A9A92', fontSize: 14},
   retry: {color: ACCENT, fontSize: 14, fontWeight: '700', marginTop: 4},

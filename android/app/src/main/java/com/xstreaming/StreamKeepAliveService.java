@@ -24,7 +24,11 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
  */
 public class StreamKeepAliveService extends Service {
     public static final String CHANNEL_ID = "stream_keepalive";
+    // Separate, higher-importance channel + id for one-off alerts (e.g. a GFN
+    // queue seat becoming ready) so they pop as a heads-up notification.
+    public static final String READY_CHANNEL_ID = "stream_ready";
     private static final int NOTIFICATION_ID = 4711;
+    private static final int READY_NOTIFICATION_ID = 4712;
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_TEXT = "text";
     public static final String EXTRA_DISCONNECT_LABEL = "disconnectLabel";
@@ -58,6 +62,66 @@ public class StreamKeepAliveService extends Service {
 
     public static void stop(Context context) {
         context.stopService(new Intent(context, StreamKeepAliveService.class));
+    }
+
+    /**
+     * Post a one-off, high-importance heads-up notification. Used to alert the
+     * user that something is ready (e.g. a GeForce NOW queue seat) while the app
+     * is backgrounded. Tapping it brings the (singleTask) MainActivity forward,
+     * where the pending stream screen resumes and connects.
+     */
+    public static void notifyReady(Context context, String title, String text) {
+        if (title == null) {
+            title = "XStreaming";
+        }
+        if (text == null) {
+            text = "Ready";
+        }
+        NotificationManager nm =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && nm.getNotificationChannel(READY_CHANNEL_ID) == null) {
+            NotificationChannel channel = new NotificationChannel(
+                    READY_CHANNEL_ID,
+                    "Session ready",
+                    NotificationManager.IMPORTANCE_HIGH);
+            nm.createNotificationChannel(channel);
+        }
+
+        Intent launch = new Intent(context, MainActivity.class);
+        launch.setFlags(
+                Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            piFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent contentIntent =
+                PendingIntent.getActivity(context, 2, launch, piFlags);
+
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context, READY_CHANNEL_ID);
+        } else {
+            builder = new Notification.Builder(context)
+                    .setPriority(Notification.PRIORITY_HIGH);
+        }
+        builder.setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(context.getApplicationInfo().icon)
+                .setContentIntent(contentIntent)
+                .setAutoCancel(true);
+        nm.notify(READY_NOTIFICATION_ID, builder.build());
+    }
+
+    public static void cancelReady(Context context) {
+        NotificationManager nm =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.cancel(READY_NOTIFICATION_ID);
+        }
     }
 
     @Override

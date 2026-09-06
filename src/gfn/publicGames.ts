@@ -18,6 +18,8 @@ export type GfnGame = {
   steamAppId?: string;
   imageUrl?: string;
   heroUrl?: string;
+  /** True when the signed-in user owns this title (from the authed library). */
+  owned?: boolean;
 };
 
 type RawPublicGame = {
