@@ -253,6 +253,11 @@ export const refreshAuthTokens = async (
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
     client_id: authClientId,
+    // Request the same scopes (incl. openid) so NVIDIA re-issues a fresh
+    // id_token — without this the refresh often returns only a new access
+    // token, leaving the stale id_token (used to authorize CloudMatch) to
+    // expire and fail auth a few hours after sign-in.
+    scope: SCOPES,
   });
 
   const response = await fetch(TOKEN_ENDPOINT, {
@@ -310,6 +315,59 @@ export const clearStoredTokens = (): void => {
 
 export const isSignedIn = (): boolean => getStoredTokens() !== null;
 
+// Base64url-decode a string without relying on atob (not guaranteed in RN).
+const base64UrlDecode = (input: string): string => {
+  let s = input.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) {
+    s += '=';
+  }
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let output = '';
+  for (let i = 0; i < s.length; i += 4) {
+    const e1 = chars.indexOf(s[i]);
+    const e2 = chars.indexOf(s[i + 1]);
+    const e3 = chars.indexOf(s[i + 2]);
+    const e4 = chars.indexOf(s[i + 3]);
+    const c1 = (e1 << 2) | (e2 >> 4);
+    const c2 = ((e2 & 15) << 4) | (e3 >> 2);
+    const c3 = ((e3 & 3) << 6) | e4;
+    output += String.fromCharCode(c1);
+    if (e3 !== 64 && e3 !== -1) {
+      output += String.fromCharCode(c2);
+    }
+    if (e4 !== 64 && e4 !== -1) {
+      output += String.fromCharCode(c3);
+    }
+  }
+  return output;
+};
+
+// The `exp` (ms) of a JWT, or null if it can't be read.
+const jwtExpiresAt = (token?: string): number | null => {
+  if (!token) {
+    return null;
+  }
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const claims = JSON.parse(base64UrlDecode(parts[1]));
+    return typeof claims.exp === 'number' ? claims.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+};
+
+// The effective expiry: the earliest of the access-token expiry and the
+// id_token's own exp. The id_token is what authorizes CloudMatch, and it can
+// expire before the access token, so we must refresh on whichever comes first.
+const effectiveExpiresAt = (tokens: GfnTokens): number => {
+  const idExp = jwtExpiresAt(tokens.idToken);
+  return idExp ? Math.min(tokens.expiresAt, idExp) : tokens.expiresAt;
+};
+
 // Return a valid token set, refreshing (and re-persisting) if it is expired or
 // close to it. Returns null when there is no session or the refresh fails.
 export const getValidTokens = async (): Promise<GfnTokens | null> => {
@@ -317,21 +375,25 @@ export const getValidTokens = async (): Promise<GfnTokens | null> => {
   if (!tokens) {
     return null;
   }
-  if (tokens.expiresAt - Date.now() > REFRESH_WINDOW_MS) {
+  const expiry = effectiveExpiresAt(tokens);
+  if (expiry - Date.now() > REFRESH_WINDOW_MS) {
     return tokens;
   }
   if (!tokens.refreshToken) {
-    return tokens.expiresAt > Date.now() ? tokens : null;
+    return expiry > Date.now() ? tokens : null;
   }
   try {
     const refreshed = await refreshAuthTokens(
       tokens.refreshToken,
       tokens.authClientId,
     );
-    // Preserve an id/client token the refresh response may omit.
+    // Preserve an id/client token the refresh response may omit — but never
+    // keep a stale id_token that has already expired (fall back to the access
+    // token instead), and re-persist so the next call sees the fresh set.
+    const oldIdValid = (jwtExpiresAt(tokens.idToken) ?? 0) > Date.now();
     const merged: GfnTokens = {
       ...refreshed,
-      idToken: refreshed.idToken ?? tokens.idToken,
+      idToken: refreshed.idToken ?? (oldIdValid ? tokens.idToken : undefined),
       clientToken: refreshed.clientToken ?? tokens.clientToken,
     };
     setStoredTokens(merged);

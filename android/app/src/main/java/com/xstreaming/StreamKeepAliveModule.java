@@ -28,12 +28,25 @@ public class StreamKeepAliveModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void start(
             String title, String text, String disconnectLabel, double deadlineEpochMs) {
-        StreamKeepAliveService.start(
-                ctx.getApplicationContext(),
-                title,
-                text,
-                disconnectLabel,
-                (long) deadlineEpochMs);
+        try {
+            StreamKeepAliveService.start(
+                    ctx.getApplicationContext(),
+                    title,
+                    text,
+                    disconnectLabel,
+                    (long) deadlineEpochMs);
+        } catch (Exception ignored) {
+            // e.g. ForegroundServiceStartNotAllowedException if invoked from the
+            // background on Android 12+; the caller falls back to updateNotification.
+        }
+    }
+
+    // Update the ongoing keep-alive notification text in place (e.g. live queue
+    // position). Safe from the background.
+    @ReactMethod
+    public void update(String title, String text, String disconnectLabel) {
+        StreamKeepAliveService.updateNotification(
+                ctx.getApplicationContext(), title, text, disconnectLabel);
     }
 
     @ReactMethod
