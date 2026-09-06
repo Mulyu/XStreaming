@@ -360,12 +360,33 @@ const fetchCloudMatch = async (
   }
 };
 
+// Pull a human-readable reason out of a CloudMatch error body: prefer the
+// requestStatus fields (statusDescription + unifiedErrorCode) over raw JSON.
+const describeCloudMatchError = (status: number, text: string): string => {
+  try {
+    const body = JSON.parse(text);
+    const rs = body?.requestStatus;
+    if (rs) {
+      const parts = [
+        rs.statusDescription,
+        rs.unifiedErrorCode != null
+          ? `code ${rs.unifiedErrorCode}`
+          : rs.statusCode != null
+          ? `status ${rs.statusCode}`
+          : null,
+      ].filter(Boolean);
+      if (parts.length > 0) {
+        return `GFN error: ${parts.join(' — ')}`;
+      }
+    }
+  } catch {}
+  return `CloudMatch HTTP ${status}: ${text.slice(0, 200)}`;
+};
+
 const readJson = async <T>(response: Response): Promise<T> => {
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(
-      `CloudMatch HTTP ${response.status}: ${text.slice(0, 300)}`,
-    );
+    throw new Error(describeCloudMatchError(response.status, text));
   }
   return JSON.parse(text) as T;
 };
@@ -425,7 +446,7 @@ export const createGfnSession = async (
   const base = await resolveRegionBase(DEFAULT_BASE_URL, originHeaders);
   const body = buildSessionRequestBody(appId, settings, deviceId);
   const query = new URLSearchParams({
-    keyboardLayout: 'en-US-qwerty',
+    keyboardLayout: 'en-US',
     languageCode: 'en_US',
   }).toString();
   const response = await fetchCloudMatch(`${base}/v2/session?${query}`, {
