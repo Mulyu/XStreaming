@@ -58,27 +58,37 @@ function GfnStreamScreen({route, navigation}: any) {
   const cancelledRef = React.useRef(false);
   const appStateRef = React.useRef(AppState.currentState);
   const keepAliveRef = React.useRef(false);
+  // Body text currently posted. The progress callback fires on every poll, so
+  // this is what keeps the notification from being rebuilt on every tick: it is
+  // re-issued only when the queue position actually moves.
+  const keepAliveTextRef = React.useRef<string | null>(null);
 
-  // Keep the process alive while queuing so polling survives backgrounding.
-  // Started while the app is foreground (Android forbids starting a foreground
-  // service from the background); safe to call repeatedly.
-  const startKeepAlive = React.useCallback(() => {
-    if (keepAliveRef.current) {
-      return;
-    }
-    keepAliveRef.current = true;
-    StreamKeepAliveManager?.start?.(
-      title,
-      t('GfnQueueKeepAlive'),
-      t('Disconnect'),
-      0,
-    );
-  }, [title, t]);
+  // Keep the process alive while queuing so polling survives backgrounding, and
+  // mirror the queue position into the notification so the wait is visible
+  // without returning to the app. Started while the app is foreground (Android
+  // forbids starting a foreground service from the background); re-issuing with
+  // the same notification id updates it in place.
+  const startKeepAlive = React.useCallback(
+    (queuePosition?: number) => {
+      const text =
+        (queuePosition ?? 0) > 1
+          ? t('GfnLaunchQueued', {n: queuePosition})
+          : t('GfnQueueKeepAlive');
+      if (keepAliveRef.current && keepAliveTextRef.current === text) {
+        return;
+      }
+      keepAliveRef.current = true;
+      keepAliveTextRef.current = text;
+      StreamKeepAliveManager?.start?.(title, text, t('Disconnect'), 0);
+    },
+    [title, t],
+  );
 
   const stopKeepAlive = React.useCallback(() => {
     StreamKeepAliveManager?.cancelReady?.();
     if (keepAliveRef.current) {
       keepAliveRef.current = false;
+      keepAliveTextRef.current = null;
       StreamKeepAliveManager?.stop?.();
     }
   }, []);
@@ -189,7 +199,7 @@ function GfnStreamScreen({route, navigation}: any) {
             if (p.status === 1) {
               // Entered setup/queue: keep the process alive so the wait
               // survives backgrounding (started while still foreground).
-              startKeepAlive();
+              startKeepAlive(p.queuePosition);
               if ((p.queuePosition ?? 0) > 1) {
                 setStatusText(t('GfnLaunchQueued', {n: p.queuePosition}));
               } else {
