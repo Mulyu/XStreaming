@@ -5,12 +5,17 @@ import {
   Pressable,
   ActivityIndicator,
   BackHandler,
+  AppState,
+  NativeModules,
 } from 'react-native';
 import {Text} from 'react-native-paper';
 import {RTCView, MediaStream} from 'react-native-webrtc';
+import BackgroundTimer from 'react-native-background-timer';
 import {useTranslation} from 'react-i18next';
 import AnalogStick from '../components/AnalogStick';
 import {getValidGfnJwt} from '../gfn/auth';
+
+const {StreamKeepAliveManager} = NativeModules;
 import {launchGfnSession, stopGfnSession, GfnSession} from '../gfn/session';
 import {GfnWebRtcClient, GfnConnectionState} from '../gfn/webrtcClient';
 import {
@@ -51,6 +56,39 @@ function GfnStreamScreen({route, navigation}: any) {
   const sessionRef = React.useRef<GfnSession | null>(null);
   const tokenRef = React.useRef<string | null>(null);
   const cancelledRef = React.useRef(false);
+  const appStateRef = React.useRef(AppState.currentState);
+  const keepAliveRef = React.useRef(false);
+
+  // Keep the process alive while queuing so polling survives backgrounding.
+  // Started while the app is foreground (Android forbids starting a foreground
+  // service from the background); safe to call repeatedly.
+  const startKeepAlive = React.useCallback(() => {
+    if (keepAliveRef.current) {
+      return;
+    }
+    keepAliveRef.current = true;
+    StreamKeepAliveManager?.start?.(
+      title,
+      t('GfnQueueKeepAlive'),
+      t('Disconnect'),
+      0,
+    );
+  }, [title, t]);
+
+  const stopKeepAlive = React.useCallback(() => {
+    StreamKeepAliveManager?.cancelReady?.();
+    if (keepAliveRef.current) {
+      keepAliveRef.current = false;
+      StreamKeepAliveManager?.stop?.();
+    }
+  }, []);
+
+  // Background-safe sleep so the queue poll keeps firing when backgrounded.
+  const bgSleep = React.useCallback(
+    (ms: number) =>
+      new Promise<void>(resolve => BackgroundTimer.setTimeout(resolve, ms)),
+    [],
+  );
 
   // The live controller state, mutated in place and sent on every change.
   const gp = React.useRef<GamepadInput>({
@@ -112,13 +150,14 @@ function GfnStreamScreen({route, navigation}: any) {
 
   const cleanup = React.useCallback(() => {
     cancelledRef.current = true;
+    stopKeepAlive();
     clientRef.current?.dispose();
     clientRef.current = null;
     if (sessionRef.current && tokenRef.current) {
       stopGfnSession(sessionRef.current, tokenRef.current);
       sessionRef.current = null;
     }
-  }, []);
+  }, [stopKeepAlive]);
 
   const exit = React.useCallback(() => {
     cleanup();
@@ -142,14 +181,20 @@ function GfnStreamScreen({route, navigation}: any) {
         setStatusText(t('GfnLaunchRequesting'));
         const session = await launchGfnSession(appId, token, {
           shouldCancel: () => cancelledRef.current,
+          sleep: bgSleep,
           onProgress: p => {
             if (!active) {
               return;
             }
-            if (p.status === 1 && (p.queuePosition ?? 0) > 1) {
-              setStatusText(t('GfnLaunchQueued', {n: p.queuePosition}));
-            } else if (p.status === 1) {
-              setStatusText(t('GfnLaunchStarting'));
+            if (p.status === 1) {
+              // Entered setup/queue: keep the process alive so the wait
+              // survives backgrounding (started while still foreground).
+              startKeepAlive();
+              if ((p.queuePosition ?? 0) > 1) {
+                setStatusText(t('GfnLaunchQueued', {n: p.queuePosition}));
+              } else {
+                setStatusText(t('GfnLaunchStarting'));
+              }
             }
           },
         });
@@ -159,6 +204,10 @@ function GfnStreamScreen({route, navigation}: any) {
         }
         sessionRef.current = session;
         setStatusText(t('GfnLaunchConnecting'));
+        // Seat is ready. If the user backgrounded during the queue, alert them.
+        if (appStateRef.current !== 'active') {
+          StreamKeepAliveManager?.notifyReady?.(title, t('GfnReadyNotifyBody'));
+        }
 
         const client = new GfnWebRtcClient(session, {
           onStream: stream => {
@@ -173,16 +222,21 @@ function GfnStreamScreen({route, navigation}: any) {
             setState(s);
             if (s === 'connected') {
               setStatusText('');
+              // Streaming has begun; the queue keep-alive is no longer needed.
+              stopKeepAlive();
             } else if (s === 'failed') {
               setFatal(detail || t('GfnLaunchFailed'));
+              stopKeepAlive();
             } else if (s === 'disconnected') {
               setFatal(detail || t('GfnLaunchDisconnected'));
+              stopKeepAlive();
             }
           },
         });
         clientRef.current = client;
         client.connect();
       } catch (e: any) {
+        stopKeepAlive();
         if (active && e?.message !== 'cancelled') {
           setFatal(e?.message || t('GfnLaunchFailed'));
         }
@@ -193,10 +247,18 @@ function GfnStreamScreen({route, navigation}: any) {
       exit();
       return true;
     });
+    const appSub = AppState.addEventListener('change', next => {
+      appStateRef.current = next;
+      // Coming back to the foreground: clear any pending ready notification.
+      if (next === 'active') {
+        StreamKeepAliveManager?.cancelReady?.();
+      }
+    });
 
     return () => {
       active = false;
       backSub.remove();
+      appSub.remove();
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -41,6 +41,19 @@ public class StreamKeepAliveModule extends ReactContextBaseJavaModule {
         StreamKeepAliveService.stop(ctx.getApplicationContext());
     }
 
+    // Post a one-off heads-up notification (e.g. "queue seat ready"). Tapping it
+    // brings the app to the front.
+    @ReactMethod
+    public void notifyReady(String title, String text) {
+        StreamKeepAliveService.notifyReady(ctx.getApplicationContext(), title, text);
+    }
+
+    // Dismiss the one-off ready notification.
+    @ReactMethod
+    public void cancelReady() {
+        StreamKeepAliveService.cancelReady(ctx.getApplicationContext());
+    }
+
     // Whether the app is exempt from battery optimization. Many OEMs suspend
     // background execution (killing the keep-alive + keepalive) within a few
     // minutes unless the app is whitelisted, so we surface this to the user.

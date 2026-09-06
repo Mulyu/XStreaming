@@ -416,6 +416,10 @@ export default {
     GfnLaunchFailed: 'Could not start the stream.',
     GfnLaunchDisconnected: 'The stream disconnected.',
     GfnSignInToPlay: 'Sign in to play',
+    GfnQueueKeepAlive: 'Waiting in the GeForce NOW queue…',
+    GfnReadyNotifyBody: 'Your session is ready — tap to start.',
+    GfnAllGames: 'All',
+    GfnOwned: 'Owned',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',
