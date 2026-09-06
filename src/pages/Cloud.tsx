@@ -179,19 +179,35 @@ function CloudScreen({navigation, route}) {
 
               setTitlesMap(_titleMap);
 
-              // Get new games
-              _xCloudApi.getNewTitles().then(newTitleRes => {
-                const _newTitles: any = [];
-                newTitleRes.forEach((item: any) => {
-                  if (
-                    item.id &&
-                    _titleMap[item.id] &&
-                    (_titleMap[item.id].titleId ||
-                      _titleMap[item.id].XCloudTitleId)
-                  ) {
-                    _newTitles.push(_titleMap[item.id]);
+              // Build "Newest" from release dates across ALL titles (Game Pass
+              // and non-Game-Pass), newest first. The Game Pass "Recently added"
+              // collection only covered Game Pass titles; sorting the full
+              // catalog by release date includes everything. Reuse cached dates
+              // and only fetch the ones we do not have yet.
+              const _dateCache = getXcloudData();
+              const cachedDates = (_dateCache && _dateCache.releaseDates) || {};
+              const productIds = _titles
+                .map((item: any) => item.productId)
+                .filter(Boolean);
+              const missingIds = productIds.filter(
+                (id: string) => !cachedDates[id],
+              );
+
+              _xCloudApi.getReleaseDates(missingIds).then(fetchedDates => {
+                const releaseDates = {...cachedDates, ...fetchedDates};
+                _titles.forEach((item: any) => {
+                  const d = releaseDates[item.productId];
+                  if (d) {
+                    item.ReleaseDate = d;
                   }
                 });
+                const _newTitles: any = _titles
+                  .filter((item: any) => item.ReleaseDate)
+                  .sort(
+                    (a: any, b: any) =>
+                      new Date(b.ReleaseDate).getTime() -
+                      new Date(a.ReleaseDate).getTime(),
+                  );
                 setNewTitles(_newTitles);
 
                 // Get recent games
@@ -221,6 +237,7 @@ function CloudScreen({navigation, route}) {
                     titleMap: _titleMap,
                     newTitles: _newTitles,
                     recentTitles: _recentTitles,
+                    releaseDates,
                   });
                 });
               });
