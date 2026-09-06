@@ -310,18 +310,18 @@ export const clearStoredTokens = (): void => {
 
 export const isSignedIn = (): boolean => getStoredTokens() !== null;
 
-// Return a usable access token, refreshing (and re-persisting) if it is expired
-// or close to it. Returns null when there is no session or the refresh fails.
-export const getValidAccessToken = async (): Promise<string | null> => {
+// Return a valid token set, refreshing (and re-persisting) if it is expired or
+// close to it. Returns null when there is no session or the refresh fails.
+export const getValidTokens = async (): Promise<GfnTokens | null> => {
   const tokens = getStoredTokens();
   if (!tokens) {
     return null;
   }
   if (tokens.expiresAt - Date.now() > REFRESH_WINDOW_MS) {
-    return tokens.accessToken;
+    return tokens;
   }
   if (!tokens.refreshToken) {
-    return tokens.expiresAt > Date.now() ? tokens.accessToken : null;
+    return tokens.expiresAt > Date.now() ? tokens : null;
   }
   try {
     const refreshed = await refreshAuthTokens(
@@ -335,8 +335,25 @@ export const getValidAccessToken = async (): Promise<string | null> => {
       clientToken: refreshed.clientToken ?? tokens.clientToken,
     };
     setStoredTokens(merged);
-    return merged.accessToken;
+    return merged;
   } catch {
     return null;
   }
+};
+
+// The JWT to authorize GeForce NOW services (CloudMatch, GraphQL). NVIDIA's
+// clients send the OpenID id_token as `GFNJWT <token>`; fall back to the access
+// token only if no id_token is present.
+export const getValidGfnJwt = async (): Promise<string | null> => {
+  const tokens = await getValidTokens();
+  if (!tokens) {
+    return null;
+  }
+  return tokens.idToken ?? tokens.accessToken;
+};
+
+// Return a usable access token (OAuth access_token), refreshing if needed.
+export const getValidAccessToken = async (): Promise<string | null> => {
+  const tokens = await getValidTokens();
+  return tokens ? tokens.accessToken : null;
 };

@@ -10,7 +10,7 @@ import {Text} from 'react-native-paper';
 import {RTCView, MediaStream} from 'react-native-webrtc';
 import {useTranslation} from 'react-i18next';
 import AnalogStick from '../components/AnalogStick';
-import {getValidAccessToken} from '../gfn/auth';
+import {getValidGfnJwt} from '../gfn/auth';
 import {launchGfnSession, stopGfnSession, GfnSession} from '../gfn/session';
 import {GfnWebRtcClient, GfnConnectionState} from '../gfn/webrtcClient';
 import {
@@ -132,7 +132,7 @@ function GfnStreamScreen({route, navigation}: any) {
         setFatal(t('GfnLaunchInvalidApp'));
         return;
       }
-      const token = await getValidAccessToken();
+      const token = await getValidGfnJwt();
       if (!token) {
         setFatal(t('GfnLaunchSignInRequired'));
         return;
