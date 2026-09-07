@@ -4,7 +4,7 @@ import {
   RTCIceCandidate,
   MediaStream,
 } from 'react-native-webrtc';
-import {GfnSession} from './session';
+import {GfnSession, parseResolution} from './session';
 import {
   GfnSignalingClient,
   GfnIceCandidate,
@@ -175,14 +175,18 @@ export class GfnWebRtcClient {
 
     const finalSdp = (pc as any).localDescription?.sdp ?? answer.sdp;
     const credentials = extractIceCredentials(finalSdp);
-    const {width, height} = this.parseResolution();
+    // Match the encoder settings this session was actually requested with
+    // (CloudMatch was told the same resolution/fps/bitrate/codec) rather than
+    // an independent, possibly-stale hardcoded copy.
+    const {settings} = this.session;
+    const {width, height} = parseResolution(settings.resolution);
     const nvstSdp = buildNvstSdp({
       width,
       height,
-      fps: 60,
-      maxBitrateKbps: 30000,
+      fps: settings.fps,
+      maxBitrateKbps: Math.round(settings.maxBitrateMbps * 1000),
       partialReliableThresholdMs: this.partialReliableThresholdMs,
-      codec: 'H264',
+      codec: settings.codec,
       credentials,
     });
 
@@ -296,10 +300,6 @@ export class GfnWebRtcClient {
         }),
       );
     } catch {}
-  }
-
-  private parseResolution(): {width: number; height: number} {
-    return {width: 1920, height: 1080};
   }
 
   // Expose the peer connection's WebRTC stats for the performance overlay.
