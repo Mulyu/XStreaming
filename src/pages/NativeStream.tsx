@@ -45,6 +45,7 @@ import {
 } from '../store/touchProfileStore';
 import {useTranslation} from 'react-i18next';
 import webRTCClient from '../webrtc';
+import {GfnStreamAdapter} from '../gfn/streamAdapter';
 import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../utils/debug';
 import {GAMEPAD_MAPING} from '../common';
@@ -663,8 +664,11 @@ export function NativeStreamScreenBase({
     Orientation.unlockAllOrientations();
     FullScreenManager.immersiveModeOff();
     // Cloud is now a tab inside the Main tab navigator; a cloud stream returns
-    // to the Library tab through Main, otherwise back to the Home gate.
-    if (getStreamDestination() === 'Cloud') {
+    // to the Library tab through Main, GFN back to the Gfn tab, otherwise back
+    // to the Home gate.
+    if (route.params?.streamType === 'gfn') {
+      navigation.navigate('Main', {screen: 'Gfn'});
+    } else if (getStreamDestination() === 'Cloud') {
       navigation.navigate('Main', {
         screen: 'Cloud',
         params: {needRefresh: true},
@@ -672,7 +676,7 @@ export function NativeStreamScreenBase({
     } else {
       navigation.navigate('Home', {needRefresh: true});
     }
-  }, [getStreamDestination, navigation]);
+  }, [getStreamDestination, navigation, route.params?.streamType]);
 
   const waitStopStream = React.useCallback(async (api: any) => {
     try {
@@ -1377,7 +1381,17 @@ export function NativeStreamScreenBase({
     }
 
     if (!streamApi) {
-      if (route.params?.streamType === 'cloud') {
+      if (route.params?.streamType === 'gfn') {
+        // GeForce NOW drives itself through GfnStreamAdapter (below); NativeStream
+        // only needs a no-op streamApi so its xCloud keepalive/stop plumbing stays
+        // harmless. The adapter owns the GFN session lifecycle.
+        setStreamApi({
+          startSession: () => Promise.resolve(),
+          stopStream: () => Promise.resolve(),
+          sendKeepalive: () => Promise.resolve(),
+          getKeepaliveIntervalMs: () => 20 * 1000,
+        } as any);
+      } else if (route.params?.streamType === 'cloud') {
         if (streamingTokens.xCloudToken) {
           const _xCloudApi = new XcloudApi(
             streamingTokens.xCloudToken.getDefaultRegion().baseUri,
@@ -1403,7 +1417,17 @@ export function NativeStreamScreenBase({
     }
 
     if (streamApi && webrtcClient === undefined) {
-      setWebrtcClient(new webRTCClient());
+      if (route.params?.streamType === 'gfn') {
+        setWebrtcClient(
+          new GfnStreamAdapter({
+            appId: String(route.params?.appId ?? ''),
+            title: String(route.params?.title ?? ''),
+            onProgress: setLoadingText,
+          }) as any,
+        );
+      } else {
+        setWebrtcClient(new webRTCClient());
+      }
     }
 
     if (streamApi && webrtcClient !== undefined) {
@@ -1838,120 +1862,129 @@ export function NativeStreamScreenBase({
         }
       };
 
-      streamApi
-        .startSession(route.params?.sessionId, _settings.resolution)
-        .then(() => {
-          setLoadingText(
-            `${t('Configuration obtained successfully, initiating offer...')}`,
-          );
-          webrtcClient.createOffer().then(offer => {
-            // Set codec
-            if (_settings.codec !== '') {
-              offer.sdp = setCodec(offer.sdp);
-            }
+      // GeForce NOW does its own CloudMatch session + nvst signaling inside the
+      // adapter (kicked off by webrtcClient.init() above), so skip xCloud's
+      // startSession/SDP/ICE exchange entirely for gfn.
+      if (route.params?.streamType !== 'gfn') {
+        streamApi
+          .startSession(route.params?.sessionId, _settings.resolution)
+          .then(() => {
+            setLoadingText(
+              `${t(
+                'Configuration obtained successfully, initiating offer...',
+              )}`,
+            );
+            webrtcClient.createOffer().then(offer => {
+              // Set codec
+              if (_settings.codec !== '') {
+                offer.sdp = setCodec(offer.sdp);
+              }
 
-            streamApi
-              .sendSDPOffer(offer)
-              .then(sdpResponse => {
-                setLoadingText(
-                  `${t('Remote offer retrieved successfully...')}`,
-                );
-                log.info('sdpResponse.exchangeResponse:', sdpResponse);
-                const sdpDetails = JSON.parse(sdpResponse.exchangeResponse);
-                webrtcClient.setRemoteOffer(sdpDetails.sdp).then(() => {
-                  setLoadingText(`${t('Ready to send ICE...')}`);
-                  const iceCandidates = webrtcClient.getIceCandidates();
-                  streamApi
-                    .sendICECandidates(iceCandidates)
-                    .then(iceDetails => {
-                      log.info(
-                        'Client - ICE iceDetails:',
-                        JSON.stringify(iceDetails),
-                      );
-                      webrtcClient.setIceCandidates(iceDetails);
-                      setLoadingText(`${t('Exchange ICE successfully...')}`);
-                    })
-                    .catch(e => {
-                      Alert.alert(
-                        t('Warning'),
-                        '[sendICECandidates] fail:' + e,
-                        [
-                          {
-                            text: t('Confirm'),
-                            style: 'default',
-                            onPress: () => {
-                              exit();
+              streamApi
+                .sendSDPOffer(offer)
+                .then(sdpResponse => {
+                  setLoadingText(
+                    `${t('Remote offer retrieved successfully...')}`,
+                  );
+                  log.info('sdpResponse.exchangeResponse:', sdpResponse);
+                  const sdpDetails = JSON.parse(sdpResponse.exchangeResponse);
+                  webrtcClient.setRemoteOffer(sdpDetails.sdp).then(() => {
+                    setLoadingText(`${t('Ready to send ICE...')}`);
+                    const iceCandidates = webrtcClient.getIceCandidates();
+                    streamApi
+                      .sendICECandidates(iceCandidates)
+                      .then(iceDetails => {
+                        log.info(
+                          'Client - ICE iceDetails:',
+                          JSON.stringify(iceDetails),
+                        );
+                        webrtcClient.setIceCandidates(iceDetails);
+                        setLoadingText(`${t('Exchange ICE successfully...')}`);
+                      })
+                      .catch(e => {
+                        Alert.alert(
+                          t('Warning'),
+                          '[sendICECandidates] fail:' + e,
+                          [
+                            {
+                              text: t('Confirm'),
+                              style: 'default',
+                              onPress: () => {
+                                exit();
+                              },
                             },
-                          },
-                        ],
-                      );
-                    });
-                });
-              })
-              .catch(e => {
-                Alert.alert(t('Warning'), '[sendSDPOffer] fail:' + e, [
-                  {
-                    text: t('Confirm'),
-                    style: 'default',
-                    onPress: () => {
-                      exit();
+                          ],
+                        );
+                      });
+                  });
+                })
+                .catch(e => {
+                  Alert.alert(t('Warning'), '[sendSDPOffer] fail:' + e, [
+                    {
+                      text: t('Confirm'),
+                      style: 'default',
+                      onPress: () => {
+                        exit();
+                      },
                     },
-                  },
-                ]);
-              });
-          });
-        })
-        .catch(e => {
-          if (e !== '') {
-            let msg = '';
-            if (typeof e === 'string') {
-              if (e.includes('WaitingForServerToRegister')) {
-                if (e.includes('disabled streaming')) {
-                  msg = '[StartSession] Fail:' + t('DisabledStreamingErr') + e;
+                  ]);
+                });
+            });
+          })
+          .catch(e => {
+            if (e !== '') {
+              let msg = '';
+              if (typeof e === 'string') {
+                if (e.includes('WaitingForServerToRegister')) {
+                  if (e.includes('disabled streaming')) {
+                    msg =
+                      '[StartSession] Fail:' + t('DisabledStreamingErr') + e;
+                  } else {
+                    msg =
+                      '[StartSession] Fail:' +
+                      t('WaitingForServerToRegister') +
+                      e;
+                  }
+                } else if (e.includes('xboxstreaminghelper.cpp')) {
+                  msg =
+                    '[StartSession] Fail:' + t('XboxstreaminghelperErr') + e;
+                } else {
+                  msg = '[StartSession] Fail:' + e;
+                }
+              } else {
+                if (e.message?.indexOf('400') > -1) {
+                  const error =
+                    route.params?.streamType === 'cloud'
+                      ? t('noAllow')
+                      : t('homeNoAllow');
+                  msg =
+                    `[StartSession](${
+                      route.params?.streamType === 'cloud' ? 'Cloud' : 'Home'
+                    }) - (${route.params?.sessionId}) Fail:` + error;
                 } else {
                   msg =
-                    '[StartSession] Fail:' +
-                    t('WaitingForServerToRegister') +
-                    e;
+                    `[StartSession](${
+                      route.params?.streamType === 'cloud' ? 'Cloud' : 'Home'
+                    }) - (${route.params?.sessionId}) Fail:` + e;
                 }
-              } else if (e.includes('xboxstreaminghelper.cpp')) {
-                msg = '[StartSession] Fail:' + t('XboxstreaminghelperErr') + e;
-              } else {
-                msg = '[StartSession] Fail:' + e;
               }
-            } else {
-              if (e.message?.indexOf('400') > -1) {
-                const error =
-                  route.params?.streamType === 'cloud'
-                    ? t('noAllow')
-                    : t('homeNoAllow');
-                msg =
-                  `[StartSession](${
-                    route.params?.streamType === 'cloud' ? 'Cloud' : 'Home'
-                  }) - (${route.params?.sessionId}) Fail:` + error;
-              } else {
-                msg =
-                  `[StartSession](${
-                    route.params?.streamType === 'cloud' ? 'Cloud' : 'Home'
-                  }) - (${route.params?.sessionId}) Fail:` + e;
-              }
-            }
-            Alert.alert(t('Warning'), msg, [
-              {
-                text: t('Confirm'),
-                style: 'default',
-                onPress: () => {
-                  Orientation.unlockAllOrientations();
-                  if (route.params?.streamType === 'cloud') {
-                    navigation.navigate('Main', {screen: 'Cloud'});
-                  } else {
-                    navigation.navigate('Home');
-                  }
+              Alert.alert(t('Warning'), msg, [
+                {
+                  text: t('Confirm'),
+                  style: 'default',
+                  onPress: () => {
+                    Orientation.unlockAllOrientations();
+                    if (route.params?.streamType === 'cloud') {
+                      navigation.navigate('Main', {screen: 'Cloud'});
+                    } else {
+                      navigation.navigate('Home');
+                    }
+                  },
                 },
-              },
-            ]);
-          }
-        });
+              ]);
+            }
+          });
+      }
     }
 
     return () => {
@@ -2021,6 +2054,8 @@ export function NativeStreamScreenBase({
     t,
     route.params?.sessionId,
     route.params?.streamType,
+    route.params?.appId,
+    route.params?.title,
     route.params?.isUsbMode,
     route.params?.usbController,
     webrtcClient,
@@ -2885,7 +2920,10 @@ export function NativeStreamScreenBase({
         id: 'pressNexus',
         title: t('Press Nexus'),
       });
-      if (route.params?.streamType !== 'cloud') {
+      if (
+        route.params?.streamType !== 'cloud' &&
+        route.params?.streamType !== 'gfn'
+      ) {
         items.push({
           id: 'longPressNexus',
           title: t('Long press Nexus'),
@@ -2895,7 +2933,11 @@ export function NativeStreamScreenBase({
           title: t('Send text'),
         });
       }
-      if (settings.power_on && route.params?.streamType !== 'cloud') {
+      if (
+        settings.power_on &&
+        route.params?.streamType !== 'cloud' &&
+        route.params?.streamType !== 'gfn'
+      ) {
         items.push({
           id: 'disconnectPowerOff',
           title: t('Disconnect and power off'),

@@ -133,8 +133,14 @@ function GfnLibraryScreen() {
         startLogin();
         return;
       }
-      // The public catalog id is the numeric CloudMatch app id.
-      navigation.navigate('GfnStream', {appId: game.id, title: game.title});
+      // The public catalog id is the numeric CloudMatch app id. Launch through
+      // the shared NativeStream screen (streamType 'gfn') so GFN reuses the full
+      // xCloud play UI: virtual gamepad, layout editor, controllers, options.
+      navigation.navigate('NativeStream', {
+        streamType: 'gfn',
+        appId: game.id,
+        title: game.title,
+      });
     },
     [navigation, startLogin],
   );
