@@ -99,6 +99,8 @@ export class GfnStreamAdapter {
   private pollRate = 60;
   private inputTimer: ReturnType<typeof setInterval> | null = null;
   private gpState: any = null;
+  // Previous inbound-video stat sample, for bitrate/jitter/decode deltas.
+  private lastStat: any = null;
 
   // Handlers NativeStream registers.
   private trackHandler: ((event: any) => void) | null = null;
@@ -373,8 +375,11 @@ export class GfnStreamAdapter {
     return Promise.resolve(0);
   }
 
+  // Mirror the xCloud client's stats derivation so NativeStream's performance
+  // overlay shows real numbers on GFN too. Reads the GFN peer connection's
+  // WebRTC stats and keeps a previous sample for per-second deltas.
   getStreamState(): Promise<any> {
-    return Promise.resolve({
+    const performances: any = {
       resolution: '',
       rtt: '-1 (-1%)',
       jit: '-1',
@@ -383,6 +388,109 @@ export class GfnStreamAdapter {
       fl: '-1 (-1%)',
       br: '',
       decode: '',
-    });
+    };
+    const client = this.gfnClient;
+    if (!client) {
+      return Promise.resolve(performances);
+    }
+    return client
+      .getStats()
+      .then((stats: any) => {
+        if (!stats || typeof stats.forEach !== 'function') {
+          return performances;
+        }
+        stats.forEach((stat: any) => {
+          if (
+            stat.type === 'inbound-rtp' &&
+            (stat.kind === 'video' || stat.mediaType === 'video')
+          ) {
+            if (stat.frameWidth && stat.frameHeight) {
+              performances.resolution = `${stat.frameWidth} X ${stat.frameHeight}`;
+            }
+            performances.fps = stat.framesPerSecond || 0;
+
+            const framesDropped = stat.framesDropped;
+            if (framesDropped !== undefined) {
+              const framesReceived = stat.framesReceived;
+              const framesDroppedPercentage = (
+                (framesDropped * 100) /
+                (framesDropped + framesReceived || 1)
+              ).toFixed(2);
+              performances.fl = `${framesDropped} (${framesDroppedPercentage}%)`;
+            }
+
+            const packetsLost = stat.packetsLost;
+            if (packetsLost !== undefined) {
+              const packetsReceived = stat.packetsReceived;
+              const packetsLostPercentage = (
+                (packetsLost * 100) /
+                (packetsLost + packetsReceived || 1)
+              ).toFixed(2);
+              performances.pl = `${packetsLost} (${packetsLostPercentage}%)`;
+            }
+
+            if (this.lastStat) {
+              try {
+                const lastStat = this.lastStat;
+                const timeDiff = stat.timestamp - lastStat.timestamp;
+                if (timeDiff !== 0) {
+                  const bitrate =
+                    (8 * (stat.bytesReceived - lastStat.bytesReceived)) /
+                    timeDiff /
+                    1000;
+                  performances.br = `${bitrate.toFixed(1)} Mbps`;
+                } else {
+                  performances.br = '--';
+                }
+
+                const bufferDelayDiff =
+                  stat.jitterBufferDelay - lastStat.jitterBufferDelay;
+                const emittedCountDiff =
+                  stat.jitterBufferEmittedCount -
+                  lastStat.jitterBufferEmittedCount;
+                if (emittedCountDiff > 0) {
+                  performances.jit = `${Math.round(
+                    (bufferDelayDiff / emittedCountDiff) * 1000,
+                  )}ms`;
+                } else {
+                  performances.jit = '--';
+                }
+
+                const totalDecodeTimeDiff =
+                  stat.totalDecodeTime - lastStat.totalDecodeTime;
+                const framesDecodedDiff =
+                  stat.framesDecoded - lastStat.framesDecoded;
+                if (framesDecodedDiff !== 0) {
+                  let currentDecodeTime =
+                    (totalDecodeTimeDiff / framesDecodedDiff) * 1000;
+                  // Decode time reads high on Android Chromium; match xCloud's
+                  // correction.
+                  if (currentDecodeTime > 20) {
+                    currentDecodeTime -= 20;
+                  }
+                  if (currentDecodeTime > 17) {
+                    currentDecodeTime -= 15;
+                  }
+                  performances.decode = `${currentDecodeTime.toFixed(2)}ms`;
+                } else {
+                  performances.decode = '--';
+                }
+              } catch {}
+            }
+            this.lastStat = stat;
+          } else if (
+            stat.type === 'candidate-pair' &&
+            stat.state === 'succeeded'
+          ) {
+            const roundTripTime =
+              typeof stat.currentRoundTripTime !== 'undefined'
+                ? stat.currentRoundTripTime * 1000
+                : '???';
+            performances.rtt = `${roundTripTime}ms`;
+          }
+        });
+        return performances;
+      })
+      .catch(() => performances);
   }
 }

@@ -302,6 +302,15 @@ export class GfnWebRtcClient {
     return {width: 1920, height: 1080};
   }
 
+  // Expose the peer connection's WebRTC stats for the performance overlay.
+  // Resolves null before the connection exists.
+  getStats(): Promise<any> {
+    if (!this.pc) {
+      return Promise.resolve(null);
+    }
+    return (this.pc as any).getStats();
+  }
+
   dispose(): void {
     this.disposed = true;
     this.stopInputHeartbeat();
