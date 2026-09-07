@@ -90,8 +90,9 @@ export type Settings = {
   coop: boolean;
   use_msal_login: boolean;
   enable_microphone: boolean;
-  /** In-app game volume (0-10, 1 = normal), applied independently of the
-   * Android system volume via the remote audio track's gain. */
+  /** In-app game volume (0.0-1.0 in 0.1 steps, 1 = full), applied
+   * independently of the Android system volume via the remote audio track's
+   * gain. */
   audio_gain: number;
   /** Mute the game audio while the app is in the background. */
   background_mute: boolean;

@@ -261,7 +261,7 @@ export function NativeStreamScreenBase({
   const [swipeConfigVersion, setSwipeConfigVersion] = React.useState(0);
   const [audioGain, setAudioGain] = React.useState(() => {
     const g = Number(getSettings().audio_gain);
-    return Number.isFinite(g) ? Math.max(0, Math.min(10, g)) : 1;
+    return Number.isFinite(g) ? Math.max(0, Math.min(1, g)) : 1;
   });
   const [portraitGamepadEditing, setPortraitGamepadEditing] =
     React.useState(false);
@@ -284,7 +284,7 @@ export function NativeStreamScreenBase({
   const audioGainRef = React.useRef(
     (() => {
       const g = Number(getSettings().audio_gain);
-      return Number.isFinite(g) ? Math.max(0, Math.min(10, g)) : 1;
+      return Number.isFinite(g) ? Math.max(0, Math.min(1, g)) : 1;
     })(),
   );
   // True while the app is backgrounded and audio is muted, so foreground
@@ -628,7 +628,7 @@ export function NativeStreamScreenBase({
   const applyRemoteAudioGain = React.useCallback((gain?: number) => {
     const nextGain =
       typeof gain === 'number' && Number.isFinite(gain)
-        ? Math.max(0, Math.min(10, gain))
+        ? Math.max(0, Math.min(1, gain))
         : audioGainRef.current;
     const audioTracks = remoteStream.current?.getAudioTracks?.() ?? [];
     audioTracks.forEach((track: any) => {
@@ -638,7 +638,9 @@ export function NativeStreamScreenBase({
 
   const handleAudioGainChange = React.useCallback(
     (value: number) => {
-      const nextGain = Math.max(0, Math.min(10, Math.round(value)));
+      // Game volume is 0.0 - 1.0 in 0.1 steps; keep one decimal, don't round to
+      // an integer.
+      const nextGain = Math.max(0, Math.min(1, Math.round(value * 10) / 10));
       audioGainRef.current = nextGain;
       setAudioGain(nextGain);
       // Persist so the chosen game volume is remembered across sessions.
