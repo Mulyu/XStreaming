@@ -368,8 +368,31 @@ const effectiveExpiresAt = (tokens: GfnTokens): number => {
   return idExp ? Math.min(tokens.expiresAt, idExp) : tokens.expiresAt;
 };
 
+// Multiple call sites (the library screen's owned-games load, a stream launch,
+// ...) can call getValidTokens() within milliseconds of each other. If both
+// see the same near-expiry token and independently call refreshAuthTokens(),
+// and NVIDIA rotates refresh tokens (issuing a new one and invalidating the
+// old on each use — standard for public OAuth clients), the loser's refresh
+// token has already been consumed by the winner and its request fails. Share
+// one in-flight refresh across concurrent callers so only one request is ever
+// made for a given stale token.
+let inFlightRefresh: Promise<GfnTokens> | null = null;
+
+const refreshOnce = (tokens: GfnTokens): Promise<GfnTokens> => {
+  if (!inFlightRefresh) {
+    inFlightRefresh = refreshAuthTokens(
+      tokens.refreshToken!,
+      tokens.authClientId,
+    ).finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
+};
+
 // Return a valid token set, refreshing (and re-persisting) if it is expired or
-// close to it. Returns null when there is no session or the refresh fails.
+// close to it. Returns null only when there is no session, or the current
+// tokens have actually expired and a refresh could not get fresh ones.
 export const getValidTokens = async (): Promise<GfnTokens | null> => {
   const tokens = getStoredTokens();
   if (!tokens) {
@@ -383,10 +406,7 @@ export const getValidTokens = async (): Promise<GfnTokens | null> => {
     return expiry > Date.now() ? tokens : null;
   }
   try {
-    const refreshed = await refreshAuthTokens(
-      tokens.refreshToken,
-      tokens.authClientId,
-    );
+    const refreshed = await refreshOnce(tokens);
     // Preserve an id/client token the refresh response may omit — but never
     // keep a stale id_token that has already expired (fall back to the access
     // token instead), and re-persist so the next call sees the fresh set.
@@ -399,7 +419,11 @@ export const getValidTokens = async (): Promise<GfnTokens | null> => {
     setStoredTokens(merged);
     return merged;
   } catch {
-    return null;
+    // Refresh failed — a transient/network error, or this call lost a race
+    // against a concurrent refresh that already consumed the same refresh
+    // token. If the tokens we already have haven't actually expired yet, keep
+    // using them instead of forcing a sign-out; the next call retries.
+    return expiry > Date.now() ? tokens : null;
   }
 };
 
