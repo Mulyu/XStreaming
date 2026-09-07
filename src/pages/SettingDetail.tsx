@@ -30,6 +30,7 @@ import gamepad from '../common/settings/gamepad';
 import vgamepad from '../common/settings/vgamepad';
 import audio from '../common/settings/audio';
 import xcloud from '../common/settings/xcloud';
+import gfn from '../common/settings/gfn';
 import sensor from '../common/settings/sensor';
 import others from '../common/settings/others';
 import {
@@ -92,6 +93,7 @@ function SettingDetailScreen({navigation, route}) {
         ...vgamepad,
         ...audio,
         ...xcloud,
+        ...gfn,
         ...sensor,
         ...others,
       ];
@@ -107,6 +109,9 @@ function SettingDetailScreen({navigation, route}) {
       }
       if (name === 'audio_bitrate_mode') {
         setValue2(_settings.audio_bitrate);
+      }
+      if (name === 'gfn_bitrate_mode') {
+        setValue2(_settings.gfn_bitrate);
       }
 
       if (name === 'signaling_cloud') {
@@ -196,6 +201,9 @@ function SettingDetailScreen({navigation, route}) {
     } else if (current === 'audio_bitrate_mode') {
       settings.audio_bitrate_mode = value;
       settings.audio_bitrate = value2;
+    } else if (current === 'gfn_bitrate_mode') {
+      settings.gfn_bitrate_mode = value;
+      settings.gfn_bitrate = value2;
     } else if (currentMetas.name === 'signaling_cloud') {
       xgpuRegions.current.forEach(region => {
         if (region.name === value) {
@@ -234,8 +242,10 @@ function SettingDetailScreen({navigation, route}) {
     }
     if (
       currentMetas.name === 'xcloud_bitrate_mode' ||
-      currentMetas.name === 'audio_bitrate_mode'
+      currentMetas.name === 'audio_bitrate_mode' ||
+      currentMetas.name === 'gfn_bitrate_mode'
     ) {
+      const isGfn = currentMetas.name === 'gfn_bitrate_mode';
       return (
         <>
           <RadioButton.Group onValueChange={val => setValue(val)} value={value}>
@@ -258,10 +268,10 @@ function SettingDetailScreen({navigation, route}) {
               <Slider
                 style={styles.slider}
                 value={value2}
-                minimumValue={1}
+                minimumValue={isGfn ? 4 : 1}
                 maximumValue={50}
                 step={1}
-                lowerLimit={1}
+                lowerLimit={isGfn ? 4 : 1}
                 onValueChange={val => {
                   setValue2(val);
                 }}

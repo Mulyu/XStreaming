@@ -1,8 +1,15 @@
 import {NativeModules, AppState} from 'react-native';
 import BackgroundTimer from 'react-native-background-timer';
-import {launchGfnSession, stopGfnSession, GfnSession} from './session';
+import {
+  launchGfnSession,
+  stopGfnSession,
+  GfnSession,
+  GfnStreamSettings,
+  DEFAULT_GFN_SETTINGS,
+} from './session';
 import {GfnWebRtcClient, GfnConnectionState} from './webrtcClient';
 import {getValidGfnJwt} from './auth';
+import {getSettings} from '../store/settingStore';
 import i18next from '../i18n';
 import {
   GamepadInput,
@@ -72,6 +79,34 @@ export const gpStateToGfnInput = (gp: any): GamepadInput => {
     leftStickY: normalizeAxisToInt16(-num(gp?.LeftThumbYAxis)),
     rightStickX: normalizeAxisToInt16(num(gp?.RightThumbXAxis)),
     rightStickY: normalizeAxisToInt16(-num(gp?.RightThumbYAxis)),
+  };
+};
+
+// Build the GfnStreamSettings CloudMatch/nvstSdp are driven by from the
+// user's saved GFN quality settings. Codec is left at the default
+// (H264) — it isn't exposed as a user setting since it's the only codec
+// verified to negotiate reliably on RN.
+const readGfnStreamSettings = (): GfnStreamSettings => {
+  const s = getSettings();
+  const resolution =
+    typeof s.gfn_resolution === 'string' && s.gfn_resolution
+      ? s.gfn_resolution
+      : DEFAULT_GFN_SETTINGS.resolution;
+  const fps =
+    typeof s.gfn_fps === 'number' && s.gfn_fps > 0
+      ? s.gfn_fps
+      : DEFAULT_GFN_SETTINGS.fps;
+  const maxBitrateMbps =
+    s.gfn_bitrate_mode === 'custom' &&
+    typeof s.gfn_bitrate === 'number' &&
+    s.gfn_bitrate > 0
+      ? s.gfn_bitrate
+      : DEFAULT_GFN_SETTINGS.maxBitrateMbps;
+  return {
+    resolution,
+    fps,
+    maxBitrateMbps,
+    codec: DEFAULT_GFN_SETTINGS.codec,
   };
 };
 
@@ -186,6 +221,7 @@ export class GfnStreamAdapter {
       }
       this.token = token;
       const session = await launchGfnSession(this.options.appId, token, {
+        settings: readGfnStreamSettings(),
         shouldCancel: () => this.cancelled,
         sleep: ms => this.bgSleep(ms),
         onProgress: p => {

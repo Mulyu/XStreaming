@@ -186,6 +186,7 @@ export default {
     vGamepadSettings: '仮想パッド設定',
     AudioSettings: 'オーディオ設定',
     XcloudSettings: 'xCloud設定',
+    GfnSettings: 'GeForce NOW',
     XchomeSettings: 'コンソール設定',
     SensorSettings: 'センサー設定',
     TurnServerSettings: 'TURNサーバー設定',
@@ -383,6 +384,15 @@ export default {
     GfnReadyNotifyBody: '順番が来ました。タップして開始します。',
     GfnAllGames: 'すべて',
     GfnOwned: '所有',
+    GfnResolutionTitle: 'GeForce NOW 解像度',
+    GfnResolutionDesc:
+      'GeForce NOW でリクエストするストリーミング解像度を設定します。',
+    GfnFpsTitle: 'GeForce NOW フレームレート',
+    GfnFpsDesc:
+      'GeForce NOW でリクエストするストリーミングフレームレートを設定します。',
+    GfnBitrateTitle: 'GeForce NOW ビットレート',
+    GfnBitrateDesc:
+      'GeForce NOW の最大ストリーミングビットレートを設定します（注：回線や端末の性能が低い場合、ビットレートを下げると改善することがあります）。',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',
