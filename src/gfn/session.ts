@@ -55,6 +55,9 @@ export type GfnSession = {
   clientId: string;
   deviceId: string;
   gpuType?: string;
+  /** The settings this session was actually requested with — the WebRTC
+   * client's nvstSdp must match these, not a separate hardcoded copy. */
+  settings: GfnStreamSettings;
 };
 
 // ---- ids ----
@@ -114,7 +117,9 @@ const buildCloudMatchHeaders = (opts: {
 
 // ---- request body ----
 
-const parseResolution = (input: string): {width: number; height: number} => {
+export const parseResolution = (
+  input: string,
+): {width: number; height: number} => {
   const [w, h] = input.split('x');
   const width = parseInt(w ?? '', 10);
   const height = parseInt(h ?? '', 10);
@@ -338,7 +343,12 @@ const normalizeIceServers = (
 
 const toGfnSession = (
   payload: RawCloudMatchResponse,
-  ctx: {streamingBaseUrl: string; clientId: string; deviceId: string},
+  ctx: {
+    streamingBaseUrl: string;
+    clientId: string;
+    deviceId: string;
+    settings: GfnStreamSettings;
+  },
 ): GfnSession => {
   if (payload.requestStatus?.statusCode !== 1 || !payload.session?.sessionId) {
     throw new Error(
@@ -367,6 +377,7 @@ const toGfnSession = (
     clientId: ctx.clientId,
     deviceId: ctx.deviceId,
     gpuType: session.gpuType,
+    settings: ctx.settings,
   };
 };
 
@@ -487,7 +498,12 @@ export const createGfnSession = async (
     body: JSON.stringify(body),
   });
   const payload = await readJson<RawCloudMatchResponse>(response);
-  return toGfnSession(payload, {streamingBaseUrl: base, clientId, deviceId});
+  return toGfnSession(payload, {
+    streamingBaseUrl: base,
+    clientId,
+    deviceId,
+    settings,
+  });
 };
 
 // Poll an existing session once. When the session becomes ready and a real
@@ -508,7 +524,12 @@ export const pollGfnSession = async (
     {method: 'GET', headers},
   );
   const payload = await readJson<RawCloudMatchResponse>(response);
-  const next = toGfnSession(payload, {streamingBaseUrl, clientId, deviceId});
+  const next = toGfnSession(payload, {
+    streamingBaseUrl,
+    clientId,
+    deviceId,
+    settings: session.settings,
+  });
 
   // When ready and we learned a direct server IP, re-poll it directly so the
   // signaling endpoint is the real game server, not the zone load balancer.
@@ -530,6 +551,7 @@ export const pollGfnSession = async (
             streamingBaseUrl: directBase,
             clientId,
             deviceId,
+            settings: session.settings,
           });
         }
       }
