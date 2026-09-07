@@ -258,7 +258,10 @@ export function NativeStreamScreenBase({
   const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
   const [gamepadLayoutVersion, setGamepadLayoutVersion] = React.useState(0);
   const [swipeConfigVersion, setSwipeConfigVersion] = React.useState(0);
-  const [audioGain, setAudioGain] = React.useState(1);
+  const [audioGain, setAudioGain] = React.useState(() => {
+    const g = Number(getSettings().audio_gain);
+    return Number.isFinite(g) ? Math.max(0, Math.min(10, g)) : 1;
+  });
   const [portraitGamepadEditing, setPortraitGamepadEditing] =
     React.useState(false);
   const [openMicro, setOpenMicro] = React.useState(false);
@@ -277,7 +280,15 @@ export function NativeStreamScreenBase({
   const [webrtcClient, setWebrtcClient] = React.useState<any>(undefined);
   const [remote, setRemote] = React.useState<any>(null);
   const remoteStream = React.useRef<any>(null);
-  const audioGainRef = React.useRef(1);
+  const audioGainRef = React.useRef(
+    (() => {
+      const g = Number(getSettings().audio_gain);
+      return Number.isFinite(g) ? Math.max(0, Math.min(10, g)) : 1;
+    })(),
+  );
+  // True while the app is backgrounded and audio is muted, so foreground
+  // restore knows to re-apply the user's gain.
+  const backgroundMutedRef = React.useRef(false);
   const keepaliveInterval = React.useRef<any>(null);
   const performanceInterval = React.useRef<any>(null);
   const connectStateRef = React.useRef<any>('');
@@ -629,7 +640,15 @@ export function NativeStreamScreenBase({
       const nextGain = Math.max(0, Math.min(10, Math.round(value)));
       audioGainRef.current = nextGain;
       setAudioGain(nextGain);
-      applyRemoteAudioGain(nextGain);
+      // Persist so the chosen game volume is remembered across sessions.
+      try {
+        saveSettings({...getSettings(), audio_gain: nextGain});
+      } catch {}
+      // While backgrounded the audio is muted; keep it muted and apply the new
+      // gain only when we return to the foreground.
+      if (!backgroundMutedRef.current) {
+        applyRemoteAudioGain(nextGain);
+      }
     },
     [applyRemoteAudioGain],
   );
@@ -855,10 +874,21 @@ export function NativeStreamScreenBase({
           // Back in the foreground: drop the keep-alive service and anti-idle.
           StreamKeepAliveManager?.stop?.();
           stopAntiIdle();
+          // Restore the game audio if we muted it on backgrounding.
+          if (backgroundMutedRef.current) {
+            backgroundMutedRef.current = false;
+            applyRemoteAudioGain(audioGainRef.current);
+          }
           return;
         }
         if (state !== 'background' || !isConnected.current) {
           return;
+        }
+        // Mute the game audio while backgrounded (independent of the Android
+        // system volume). The session keeps running via the keep-alive service.
+        if (getSettings().background_mute !== false) {
+          backgroundMutedRef.current = true;
+          applyRemoteAudioGain(0);
         }
         // Anti-idle is controlled solely by the max-duration slider: 0 = off.
         const antiIdleMinutes =
@@ -1400,7 +1430,10 @@ export function NativeStreamScreenBase({
         }
         remoteStream.current.addTrack(track, remoteStream.current);
         if (track?.kind === 'audio') {
-          track?._setVolume?.(audioGainRef.current);
+          // Stay muted if a track arrives while backgrounded.
+          track?._setVolume?.(
+            backgroundMutedRef.current ? 0 : audioGainRef.current,
+          );
         }
       });
 
