@@ -104,7 +104,8 @@ export class GfnStreamAdapter {
 
   // Handlers NativeStream registers.
   private trackHandler: ((event: any) => void) | null = null;
-  private connectedHandler: ((state: string) => void) | null = null;
+  private connectedHandler: ((state: string, detail?: string) => void) | null =
+    null;
 
   // Queue-phase background keep-alive (foreground service + notification) so the
   // wait survives backgrounding and shows the live queue position. Once
@@ -177,7 +178,10 @@ export class GfnStreamAdapter {
     try {
       const token = await getValidGfnJwt();
       if (!token) {
-        this.connectedHandler?.(FAILED);
+        this.connectedHandler?.(
+          FAILED,
+          'Sign-in required or token refresh failed',
+        );
         return;
       }
       this.token = token;
@@ -240,10 +244,10 @@ export class GfnStreamAdapter {
             this.connectedHandler?.(CONNECTED);
           } else if (s === 'failed') {
             this.stopKeepAlive();
-            this.connectedHandler?.(FAILED);
+            this.connectedHandler?.(FAILED, detail || s);
           } else if (s === 'disconnected') {
             this.stopKeepAlive();
-            this.connectedHandler?.(CLOSED);
+            this.connectedHandler?.(CLOSED, detail || s);
           } else {
             this.options.onProgress?.(detail || s);
           }
@@ -254,7 +258,10 @@ export class GfnStreamAdapter {
     } catch (e: any) {
       this.stopKeepAlive();
       if (!this.disposed && e?.message !== 'cancelled') {
-        this.connectedHandler?.(FAILED);
+        this.connectedHandler?.(
+          FAILED,
+          e?.message ? String(e.message) : String(e),
+        );
       }
     }
   }

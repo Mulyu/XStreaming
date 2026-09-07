@@ -1481,7 +1481,7 @@ export function NativeStreamScreenBase({
           });
       });
 
-      webrtcClient.setConnectedHandler(state => {
+      webrtcClient.setConnectedHandler((state, detail?: string) => {
         // If the session drops (incl. while backgrounded, e.g. xCloud's idle
         // disconnect), tear down the background keep-alive notification too.
         if (state === CLOSED || state === FAILED) {
@@ -1621,7 +1621,14 @@ export function NativeStreamScreenBase({
             ToastAndroid.show(t('Reconnected failed'), ToastAndroid.SHORT);
             exit();
           } else {
-            Alert.alert(t('Warning'), t('NAT failed'), [
+            // GFN failures aren't NAT/ICE-specific like xCloud's — show the
+            // real reason (auth, CloudMatch, signaling, or peer connection)
+            // instead of the generic xCloud NAT message.
+            const message =
+              route.params?.streamType === 'gfn' && detail
+                ? `${t('GfnLaunchFailed')}\n${detail}`
+                : t('NAT failed');
+            Alert.alert(t('Warning'), message, [
               {
                 text: t('Confirm'),
                 style: 'default',
