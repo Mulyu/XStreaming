@@ -169,7 +169,10 @@ public class NativeInputDialogModule extends ReactContextBaseJavaModule {
             int screenWidth = activity.getResources().getDisplayMetrics().widthPixels;
             int targetWidth = Math.min(dp(activity, 320), Math.round(screenWidth * 0.5f));
             boolean showAudioGainControl = getBoolean(options, "showAudioGainControl", false);
-            int audioGain = Math.max(0, Math.min(10, getInt(options, "audioGain", 1)));
+            // In-app game volume is 0.0x - 1.0x (attenuation only), adjusted in
+            // 0.1 steps, so the SeekBar uses 10 discrete steps (progress / 10).
+            double audioGain = Math.max(0.0, Math.min(1.0, getDouble(options, "audioGain", 1.0)));
+            int audioGainProgress = (int) Math.round(audioGain * 10);
 
             FrameLayout root = new FrameLayout(activity);
             root.setLayoutParams(new ViewGroup.LayoutParams(
@@ -218,25 +221,25 @@ public class NativeInputDialogModule extends ReactContextBaseJavaModule {
                 audioGainContent.setBackground(audioGainBackground);
 
                 TextView audioGainLabel = new TextView(activity);
-                audioGainLabel.setText(audioGain + "x");
+                audioGainLabel.setText(String.format(java.util.Locale.US, "%.1fx", audioGain));
                 audioGainLabel.setTextColor(Color.WHITE);
                 audioGainLabel.setTextSize(14);
                 audioGainLabel.setGravity(Gravity.CENTER_VERTICAL);
                 audioGainContent.addView(audioGainLabel, new LinearLayout.LayoutParams(
-                        dp(activity, 36),
+                        dp(activity, 44),
                         LinearLayout.LayoutParams.MATCH_PARENT
                 ));
 
                 SeekBar audioGainSlider = new SeekBar(activity);
                 audioGainSlider.setMax(10);
-                audioGainSlider.setProgress(audioGain);
+                audioGainSlider.setProgress(audioGainProgress);
                 audioGainSlider.setFocusable(false);
                 audioGainSlider.setFocusableInTouchMode(false);
                 audioGainSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        int nextGain = Math.max(0, Math.min(10, progress));
-                        audioGainLabel.setText(nextGain + "x");
+                        double nextGain = Math.max(0, Math.min(10, progress)) / 10.0;
+                        audioGainLabel.setText(String.format(java.util.Locale.US, "%.1fx", nextGain));
                         if (fromUser) {
                             emitAudioGainChange(nextGain);
                         }
@@ -377,9 +380,9 @@ public class NativeInputDialogModule extends ReactContextBaseJavaModule {
         }
     }
 
-    private void emitAudioGainChange(int gain) {
+    private void emitAudioGainChange(double gain) {
         WritableMap event = Arguments.createMap();
-        event.putInt("value", Math.max(0, Math.min(10, gain)));
+        event.putDouble("value", Math.max(0.0, Math.min(1.0, gain)));
         getReactApplicationContext()
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                 .emit("NativeInputDialogAudioGainChange", event);
@@ -464,6 +467,13 @@ public class NativeInputDialogModule extends ReactContextBaseJavaModule {
     private boolean getBoolean(ReadableMap map, String key, boolean fallback) {
         if (map != null && map.hasKey(key) && !map.isNull(key)) {
             return map.getBoolean(key);
+        }
+        return fallback;
+    }
+
+    private double getDouble(ReadableMap map, String key, double fallback) {
+        if (map != null && map.hasKey(key) && !map.isNull(key)) {
+            return map.getDouble(key);
         }
         return fallback;
     }
