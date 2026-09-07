@@ -250,14 +250,41 @@ type RawCloudMatchResponse = {
 const firstIp = (ip?: string | string[]): string | undefined =>
   Array.isArray(ip) ? ip[0] : ip;
 
+// Extract the host from an rtsps/rtsp/wss/https URL (matches OpenNOW's
+// extract_host_from_url), e.g. rtsps://80-250-97-40.server.net:48322 -> host.
+const extractHostFromUrl = (url: string): string | null => {
+  for (const prefix of ['rtsps://', 'rtsp://', 'wss://', 'https://']) {
+    if (url.startsWith(prefix)) {
+      const host = url.slice(prefix.length).split(':')[0].split('/')[0];
+      return host && host.length > 0 && !host.startsWith('.') ? host : null;
+    }
+  }
+  return null;
+};
+
+// Resolve the real streaming/signaling server host, matching OpenNOW's
+// streaming_server_ip priority chain:
+//   1. connectionInfo[usage=14].ip (direct IP)
+//   2. host from connectionInfo[usage=14].resourcePath (rtsps:// URL) — the
+//      signaling connection often carries the host only here, not in `ip`
+//   3. sessionControlInfo.ip (the zone load balancer — a last resort, and NOT
+//      a valid signaling host: /nvst/ 404s there)
 const streamingServerIp = (
   session: NonNullable<RawCloudMatchResponse['session']>,
 ): string | null => {
   const connections = session.connectionInfo ?? [];
   const sigConn = connections.find(c => c.usage === 14);
-  const directIp = firstIp(sigConn?.ip);
-  if (directIp && directIp.length > 0) {
-    return directIp;
+  if (sigConn) {
+    const directIp = firstIp(sigConn.ip);
+    if (directIp && directIp.length > 0) {
+      return directIp;
+    }
+    if (sigConn.resourcePath) {
+      const host = extractHostFromUrl(sigConn.resourcePath);
+      if (host) {
+        return host;
+      }
+    }
   }
   const controlIp = firstIp(session.sessionControlInfo?.ip);
   return controlIp && controlIp.length > 0 ? controlIp : null;
@@ -322,9 +349,9 @@ const toGfnSession = (
   }
   const session = payload.session;
   const serverIp = streamingServerIp(session) ?? '';
-  const sigConn = (session.connectionInfo ?? []).find(
-    c => c.usage === 14 && c.ip,
-  );
+  // The signaling connection's resourcePath (usage=14) — carried even when the
+  // connection has no `ip` field, so do not require one.
+  const sigConn = (session.connectionInfo ?? []).find(c => c.usage === 14);
   return {
     sessionId: session.sessionId,
     status: session.status ?? 1,

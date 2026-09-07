@@ -101,6 +101,9 @@ export class GfnSignalingClient {
 
   connect(): void {
     const url = this.buildSignInUrl();
+    // Host being hit, surfaced in errors so a wrong signaling host (e.g. the
+    // zone load balancer, which 404s /nvst/) is diagnosable on-device.
+    const host = url.replace(/^wss?:\/\//, '').split('/')[0];
     const protocol = `x-nv-sessionid.${this.sessionId}`;
     // RN WebSocket accepts (url, protocols, options) — headers apply on Android.
     const ws = new WebSocket(url, protocol, {
@@ -120,7 +123,7 @@ export class GfnSignalingClient {
     ws.onerror = (event: any) => {
       this.emit({
         type: 'error',
-        message: `Signaling error: ${event?.message ?? 'unknown'}`,
+        message: `Signaling error @ ${host}: ${event?.message ?? 'unknown'}`,
       });
     };
     ws.onclose = event => {
