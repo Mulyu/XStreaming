@@ -1,6 +1,9 @@
+import {NativeModules, AppState} from 'react-native';
+import BackgroundTimer from 'react-native-background-timer';
 import {launchGfnSession, stopGfnSession, GfnSession} from './session';
 import {GfnWebRtcClient, GfnConnectionState} from './webrtcClient';
 import {getValidGfnJwt} from './auth';
+import i18next from '../i18n';
 import {
   GamepadInput,
   normalizeAxisToInt16,
@@ -77,6 +80,9 @@ const CONNECTED = 'connected';
 const CLOSED = 'closed';
 const FAILED = 'failed';
 
+const {StreamKeepAliveManager} = NativeModules;
+const {t} = i18next;
+
 type AdapterOptions = {
   appId: string;
   title: string;
@@ -98,7 +104,64 @@ export class GfnStreamAdapter {
   private trackHandler: ((event: any) => void) | null = null;
   private connectedHandler: ((state: string) => void) | null = null;
 
-  constructor(private readonly options: AdapterOptions) {}
+  // Queue-phase background keep-alive (foreground service + notification) so the
+  // wait survives backgrounding and shows the live queue position. Once
+  // connected, NativeStream owns the streaming keep-alive.
+  private keepAlive = false;
+  private keepAliveText = '';
+  private appState: string = AppState.currentState ?? 'active';
+  private appStateSub: any = null;
+
+  constructor(private readonly options: AdapterOptions) {
+    this.appStateSub = AppState.addEventListener('change', next => {
+      this.appState = next;
+      // Back in the foreground: drop any pending "seat ready" notification.
+      if (next === 'active') {
+        StreamKeepAliveManager?.cancelReady?.();
+      }
+    });
+  }
+
+  // Start/refresh the queue keep-alive notification. Android forbids starting a
+  // foreground service from the background, so this must first run while
+  // foreground (during the queue); later text updates are background-safe.
+  private showKeepAlive(text: string): void {
+    if (this.keepAliveText === text && this.keepAlive) {
+      return;
+    }
+    this.keepAliveText = text;
+    if (!this.keepAlive) {
+      this.keepAlive = true;
+      StreamKeepAliveManager?.start?.(
+        this.options.title,
+        text,
+        t('Disconnect'),
+        0,
+      );
+    } else {
+      StreamKeepAliveManager?.update?.(
+        this.options.title,
+        text,
+        t('Disconnect'),
+      );
+    }
+  }
+
+  private stopKeepAlive(): void {
+    StreamKeepAliveManager?.cancelReady?.();
+    this.keepAliveText = '';
+    if (this.keepAlive) {
+      this.keepAlive = false;
+      StreamKeepAliveManager?.stop?.();
+    }
+  }
+
+  // Background-safe sleep so the queue poll keeps firing while backgrounded.
+  private bgSleep(ms: number): Promise<void> {
+    return new Promise<void>(resolve =>
+      BackgroundTimer.setTimeout(resolve, ms),
+    );
+  }
 
   // ---- lifecycle NativeStream calls ----
 
@@ -118,12 +181,25 @@ export class GfnStreamAdapter {
       this.token = token;
       const session = await launchGfnSession(this.options.appId, token, {
         shouldCancel: () => this.cancelled,
+        sleep: ms => this.bgSleep(ms),
         onProgress: p => {
           if (this.disposed) {
             return;
           }
-          if (p.status === 1 && (p.queuePosition ?? 0) > 1) {
-            this.options.onProgress?.(`Queue #${p.queuePosition}`);
+          if (p.status === 1) {
+            // Entered setup/queue: keep the process alive so the wait survives
+            // backgrounding, and show the live position in the notification
+            // (updates in place as the queue advances).
+            const n = p.queuePosition ?? 0;
+            const queued = n > 1;
+            this.showKeepAlive(
+              queued
+                ? t('GfnQueueNotifyPosition', {n})
+                : t('GfnQueueKeepAlive'),
+            );
+            this.options.onProgress?.(
+              queued ? t('GfnLaunchQueued', {n}) : t('GfnLaunchStarting'),
+            );
           }
         },
       });
@@ -132,6 +208,14 @@ export class GfnStreamAdapter {
         return;
       }
       this.session = session;
+
+      // Seat is ready. If the user backgrounded during the queue, alert them.
+      if (this.appState !== 'active') {
+        StreamKeepAliveManager?.notifyReady?.(
+          this.options.title,
+          t('GfnReadyNotifyBody'),
+        );
+      }
 
       const client = new GfnWebRtcClient(session, {
         onStream: stream => {
@@ -147,11 +231,16 @@ export class GfnStreamAdapter {
             return;
           }
           if (s === 'connected') {
+            // Streaming has begun; the queue keep-alive is no longer needed —
+            // NativeStream owns the in-stream keep-alive from here.
+            this.stopKeepAlive();
             this.startInputLoop();
             this.connectedHandler?.(CONNECTED);
           } else if (s === 'failed') {
+            this.stopKeepAlive();
             this.connectedHandler?.(FAILED);
           } else if (s === 'disconnected') {
+            this.stopKeepAlive();
             this.connectedHandler?.(CLOSED);
           } else {
             this.options.onProgress?.(detail || s);
@@ -161,6 +250,7 @@ export class GfnStreamAdapter {
       this.gfnClient = client;
       client.connect();
     } catch (e: any) {
+      this.stopKeepAlive();
       if (!this.disposed && e?.message !== 'cancelled') {
         this.connectedHandler?.(FAILED);
       }
@@ -190,6 +280,11 @@ export class GfnStreamAdapter {
     this.disposed = true;
     this.cancelled = true;
     this.stopInputLoop();
+    this.stopKeepAlive();
+    if (this.appStateSub) {
+      this.appStateSub.remove?.();
+      this.appStateSub = null;
+    }
     this.gfnClient?.dispose();
     this.gfnClient = null;
     if (this.session && this.token) {

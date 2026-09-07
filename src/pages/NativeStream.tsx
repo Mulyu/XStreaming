@@ -877,8 +877,12 @@ export function NativeStreamScreenBase({
       'change',
       state => {
         if (state === 'active') {
-          // Back in the foreground: drop the keep-alive service and anti-idle.
-          StreamKeepAliveManager?.stop?.();
+          // Back in the foreground: drop the in-stream keep-alive service and
+          // anti-idle. Only once connected — before that, GFN's queue keep-alive
+          // (owned by the stream adapter) must survive foregrounding.
+          if (isConnected.current) {
+            StreamKeepAliveManager?.stop?.();
+          }
           stopAntiIdle();
           // Restore the game audio if we muted it on backgrounding.
           if (backgroundMutedRef.current) {
