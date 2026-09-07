@@ -96,6 +96,13 @@ export type Settings = {
   audio_gain: number;
   /** Mute the game audio while the app is in the background. */
   background_mute: boolean;
+  /** GeForce NOW streaming resolution, "WxH". */
+  gfn_resolution: string;
+  /** GeForce NOW streaming frame rate. */
+  gfn_fps: number;
+  gfn_bitrate_mode: string;
+  /** Custom GeForce NOW bitrate in Mbps, used when gfn_bitrate_mode is 'custom'. */
+  gfn_bitrate: number;
   debug: boolean;
 };
 
@@ -182,6 +189,10 @@ const defaultSettings: Settings = {
   enable_microphone: false,
   audio_gain: 1,
   background_mute: true,
+  gfn_resolution: '1920x1080',
+  gfn_fps: 60,
+  gfn_bitrate_mode: 'auto',
+  gfn_bitrate: 20,
   debug: false,
 };
 

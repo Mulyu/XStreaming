@@ -216,6 +216,7 @@ export default {
     vGamepadSettings: 'Virtual controller',
     AudioSettings: 'Audio',
     XcloudSettings: 'Cloud gaming',
+    GfnSettings: 'GeForce NOW',
     XchomeSettings: 'Console streaming',
     SensorSettings: 'Sensor',
     TurnServerSettings: 'TURN server',
@@ -421,6 +422,14 @@ export default {
     GfnReadyNotifyBody: 'Your session is ready — tap to start.',
     GfnAllGames: 'All',
     GfnOwned: 'Owned',
+    GfnResolutionTitle: 'GeForce NOW resolution',
+    GfnResolutionDesc:
+      'Set the streaming resolution requested from GeForce NOW.',
+    GfnFpsTitle: 'GeForce NOW frame rate',
+    GfnFpsDesc: 'Set the streaming frame rate requested from GeForce NOW.',
+    GfnBitrateTitle: 'GeForce NOW bitrate',
+    GfnBitrateDesc:
+      'Set the maximum streaming bitrate for GeForce NOW (Note: a lower bitrate can help on weaker networks or devices).',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',

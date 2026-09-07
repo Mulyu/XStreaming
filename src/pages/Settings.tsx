@@ -26,6 +26,7 @@ import gamepad from '../common/settings/gamepad';
 import vgamepad from '../common/settings/vgamepad';
 import audio from '../common/settings/audio';
 import xcloud from '../common/settings/xcloud';
+import gfn from '../common/settings/gfn';
 import sensor from '../common/settings/sensor';
 import others from '../common/settings/others';
 
@@ -267,6 +268,25 @@ function SettingsScreen({navigation}) {
           </View>
 
           {xcloud.map((meta, idx) => {
+            return (
+              <SettingItem
+                key={meta.name || idx}
+                title={meta.title}
+                description={meta.description}
+                onPress={() => handleItemPress(meta.name)}
+              />
+            );
+          })}
+        </View>
+
+        <View>
+          <View style={styles.contentTitle}>
+            <Text variant="titleLarge" style={titleTextStyle}>
+              🟢 {t('GfnSettings')}
+            </Text>
+          </View>
+
+          {gfn.map((meta, idx) => {
             return (
               <SettingItem
                 key={meta.name || idx}
