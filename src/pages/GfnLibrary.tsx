@@ -9,7 +9,6 @@ import {
   Pressable,
   Modal,
   Linking,
-  ToastAndroid,
   useWindowDimensions,
 } from 'react-native';
 import {Text, Icon, ActivityIndicator, useTheme} from 'react-native-paper';
@@ -35,7 +34,6 @@ import {
   clearOwnedGames,
   mergeOwnedGames,
 } from '../gfn/catalog';
-import {gfnLaunchManager} from '../gfn/launchManager';
 
 const ACCENT = '#76B900'; // NVIDIA green
 
@@ -135,27 +133,16 @@ function GfnLibraryScreen() {
         startLogin();
         return;
       }
-      // The public catalog id is the numeric CloudMatch app id.
-      const appId = String(game.id);
-      if (!gfnLaunchManager.isActiveFor(appId)) {
-        // Not already queueing/connected: start the launch in the background
-        // and stay right here -- the queue shouldn't occupy the screen, so
-        // e.g. xCloud can be played while GFN waits. A "ready" notification
-        // (and re-tapping this title) brings the user back to it.
-        gfnLaunchManager.start(appId, game.title);
-        ToastAndroid.show(t('GfnQueueingInBackground'), ToastAndroid.LONG);
-        return;
-      }
-      // Already queueing or connected: resume it, through the shared
-      // NativeStream screen (streamType 'gfn') so GFN reuses the full
+      // The public catalog id is the numeric CloudMatch app id. Launch through
+      // the shared NativeStream screen (streamType 'gfn') so GFN reuses the full
       // xCloud play UI: virtual gamepad, layout editor, controllers, options.
       navigation.navigate('NativeStream', {
         streamType: 'gfn',
-        appId,
+        appId: game.id,
         title: game.title,
       });
     },
-    [navigation, startLogin, t],
+    [navigation, startLogin],
   );
 
   const load = React.useCallback((force = false) => {
