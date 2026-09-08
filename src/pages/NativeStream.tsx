@@ -878,11 +878,13 @@ export function NativeStreamScreenBase({
       'change',
       state => {
         if (state === 'active') {
-          // Back in the foreground: drop the in-stream keep-alive service and
-          // anti-idle. Only once connected — before that, GFN's queue keep-alive
-          // (owned by the stream adapter) must survive foregrounding.
+          // Back in the foreground: hide the in-stream keep-alive notification
+          // and anti-idle, but keep the service itself armed (demote, not
+          // stop) so the next backgrounding can promote it again reliably.
+          // Only once connected — before that, GFN's queue keep-alive (owned
+          // by the stream adapter) must survive foregrounding.
           if (isConnected.current) {
-            StreamKeepAliveManager?.stop?.();
+            StreamKeepAliveManager?.demote?.();
           }
           stopAntiIdle();
           // Restore the game audio if we muted it on backgrounding.
@@ -910,7 +912,10 @@ export function NativeStreamScreenBase({
         // foreground service whose notification resumes the game on tap. When
         // anti-idle is on, the notification shows a live count-down to the
         // deadline so the user can see how much longer the session is kept awake.
-        StreamKeepAliveManager?.start?.(
+        // promote() (not start()) because the service was already armed while
+        // connected -- Android may otherwise refuse to start a brand new
+        // foreground service now that the app has already left the foreground.
+        StreamKeepAliveManager?.promote?.(
           t('Streaming in background'),
           antiIdleDeadline > 0
             ? t('BackgroundKeepAliveAntiIdle')
@@ -1510,6 +1515,13 @@ export function NativeStreamScreenBase({
           setLoadingText(`${t(CONNECTED)}`);
           setLoading(false);
           isConnected.current = true;
+
+          // Get the keep-alive service running now, while definitely still in
+          // the foreground, so that backgrounding later can reliably promote
+          // it to show the notification. Starting it for the first time only
+          // once already backgrounded risks Android silently refusing to
+          // start a new foreground service from there.
+          StreamKeepAliveManager?.arm?.();
 
           // Ask for notification permission up front (Android 13+) so the
           // background keep-alive notification can actually be shown/tapped.

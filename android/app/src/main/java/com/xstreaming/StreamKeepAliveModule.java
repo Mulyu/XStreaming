@@ -35,9 +35,50 @@ public class StreamKeepAliveModule extends ReactContextBaseJavaModule {
                     text,
                     disconnectLabel,
                     (long) deadlineEpochMs);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
             // e.g. ForegroundServiceStartNotAllowedException if invoked from the
-            // background on Android 12+; the caller falls back to updateNotification.
+            // background on Android 12+. The service itself won't end up
+            // running, but at least surface a notification instead of nothing.
+            StreamKeepAliveService.updateNotification(
+                    ctx.getApplicationContext(), title, text, disconnectLabel);
+        }
+    }
+
+    // Get the service running (no notification yet) while the app is
+    // definitely still in the foreground, so promote() can reliably show the
+    // notification later even after the app backgrounds. See arm()'s comment
+    // in StreamKeepAliveService for why this two-step avoids the
+    // ForegroundServiceStartNotAllowedException risk `start()` above has.
+    @ReactMethod
+    public void arm() {
+        try {
+            StreamKeepAliveService.arm(ctx.getApplicationContext());
+        } catch (Exception ignored) {
+        }
+    }
+
+    // Show the ongoing notification on an already-armed (or already-running)
+    // instance. Unlike start(), this is safe to call after the app has
+    // backgrounded.
+    @ReactMethod
+    public void promote(
+            String title, String text, String disconnectLabel, double deadlineEpochMs) {
+        StreamKeepAliveService instance = StreamKeepAliveService.getInstance();
+        if (instance != null) {
+            instance.promote(title, text, disconnectLabel, (long) deadlineEpochMs);
+        } else {
+            // Not armed (e.g. process was restarted) -- best effort.
+            start(title, text, disconnectLabel, deadlineEpochMs);
+        }
+    }
+
+    // Hide the notification and drop foreground status without stopping the
+    // service, so it stays armed and ready to promote() again later.
+    @ReactMethod
+    public void demote() {
+        StreamKeepAliveService instance = StreamKeepAliveService.getInstance();
+        if (instance != null) {
+            instance.demote();
         }
     }
 
