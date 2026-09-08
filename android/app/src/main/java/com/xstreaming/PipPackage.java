@@ -19,6 +19,7 @@ public class PipPackage implements ReactPackage {
     public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
         List<NativeModule> modules = new ArrayList<>();
         modules.add(new StreamKeepAliveModule(reactContext));
+        modules.add(new WifiPerformanceModule(reactContext));
         return modules;
     }
 }

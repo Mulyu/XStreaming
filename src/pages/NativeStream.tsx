@@ -90,6 +90,7 @@ const {
   StreamKeepAliveManager,
   NativeInputDialog,
   CoverDisplayManager,
+  WifiPerformanceManager,
 } = NativeModules;
 
 let defaultMaping: any = GAMEPAD_MAPING;
@@ -1487,8 +1488,15 @@ export function NativeStreamScreenBase({
         if (state === CLOSED || state === FAILED) {
           StreamKeepAliveManager?.stop?.();
           stopAntiIdle();
+          WifiPerformanceManager?.release?.();
         }
         if (state === CONNECTED) {
+          // Keep the WiFi radio out of power-save mode for the rest of the
+          // stream — Android's default power management lets it doze between
+          // packets, which shows up as latency jitter on real-time media even
+          // without packet loss (a desktop client's always-on WiFi/Ethernet
+          // never has this problem).
+          WifiPerformanceManager?.acquire?.();
           // Connected
           if (!isConnected.current) {
             ToastAndroid.show(t('Connected'), ToastAndroid.SHORT);
@@ -2018,6 +2026,7 @@ export function NativeStreamScreenBase({
       keepAliveDisconnectListener.current &&
         keepAliveDisconnectListener.current.remove();
       StreamKeepAliveManager?.stop?.();
+      WifiPerformanceManager?.release?.();
       if (antiIdleTimerRef.current) {
         BackgroundTimer.clearInterval(antiIdleTimerRef.current);
         antiIdleTimerRef.current = null;
