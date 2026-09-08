@@ -457,6 +457,10 @@ export class GfnStreamAdapter {
       // instead of the local one) is visible instead of only inferred from
       // symptoms like high RTT/jitter.
       region: regionLabelFromBase(this.session?.streamingBaseUrl),
+      // Active candidate-pair's local candidate type/protocol, e.g. "srflx/udp"
+      // or "relay/udp" (TURN relay — an extra hop, and a common cause of
+      // higher/less stable latency than a direct connection).
+      transport: '',
     };
     const client = this.gfnClient;
     if (!client) {
@@ -468,6 +472,22 @@ export class GfnStreamAdapter {
         if (!stats || typeof stats.forEach !== 'function') {
           return performances;
         }
+        // Local candidate id -> {type, protocol}, so the active candidate-pair
+        // can report whether media is flowing direct (host/srflx) or via a
+        // TURN relay — relayed paths add a hop and are a common source of
+        // extra latency/jitter versus a direct connection.
+        const localCandidates = new Map<
+          string,
+          {type?: string; protocol?: string}
+        >();
+        stats.forEach((stat: any) => {
+          if (stat.type === 'local-candidate' && stat.id) {
+            localCandidates.set(stat.id, {
+              type: stat.candidateType,
+              protocol: stat.protocol,
+            });
+          }
+        });
         stats.forEach((stat: any) => {
           if (
             stat.type === 'inbound-rtp' &&
@@ -549,13 +569,20 @@ export class GfnStreamAdapter {
             this.lastStat = stat;
           } else if (
             stat.type === 'candidate-pair' &&
-            stat.state === 'succeeded'
+            (stat.state === 'succeeded' || stat.nominated)
           ) {
             const roundTripTime =
               typeof stat.currentRoundTripTime !== 'undefined'
                 ? stat.currentRoundTripTime * 1000
                 : '???';
             performances.rtt = `${roundTripTime}ms`;
+            const local = localCandidates.get(stat.localCandidateId);
+            if (local?.type) {
+              performances.transport =
+                local.type === 'relay'
+                  ? `relay/${local.protocol ?? '?'}`
+                  : `${local.type}/${local.protocol ?? '?'}`;
+            }
           }
         });
         return performances;
