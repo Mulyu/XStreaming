@@ -10,7 +10,7 @@ import {
   GfnIceCandidate,
   GfnSignalingEvent,
 } from './signaling';
-import {buildNvstSdp, extractIceCredentials} from './nvstSdp';
+import {buildNvstSdp, extractIceCredentials, mungeAnswerSdp} from './nvstSdp';
 import {
   GfnInputEncoder,
   GamepadInput,
@@ -170,21 +170,30 @@ export class GfnWebRtcClient {
       new RTCSessionDescription({type: 'offer', sdp: offerSdp}),
     );
 
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-
-    const finalSdp = (pc as any).localDescription?.sdp ?? answer.sdp;
-    const credentials = extractIceCredentials(finalSdp);
     // Match the encoder settings this session was actually requested with
     // (CloudMatch was told the same resolution/fps/bitrate/codec) rather than
     // an independent, possibly-stale hardcoded copy.
     const {settings} = this.session;
+    const maxBitrateKbps = Math.round(settings.maxBitrateMbps * 1000);
+
+    const answer = await pc.createAnswer();
+    // Match the official web client: inject a "b=AS:<kbps>" bandwidth hint
+    // (separate from nvstSdp's own vqos.bw.* hints) and "stereo=1" for opus,
+    // before setting the local description so it's what's actually negotiated
+    // and sent to the signaling server.
+    if (answer.sdp) {
+      answer.sdp = mungeAnswerSdp(answer.sdp, maxBitrateKbps);
+    }
+    await pc.setLocalDescription(answer);
+
+    const finalSdp = (pc as any).localDescription?.sdp ?? answer.sdp;
+    const credentials = extractIceCredentials(finalSdp);
     const {width, height} = parseResolution(settings.resolution);
     const nvstSdp = buildNvstSdp({
       width,
       height,
       fps: settings.fps,
-      maxBitrateKbps: Math.round(settings.maxBitrateMbps * 1000),
+      maxBitrateKbps,
       partialReliableThresholdMs: this.partialReliableThresholdMs,
       codec: settings.codec,
       credentials,

@@ -28,6 +28,42 @@ export const extractIceCredentials = (
   return {ufrag, pwd, fingerprint};
 };
 
+// Munge the WebRTC answer (not the nvstSdp blob) to match what the official
+// GFN web client sends: a "b=AS:<kbps>" bandwidth line after each m= section,
+// and "stereo=1" on the opus fmtp line. These are separate from nvstSdp's own
+// vqos.bw.* hints and are hints to the server's encoder/audio negotiation, not
+// enforced client-side. Ported from OpenNOW's answer.ts.
+export const mungeAnswerSdp = (sdp: string, maxBitrateKbps: number): string => {
+  const lineEnding = sdp.includes('\r\n') ? '\r\n' : '\n';
+  const lines = sdp.split(/\r?\n/);
+  const result: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    result.push(line);
+
+    if (line.startsWith('m=video') || line.startsWith('m=audio')) {
+      const bitrateForSection = line.startsWith('m=video')
+        ? maxBitrateKbps
+        : 128; // 128 kbps is plenty for stereo opus.
+      const nextLine = lines[i + 1] ?? '';
+      if (!nextLine.startsWith('b=')) {
+        result.push(`b=AS:${bitrateForSection}`);
+      }
+    }
+
+    if (
+      line.startsWith('a=fmtp:') &&
+      line.includes('minptime=') &&
+      !line.includes('stereo=1')
+    ) {
+      result[result.length - 1] = line + ';stereo=1';
+    }
+  }
+
+  return result.join(lineEnding);
+};
+
 export const buildNvstSdp = (params: NvstParams): string => {
   const maxBitrate = Math.max(
     OFFICIAL_MIN_BITRATE_KBPS,
