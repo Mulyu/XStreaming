@@ -384,11 +384,17 @@ const toGfnSession = (
 // ---- transport ----
 
 const CLOUDMATCH_TIMEOUT_MS = 30_000;
+// GET requests (region discovery, polling) are safe to retry on a transient
+// failure; a single blip here previously fell straight back to the global
+// default endpoint for the rest of the session instead of the local region.
+const CLOUDMATCH_GET_RETRIES = 2;
+const CLOUDMATCH_RETRY_DELAYS_MS = [250, 750];
+const CLOUDMATCH_RETRY_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-const fetchCloudMatch = async (
-  url: string,
-  init: RequestInit,
-): Promise<Response> => {
+const sleep = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+const fetchOnce = async (url: string, init: RequestInit): Promise<Response> => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CLOUDMATCH_TIMEOUT_MS);
   try {
@@ -396,6 +402,40 @@ const fetchCloudMatch = async (
   } finally {
     clearTimeout(timeout);
   }
+};
+
+const fetchCloudMatch = async (
+  url: string,
+  init: RequestInit,
+): Promise<Response> => {
+  const method = (init.method ?? 'GET').toUpperCase();
+  const retries = method === 'GET' ? CLOUDMATCH_GET_RETRIES : 0;
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetchOnce(url, init);
+      if (attempt < retries && CLOUDMATCH_RETRY_STATUSES.has(response.status)) {
+        await sleep(
+          CLOUDMATCH_RETRY_DELAYS_MS[
+            Math.min(attempt, CLOUDMATCH_RETRY_DELAYS_MS.length - 1)
+          ],
+        );
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retries) {
+        throw error;
+      }
+      await sleep(
+        CLOUDMATCH_RETRY_DELAYS_MS[
+          Math.min(attempt, CLOUDMATCH_RETRY_DELAYS_MS.length - 1)
+        ],
+      );
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 };
 
 // Pull a human-readable reason out of a CloudMatch error body: prefer the
