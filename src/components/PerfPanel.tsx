@@ -25,6 +25,10 @@ const PerfPanel: React.FC<Props> = ({performance = {}, streamType}) => {
     xcloudRegionFlag ? `(${xcloudRegionFlag})` : ''
   }${
     streamType === 'gfn' && performance.region ? `(${performance.region})` : ''
+  }${
+    streamType === 'gfn' && performance.transport
+      ? `[${performance.transport}]`
+      : ''
   }`;
 
   React.useEffect(() => {
