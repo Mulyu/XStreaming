@@ -415,6 +415,7 @@ export default {
     GfnLaunchStarting: 'Starting your session…',
     GfnLaunchQueued: 'In queue (position {{n}})…',
     GfnLaunchConnecting: 'Connecting to the stream…',
+    GfnConnectingRegion: 'Connecting via {{region}}…',
     GfnLaunchFailed: 'Could not start the stream.',
     GfnLaunchDisconnected: 'The stream disconnected.',
     GfnSignInToPlay: 'Sign in to play',
