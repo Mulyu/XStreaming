@@ -272,6 +272,14 @@ export class GfnStreamAdapter {
       }
       this.session = session;
 
+      // Show which CloudMatch region the session actually landed on as soon
+      // as it's known, so it's visible during connection setup itself — not
+      // only in the (opt-in) performance overlay once already playing.
+      const region = regionLabelFromBase(session.streamingBaseUrl);
+      if (region) {
+        this.options.onProgress?.(t('GfnConnectingRegion', {region}));
+      }
+
       // Seat is ready. If the user backgrounded during the queue, alert them.
       if (this.appState !== 'active') {
         StreamKeepAliveManager?.notifyReady?.(
@@ -306,7 +314,10 @@ export class GfnStreamAdapter {
             this.stopKeepAlive();
             this.connectedHandler?.(CLOSED, detail || s);
           } else {
-            this.options.onProgress?.(detail || s);
+            const region = regionLabelFromBase(this.session?.streamingBaseUrl);
+            this.options.onProgress?.(
+              region ? `${detail || s} (${region})` : detail || s,
+            );
           }
         },
       });

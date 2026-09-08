@@ -377,6 +377,7 @@ export default {
     GfnLaunchStarting: 'セッションを開始しています…',
     GfnLaunchQueued: '順番待ち（{{n}} 番目）…',
     GfnLaunchConnecting: 'ストリームに接続しています…',
+    GfnConnectingRegion: '接続先リージョン: {{region}}',
     GfnLaunchFailed: 'ストリームを開始できませんでした。',
     GfnLaunchDisconnected: 'ストリームが切断されました。',
     GfnSignInToPlay: 'サインインしてプレイ',
