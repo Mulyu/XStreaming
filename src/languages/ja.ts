@@ -382,6 +382,8 @@ export default {
     GfnLaunchDisconnected: 'ストリームが切断されました。',
     GfnSignInToPlay: 'サインインしてプレイ',
     GfnQueueKeepAlive: 'GeForce NOW の順番待ち中…',
+    GfnQueueingInBackground:
+      'バックグラウンドで順番待ちを開始しました。準備ができたら通知します。',
     GfnQueueNotifyPosition: '順番待ち {{n}} 番目 · タップで戻る',
     GfnReadyNotifyBody: '順番が来ました。タップして開始します。',
     GfnAllGames: 'すべて',

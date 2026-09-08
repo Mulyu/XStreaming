@@ -420,6 +420,8 @@ export default {
     GfnLaunchDisconnected: 'The stream disconnected.',
     GfnSignInToPlay: 'Sign in to play',
     GfnQueueKeepAlive: 'Waiting in the GeForce NOW queue…',
+    GfnQueueingInBackground:
+      "Queueing in the background — we'll notify you when it's ready.",
     GfnQueueNotifyPosition: 'Queue position {{n}} · tap to return',
     GfnReadyNotifyBody: 'Your session is ready — tap to start.',
     GfnAllGames: 'All',
