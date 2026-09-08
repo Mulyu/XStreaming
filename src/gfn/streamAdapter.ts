@@ -82,6 +82,27 @@ export const gpStateToGfnInput = (gp: any): GamepadInput => {
   };
 };
 
+// Shorten a CloudMatch base URL to a short region label for the performance
+// overlay, e.g. "https://jp-01.cloudmatchbeta.nvidiagrid.net" -> "jp-01", or
+// "default" when it's still the global (unresolved-region) endpoint — the
+// tell-tale sign region discovery fell back instead of finding the local one.
+const regionLabelFromBase = (base?: string): string => {
+  if (!base) {
+    return '';
+  }
+  const host = base.replace(/^https?:\/\//, '').split('/')[0];
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    return host;
+  }
+  const zoneMatch = /^([a-z0-9-]+)\.cloudmatchbeta\.nvidiagrid\.net$/i.exec(
+    host,
+  );
+  if (zoneMatch) {
+    return zoneMatch[1] === 'prod' ? 'default' : zoneMatch[1];
+  }
+  return host;
+};
+
 // Build the GfnStreamSettings CloudMatch/nvstSdp are driven by from the
 // user's saved GFN quality settings. Codec is left at the default
 // (H264) — it isn't exposed as a user setting since it's the only codec
@@ -431,6 +452,11 @@ export class GfnStreamAdapter {
       fl: '-1 (-1%)',
       br: '',
       decode: '',
+      // Which CloudMatch region the session actually landed on, so a bad
+      // region resolution (falling back to the global default endpoint
+      // instead of the local one) is visible instead of only inferred from
+      // symptoms like high RTT/jitter.
+      region: regionLabelFromBase(this.session?.streamingBaseUrl),
     };
     const client = this.gfnClient;
     if (!client) {

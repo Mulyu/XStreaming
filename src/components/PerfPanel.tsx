@@ -23,6 +23,8 @@ const PerfPanel: React.FC<Props> = ({performance = {}, streamType}) => {
     streamType === 'cloud' ? getXcloudRegionFlag(settings.force_region_ip) : '';
   const rttLabel = `${t('RTT')}${
     xcloudRegionFlag ? `(${xcloudRegionFlag})` : ''
+  }${
+    streamType === 'gfn' && performance.region ? `(${performance.region})` : ''
   }`;
 
   React.useEffect(() => {
