@@ -123,6 +123,17 @@ const PerfPanel: React.FC<Props> = ({performance = {}, streamType}) => {
             {isHorizon ? ' | ' : ''}
           </Text>
         </View>
+        {!!(performance.wifi?.band || performance.wifi?.rssi) && (
+          <View>
+            <Text style={styles.text}>
+              {t('WiFi')}: {performance.wifi?.band || '?'}
+              {typeof performance.wifi?.rssi === 'number'
+                ? ` ${performance.wifi.rssi}dBm`
+                : ''}
+              {isHorizon ? ' | ' : ''}
+            </Text>
+          </View>
+        )}
         {battery > -1 && (
           <View>
             <Text style={styles.text}>{renderBattery(battery)}</Text>

@@ -2114,11 +2114,22 @@ export function NativeStreamScreenBase({
       return;
     }
 
+    // WiFi signal info (band/RSSI) changes slowly; only refresh it every 5th
+    // tick instead of every second.
+    let wifiTick = 0;
+    let lastWifiInfo: any = null;
     const updatePerformance = () => {
-      webrtcClient
-        .getStreamState()
-        .then(res => {
-          setPerformance(res);
+      const wantsWifiInfo = wifiTick % 5 === 0;
+      wifiTick++;
+      const wifiInfoPromise = wantsWifiInfo
+        ? WifiPerformanceManager?.getSignalInfo?.().catch(() => null)
+        : Promise.resolve(null);
+      Promise.all([webrtcClient.getStreamState(), wifiInfoPromise])
+        .then(([res, wifiInfo]) => {
+          if (wifiInfo) {
+            lastWifiInfo = wifiInfo;
+          }
+          setPerformance({...res, wifi: lastWifiInfo});
         })
         .catch(() => {});
     };

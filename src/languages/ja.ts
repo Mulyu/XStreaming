@@ -218,6 +218,7 @@ export default {
     PL: 'PL',
     Bitrate: 'ビットレート',
     DT: 'DT',
+    WiFi: 'WiFi',
     Download: 'ダウンロード',
     'Serve & Connection': 'サービスと接続',
     'Virtual Opacity': '仮想パッドの不透明度',

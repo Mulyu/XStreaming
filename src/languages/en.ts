@@ -248,6 +248,7 @@ export default {
     PL: 'PL',
     Bitrate: 'Bitrate',
     DT: 'DT',
+    WiFi: 'WiFi',
     Download: 'Download',
     'Serve & Connection': 'Service and connection',
     'Virtual Opacity': 'Virtual button opacity',
