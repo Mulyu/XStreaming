@@ -45,7 +45,7 @@ import {
 } from '../store/touchProfileStore';
 import {useTranslation} from 'react-i18next';
 import webRTCClient from '../webrtc';
-import {GfnAttachedStream} from '../gfn/launchManager';
+import {GfnStreamAdapter} from '../gfn/streamAdapter';
 import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../utils/debug';
 import {GAMEPAD_MAPING} from '../common';
@@ -878,11 +878,13 @@ export function NativeStreamScreenBase({
       'change',
       state => {
         if (state === 'active') {
-          // Back in the foreground: drop the in-stream keep-alive service and
-          // anti-idle. Only once connected — before that, GFN's queue keep-alive
-          // (owned by the stream adapter) must survive foregrounding.
+          // Back in the foreground: hide the in-stream keep-alive notification
+          // and anti-idle, but keep the service itself armed (demote, not
+          // stop) so the next backgrounding can promote it again reliably.
+          // Only once connected — before that, GFN's queue keep-alive (owned
+          // by the stream adapter) must survive foregrounding.
           if (isConnected.current) {
-            StreamKeepAliveManager?.stop?.();
+            StreamKeepAliveManager?.demote?.();
           }
           stopAntiIdle();
           // Restore the game audio if we muted it on backgrounding.
@@ -910,7 +912,10 @@ export function NativeStreamScreenBase({
         // foreground service whose notification resumes the game on tap. When
         // anti-idle is on, the notification shows a live count-down to the
         // deadline so the user can see how much longer the session is kept awake.
-        StreamKeepAliveManager?.start?.(
+        // promote() (not start()) because the service was already armed while
+        // connected -- Android may otherwise refuse to start a brand new
+        // foreground service now that the app has already left the foreground.
+        StreamKeepAliveManager?.promote?.(
           t('Streaming in background'),
           antiIdleDeadline > 0
             ? t('BackgroundKeepAliveAntiIdle')
@@ -1326,18 +1331,6 @@ export function NativeStreamScreenBase({
     // Back action
     const beforeRemoveListener = navigation.addListener('beforeRemove', e => {
       stopVibrate();
-      // While a GFN launch is still queueing/connecting (not yet playing),
-      // let the user navigate away freely instead of asking to confirm an
-      // exit -- nothing is being interrupted yet. The launch keeps running
-      // via gfnLaunchManager; a "ready" notification (and re-tapping the
-      // title in the library) lets them come back to it.
-      if (
-        route.params?.streamType === 'gfn' &&
-        connectStateRef.current !== CONNECTED &&
-        e.data.action.type === 'GO_BACK'
-      ) {
-        return;
-      }
       if (portraitMode && e.data.action.type === 'GO_BACK') {
         e.preventDefault();
         Alert.alert(t('Warning'), t('Exit stream?'), [
@@ -1401,11 +1394,9 @@ export function NativeStreamScreenBase({
 
     if (!streamApi) {
       if (route.params?.streamType === 'gfn') {
-        // GeForce NOW drives itself through gfnLaunchManager (below);
-        // NativeStream only needs a no-op streamApi so its xCloud
-        // keepalive/stop plumbing stays harmless. The manager -- not this
-        // screen -- owns the GFN session lifecycle, so leaving the screen
-        // doesn't cancel a queueing/connecting launch.
+        // GeForce NOW drives itself through GfnStreamAdapter (below); NativeStream
+        // only needs a no-op streamApi so its xCloud keepalive/stop plumbing stays
+        // harmless. The adapter owns the GFN session lifecycle.
         setStreamApi({
           startSession: () => Promise.resolve(),
           stopStream: () => Promise.resolve(),
@@ -1440,7 +1431,7 @@ export function NativeStreamScreenBase({
     if (streamApi && webrtcClient === undefined) {
       if (route.params?.streamType === 'gfn') {
         setWebrtcClient(
-          new GfnAttachedStream({
+          new GfnStreamAdapter({
             appId: String(route.params?.appId ?? ''),
             title: String(route.params?.title ?? ''),
             onProgress: setLoadingText,
@@ -1524,6 +1515,13 @@ export function NativeStreamScreenBase({
           setLoadingText(`${t(CONNECTED)}`);
           setLoading(false);
           isConnected.current = true;
+
+          // Get the keep-alive service running now, while definitely still in
+          // the foreground, so that backgrounding later can reliably promote
+          // it to show the notification. Starting it for the first time only
+          // once already backgrounded risks Android silently refusing to
+          // start a new foreground service from there.
+          StreamKeepAliveManager?.arm?.();
 
           // Ask for notification permission up front (Android 13+) so the
           // background keep-alive notification can actually be shown/tapped.
@@ -2026,17 +2024,7 @@ export function NativeStreamScreenBase({
       beforeRemoveListener();
       FullScreenManager.immersiveModeOff();
       stopVibrate();
-      if (webrtcClient) {
-        // Leaving while a GFN launch is still queueing/connecting is a quiet
-        // leave (see the beforeRemove guard above) -- detach without
-        // canceling the launch. Every other case (including a GFN stream
-        // the user explicitly disconnected, or any xCloud/xHome stream) is a
-        // real close.
-        const quietGfnLeave =
-          route.params?.streamType === 'gfn' &&
-          connectStateRef.current !== CONNECTED;
-        webrtcClient.close(quietGfnLeave ? {keepAlive: true} : undefined);
-      }
+      webrtcClient && webrtcClient.close();
       usbGpEventListener.current && usbGpEventListener.current.remove();
       gpDownEventListener.current && gpDownEventListener.current.remove();
       gpUpEventListener.current && gpUpEventListener.current.remove();

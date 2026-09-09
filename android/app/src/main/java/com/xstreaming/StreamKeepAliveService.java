@@ -36,11 +36,38 @@ public class StreamKeepAliveService extends Service {
     // countdown (anti-idle disabled). Drives a live notification chronometer.
     public static final String EXTRA_DEADLINE = "deadline";
     public static final String ACTION_DISCONNECT = "com.xstreaming.action.KEEPALIVE_DISCONNECT";
+    // Start the service without promoting it to foreground yet -- see arm().
+    public static final String ACTION_ARM = "com.xstreaming.action.KEEPALIVE_ARM";
     public static final String JS_EVENT_DISCONNECT = "StreamKeepAliveDisconnect";
     // 3h cap so a stranded service can't hold the CPU forever.
     private static final long WAKELOCK_TIMEOUT_MS = 3 * 60 * 60 * 1000L;
 
+    // Set in onCreate/cleared in onDestroy, so promote()/demote() can be
+    // invoked as plain in-process method calls instead of through a new
+    // Context.startForegroundService()/startService() call -- the latter is
+    // what Android disallows once the app has left the foreground.
+    private static StreamKeepAliveService instance;
+
     private PowerManager.WakeLock wakeLock;
+
+    // Start the service as a plain (non-foreground, no notification) service
+    // while the app is still known to be in the foreground (e.g. right when a
+    // stream connects). Because Context.startService() -- unlike
+    // startForegroundService() -- carries no "must call startForeground()
+    // within 5s" obligation, this leaves the service simply alive and ready:
+    // promote() can then reliably show the notification later even after the
+    // app backgrounds, since that only needs an already-running instance to
+    // call Service#startForeground() on itself, which isn't subject to the
+    // background-start restriction.
+    public static void arm(Context context) {
+        Intent intent = new Intent(context, StreamKeepAliveService.class);
+        intent.setAction(ACTION_ARM);
+        context.startService(intent);
+    }
+
+    public static StreamKeepAliveService getInstance() {
+        return instance;
+    }
 
     public static void start(
             Context context,
@@ -125,11 +152,22 @@ public class StreamKeepAliveService extends Service {
     }
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        instance = this;
+    }
+
+    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_DISCONNECT.equals(intent.getAction())) {
             emitDisconnect();
             stopSelf();
             return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_ARM.equals(intent.getAction())) {
+            // Stay alive as a plain service; promote() shows the notification
+            // (and calls startForeground) later, on demand.
+            return START_STICKY;
         }
 
         String title = intent != null ? intent.getStringExtra(EXTRA_TITLE) : null;
@@ -163,6 +201,34 @@ public class StreamKeepAliveService extends Service {
 
         acquireWakeLock();
         return START_STICKY;
+    }
+
+    // Promote an already-armed (or already-foreground) instance to show the
+    // ongoing notification. Safe to call after the app has backgrounded --
+    // unlike Context.startForegroundService(), Service#startForeground() on a
+    // live instance has no foreground-app requirement.
+    public void promote(String title, String text, String disconnectLabel, long deadlineEpochMs) {
+        createChannel(this);
+        Notification notification =
+                buildOngoingNotification(this, title, text, disconnectLabel, deadlineEpochMs);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
+        acquireWakeLock();
+    }
+
+    // Hide the notification and drop foreground status, but keep the service
+    // (and this instance) alive so it can be promoted again later without
+    // needing another Context-level service start.
+    public void demote() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(Service.STOP_FOREGROUND_REMOVE);
+        } else {
+            stopForeground(true);
+        }
+        releaseWakeLock();
     }
 
     private void emitDisconnect() {
@@ -296,6 +362,9 @@ public class StreamKeepAliveService extends Service {
             stopForeground(Service.STOP_FOREGROUND_REMOVE);
         } else {
             stopForeground(true);
+        }
+        if (instance == this) {
+            instance = null;
         }
         super.onDestroy();
     }
