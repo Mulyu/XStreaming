@@ -95,11 +95,8 @@ const display = [
     ),
     data: [
       {value: '', text: 'Auto'},
-      {value: 'video/AV1', text: 'AV1'},
+      // {value: 'video/AV1', text: 'AV1'},
       // {value: 'video/VP9', text: 'VP9'},
-      // H265/HEVC has no decoder in this app's WebRTC stack (Google's
-      // libwebrtc doesn't ship one, for licensing reasons) -- leave this
-      // unavailable rather than offer a codec that can't actually decode.
       // {value: '', text: 'H265'},
       // {value: 'video/VP8', text: 'VP8'},
       {value: 'video/H264-4d', text: 'H264-High'},
