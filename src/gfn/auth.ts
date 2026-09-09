@@ -249,15 +249,20 @@ export const refreshAuthTokens = async (
   refreshToken: string,
   authClientId = STEAM_DECK_CLIENT_ID,
 ): Promise<GfnTokens> => {
+  // No `scope` param here, matching OpenNOW's (the reference this flow was
+  // ported from) working refresh request exactly. An earlier attempt to add
+  // it here (to force a fresh id_token) is suspected of making NVIDIA's
+  // rotating refresh tokens (see refreshOnce() below) fail outright on
+  // refresh instead -- riding out the old access/id token until it truly
+  // expires and then forcing a full re-login every few hours, matching what
+  // was reported. Standard OIDC refresh already re-issues the id_token for
+  // the original (openid-inclusive) grant without re-specifying scope; the
+  // effectiveExpiresAt()/oldIdValid handling below is the safety net if that
+  // ever doesn't hold.
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
     client_id: authClientId,
-    // Request the same scopes (incl. openid) so NVIDIA re-issues a fresh
-    // id_token — without this the refresh often returns only a new access
-    // token, leaving the stale id_token (used to authorize CloudMatch) to
-    // expire and fail auth a few hours after sign-in.
-    scope: SCOPES,
   });
 
   const response = await fetch(TOKEN_ENDPOINT, {
