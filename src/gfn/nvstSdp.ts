@@ -121,7 +121,11 @@ export const buildNvstSdp = (params: NvstParams): string => {
     `a=video.initialPeakBitrateKbps:${startupBitrate}`,
     `a=vqos.bw.maximumBitrateKbps:${maxBitrate}`,
     `a=vqos.bw.minimumBitrateKbps:${OFFICIAL_MIN_BITRATE_KBPS}`,
-    'a=video.maxNumReferenceFrames:4',
+    // Experimenting with a lower reference-frame count to reduce per-frame
+    // motion-compensation decode cost, which scales with high-motion scenes
+    // -- suspected cause of video-only delay growing under load. Was 4; try
+    // 1 next if 2 doesn't fix it.
+    'a=video.maxNumReferenceFrames:2',
     'a=video.mapRtpTimestampsToFrames:1',
     'a=video.encoderCscMode:3',
     'a=video.encoderHdrCscMode:4',
