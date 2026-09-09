@@ -223,6 +223,7 @@ export default {
     PL: '丟包',
     Bitrate: '碼率',
     DT: '解碼',
+    DEC: '解碼器',
     Download: '下載',
     'Serve & Connection': '服務與連接',
     'Virtual Opacity': '虛擬按鍵透明度',

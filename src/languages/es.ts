@@ -222,6 +222,7 @@ export default {
     PL: 'PL',
     Bitrate: 'Bitrate',
     DT: 'DT',
+    DEC: 'DEC',
     Download: 'Descargar',
     'Serve & Connection': 'Servicio y conexión',
     'Virtual Opacity': 'Opacidad virtual',

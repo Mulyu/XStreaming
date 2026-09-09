@@ -123,6 +123,14 @@ const PerfPanel: React.FC<Props> = ({performance = {}, streamType}) => {
             {isHorizon ? ' | ' : ''}
           </Text>
         </View>
+        {!!performance.decoder && (
+          <View>
+            <Text style={styles.text}>
+              {t('DEC')}: {performance.decoder}
+              {isHorizon ? ' | ' : ''}
+            </Text>
+          </View>
+        )}
         {!!(performance.wifi?.band || performance.wifi?.rssi) && (
           <View>
             <Text style={styles.text}>

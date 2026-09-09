@@ -232,6 +232,7 @@ export default {
     PL: 'Perda de pacotes',
     Bitrate: 'Bitrate',
     DT: 'Decodificação',
+    DEC: 'Decodificador',
     Download: 'Baixar',
     'Serve & Connection': 'Serviço e conexão',
     'Virtual Opacity': 'Opacidade dos botões virtuais',

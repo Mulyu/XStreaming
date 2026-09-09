@@ -223,6 +223,7 @@ export default {
     PL: 'PL',
     Bitrate: 'बिटरेट',
     DT: 'DT',
+    DEC: 'DEC',
     Download: 'डाउनलोड',
     'Serve & Connection': 'सेवा और कनेक्शन',
     'Virtual Opacity': 'वर्चुअल पारदर्शिता',

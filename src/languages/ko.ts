@@ -215,6 +215,7 @@ export default {
     PL: 'PL',
     Bitrate: '비트레이트',
     DT: 'DT',
+    DEC: 'DEC',
     Download: '다운로드',
     'Serve & Connection': '서비스 및 연결',
     'Virtual Opacity': '가상 패드 투명도',

@@ -218,6 +218,7 @@ export default {
     PL: 'PL',
     Bitrate: 'ビットレート',
     DT: 'DT',
+    DEC: 'DEC',
     WiFi: 'WiFi',
     Download: 'ダウンロード',
     'Serve & Connection': 'サービスと接続',

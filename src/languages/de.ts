@@ -230,6 +230,7 @@ export default {
     PL: 'Paketverlust',
     Bitrate: 'Bitrate',
     DT: 'Dekodierung',
+    DEC: 'Decoder',
     Download: 'Herunterladen',
     'Serve & Connection': 'Dienst und Verbindung',
     'Virtual Opacity': 'Transparenz virtueller Tasten',
