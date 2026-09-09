@@ -28,6 +28,44 @@ export const extractIceCredentials = (
   return {ufrag, pwd, fingerprint};
 };
 
+// Reorder the answer's m=video payload types so codecName's are tried first.
+// pc.createAnswer() has no codec preference of its own -- if the server's
+// offer lists a codec we can only decode in software (e.g. AV1 via dav1d,
+// confirmed on-device via the performance overlay's decoder readout) ahead
+// of H264, createAnswer() can land on it, and dav1d is far too slow for
+// 1080p60 under real motion, causing video-only latency that balloons under
+// load. Mirrors what xCloud's own setCodec() does for its offer.
+export const preferVideoCodec = (sdp: string, codecName: string): string => {
+  const lineEnding = sdp.includes('\r\n') ? '\r\n' : '\n';
+  const lines = sdp.split(/\r?\n/);
+  const rtpmapPattern = new RegExp(`^a=rtpmap:(\\d+) ${codecName}/`, 'i');
+  const preferredIds: string[] = [];
+  for (const line of lines) {
+    const match = rtpmapPattern.exec(line);
+    if (match) {
+      preferredIds.push(match[1]);
+    }
+  }
+  // codecName isn't in this answer's capabilities at all -- nothing to do.
+  if (!preferredIds.length) {
+    return sdp;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith('m=video')) {
+      continue;
+    }
+    const tmp = lines[i].trim().split(' ');
+    let ids = tmp.slice(3);
+    ids = ids.filter(id => !preferredIds.includes(id));
+    ids = preferredIds.concat(ids);
+    lines[i] = tmp.slice(0, 3).concat(ids).join(' ');
+    break;
+  }
+
+  return lines.join(lineEnding);
+};
+
 // Munge the WebRTC answer (not the nvstSdp blob) to match what the official
 // GFN web client sends: a "b=AS:<kbps>" bandwidth line after each m= section,
 // and "stereo=1" on the opus fmtp line. These are separate from nvstSdp's own

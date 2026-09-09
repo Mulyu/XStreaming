@@ -10,7 +10,12 @@ import {
   GfnIceCandidate,
   GfnSignalingEvent,
 } from './signaling';
-import {buildNvstSdp, extractIceCredentials, mungeAnswerSdp} from './nvstSdp';
+import {
+  buildNvstSdp,
+  extractIceCredentials,
+  mungeAnswerSdp,
+  preferVideoCodec,
+} from './nvstSdp';
 import {
   GfnInputEncoder,
   GamepadInput,
@@ -177,11 +182,15 @@ export class GfnWebRtcClient {
     const maxBitrateKbps = Math.round(settings.maxBitrateMbps * 1000);
 
     const answer = await pc.createAnswer();
-    // Match the official web client: inject a "b=AS:<kbps>" bandwidth hint
-    // (separate from nvstSdp's own vqos.bw.* hints) and "stereo=1" for opus,
-    // before setting the local description so it's what's actually negotiated
-    // and sent to the signaling server.
     if (answer.sdp) {
+      // createAnswer() has no codec preference of its own; force the codec
+      // we actually asked CloudMatch for (see settings.codec above) so
+      // negotiation can't land on one we'd have to decode in software.
+      answer.sdp = preferVideoCodec(answer.sdp, settings.codec);
+      // Match the official web client: inject a "b=AS:<kbps>" bandwidth hint
+      // (separate from nvstSdp's own vqos.bw.* hints) and "stereo=1" for opus,
+      // before setting the local description so it's what's actually negotiated
+      // and sent to the signaling server.
       answer.sdp = mungeAnswerSdp(answer.sdp, maxBitrateKbps);
     }
     await pc.setLocalDescription(answer);
