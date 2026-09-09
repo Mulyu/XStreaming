@@ -1796,12 +1796,10 @@ export function NativeStreamScreenBase({
       const setCodec = sdp => {
         const codec = _settings.codec;
         const codecArr = codec.split('-');
-        const mimeType = codecArr[0]; // e.g. 'video/H264', 'video/AV1'
-        const profiles = codecArr[1]; // H264 only: 4d = high, 42e = mid, 420 = low
+        const mimeType = codecArr[0]; // H264
+        const profiles = codecArr[1]; // ['4d'] 4d = high, 42e = mid, 420 = low
 
-        // Codecs without a profile-level-id (AV1, VP9, VP8) have no second
-        // segment -- only bail out here when there's no codec at all.
-        if (!mimeType) {
+        if (!mimeType || !profiles) {
           return sdp;
         }
         const capabilities = RTCRtpReceiver.getCapabilities('video');
@@ -1815,7 +1813,7 @@ export function NativeStreamScreenBase({
 
         for (let i = 0; i < codecs.length; i++) {
           if (codecs[i].mimeType === mimeType) {
-            if (profiles && profiles.length > 0) {
+            if (profiles.length > 0) {
               for (let j = 0; j < profiles.length; j++) {
                 if (
                   codecs[i].sdpFmtpLine?.indexOf(
@@ -1895,36 +1893,6 @@ export function NativeStreamScreenBase({
 
           return lines.join('\r\n');
         }
-
-        // Codecs without a profile-level-id (AV1, VP9, VP8): match payload
-        // ids straight off the SDP's own rtpmap lines instead of fmtp, since
-        // there's no profile string to key off of.
-        const codecName = mimeType.split('/')[1] || mimeType;
-        const rtpmapPattern = new RegExp(`a=rtpmap:(\\d+) ${codecName}/`, 'gi');
-        const preferredCodecIds: any = [];
-        const rtpmapMatches = sdp.matchAll(rtpmapPattern) || [];
-        for (const match of rtpmapMatches) {
-          preferredCodecIds.push(match[1]);
-        }
-        if (!preferredCodecIds.length) {
-          return sdp;
-        }
-
-        const lines = sdp.split('\r\n');
-        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-          const line = lines[lineIndex];
-          if (!line.startsWith('m=video')) {
-            continue;
-          }
-          const tmp = line.trim().split(' ');
-          let ids = tmp.slice(3);
-          ids = ids.filter(item => !preferredCodecIds.includes(item));
-          ids = preferredCodecIds.concat(ids);
-          lines[lineIndex] = tmp.slice(0, 3).concat(ids).join(' ');
-          break;
-        }
-
-        return lines.join('\r\n');
       };
 
       // GeForce NOW does its own CloudMatch session + nvst signaling inside the
