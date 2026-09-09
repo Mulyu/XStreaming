@@ -248,6 +248,7 @@ export default {
     PL: 'PL',
     Bitrate: 'Bitrate',
     DT: 'DT',
+    DEC: 'DEC',
     WiFi: 'WiFi',
     Download: 'Download',
     'Serve & Connection': 'Service and connection',

@@ -463,6 +463,11 @@ export class GfnStreamAdapter {
       fl: '-1 (-1%)',
       br: '',
       decode: '',
+      // Standard WebRTC inbound-rtp field naming the actual decoder
+      // implementation in use (e.g. a vendor-named MediaCodec component for
+      // hardware, or an "OMX.google."/"c2.android." one for software) --
+      // shows hardware-vs-software decode on-screen without needing adb.
+      decoder: '',
       // Which CloudMatch region the session actually landed on, so a bad
       // region resolution (falling back to the global default endpoint
       // instead of the local one) is visible instead of only inferred from
@@ -508,6 +513,9 @@ export class GfnStreamAdapter {
               performances.resolution = `${stat.frameWidth} X ${stat.frameHeight}`;
             }
             performances.fps = stat.framesPerSecond || 0;
+            if (stat.decoderImplementation) {
+              performances.decoder = stat.decoderImplementation;
+            }
 
             const framesDropped = stat.framesDropped;
             if (framesDropped !== undefined) {

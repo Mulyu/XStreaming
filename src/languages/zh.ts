@@ -242,6 +242,7 @@ export default {
     PL: '丢包',
     Bitrate: '码率',
     DT: '解码',
+    DEC: '解码器',
     Download: '下载',
     'Serve & Connection': '服务与连接',
     'Virtual Opacity': '虚拟按键透明度',

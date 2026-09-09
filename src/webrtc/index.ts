@@ -540,6 +540,11 @@ class webRTCClient {
         fl: '-1 (-1%)',
         br: '',
         decode: '',
+        // Standard WebRTC inbound-rtp field naming the actual decoder
+        // implementation in use (e.g. a vendor-named MediaCodec component
+        // for hardware, or an "OMX.google."/"c2.android." one for software)
+        // -- shows hardware-vs-software decode on-screen without adb.
+        decoder: '',
       };
       if (this._webrtcClient) {
         this._webrtcClient
@@ -556,6 +561,10 @@ class webRTCClient {
 
                 // FPS
                 performances.fps = stat.framesPerSecond || 0;
+
+                if (stat.decoderImplementation) {
+                  performances.decoder = stat.decoderImplementation;
+                }
 
                 // Frames Dropped
                 const framesDropped = stat.framesDropped;
