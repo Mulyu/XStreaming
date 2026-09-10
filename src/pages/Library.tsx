@@ -25,8 +25,15 @@ import {
   fetchGfnOwnedGames,
   getFreshOwnedGames,
   mergeOwnedGames,
+  fetchGfnCatalogOrder,
+  GFN_SORT_MOST_POPULAR,
+  GFN_SORT_LAST_ADDED,
 } from '../gfn/catalog';
-import {buildUnifiedCatalog, CatalogTitle} from '../catalog/unifiedCatalog';
+import {
+  buildUnifiedCatalog,
+  isCatalogTitleOwned,
+  CatalogTitle,
+} from '../catalog/unifiedCatalog';
 import {getCatalogPreference} from '../store/catalogPreferences';
 import {
   launchWithProvider,
@@ -41,6 +48,7 @@ import {
   getFreshPopularOrder,
   savePopularOrder,
 } from '../store/priceStore';
+import {getFreshGfnRankOrder, saveGfnRankOrder} from '../store/gfnRankStore';
 import {fetchPopularOrder, buildPopularRank} from '../utils/popularOrder';
 import {
   PriceInfo,
@@ -55,7 +63,7 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const SALE_ACCENT = '#E67E22';
 
-type SortMode = 'reco' | 'sale' | 'newest' | 'popular';
+type SortMode = 'reco' | 'sale' | 'newest' | 'popular' | 'recent';
 
 const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
 const EMPTY_RANK: Record<string, number> = {};
@@ -95,6 +103,24 @@ function LibraryScreen() {
   const [releaseDates, setReleaseDates] = React.useState<
     Record<string, string>
   >(() => getXcloudData()?.releaseDates || {});
+
+  // GFN's own catalog-wide "Most Popular"/"Newest" order -- confirmed live
+  // against GFN's real sort-definitions endpoint -- so those two sorts can
+  // rank titles from both services on the same footing instead of being
+  // xCloud-only. Requires a signed-in GFN token; stays empty otherwise.
+  const [gfnPopularRank, setGfnPopularRank] =
+    React.useState<Record<string, number>>(EMPTY_RANK);
+  const [gfnNewestRank, setGfnNewestRank] =
+    React.useState<Record<string, number>>(EMPTY_RANK);
+  // xCloud's own "recently played" order (MRU), for the Recently Played sort.
+  const [xcloudRecentRank, setXcloudRecentRank] =
+    React.useState<Record<string, number>>(EMPTY_RANK);
+
+  // Filter chips: provider (OR between active ones; neither active = all)
+  // and Owned, defaulting to owned-only.
+  const [filterXcloud, setFilterXcloud] = React.useState(false);
+  const [filterGfn, setFilterGfn] = React.useState(false);
+  const [filterOwnedOnly, setFilterOwnedOnly] = React.useState(true);
 
   const gameLanguage = getSettings().preferred_game_language;
   const deviceRegion = getSystemRegion();
@@ -213,6 +239,29 @@ function LibraryScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xcloudTitles]);
 
+  // xCloud's own recently-played order (MRU, up to 25), for "Recently
+  // played". Not cached -- MRU should reflect genuinely recent activity, not
+  // a stale snapshot.
+  React.useEffect(() => {
+    if (!streamingTokens?.xCloudToken) {
+      return;
+    }
+    const api = new XcloudApi(
+      streamingTokens.xCloudToken.getDefaultRegion().baseUri,
+      streamingTokens.xCloudToken.data.gsToken,
+      'cloud',
+    );
+    api.getRecentTitles().then((res: any) => {
+      const ids = (res?.results ?? [])
+        .map((item: any) => item?.details?.productId)
+        .filter(Boolean)
+        .map((id: string) => id.toUpperCase());
+      if (ids.length > 0) {
+        setXcloudRecentRank(buildPopularRank(ids));
+      }
+    });
+  }, [streamingTokens?.xCloudToken]);
+
   // GFN: public catalog (no sign-in needed) + the signed-in user's owned
   // library merged in, exactly as GfnLibrary did.
   const loadGfnPublic = React.useCallback((force = false) => {
@@ -246,6 +295,48 @@ function LibraryScreen() {
     });
   }, []);
 
+  // GFN's catalog-wide Most Popular / Newest order, cached (24h). Requires a
+  // signed-in token -- GFN's catalog-browse endpoint doesn't serve this
+  // anonymously (same precondition as the owned-library query above) -- so
+  // these two sorts simply stay xCloud-only while signed out.
+  React.useEffect(() => {
+    if (!isSignedIn()) {
+      return;
+    }
+    const cachedPopular = getFreshGfnRankOrder('popular');
+    if (cachedPopular) {
+      setGfnPopularRank(buildPopularRank(cachedPopular));
+    }
+    const cachedNewest = getFreshGfnRankOrder('newest');
+    if (cachedNewest) {
+      setGfnNewestRank(buildPopularRank(cachedNewest));
+    }
+    if (cachedPopular && cachedNewest) {
+      return;
+    }
+    getValidGfnJwt().then(token => {
+      if (!token) {
+        return;
+      }
+      if (!cachedPopular) {
+        fetchGfnCatalogOrder(token, GFN_SORT_MOST_POPULAR).then(order => {
+          if (order.length > 0) {
+            saveGfnRankOrder('popular', order);
+            setGfnPopularRank(buildPopularRank(order));
+          }
+        });
+      }
+      if (!cachedNewest) {
+        fetchGfnCatalogOrder(token, GFN_SORT_LAST_ADDED).then(order => {
+          if (order.length > 0) {
+            saveGfnRankOrder('newest', order);
+            setGfnNewestRank(buildPopularRank(order));
+          }
+        });
+      }
+    });
+  }, []);
+
   React.useEffect(() => {
     // Nothing to actually await -- both fetches above resolve independently
     // and paint as they arrive. This just clears the initial spinner once
@@ -259,18 +350,64 @@ function LibraryScreen() {
     [gfnPublicGames, gfnOwnedGames],
   );
 
+  // gfnOwnedGames arrives in the server's own lastPlayed/added order (see
+  // gfn/catalog.ts) -- turn that position into a rank map the same way
+  // xCloud's own recent/popular orders already are.
+  const gfnRecentRank = React.useMemo(
+    () => buildPopularRank(gfnOwnedGames.map(g => g.id)),
+    [gfnOwnedGames],
+  );
+
+  // xCloud release dates, turned into an ordinal rank (0 = newest known
+  // date) so they combine fairly with GFN's ordinal "last added" rank --
+  // comparing a real timestamp against a catalog position wouldn't mean
+  // anything, but comparing two positions does.
+  const xcloudNewestRank = React.useMemo(() => {
+    const withDates = xcloudTitles
+      .map((item: any) => ({
+        id: item.productId as string | undefined,
+        ms: item.productId
+          ? new Date(releaseDates[item.productId] || '').getTime()
+          : NaN,
+      }))
+      .filter(x => x.id && Number.isFinite(x.ms))
+      .sort((a, b) => b.ms - a.ms);
+    const rank: Record<string, number> = {};
+    withDates.forEach((x, i) => {
+      if (rank[x.id!] === undefined) {
+        rank[x.id!] = i;
+      }
+    });
+    return rank;
+  }, [xcloudTitles, releaseDates]);
+
   const catalog = React.useMemo(
     () => buildUnifiedCatalog(xcloudTitles, gfnGames),
     [xcloudTitles, gfnGames],
   );
 
+  const providerOwnedFiltered = React.useMemo(() => {
+    let list = catalog;
+    if (filterXcloud || filterGfn) {
+      list = list.filter(
+        item => (filterXcloud && item.xcloud) || (filterGfn && item.gfn),
+      );
+    }
+    if (filterOwnedOnly) {
+      list = list.filter(isCatalogTitleOwned);
+    }
+    return list;
+  }, [catalog, filterXcloud, filterGfn, filterOwnedOnly]);
+
   const filtered = React.useMemo(() => {
     const q = keyword.trim().toLowerCase();
     if (!q) {
-      return catalog;
+      return providerOwnedFiltered;
     }
-    return catalog.filter(item => item.title.toLowerCase().includes(q));
-  }, [catalog, keyword]);
+    return providerOwnedFiltered.filter(item =>
+      item.title.toLowerCase().includes(q),
+    );
+  }, [providerOwnedFiltered, keyword]);
 
   // xCloud-only discount percent for the sale badge/sort; 0 for anything not
   // on sale (or not on xCloud at all).
@@ -286,6 +423,40 @@ function LibraryScreen() {
     [priceMap],
   );
 
+  // Combines a title's xCloud rank and GFN rank (each an ordinal position
+  // within that provider's own ordered list -- see the two memos above and
+  // the two GFN fetch effects) into one rank: whichever provider ranks it
+  // more favorably, so a single mixed list can sort by it. A title present
+  // on only one provider just uses that provider's rank; absent from both,
+  // it sorts last.
+  const mergedRankOf = React.useCallback(
+    (
+      item: CatalogTitle,
+      xRank: Record<string, number>,
+      gRank: Record<string, number>,
+      upperXKey: boolean,
+    ): number => {
+      const xId = item.xcloud?.raw?.productId;
+      const xR = xId ? xRank[upperXKey ? xId.toUpperCase() : xId] : undefined;
+      const gIds = item.gfn?.variants.map(v => v.id) ?? [];
+      const gRs = gIds
+        .map(id => gRank[id])
+        .filter((r): r is number => r !== undefined);
+      const gR = gRs.length > 0 ? Math.min(...gRs) : undefined;
+      if (xR === undefined && gR === undefined) {
+        return Number.MAX_SAFE_INTEGER;
+      }
+      if (xR === undefined) {
+        return gR!;
+      }
+      if (gR === undefined) {
+        return xR;
+      }
+      return Math.min(xR, gR);
+    },
+    [],
+  );
+
   const sorted = React.useMemo(() => {
     if (sortMode === 'reco') {
       return filtered;
@@ -297,45 +468,47 @@ function LibraryScreen() {
           saleDiscount(b) - saleDiscount(a) || a.title.localeCompare(b.title),
       );
     } else if (sortMode === 'newest') {
-      const timeOf = (item: CatalogTitle): number => {
-        const productId = item.xcloud?.raw?.productId;
-        const iso = productId ? releaseDates[productId] : undefined;
-        const ms = iso ? new Date(iso).getTime() : NaN;
-        return Number.isFinite(ms) ? ms : -Infinity;
-      };
       list.sort(
-        (a, b) => timeOf(b) - timeOf(a) || a.title.localeCompare(b.title),
+        (a, b) =>
+          mergedRankOf(a, xcloudNewestRank, gfnNewestRank, false) -
+            mergedRankOf(b, xcloudNewestRank, gfnNewestRank, false) ||
+          a.title.localeCompare(b.title),
       );
     } else if (sortMode === 'popular') {
-      const rankOf = (item: CatalogTitle): number => {
-        const productId = item.xcloud?.raw?.productId?.toUpperCase();
-        const r = productId ? popularRank[productId] : undefined;
-        return r === undefined ? Number.MAX_SAFE_INTEGER : r;
-      };
       list.sort(
-        (a, b) => rankOf(a) - rankOf(b) || a.title.localeCompare(b.title),
+        (a, b) =>
+          mergedRankOf(a, popularRank, gfnPopularRank, true) -
+            mergedRankOf(b, popularRank, gfnPopularRank, true) ||
+          a.title.localeCompare(b.title),
+      );
+    } else if (sortMode === 'recent') {
+      list.sort(
+        (a, b) =>
+          mergedRankOf(a, xcloudRecentRank, gfnRecentRank, true) -
+            mergedRankOf(b, xcloudRecentRank, gfnRecentRank, true) ||
+          a.title.localeCompare(b.title),
       );
     }
     return list;
-  }, [filtered, sortMode, saleDiscount, releaseDates, popularRank]);
+  }, [
+    filtered,
+    sortMode,
+    saleDiscount,
+    mergedRankOf,
+    xcloudNewestRank,
+    gfnNewestRank,
+    popularRank,
+    gfnPopularRank,
+    xcloudRecentRank,
+    gfnRecentRank,
+  ]);
 
   const sortOptions: {value: SortMode; label: string; scope: string}[] = [
     {value: 'reco', label: t('Recommended'), scope: ''},
-    {
-      value: 'sale',
-      label: t('On sale'),
-      scope: t('LibrarySortXcloudOnly'),
-    },
-    {
-      value: 'newest',
-      label: t('SortNewest'),
-      scope: t('LibrarySortXcloudOnly'),
-    },
-    {
-      value: 'popular',
-      label: t('Popular'),
-      scope: t('LibrarySortXcloudOnly'),
-    },
+    {value: 'sale', label: t('On sale'), scope: t('LibrarySortXcloudOnly')},
+    {value: 'newest', label: t('SortNewest'), scope: ''},
+    {value: 'popular', label: t('Popular'), scope: ''},
+    {value: 'recent', label: t('SortRecent'), scope: ''},
   ];
   const activeSortLabel =
     sortOptions.find(o => o.value === sortMode)?.label || t('Recommended');
@@ -365,8 +538,7 @@ function LibraryScreen() {
     // its listed services today (no Game Pass entitlement, no owned GFN
     // store variant) -- the X/N badges stay their normal color regardless,
     // since they answer "which service" rather than "playable right now".
-    const isPlayable =
-      !!item.xcloud?.hasEntitlement || !!item.gfn?.variants.some(v => v.owned);
+    const isPlayable = isCatalogTitleOwned(item);
     const discount = saleDiscount(item);
 
     return (
@@ -441,22 +613,64 @@ function LibraryScreen() {
           />
         </View>
         <View style={styles.filterRow}>
-          <Pressable
-            style={[styles.sortChip, sortMode !== 'reco' && styles.sortChipOn]}
-            onPress={() => setSortMenuOpen(v => !v)}>
-            <Text
+          <View style={styles.chipsRow}>
+            <Pressable
+              style={[styles.filterChip, filterXcloud && styles.filterChipOn]}
+              onPress={() => setFilterXcloud(v => !v)}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterXcloud && styles.filterChipTextOn,
+                ]}>
+                {t('LibraryFilterXcloud')}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, filterGfn && styles.filterChipOn]}
+              onPress={() => setFilterGfn(v => !v)}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterGfn && styles.filterChipTextOn,
+                ]}>
+                {t('LibraryFilterGfn')}
+              </Text>
+            </Pressable>
+            <Pressable
               style={[
-                styles.sortChipText,
-                sortMode !== 'reco' && styles.sortChipTextOn,
-              ]}>
-              {`${t('Sort')}: ${activeSortLabel}`}
-            </Text>
-            <Icon
-              source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
-              size={14}
-              color={sortMode !== 'reco' ? '#0B0F0C' : '#8A9A92'}
-            />
-          </Pressable>
+                styles.filterChip,
+                filterOwnedOnly && styles.filterChipOn,
+              ]}
+              onPress={() => setFilterOwnedOnly(v => !v)}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterOwnedOnly && styles.filterChipTextOn,
+                ]}>
+                {t('LibraryFilterOwned')}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.sortChip,
+                sortMode !== 'reco' && styles.sortChipOn,
+              ]}
+              onPress={() => setSortMenuOpen(v => !v)}>
+              <Text
+                style={[
+                  styles.sortChipText,
+                  sortMode !== 'reco' && styles.sortChipTextOn,
+                ]}>
+                {`${t('Sort')}: ${activeSortLabel}`}
+              </Text>
+              <Icon
+                source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color={sortMode !== 'reco' ? '#0B0F0C' : '#8A9A92'}
+              />
+            </Pressable>
+          </View>
 
           {sortMenuOpen && (
             <View style={styles.sortMenu}>
@@ -525,11 +739,23 @@ const styles = StyleSheet.create({
   },
   searchInput: {flex: 1, padding: 0, fontSize: 14, color: '#E6ECE8'},
   filterRow: {position: 'relative'},
+  chipsRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(140,140,150,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(140,140,150,0.24)',
+  },
+  filterChipOn: {backgroundColor: XBOX_ACCENT, borderColor: XBOX_ACCENT},
+  filterChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
+  filterChipTextOn: {color: '#0B0F0C'},
   sortChip: {
     flexDirection: 'row',
-    alignSelf: 'flex-end',
     alignItems: 'center',
     gap: 4,
+    marginLeft: 'auto',
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
