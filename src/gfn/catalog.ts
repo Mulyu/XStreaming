@@ -1,5 +1,5 @@
 import {storage} from '../store/mmkv';
-import {GfnGame} from './publicGames';
+import {GfnGame, steamAppIdFromUrl} from './publicGames';
 
 // GeForce NOW authenticated catalog. The public supported-games list has no
 // ownership info and omits account-linked titles (e.g. Battle.net games like
@@ -97,6 +97,7 @@ const LIBRARY_QUERY = `query GetLibraryApps(
       variants {
         id
         appStore
+        storeUrl
         gfn { library { status } }
       }
     }
@@ -106,6 +107,7 @@ const LIBRARY_QUERY = `query GetLibraryApps(
 type RawVariant = {
   id?: string;
   appStore?: string;
+  storeUrl?: string;
   gfn?: {library?: {status?: string}};
 };
 
@@ -158,6 +160,11 @@ const toOwnedGames = (app: RawApp): GfnGame[] => {
     'GAME_BOX_ART',
   ]);
 
+  // The app-level uuid (distinct from each variant's numeric launch id) --
+  // only ever available from an authenticated apps() response like this one.
+  // Needed to look up GFN's own rich per-title metadata (AppDataForAppId).
+  const appId = app.id && !isNumeric(app.id) ? app.id : undefined;
+
   if (usable.length === 0) {
     return [
       {
@@ -167,6 +174,7 @@ const toOwnedGames = (app: RawApp): GfnGame[] => {
         genres: [],
         imageUrl: image,
         owned: true,
+        appId,
       },
     ];
   }
@@ -180,7 +188,19 @@ const toOwnedGames = (app: RawApp): GfnGame[] => {
       return acc;
     }
     seen.add(key);
-    acc.push({id, title, store, genres: [], imageUrl: image, owned: true});
+    acc.push({
+      id,
+      title,
+      store,
+      genres: [],
+      imageUrl: image,
+      owned: true,
+      appId,
+      steamAppId:
+        store.toUpperCase() === 'STEAM'
+          ? steamAppIdFromUrl(variant.storeUrl)
+          : undefined,
+    });
     return acc;
   }, []);
 };
@@ -345,6 +365,87 @@ export const fetchGfnCatalogOrder = async (
   return order;
 };
 
+export type GfnAppDetails = {
+  developerName?: string;
+  publisherName?: string;
+  shortDescription?: string;
+  longDescription?: string;
+  genres?: string[];
+  screenshots: string[];
+};
+
+// Trimmed to only the fields this app actually renders -- the real
+// AppDataForAppId query (captured from OpenNOW) also carries content
+// ratings, per-store SKU/tier-gating strings and nvidia-tech flags this app
+// has no UI for yet.
+const APP_DETAILS_QUERY = `query GetAppDataQueryForAppId(
+  $vpcId: String!,
+  $locale: String!,
+  $appIds: [String]!
+) {
+  apps(vpcId: $vpcId, language: $locale, appIds: $appIds) {
+    items {
+      developerName
+      publisherName
+      shortDescription
+      longDescription
+      genres
+      images { SCREENSHOTS }
+    }
+  }
+}`;
+
+// GFN's own rich per-title metadata -- description, screenshots, developer/
+// publisher -- used only as a fallback/supplement to xCloud's richer
+// DisplayCatalog data (see utils/storePrice.ts), for a GFN-only title or to
+// pad out a thin media strip. Needs the title's app-level uuid (GfnGame's
+// `appId`, only known for titles resolved through an authenticated apps()
+// response) and a signed-in token -- unlike the catalog-browse query above,
+// this one returned nothing at all for an anonymous call even against a
+// title from the small anonymous-visible set, confirmed live. Returns null
+// on any failure or when the app isn't found.
+export const fetchGfnAppDetails = async (
+  token: string,
+  appId: string,
+): Promise<GfnAppDetails | null> => {
+  const vpcId = await getVpcId(token);
+  let res: Response;
+  try {
+    res = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: graphqlHeaders(token),
+      body: JSON.stringify({
+        query: APP_DETAILS_QUERY,
+        variables: {vpcId, locale: 'en_US', appIds: [appId]},
+      }),
+    });
+  } catch {
+    return null;
+  }
+  if (!res.ok) {
+    return null;
+  }
+  let payload: any;
+  try {
+    payload = await res.json();
+  } catch {
+    return null;
+  }
+  const item = payload?.data?.apps?.items?.[0];
+  if (!item) {
+    return null;
+  }
+  const screenshots = item.images?.SCREENSHOTS;
+  return {
+    developerName: item.developerName || undefined,
+    publisherName: item.publisherName || undefined,
+    shortDescription: item.shortDescription || undefined,
+    longDescription: item.longDescription || undefined,
+    genres: Array.isArray(item.genres) ? item.genres : undefined,
+    screenshots: Array.isArray(screenshots) ? screenshots.filter(Boolean) : [],
+  };
+};
+
 export const normalizeTitle = (title: string): string =>
   title
     .trim()
@@ -361,14 +462,27 @@ export const mergeOwnedGames = (
   if (ownedGames.length === 0) {
     return publicGames;
   }
-  const ownedById = new Set(ownedGames.map(g => g.id));
-  const ownedByTitle = new Set(ownedGames.map(g => normalizeTitle(g.title)));
-
-  const merged = publicGames.map(g =>
-    ownedById.has(g.id) || ownedByTitle.has(normalizeTitle(g.title))
-      ? {...g, owned: true}
-      : g,
+  const ownedById = new Map(ownedGames.map(g => [g.id, g]));
+  const ownedByTitle = new Map(
+    ownedGames.map(g => [normalizeTitle(g.title), g]),
   );
+
+  const merged = publicGames.map(g => {
+    const owned =
+      ownedById.get(g.id) ?? ownedByTitle.get(normalizeTitle(g.title));
+    if (!owned) {
+      return g;
+    }
+    // Carry over what only the authenticated fetch knows -- the public
+    // catalog entry has neither the app-level uuid nor (usually) a Steam
+    // appid the public JSON's own steamUrl parsing already found anyway.
+    return {
+      ...g,
+      owned: true,
+      appId: g.appId ?? owned.appId,
+      steamAppId: g.steamAppId ?? owned.steamAppId,
+    };
+  });
 
   const presentTitles = new Set(merged.map(g => normalizeTitle(g.title)));
   const extras = ownedGames.filter(
