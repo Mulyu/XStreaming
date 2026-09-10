@@ -641,6 +641,16 @@ function LibraryScreen() {
     [navigation],
   );
 
+  // Long-press always goes to the detail screen, bypassing the saved
+  // provider preference -- the escape hatch for reconsidering/changing
+  // which provider a tap on this title launches.
+  const openTitleDetail = React.useCallback(
+    (item: CatalogTitle) => {
+      navigation.navigate('LibraryTitleDetail', {catalogTitle: item});
+    },
+    [navigation],
+  );
+
   const renderCard = ({item}: {item: CatalogTitle}) => {
     // Cover art itself grays out when the title isn't playable via any of
     // its listed services today (no Game Pass entitlement, no owned GFN
@@ -654,6 +664,7 @@ function LibraryScreen() {
         <Pressable
           style={styles.card}
           onPress={() => openTitle(item)}
+          onLongPress={() => openTitleDetail(item)}
           android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
           {item.imageUrl ? (
             <Image
