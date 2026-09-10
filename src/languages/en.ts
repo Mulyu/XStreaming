@@ -425,6 +425,11 @@ export default {
     GfnReadyNotifyBody: 'Your session is ready — tap to start.',
     GfnAllGames: 'All',
     GfnOwned: 'Owned',
+    PlayOn: 'Play on',
+    IncludedWithGamePass: 'Included with Game Pass',
+    LibraryViewDetails: 'View details',
+    LibraryStoreCount: '{{n}} linked stores — choose one',
+    RememberedChoice: 'Remembered — tap to change',
     GfnResolutionTitle: 'GeForce NOW resolution',
     GfnResolutionDesc:
       'Set the streaming resolution requested from GeForce NOW.',

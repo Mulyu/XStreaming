@@ -14,10 +14,10 @@ function SearchScreen({navigation, route}) {
   }, [route.params?.keyword]);
 
   const handleConfirm = () => {
-    // Cloud is now a tab inside the Main tab navigator; target it through Main
-    // so the keyword reaches the Library tab.
+    // Library is a tab inside the Main tab navigator; target it through Main
+    // so the keyword reaches it.
     navigation.navigate('Main', {
-      screen: 'Cloud',
+      screen: 'Library',
       params: {keyword},
       merge: true,
     });

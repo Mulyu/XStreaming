@@ -40,7 +40,6 @@ import customLightTheme from './theme/index';
 import customDarkTheme from './theme/index.dark';
 
 import HomeScreen from './pages/Home';
-import CloudScreen from './pages/Cloud';
 import AchivementScreen from './pages/Achivements';
 import AchivementDetailScreen from './pages/ArchivementDetail';
 import LoginScreen from './pages/Login';
@@ -51,7 +50,8 @@ import SettingsScreen from './pages/Settings';
 import SettingDetailScreen from './pages/SettingDetail';
 import TitleDetailScreen from './pages/TitleDetail';
 import DiscoveryScreen from './pages/Discovery';
-import GfnLibraryScreen from './pages/GfnLibrary';
+import LibraryScreen from './pages/Library';
+import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
 import GameMapScreen from './pages/GameMap';
 import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
@@ -162,8 +162,7 @@ const withTabScreen = (ScreenComponent: any) => {
   return WrappedScreen;
 };
 
-const CloudTabScreen = withTabScreen(CloudScreen);
-const GfnTabScreen = withTabScreen(GfnLibraryScreen);
+const LibraryTabScreen = withTabScreen(LibraryScreen);
 const DiscoveryTabScreen = withTabScreen(DiscoveryScreen);
 const SettingsTabScreen = withTabScreen(SettingsScreen);
 
@@ -175,6 +174,9 @@ const AchivementDetailBackgroundScreen = withPageBackground(
 const LoginBackgroundScreen = withPageBackground(LoginScreen);
 const SettingDetailBackgroundScreen = withPageBackground(SettingDetailScreen);
 const TitleDetailBackgroundScreen = withPageBackground(TitleDetailScreen);
+const LibraryTitleDetailBackgroundScreen = withPageBackground(
+  LibraryTitleDetailScreen,
+);
 const GameMapBackgroundScreen = withPageBackground(GameMapScreen);
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
@@ -194,13 +196,17 @@ const SearchBackgroundScreen = withPageBackground(SearchScreen);
 // and only the content swaps between them (Library / Discovery / Settings).
 // Detail, stream and settings sub-screens are pushed on the root stack, above
 // the tabs, so they open full-screen without a tab bar.
+// Library merges the xCloud and GeForce NOW catalogs into one grid (see
+// src/pages/Library.tsx); the previous separate Cloud/Gfn tabs are gone.
+// Cloud.tsx and GfnLibrary.tsx are kept in the repo, unregistered, as a
+// reference/rollback for the richer xCloud-only browsing (favorites, ignore
+// list, sale/rating/popularity sort) the merged screen doesn't carry yet.
 function MainTabs() {
   return (
     <MainTab.Navigator
       screenOptions={{headerShown: false}}
       tabBar={props => <HubTabBar {...props} />}>
-      <MainTab.Screen name="Cloud" component={CloudTabScreen} />
-      <MainTab.Screen name="Gfn" component={GfnTabScreen} />
+      <MainTab.Screen name="Library" component={LibraryTabScreen} />
       <MainTab.Screen name="Discovery" component={DiscoveryTabScreen} />
       <MainTab.Screen name="Settings" component={SettingsTabScreen} />
     </MainTab.Navigator>
@@ -552,6 +558,10 @@ function App() {
                 <RootStack.Screen
                   name="TitleDetail"
                   component={TitleDetailBackgroundScreen}
+                />
+                <RootStack.Screen
+                  name="LibraryTitleDetail"
+                  component={LibraryTitleDetailBackgroundScreen}
                 />
                 <RootStack.Screen
                   name="AchivementDetail"
