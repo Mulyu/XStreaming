@@ -32,11 +32,33 @@ import {
   launchWithProvider,
   isPreferenceAvailable,
 } from '../catalog/launchCatalogTitle';
+import {getSettings} from '../store/settingStore';
+import {getSystemRegion} from '../utils/locale';
+import {getXcloudData, saveXcloudData} from '../store/xcloudStore';
+import {
+  getFreshPriceCache,
+  savePriceCache,
+  getFreshPopularOrder,
+  savePopularOrder,
+} from '../store/priceStore';
+import {fetchPopularOrder, buildPopularRank} from '../utils/popularOrder';
+import {
+  PriceInfo,
+  deriveMarketLanguage,
+  fetchPricesWithRetry,
+  getPrice,
+  isSaleForDisplay,
+  discountPercent,
+} from '../utils/storePrice';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
-const DIM_ACCENT = 'rgba(140,140,150,0.25)';
-const DIM_TEXT = '#5C636A';
+const SALE_ACCENT = '#E67E22';
+
+type SortMode = 'reco' | 'sale' | 'newest' | 'popular';
+
+const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
+const EMPTY_RANK: Record<string, number> = {};
 
 // The single "Library" tab: xCloud and GeForce NOW titles merged by name into
 // one grid. A title with entries on both services still gets one card; which
@@ -59,6 +81,23 @@ function LibraryScreen() {
   );
   const [loading, setLoading] = React.useState(true);
   const [keyword, setKeyword] = React.useState('');
+  const [sortMode, setSortMode] = React.useState<SortMode>('reco');
+  const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
+
+  // xCloud-only enrichment for the sale badge and the Sale/Newest/Popular
+  // sorts -- GFN has no equivalent price, release-date or popularity data on
+  // the public catalog path this screen reads (see the Library mock's own
+  // notes), so these stay empty for GFN titles rather than faking a value.
+  const [priceMap, setPriceMap] =
+    React.useState<Record<string, PriceInfo>>(EMPTY_PRICE_MAP);
+  const [popularRank, setPopularRank] =
+    React.useState<Record<string, number>>(EMPTY_RANK);
+  const [releaseDates, setReleaseDates] = React.useState<
+    Record<string, string>
+  >(() => getXcloudData()?.releaseDates || {});
+
+  const gameLanguage = getSettings().preferred_game_language;
+  const deviceRegion = getSystemRegion();
 
   React.useEffect(() => {
     if (typeof route.params?.keyword === 'string') {
@@ -67,8 +106,10 @@ function LibraryScreen() {
   }, [route.params?.keyword]);
 
   // xCloud: title list + Game Pass entitlement. Deliberately not the full
-  // Cloud.tsx pipeline (popularity/rating/release-date/leaving-soon) -- this
-  // grid only needs enough to show a card and hand off to TitleDetail.
+  // Cloud.tsx pipeline (rating/leaving-soon/favorites/ignore) -- this grid
+  // only needs enough to show a card, hand off to TitleDetail, and (below)
+  // enrich with the same price/popularity/release-date sources Cloud.tsx
+  // used, for the sale badge and the Sale/Newest/Popular sorts.
   React.useEffect(() => {
     if (!streamingTokens?.xCloudToken) {
       return;
@@ -84,6 +125,93 @@ function LibraryScreen() {
       }
     });
   }, [streamingTokens?.xCloudToken]);
+
+  // Store prices + sale status, batched and cached (24h) exactly like
+  // Cloud.tsx's price fetch.
+  const priceSigRef = React.useRef('');
+  React.useEffect(() => {
+    const productIds = xcloudTitles
+      .map((item: any) => item.productId)
+      .filter(Boolean);
+    if (productIds.length === 0) {
+      return;
+    }
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
+    const sig = `${market}:${productIds.length}`;
+    if (priceSigRef.current === sig) {
+      return;
+    }
+    priceSigRef.current = sig;
+
+    const cache = getFreshPriceCache(market);
+    if (cache) {
+      setPriceMap(cache.priceMap);
+    }
+
+    fetchPricesWithRetry(productIds, market, language).then(
+      ({prices, ratings, ok}) => {
+        if (Object.keys(prices).length > 0) {
+          setPriceMap(prev => ({...prev, ...prices}));
+        }
+        if (ok) {
+          savePriceCache(prices, ratings, market, sig);
+        } else {
+          priceSigRef.current = '';
+        }
+      },
+    );
+  }, [xcloudTitles, gameLanguage, deviceRegion]);
+
+  // "Most popular on cloud" ranking, cached (24h) exactly like Cloud.tsx.
+  const popularMarketRef = React.useRef('');
+  React.useEffect(() => {
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
+    if (popularMarketRef.current === market) {
+      return;
+    }
+    popularMarketRef.current = market;
+
+    const cached = getFreshPopularOrder(market);
+    if (cached) {
+      setPopularRank(buildPopularRank(cached));
+      return;
+    }
+
+    fetchPopularOrder(market, language).then(order => {
+      if (order === null) {
+        popularMarketRef.current = '';
+        return;
+      }
+      savePopularOrder(order, market);
+      setPopularRank(buildPopularRank(order));
+    });
+  }, [gameLanguage, deviceRegion]);
+
+  // Release dates from the Microsoft display catalog (the Game Pass
+  // hydration carries none), cached alongside the rest of the xCloud blob.
+  React.useEffect(() => {
+    const productIds = xcloudTitles
+      .map((item: any) => item.productId)
+      .filter(Boolean);
+    const missingIds = productIds.filter((id: string) => !releaseDates[id]);
+    if (missingIds.length === 0) {
+      return;
+    }
+    const api = new XcloudApi('', '', 'cloud');
+    api.getReleaseDates(missingIds).then(fetched => {
+      if (Object.keys(fetched).length === 0) {
+        return;
+      }
+      setReleaseDates(prev => {
+        const merged = {...prev, ...fetched};
+        saveXcloudData({...getXcloudData(), releaseDates: merged});
+        return merged;
+      });
+    });
+    // Only productIds should re-trigger this -- releaseDates itself changes
+    // as a result of this effect and must not restart it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xcloudTitles]);
 
   // GFN: public catalog (no sign-in needed) + the signed-in user's owned
   // library merged in, exactly as GfnLibrary did.
@@ -144,10 +272,80 @@ function LibraryScreen() {
     return catalog.filter(item => item.title.toLowerCase().includes(q));
   }, [catalog, keyword]);
 
+  // xCloud-only discount percent for the sale badge/sort; 0 for anything not
+  // on sale (or not on xCloud at all).
+  const saleDiscount = React.useCallback(
+    (item: CatalogTitle): number => {
+      const productId = item.xcloud?.raw?.productId;
+      if (!productId) {
+        return 0;
+      }
+      const price = getPrice(priceMap, productId);
+      return price && isSaleForDisplay(price) ? discountPercent(price) : 0;
+    },
+    [priceMap],
+  );
+
+  const sorted = React.useMemo(() => {
+    if (sortMode === 'reco') {
+      return filtered;
+    }
+    const list = [...filtered];
+    if (sortMode === 'sale') {
+      list.sort(
+        (a, b) =>
+          saleDiscount(b) - saleDiscount(a) || a.title.localeCompare(b.title),
+      );
+    } else if (sortMode === 'newest') {
+      const timeOf = (item: CatalogTitle): number => {
+        const productId = item.xcloud?.raw?.productId;
+        const iso = productId ? releaseDates[productId] : undefined;
+        const ms = iso ? new Date(iso).getTime() : NaN;
+        return Number.isFinite(ms) ? ms : -Infinity;
+      };
+      list.sort(
+        (a, b) => timeOf(b) - timeOf(a) || a.title.localeCompare(b.title),
+      );
+    } else if (sortMode === 'popular') {
+      const rankOf = (item: CatalogTitle): number => {
+        const productId = item.xcloud?.raw?.productId?.toUpperCase();
+        const r = productId ? popularRank[productId] : undefined;
+        return r === undefined ? Number.MAX_SAFE_INTEGER : r;
+      };
+      list.sort(
+        (a, b) => rankOf(a) - rankOf(b) || a.title.localeCompare(b.title),
+      );
+    }
+    return list;
+  }, [filtered, sortMode, saleDiscount, releaseDates, popularRank]);
+
+  const sortOptions: {value: SortMode; label: string; scope: string}[] = [
+    {value: 'reco', label: t('Recommended'), scope: ''},
+    {
+      value: 'sale',
+      label: t('On sale'),
+      scope: t('LibrarySortXcloudOnly'),
+    },
+    {
+      value: 'newest',
+      label: t('SortNewest'),
+      scope: t('LibrarySortXcloudOnly'),
+    },
+    {
+      value: 'popular',
+      label: t('Popular'),
+      scope: t('LibrarySortXcloudOnly'),
+    },
+  ];
+  const activeSortLabel =
+    sortOptions.find(o => o.value === sortMode)?.label || t('Recommended');
+
+  // Square-tile grid: denser than the old 16:10 cards, so a smaller target
+  // width per column is intentional here (was 260/300).
   const isLandscape = screenWidth > screenHeight;
   const numColumns = React.useMemo(() => {
-    const target = isLandscape || Platform.isTV ? 300 : 260;
-    return Math.max(1, Math.min(6, Math.floor(screenWidth / target)));
+    const target = isLandscape || Platform.isTV ? 150 : 110;
+    return Math.max(2, Math.min(8, Math.floor(screenWidth / target)));
   }, [isLandscape, screenWidth]);
 
   const openTitle = React.useCallback(
@@ -162,13 +360,21 @@ function LibraryScreen() {
     [navigation],
   );
 
-  const renderCard = ({item}: {item: CatalogTitle}) => (
-    <View style={[styles.cell, {width: `${100 / numColumns}%`}]}>
-      <Pressable
-        style={styles.card}
-        onPress={() => openTitle(item)}
-        android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
-        <View style={styles.thumbWrap}>
+  const renderCard = ({item}: {item: CatalogTitle}) => {
+    // Cover art itself grays out when the title isn't playable via any of
+    // its listed services today (no Game Pass entitlement, no owned GFN
+    // store variant) -- the X/N badges stay their normal color regardless,
+    // since they answer "which service" rather than "playable right now".
+    const isPlayable =
+      !!item.xcloud?.hasEntitlement || !!item.gfn?.variants.some(v => v.owned);
+    const discount = saleDiscount(item);
+
+    return (
+      <View style={[styles.cell, {width: `${100 / numColumns}%`}]}>
+        <Pressable
+          style={styles.card}
+          onPress={() => openTitle(item)}
+          android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
           {item.imageUrl ? (
             <Image
               source={{uri: item.imageUrl}}
@@ -182,57 +388,36 @@ function LibraryScreen() {
               </Text>
             </View>
           )}
-        </View>
-        <View style={styles.cardFoot}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <View style={styles.availRow}>
+
+          {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
+          <View style={styles.bottomScrim} pointerEvents="none" />
+
+          <View style={styles.availOverlay}>
             {item.xcloud && (
-              <View
-                style={[
-                  styles.availDot,
-                  {
-                    backgroundColor: item.xcloud.hasEntitlement
-                      ? XBOX_ACCENT
-                      : DIM_ACCENT,
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.availDotText,
-                    !item.xcloud.hasEntitlement && {color: DIM_TEXT},
-                  ]}>
-                  X
-                </Text>
+              <View style={[styles.availDot, {backgroundColor: XBOX_ACCENT}]}>
+                <Text style={styles.availDotText}>X</Text>
               </View>
             )}
             {item.gfn && (
-              <View
-                style={[
-                  styles.availDot,
-                  {
-                    backgroundColor: item.gfn.variants.some(v => v.owned)
-                      ? NVIDIA_ACCENT
-                      : DIM_ACCENT,
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.availDotText,
-                    !item.gfn.variants.some(v => v.owned) && {
-                      color: DIM_TEXT,
-                    },
-                  ]}>
-                  N
-                </Text>
+              <View style={[styles.availDot, {backgroundColor: NVIDIA_ACCENT}]}>
+                <Text style={styles.availDotText}>N</Text>
               </View>
             )}
           </View>
-        </View>
-      </Pressable>
-    </View>
-  );
+
+          {discount > 0 && (
+            <View style={styles.saleBadge}>
+              <Text style={styles.saleBadgeText}>-{discount}%</Text>
+            </View>
+          )}
+
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.root, {backgroundColor: theme.colors.background}]}>
@@ -255,6 +440,48 @@ function LibraryScreen() {
             style={styles.searchInput}
           />
         </View>
+        <View style={styles.filterRow}>
+          <Pressable
+            style={[styles.sortChip, sortMode !== 'reco' && styles.sortChipOn]}
+            onPress={() => setSortMenuOpen(v => !v)}>
+            <Text
+              style={[
+                styles.sortChipText,
+                sortMode !== 'reco' && styles.sortChipTextOn,
+              ]}>
+              {`${t('Sort')}: ${activeSortLabel}`}
+            </Text>
+            <Icon
+              source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
+              size={14}
+              color={sortMode !== 'reco' ? '#0B0F0C' : '#8A9A92'}
+            />
+          </Pressable>
+
+          {sortMenuOpen && (
+            <View style={styles.sortMenu}>
+              {sortOptions.map(option => (
+                <Pressable
+                  key={option.value}
+                  style={styles.sortItem}
+                  onPress={() => {
+                    setSortMode(option.value);
+                    setSortMenuOpen(false);
+                  }}>
+                  <View style={styles.sortItemLabelRow}>
+                    {sortMode === option.value && (
+                      <Icon source="check" size={13} color={NVIDIA_ACCENT} />
+                    )}
+                    <Text style={styles.sortItemLabel}>{option.label}</Text>
+                  </View>
+                  {!!option.scope && (
+                    <Text style={styles.sortItemScope}>{option.scope}</Text>
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
       </View>
 
       {loading && catalog.length === 0 ? (
@@ -264,7 +491,7 @@ function LibraryScreen() {
         </View>
       ) : (
         <FlatList
-          data={filtered}
+          data={sorted}
           key={numColumns}
           numColumns={numColumns}
           keyExtractor={item => item.key}
@@ -297,50 +524,122 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(140,140,150,0.24)',
   },
   searchInput: {flex: 1, padding: 0, fontSize: 14, color: '#E6ECE8'},
-  centre: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10},
-  centreText: {color: '#8A9A92', fontSize: 14},
-  list: {paddingHorizontal: 6, paddingBottom: 20},
-  cell: {padding: 6},
-  card: {gap: 6},
-  thumbWrap: {
-    width: '100%',
-    aspectRatio: 16 / 10,
-    borderRadius: 8,
-    overflow: 'hidden',
+  filterRow: {position: 'relative'},
+  sortChip: {
+    flexDirection: 'row',
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
     backgroundColor: 'rgba(140,140,150,0.14)',
     borderWidth: 1,
     borderColor: 'rgba(140,140,150,0.24)',
   },
-  thumb: {width: '100%', height: '100%'},
+  sortChipOn: {backgroundColor: NVIDIA_ACCENT, borderColor: NVIDIA_ACCENT},
+  sortChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
+  sortChipTextOn: {color: '#0B0F0C'},
+  sortMenu: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: 6,
+    width: 230,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(30,32,36,0.98)',
+    borderWidth: 1,
+    borderColor: 'rgba(140,140,150,0.24)',
+    zIndex: 10,
+    elevation: 10,
+  },
+  sortItem: {
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(140,140,150,0.16)',
+    gap: 2,
+  },
+  sortItemLabelRow: {flexDirection: 'row', alignItems: 'center', gap: 5},
+  sortItemLabel: {fontSize: 13, fontWeight: '700'},
+  sortItemScope: {fontSize: 10, color: '#8A9A92', paddingLeft: 18},
+  centre: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10},
+  centreText: {color: '#8A9A92', fontSize: 14},
+  list: {paddingHorizontal: 6, paddingBottom: 20},
+  cell: {padding: 4},
+  // Square-cropped tile: the card IS the art, badges/title overlay on top of
+  // it so more titles fit on screen at once (was a 16:10 card + text footer).
+  card: {
+    aspectRatio: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: 'rgba(140,140,150,0.14)',
+  },
+  thumb: {...StyleSheet.absoluteFillObject},
   thumbEmpty: {
-    width: '100%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
   },
   thumbEmptyText: {
     color: '#B7C6BD',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
   },
-  cardFoot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
+  // Grays out the cover art (not the badges) when the title isn't playable
+  // via any of its listed services right now.
+  coverDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20,21,24,0.6)',
   },
-  cardTitle: {fontSize: 12, fontWeight: '600', flex: 1},
-  availRow: {flexDirection: 'row', gap: 3},
+  bottomScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '55%',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  availOverlay: {
+    position: 'absolute',
+    left: 5,
+    top: 5,
+    flexDirection: 'row',
+    gap: 3,
+  },
   availDot: {
-    width: 15,
-    height: 15,
+    width: 14,
+    height: 14,
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  availDotText: {fontSize: 8, fontWeight: '800', color: '#0B0F0C'},
+  availDotText: {fontSize: 7.5, fontWeight: '800', color: '#0B0F0C'},
+  saleBadge: {
+    position: 'absolute',
+    right: 5,
+    top: 5,
+    paddingVertical: 2,
+    paddingHorizontal: 5,
+    borderRadius: 5,
+    backgroundColor: SALE_ACCENT,
+  },
+  saleBadgeText: {fontSize: 8.5, fontWeight: '800', color: '#2B1400'},
+  cardTitle: {
+    position: 'absolute',
+    left: 6,
+    right: 6,
+    bottom: 5,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 3,
+  },
 });
 
 export default LibraryScreen;

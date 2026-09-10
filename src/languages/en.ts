@@ -647,6 +647,8 @@ export default {
     Popular: 'Popular',
     Rating: 'Rating',
     SortReleaseDate: 'Release date',
+    SortNewest: 'Newest',
+    LibrarySortXcloudOnly: 'Xbox Cloud only',
     View: 'View',
     Refine: 'Refine',
     Done: 'Done',
