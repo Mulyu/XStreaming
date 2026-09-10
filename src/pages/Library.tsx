@@ -35,6 +35,8 @@ import {
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
+const DIM_ACCENT = 'rgba(140,140,150,0.25)';
+const DIM_TEXT = '#5C636A';
 
 // The single "Library" tab: xCloud and GeForce NOW titles merged by name into
 // one grid. A title with entries on both services still gets one card; which
@@ -187,13 +189,43 @@ function LibraryScreen() {
           </Text>
           <View style={styles.availRow}>
             {item.xcloud && (
-              <View style={[styles.availDot, {backgroundColor: XBOX_ACCENT}]}>
-                <Text style={styles.availDotText}>X</Text>
+              <View
+                style={[
+                  styles.availDot,
+                  {
+                    backgroundColor: item.xcloud.hasEntitlement
+                      ? XBOX_ACCENT
+                      : DIM_ACCENT,
+                  },
+                ]}>
+                <Text
+                  style={[
+                    styles.availDotText,
+                    !item.xcloud.hasEntitlement && {color: DIM_TEXT},
+                  ]}>
+                  X
+                </Text>
               </View>
             )}
             {item.gfn && (
-              <View style={[styles.availDot, {backgroundColor: NVIDIA_ACCENT}]}>
-                <Text style={styles.availDotText}>N</Text>
+              <View
+                style={[
+                  styles.availDot,
+                  {
+                    backgroundColor: item.gfn.variants.some(v => v.owned)
+                      ? NVIDIA_ACCENT
+                      : DIM_ACCENT,
+                  },
+                ]}>
+                <Text
+                  style={[
+                    styles.availDotText,
+                    !item.gfn.variants.some(v => v.owned) && {
+                      color: DIM_TEXT,
+                    },
+                  ]}>
+                  N
+                </Text>
               </View>
             )}
           </View>

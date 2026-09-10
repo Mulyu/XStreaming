@@ -1,28 +1,19 @@
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-  Image,
-  Pressable,
-  Modal,
-  Linking,
-  ScrollView,
-} from 'react-native';
-import {Text, Icon, ActivityIndicator, useTheme} from 'react-native-paper';
+import {StyleSheet, View, Image, Pressable, ScrollView} from 'react-native';
+import {Text, Icon, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {
-  GfnDeviceChallenge,
-  requestDeviceAuthorization,
-  pollForTokens,
-  isSignedIn,
-} from '../gfn/auth';
+import {isSignedIn} from '../gfn/auth';
+import {useGfnSignIn} from '../gfn/useGfnSignIn';
+import GfnSignInModal from '../components/GfnSignInModal';
 import {CatalogTitle} from '../catalog/unifiedCatalog';
 import {getCatalogPreference} from '../store/catalogPreferences';
 import {launchWithProvider} from '../catalog/launchCatalogTitle';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
+const DIM_ICON_BG = 'rgba(140,140,150,0.16)';
+const DIM_ICON_TEXT = '#8A9A92';
 
 // A title's detail screen: "Play on" lists every provider it's actually
 // available through, and -- for GeForce NOW, where the same game can be
@@ -39,55 +30,19 @@ function LibraryTitleDetailScreen() {
   const [gfnExpanded, setGfnExpanded] = React.useState(
     () => (catalogTitle?.gfn?.variants.length ?? 0) <= 1,
   );
-  const [loginVisible, setLoginVisible] = React.useState(false);
-  const [challenge, setChallenge] = React.useState<GfnDeviceChallenge | null>(
-    null,
-  );
-  const [loginStatus, setLoginStatus] = React.useState<
-    'starting' | 'waiting' | 'failed'
-  >('starting');
-  const cancelledRef = React.useRef(false);
-  const pendingLaunchRef = React.useRef<(() => void) | null>(null);
+  const {
+    loginVisible,
+    challenge,
+    loginStatus,
+    startLogin,
+    retryLogin,
+    cancelLogin,
+  } = useGfnSignIn();
 
   const preference = React.useMemo(
     () => (catalogTitle ? getCatalogPreference(catalogTitle.key) : null),
     [catalogTitle],
   );
-
-  const startLogin = React.useCallback((onSignedIn?: () => void) => {
-    pendingLaunchRef.current = onSignedIn ?? null;
-    cancelledRef.current = false;
-    setChallenge(null);
-    setLoginStatus('starting');
-    setLoginVisible(true);
-    requestDeviceAuthorization()
-      .then(ch => {
-        if (cancelledRef.current) {
-          return;
-        }
-        setChallenge(ch);
-        setLoginStatus('waiting');
-        return pollForTokens(ch, {shouldCancel: () => cancelledRef.current});
-      })
-      .then(() => {
-        if (cancelledRef.current) {
-          return;
-        }
-        setLoginVisible(false);
-        pendingLaunchRef.current?.();
-      })
-      .catch((e: any) => {
-        if (cancelledRef.current || e?.message === 'cancelled') {
-          return;
-        }
-        setLoginStatus('failed');
-      });
-  }, []);
-
-  const cancelLogin = React.useCallback(() => {
-    cancelledRef.current = true;
-    setLoginVisible(false);
-  }, []);
 
   if (!catalogTitle) {
     return null;
@@ -112,6 +67,7 @@ function LibraryTitleDetailScreen() {
   };
 
   const gfnVariants = catalogTitle.gfn?.variants ?? [];
+  const gfnAnyOwned = gfnVariants.some(variant => variant.owned);
   const isPreferredXcloud = preference?.provider === 'xcloud';
   const isPreferredGfnVariant = (id: string, store: string) =>
     preference?.provider === 'gfn' &&
@@ -146,8 +102,22 @@ function LibraryTitleDetailScreen() {
         {catalogTitle.xcloud && (
           <View style={styles.providerCard}>
             <Pressable style={styles.providerRow} onPress={playXcloud}>
-              <View style={[styles.providerIcon, styles.xcloudIconBg]}>
-                <Text style={[styles.providerIconText, {color: XBOX_ACCENT}]}>
+              <View
+                style={[
+                  styles.providerIcon,
+                  catalogTitle.xcloud.hasEntitlement
+                    ? styles.xcloudIconBg
+                    : styles.dimIconBg,
+                ]}>
+                <Text
+                  style={[
+                    styles.providerIconText,
+                    {
+                      color: catalogTitle.xcloud.hasEntitlement
+                        ? XBOX_ACCENT
+                        : DIM_ICON_TEXT,
+                    },
+                  ]}>
                   X
                 </Text>
               </View>
@@ -176,8 +146,16 @@ function LibraryTitleDetailScreen() {
                   ? setGfnExpanded(v => !v)
                   : playGfnVariant(gfnVariants[0])
               }>
-              <View style={[styles.providerIcon, styles.gfnIconBg]}>
-                <Text style={[styles.providerIconText, {color: NVIDIA_ACCENT}]}>
+              <View
+                style={[
+                  styles.providerIcon,
+                  gfnAnyOwned ? styles.gfnIconBg : styles.dimIconBg,
+                ]}>
+                <Text
+                  style={[
+                    styles.providerIconText,
+                    {color: gfnAnyOwned ? NVIDIA_ACCENT : DIM_ICON_TEXT},
+                  ]}>
                   N
                 </Text>
               </View>
@@ -242,70 +220,13 @@ function LibraryTitleDetailScreen() {
         )}
       </View>
 
-      <Modal
+      <GfnSignInModal
         visible={loginVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={cancelLogin}>
-        <View style={styles.modalBackdrop}>
-          <View
-            style={[
-              styles.modalCard,
-              {backgroundColor: theme.colors.elevation?.level3 || '#1b201d'},
-            ]}>
-            <View style={styles.modalHeader}>
-              <Icon source="gamepad-variant" size={20} color={NVIDIA_ACCENT} />
-              <Text style={styles.modalTitle}>{t('GfnLoginTitle')}</Text>
-            </View>
-
-            {loginStatus === 'starting' ? (
-              <View style={styles.modalCentre}>
-                <ActivityIndicator color={NVIDIA_ACCENT} />
-              </View>
-            ) : loginStatus === 'failed' ? (
-              <View style={styles.modalCentre}>
-                <Icon source="alert-circle-outline" size={34} color="#E06666" />
-                <Text style={styles.modalMsg}>{t('GfnLoginFailed')}</Text>
-                <Pressable
-                  onPress={() =>
-                    startLogin(pendingLaunchRef.current ?? undefined)
-                  }
-                  style={[styles.modalBtn, styles.modalBtnPrimary]}>
-                  <Text style={styles.modalBtnTextPrimary}>{t('Retry')}</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.modalInstruction}>
-                  {t('GfnLoginInstruction')}
-                </Text>
-                <View style={styles.codeBox}>
-                  <Text style={styles.codeText}>{challenge?.userCode}</Text>
-                </View>
-                <Pressable
-                  onPress={() =>
-                    challenge &&
-                    Linking.openURL(challenge.verificationUriComplete)
-                  }
-                  style={[styles.modalBtn, styles.modalBtnPrimary]}>
-                  <Icon source="open-in-new" size={16} color="#0B0F0C" />
-                  <Text style={styles.modalBtnTextPrimary}>
-                    {t('GfnLoginOpen')}
-                  </Text>
-                </Pressable>
-                <View style={styles.waitingRow}>
-                  <ActivityIndicator size={14} color="#8A9A92" />
-                  <Text style={styles.waitingText}>{t('GfnLoginWaiting')}</Text>
-                </View>
-              </>
-            )}
-
-            <Pressable onPress={cancelLogin} style={styles.modalBtn}>
-              <Text style={styles.modalBtnText}>{t('Cancel')}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+        status={loginStatus}
+        challenge={challenge}
+        onRetry={retryLogin}
+        onCancel={cancelLogin}
+      />
     </ScrollView>
   );
 }
@@ -351,6 +272,7 @@ const styles = StyleSheet.create({
   },
   xcloudIconBg: {backgroundColor: 'rgba(16,124,16,0.18)'},
   gfnIconBg: {backgroundColor: 'rgba(118,185,0,0.18)'},
+  dimIconBg: {backgroundColor: DIM_ICON_BG},
   providerIconText: {fontWeight: '800', fontSize: 13},
   providerText: {flex: 1, gap: 1},
   providerName: {fontSize: 14, fontWeight: '700'},
@@ -380,62 +302,6 @@ const styles = StyleSheet.create({
   storeRowEnd: {flexDirection: 'row', alignItems: 'center', gap: 6},
   ownedText: {fontSize: 11, fontWeight: '700', color: NVIDIA_ACCENT},
   rememberedNote: {fontSize: 11.5, color: '#8A9A92', textAlign: 'center'},
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 380,
-    borderRadius: 16,
-    padding: 20,
-    gap: 14,
-  },
-  modalHeader: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  modalTitle: {fontSize: 16, fontWeight: '800'},
-  modalCentre: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 12,
-  },
-  modalMsg: {color: '#B7C6BD', fontSize: 14, textAlign: 'center'},
-  modalInstruction: {color: '#B7C6BD', fontSize: 13, lineHeight: 19},
-  codeBox: {
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: 'rgba(118,185,0,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(118,185,0,0.4)',
-  },
-  codeText: {
-    fontSize: 30,
-    fontWeight: '900',
-    letterSpacing: 6,
-    color: '#E6ECE8',
-  },
-  modalBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: 46,
-    borderRadius: 12,
-  },
-  modalBtnPrimary: {backgroundColor: NVIDIA_ACCENT},
-  modalBtnText: {color: '#8A9A92', fontSize: 14, fontWeight: '700'},
-  modalBtnTextPrimary: {color: '#0B0F0C', fontSize: 14, fontWeight: '800'},
-  waitingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  waitingText: {color: '#8A9A92', fontSize: 13},
 });
 
 export default LibraryTitleDetailScreen;

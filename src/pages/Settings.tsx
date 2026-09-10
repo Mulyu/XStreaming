@@ -19,6 +19,8 @@ import {debugFactory} from '../utils/debug';
 import {clearStreamToken} from '../store/streamTokenStore';
 import {clearWebToken} from '../store/webTokenStore';
 import {clearXcloudData} from '../store/xcloudStore';
+import {useGfnSignIn} from '../gfn/useGfnSignIn';
+import GfnSignInModal from '../components/GfnSignInModal';
 
 import bases from '../common/settings/bases';
 import display from '../common/settings/display';
@@ -47,6 +49,17 @@ function SettingsScreen({navigation}) {
   );
 
   const [loading, setLoading] = React.useState(false);
+
+  const {
+    signedIn: gfnSignedIn,
+    loginVisible: gfnLoginVisible,
+    challenge: gfnChallenge,
+    loginStatus: gfnLoginStatus,
+    startLogin: startGfnLogin,
+    retryLogin: retryGfnLogin,
+    cancelLogin: cancelGfnLogin,
+    signOut: signOutGfn,
+  } = useGfnSignIn();
 
   const sisuToken = authentication._tokenStore.getSisuToken();
   const userToken = authentication._tokenStore.getUserToken();
@@ -117,6 +130,17 @@ function SettingsScreen({navigation}) {
         id,
       });
     }
+  };
+
+  const handleGfnAccountPress = () => {
+    if (gfnSignedIn) {
+      Alert.alert(t('Warning'), t('GfnSignOutConfirm'), [
+        {text: t('Cancel'), style: 'cancel'},
+        {text: t('Confirm'), style: 'default', onPress: signOutGfn},
+      ]);
+      return;
+    }
+    startGfnLogin();
   };
 
   const handleClearCache = () => {
@@ -286,6 +310,14 @@ function SettingsScreen({navigation}) {
             </Text>
           </View>
 
+          <SettingItem
+            title={t('GfnAccountTitle')}
+            description={
+              gfnSignedIn ? t('GfnSignedIn') : t('GfnAccountSignedOutDesc')
+            }
+            onPress={handleGfnAccountPress}
+          />
+
           {gfn.map((meta, idx) => {
             return (
               <SettingItem
@@ -399,6 +431,14 @@ function SettingsScreen({navigation}) {
           </Text>
         </View>
       </ScrollView>
+
+      <GfnSignInModal
+        visible={gfnLoginVisible}
+        status={gfnLoginStatus}
+        challenge={gfnChallenge}
+        onRetry={retryGfnLogin}
+        onCancel={cancelGfnLogin}
+      />
     </View>
   );
 }
