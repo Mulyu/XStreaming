@@ -51,6 +51,11 @@ import {
 import {getSystemRegion, toBcp47Locale} from '../utils/locale';
 import {fetchLeavingSoon} from '../utils/leavingSoon';
 import {
+  CAP_META,
+  capLabel as sharedCapLabel,
+  renderStars,
+} from '../utils/titleCapabilities';
+import {
   getFreshPriceCache,
   getFreshLeavingSoon,
   saveLeavingSoon,
@@ -62,33 +67,6 @@ const {UsbRumbleManager, ShortcutManager} = NativeModules;
 const log = debugFactory('TitleDetailScreen');
 
 const warnTitles: any = [];
-
-// Canonical capability id -> icon + label. Labels are either translated
-// (t(...)) or kept as brand literals (4K, HDR, Dolby Atmos, ...).
-const CAP_META: Record<string, {icon: string; label: string; i18n?: boolean}> =
-  {
-    single: {icon: 'person-outline', label: 'Single player', i18n: true},
-    multi: {icon: 'people-outline', label: 'Multiplayer', i18n: true},
-    coop: {icon: 'people-circle-outline', label: 'Co-op', i18n: true},
-    crossplat: {
-      icon: 'git-compare-outline',
-      label: 'Cross-platform',
-      i18n: true,
-    },
-    optimized: {
-      icon: 'flash-outline',
-      label: 'Optimized for Series X|S',
-      i18n: true,
-    },
-    '4k': {icon: 'tv-outline', label: '4K'},
-    hdr: {icon: 'contrast-outline', label: 'HDR'},
-    dolbyvision: {icon: 'contrast-outline', label: 'Dolby Vision'},
-    atmos: {icon: 'volume-high-outline', label: 'Dolby Atmos'},
-    dtsx: {icon: 'volume-high-outline', label: 'DTS:X'},
-    spatial: {icon: 'headset-outline', label: 'Spatial sound', i18n: true},
-    achievements: {icon: 'trophy-outline', label: 'Achievements', i18n: true},
-    cloudsaves: {icon: 'cloud-outline', label: 'Cloud saves', i18n: true},
-  };
 
 function TitleDetail({navigation, route}) {
   const {t, i18n} = useTranslation();
@@ -566,27 +544,7 @@ function TitleDetail({navigation, route}) {
     }
   }, [details?.releaseDate, i18n.language]);
 
-  const capLabel = (id: string) => {
-    const meta = CAP_META[id];
-    if (!meta) {
-      return id;
-    }
-    return meta.i18n ? t(meta.label) : meta.label;
-  };
-
-  const renderStars = (avg: number) => {
-    const items = [];
-    for (let i = 1; i <= 5; i++) {
-      let name = 'star-outline';
-      if (avg >= i) {
-        name = 'star';
-      } else if (avg >= i - 0.5) {
-        name = 'star-half';
-      }
-      items.push(<Ionicons key={i} name={name} size={16} color="#ffc233" />);
-    }
-    return items;
-  };
+  const capLabel = (id: string) => sharedCapLabel(t, id);
 
   const renderLargeActionButton = (
     label: string,

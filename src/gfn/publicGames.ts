@@ -20,6 +20,14 @@ export type GfnGame = {
   heroUrl?: string;
   /** True when the signed-in user owns this title (from the authed library). */
   owned?: boolean;
+  /**
+   * GFN's own app-level uuid (distinct from `id`, which is the per-store
+   * numeric CloudMatch launch id) -- only known for titles resolved through
+   * an authenticated apps() response (owned library, catalog rank), since
+   * the public catalog never carries it. Needed to look up GFN's own rich
+   * per-title metadata (AppDataForAppId).
+   */
+  appId?: string;
 };
 
 type RawPublicGame = {
@@ -32,7 +40,7 @@ type RawPublicGame = {
   status?: string;
 };
 
-const steamAppIdFromUrl = (steamUrl?: string): string | undefined => {
+export const steamAppIdFromUrl = (steamUrl?: string): string | undefined => {
   if (!steamUrl) {
     return undefined;
   }
