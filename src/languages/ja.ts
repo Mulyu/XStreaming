@@ -387,6 +387,11 @@ export default {
     GfnReadyNotifyBody: '順番が来ました。タップして開始します。',
     GfnAllGames: 'すべて',
     GfnOwned: '所有',
+    PlayOn: 'プレイ先',
+    IncludedWithGamePass: 'Game Passに含まれています',
+    LibraryViewDetails: '詳細を見る',
+    LibraryStoreCount: '{{n}}件のストアが連携済み・選択してください',
+    RememberedChoice: '記憶済み・タップして変更',
     GfnResolutionTitle: 'GeForce NOW 解像度',
     GfnResolutionDesc:
       'GeForce NOW でリクエストするストリーミング解像度を設定します。',

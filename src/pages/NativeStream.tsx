@@ -658,7 +658,12 @@ export function NativeStreamScreenBase({
   );
 
   const getStreamDestination = React.useCallback(() => {
-    return route.params?.streamType === 'cloud' ? 'Cloud' : 'Home';
+    // Cloud and GFN both browse from the single merged Library tab now;
+    // anything else (xHome) goes back to the Home gate.
+    return route.params?.streamType === 'cloud' ||
+      route.params?.streamType === 'gfn'
+      ? 'Library'
+      : 'Home';
   }, [route.params?.streamType]);
 
   const finishStreamExit = React.useCallback(() => {
@@ -666,20 +671,15 @@ export function NativeStreamScreenBase({
     setLoading(false);
     Orientation.unlockAllOrientations();
     FullScreenManager.immersiveModeOff();
-    // Cloud is now a tab inside the Main tab navigator; a cloud stream returns
-    // to the Library tab through Main, GFN back to the Gfn tab, otherwise back
-    // to the Home gate.
-    if (route.params?.streamType === 'gfn') {
-      navigation.navigate('Main', {screen: 'Gfn'});
-    } else if (getStreamDestination() === 'Cloud') {
+    if (getStreamDestination() === 'Library') {
       navigation.navigate('Main', {
-        screen: 'Cloud',
+        screen: 'Library',
         params: {needRefresh: true},
       });
     } else {
       navigation.navigate('Home', {needRefresh: true});
     }
-  }, [getStreamDestination, navigation, route.params?.streamType]);
+  }, [getStreamDestination, navigation]);
 
   const waitStopStream = React.useCallback(async (api: any) => {
     try {
@@ -2008,7 +2008,7 @@ export function NativeStreamScreenBase({
                   onPress: () => {
                     Orientation.unlockAllOrientations();
                     if (route.params?.streamType === 'cloud') {
-                      navigation.navigate('Main', {screen: 'Cloud'});
+                      navigation.navigate('Main', {screen: 'Library'});
                     } else {
                       navigation.navigate('Home');
                     }

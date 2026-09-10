@@ -10,8 +10,7 @@ const ACCENT = '#2FD24B';
 // navigator. Keeping this here (not in the navigator) lets the bar stay a pure
 // presentational component driven by the navigation state.
 const TAB_META: Record<string, {labelKey: string; icon: string}> = {
-  Cloud: {labelKey: 'Library', icon: 'view-grid'},
-  Gfn: {labelKey: 'GfnTab', icon: 'gamepad-variant'},
+  Library: {labelKey: 'Library', icon: 'view-grid'},
   Discovery: {labelKey: 'Discovery', icon: 'cards'},
   Settings: {labelKey: 'Settings', icon: 'cog'},
 };

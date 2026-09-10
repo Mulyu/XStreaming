@@ -138,30 +138,51 @@ const firstImage = (
 
 const isNumeric = (v?: string): boolean => !!v && /^\d+$/.test(v);
 
-const toOwnedGame = (app: RawApp): GfnGame | null => {
+// One owned app can be linked to more than one store (Steam + Epic + Xbox,
+// say) -- each is its own launchable CloudMatch id. Emit one GfnGame per
+// distinct numeric store variant instead of collapsing to a single guess, so
+// the caller (the unified Library's provider/store picker) can offer all of
+// them instead of silently picking one.
+const toOwnedGames = (app: RawApp): GfnGame[] => {
   const title = app.title?.trim();
   if (!title) {
-    return null;
+    return [];
   }
   const variants = app.variants ?? [];
-  // The launch app id is a numeric variant id (falls back to a numeric app id).
-  const numericVariant = variants.find(v => isNumeric(v.id));
-  const launchId =
-    numericVariant?.id ?? (isNumeric(app.id) ? app.id : undefined);
-  const store = (numericVariant ?? variants[0])?.appStore ?? 'GFN';
-  return {
-    id: launchId ?? String(app.id ?? title),
-    title,
-    store,
-    genres: [],
-    imageUrl: firstImage(app.images, [
-      'HERO_IMAGE',
-      'TV_BANNER',
-      'KEY_ART',
-      'GAME_BOX_ART',
-    ]),
-    owned: true,
-  };
+  const numericVariants = variants.filter(v => isNumeric(v.id));
+  const usable = numericVariants.length > 0 ? numericVariants : variants;
+  const image = firstImage(app.images, [
+    'HERO_IMAGE',
+    'TV_BANNER',
+    'KEY_ART',
+    'GAME_BOX_ART',
+  ]);
+
+  if (usable.length === 0) {
+    return [
+      {
+        id: isNumeric(app.id) ? app.id! : String(app.id ?? title),
+        title,
+        store: 'GFN',
+        genres: [],
+        imageUrl: image,
+        owned: true,
+      },
+    ];
+  }
+
+  const seen = new Set<string>();
+  return usable.reduce<GfnGame[]>((acc, variant) => {
+    const id = variant.id ?? String(app.id ?? title);
+    const store = variant.appStore ?? 'GFN';
+    const key = `${store}:${id}`;
+    if (seen.has(key)) {
+      return acc;
+    }
+    seen.add(key);
+    acc.push({id, title, store, genres: [], imageUrl: image, owned: true});
+    return acc;
+  }, []);
 };
 
 // Fetch the signed-in user's owned GFN games (one page, up to 200 — covers
@@ -199,8 +220,7 @@ export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
   }
   const items: RawApp[] = payload?.data?.apps?.items ?? [];
   const games = items
-    .map(toOwnedGame)
-    .filter((g): g is GfnGame => g !== null)
+    .flatMap(toOwnedGames)
     .sort((a, b) => a.title.localeCompare(b.title));
   try {
     storage.set(OWNED_CACHE_KEY, JSON.stringify({ts: Date.now(), games}));
@@ -232,7 +252,7 @@ export const clearOwnedGames = (): void => {
   } catch {}
 };
 
-const normalizeTitle = (title: string): string =>
+export const normalizeTitle = (title: string): string =>
   title
     .trim()
     .toLowerCase()
