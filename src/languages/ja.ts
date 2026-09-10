@@ -47,6 +47,7 @@ export default {
     'Search game': 'ゲーム検索',
     'Toggle Performance': 'パフォーマンス表示切替',
     'Toggle Virtual Gamepad': '仮想パッド表示切替',
+    'Toggle Mouse Trackpad': 'マウストラックパッド表示切替',
     'Press Nexus': 'Nexusを押す',
     'Long press Nexus': 'Nexusを長押し',
     Disconnect: '切断',

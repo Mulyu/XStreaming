@@ -59,6 +59,10 @@ import PerfPanel from '../components/PerfPanel';
 import RTCFsrView from '../components/RTCFsrView';
 import NativeTouchOverlay from '../components/NativeTouchOverlay';
 import SwipeAimZone from '../components/SwipeAimZone';
+import MouseTrackpadZone from '../components/MouseTrackpadZone';
+import MouseCursorOverlay, {
+  MouseCursorOverlayHandle,
+} from '../components/MouseCursorOverlay';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {getCoverLayout} from '../store/coverLayoutStore';
 import PortraitVirtualGamepad, {
@@ -228,7 +232,7 @@ export function NativeStreamScreenBase({
   portraitMode = false,
 }: NativeStreamScreenProps) {
   const {t} = useTranslation();
-  const {width: screenWidth} = useWindowDimensions();
+  const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const authentication = useSelector((state: any) => state.authentication);
   const streamingTokens = useSelector((state: any) => state.streamingTokens);
   const webToken = useSelector((state: any) => state.webToken);
@@ -240,6 +244,10 @@ export function NativeStreamScreenBase({
   const [isExiting, setIsExiting] = React.useState(false);
   const [showModal, setShowModal] = React.useState(false);
   const [showVirtualGamepad, setShowVirtualGamepad] = React.useState(false);
+  // GFN-only: a trackpad-style overlay for mouse-driven (Steam) titles,
+  // mutually exclusive with the virtual gamepad -- see renderMouseTrackpad().
+  const [showMouseTrackpad, setShowMouseTrackpad] = React.useState(false);
+  const mouseCursorRef = React.useRef<MouseCursorOverlayHandle>(null);
   const [connectState, setConnectState] = React.useState('');
   const [coverAvailable, setCoverAvailable] = React.useState(false);
   const [coverPresented, setCoverPresented] = React.useState(false);
@@ -2952,6 +2960,12 @@ export function NativeStreamScreenBase({
           title: t('Edit Virtual Gamepad'),
         });
       }
+      if (route.params?.streamType === 'gfn') {
+        items.push({
+          id: 'toggleMouseTrackpad',
+          title: t('Toggle Mouse Trackpad'),
+        });
+      }
       if (coverAvailable) {
         items.push({
           id: 'toggleCoverControls',
@@ -3016,15 +3030,31 @@ export function NativeStreamScreenBase({
       case 'togglePerformance':
         setShowPerformance(!showPerformance);
         break;
-      case 'toggleVirtualGamepad':
+      case 'toggleVirtualGamepad': {
         if (showVirtualGamepad) {
           clearMacroTimers();
         }
-        setShowVirtualGamepad(!showVirtualGamepad);
+        const nextShowGamepad = !showVirtualGamepad;
+        setShowVirtualGamepad(nextShowGamepad);
+        // Mutually exclusive with the mouse trackpad -- both are full-screen
+        // touch overlays.
+        if (nextShowGamepad) {
+          setShowMouseTrackpad(false);
+        }
         break;
+      }
       case 'editVirtualGamepad':
         handleOpenGamepadEditor();
         break;
+      case 'toggleMouseTrackpad': {
+        const nextShowTrackpad = !showMouseTrackpad;
+        setShowMouseTrackpad(nextShowTrackpad);
+        if (nextShowTrackpad && showVirtualGamepad) {
+          clearMacroTimers();
+          setShowVirtualGamepad(false);
+        }
+        break;
+      }
       case 'toggleCoverControls':
         if (coverPresented) {
           // Manual hide: remember it so the auto-present doesn't turn it back
@@ -3089,6 +3119,7 @@ export function NativeStreamScreenBase({
     showNativeOptionsDialog,
     showPerformance,
     showVirtualGamepad,
+    showMouseTrackpad,
     t,
   ]);
 
@@ -3157,6 +3188,73 @@ export function NativeStreamScreenBase({
         onAim={handleSwipeAim}
         onEnd={clearSwipeAim}
       />
+    );
+  };
+
+  // GFN-only mouse trackpad: relative move + click/right-click/scroll for
+  // Steam/PC titles. See gfn/inputEncoding.ts and components/MouseTrackpadZone.
+  const MOUSE_TRACKPAD_SENSITIVITY = 1.4;
+  const mouseTrackpadRect = React.useMemo(
+    () => ({x: 0, y: 0, width: screenWidth, height: screenHeight}),
+    [screenWidth, screenHeight],
+  );
+
+  const handleMouseMove = React.useCallback(
+    (dx: number, dy: number) => {
+      webrtcClient?.getChannelProcessor('input')?.queueMouseMove(dx, dy);
+      mouseCursorRef.current?.moveBy(dx, dy);
+    },
+    [webrtcClient],
+  );
+
+  const handleMouseButtonDown = React.useCallback(
+    (button: number) => {
+      webrtcClient?.getChannelProcessor('input')?.sendMouseButtonDown(button);
+    },
+    [webrtcClient],
+  );
+
+  const handleMouseButtonUp = React.useCallback(
+    (button: number) => {
+      webrtcClient?.getChannelProcessor('input')?.sendMouseButtonUp(button);
+    },
+    [webrtcClient],
+  );
+
+  const handleMouseWheel = React.useCallback(
+    (delta: number) => {
+      webrtcClient?.getChannelProcessor('input')?.queueMouseWheel(delta);
+    },
+    [webrtcClient],
+  );
+
+  const renderMouseTrackpad = () => {
+    if (
+      portraitMode ||
+      isInPictureInPicture ||
+      route.params?.streamType !== 'gfn' ||
+      connectState !== CONNECTED ||
+      !showMouseTrackpad
+    ) {
+      return null;
+    }
+    return (
+      <>
+        <MouseTrackpadZone
+          enabled
+          sensitivity={MOUSE_TRACKPAD_SENSITIVITY}
+          rect={mouseTrackpadRect}
+          onMove={handleMouseMove}
+          onButtonDown={handleMouseButtonDown}
+          onButtonUp={handleMouseButtonUp}
+          onWheel={handleMouseWheel}
+        />
+        <MouseCursorOverlay
+          ref={mouseCursorRef}
+          visible
+          rect={mouseTrackpadRect}
+        />
+      </>
     );
   };
 
@@ -3390,6 +3488,8 @@ export function NativeStreamScreenBase({
       {renderPerformancePanel()}
 
       {renderSwipeAimZone()}
+
+      {renderMouseTrackpad()}
 
       {renderVirtualGamepad()}
 
