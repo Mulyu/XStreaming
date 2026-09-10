@@ -88,3 +88,9 @@ export const buildUnifiedCatalog = (
 
   return [...byKey.values()].sort((a, b) => a.title.localeCompare(b.title));
 };
+
+// Whether a title is actually playable right now via at least one of its
+// listed services -- Game Pass entitlement on xCloud, or an owned store
+// variant on GFN -- as opposed to merely being present in the catalog.
+export const isCatalogTitleOwned = (item: CatalogTitle): boolean =>
+  !!item.xcloud?.hasEntitlement || !!item.gfn?.variants.some(v => v.owned);

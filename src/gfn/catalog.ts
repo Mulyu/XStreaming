@@ -219,9 +219,11 @@ export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
     return [];
   }
   const items: RawApp[] = payload?.data?.apps?.items ?? [];
-  const games = items
-    .flatMap(toOwnedGames)
-    .sort((a, b) => a.title.localeCompare(b.title));
+  // Deliberately NOT re-sorted alphabetically: the server already returns
+  // these in LIBRARY_SORT order (most-recently-played first), which the
+  // Library screen's "Recently played" sort reuses as-is. Callers that want
+  // alphabetical order (mergeOwnedGames) already re-sort their own output.
+  const games = items.flatMap(toOwnedGames);
   try {
     storage.set(OWNED_CACHE_KEY, JSON.stringify({ts: Date.now(), games}));
   } catch {}
@@ -250,6 +252,97 @@ export const clearOwnedGames = (): void => {
   try {
     storage.delete(OWNED_CACHE_KEY);
   } catch {}
+};
+
+// Server-side sort strings confirmed live against GFN's own
+// FilterGroupAndSortOrderDefinitions catalog query -- the same "Most
+// Popular"/"Newest" options GFN's own web client offers.
+export const GFN_SORT_MOST_POPULAR =
+  'itemMetadata.gfnPopularityRank:ASC,sortName:ASC';
+export const GFN_SORT_LAST_ADDED =
+  'computedValues.libraryAddedDate:DESC,sortName:ASC';
+
+const CATALOG_RANK_QUERY = `query GetCatalogRank(
+  $vpcId: String!,
+  $locale: String!,
+  $sortString: String!,
+  $fetchCount: Int!,
+  $filters: AppFilterFields!
+) {
+  apps(
+    vpcId: $vpcId,
+    language: $locale,
+    orderBy: $sortString,
+    first: $fetchCount,
+    after: "",
+    filters: $filters
+  ) {
+    items { id variants { id } }
+  }
+}`;
+
+// Ranks the whole GFN catalog (not just the signed-in user's library) by a
+// server-side sort, mirroring xCloud's popularOrder.ts: an ORDERED id list
+// (not raw scores), built from every numeric store-variant id so it can be
+// looked up the same way GfnGame.id already is everywhere else. Requires a
+// signed-in token, same as the owned-library query -- GFN's catalog-browse
+// endpoint doesn't serve this to anonymous callers. Returns [] on failure.
+export const fetchGfnCatalogOrder = async (
+  token: string,
+  orderBy: string,
+  fetchCount = 200,
+): Promise<string[]> => {
+  const vpcId = await getVpcId(token);
+  let res: Response;
+  try {
+    res = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: graphqlHeaders(token),
+      body: JSON.stringify({
+        query: CATALOG_RANK_QUERY,
+        variables: {
+          vpcId,
+          locale: 'en_US',
+          sortString: orderBy,
+          fetchCount,
+          // No filter -- rank the whole catalog, matching how OpenNOW's own
+          // browse-with-no-filters call passes an empty object rather than
+          // omitting the (non-null) filters argument.
+          filters: {},
+        },
+      }),
+    });
+  } catch {
+    return [];
+  }
+  if (!res.ok) {
+    return [];
+  }
+  let payload: any;
+  try {
+    payload = await res.json();
+  } catch {
+    return [];
+  }
+  const items: RawApp[] = payload?.data?.apps?.items ?? [];
+  const order: string[] = [];
+  const seen = new Set<string>();
+  items.forEach(app => {
+    const variants = (app.variants ?? []).filter(v => isNumeric(v.id));
+    const ids =
+      variants.length > 0
+        ? variants.map(v => v.id!)
+        : isNumeric(app.id)
+        ? [app.id!]
+        : [];
+    ids.forEach(id => {
+      if (!seen.has(id)) {
+        seen.add(id);
+        order.push(id);
+      }
+    });
+  });
+  return order;
 };
 
 export const normalizeTitle = (title: string): string =>
