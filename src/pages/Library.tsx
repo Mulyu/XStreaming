@@ -3,6 +3,7 @@ import {
   StyleSheet,
   View,
   FlatList,
+  RefreshControl,
   Image,
   TextInput,
   Platform,
@@ -365,6 +366,84 @@ function LibraryScreen() {
     // loading quietly in the background if this is the very first fetch).
     setLoading(false);
   }, []);
+
+  // Pull-to-refresh: re-runs the same fetches the mount-time effects above
+  // do (xCloud entitlements/recent, GFN public+owned catalog, GFN rank
+  // orders, favorites), bypassing the 24h price/popularity caches is
+  // deliberately left alone -- this is about the list itself (new
+  // purchases, newly-added GFN titles), not those slower-moving sources.
+  const [refreshing, setRefreshing] = React.useState(false);
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const tasks: Promise<any>[] = [];
+
+      if (streamingTokens?.xCloudToken) {
+        const api = new XcloudApi(
+          streamingTokens.xCloudToken.getDefaultRegion().baseUri,
+          streamingTokens.xCloudToken.data.gsToken,
+          'cloud',
+        );
+        tasks.push(
+          api.getTitles().then((res: any) => {
+            if (res?.results?.length > 0) {
+              return api.getGamePassProducts(res.results).then(setXcloudTitles);
+            }
+          }),
+        );
+        tasks.push(
+          api.getRecentTitles().then((res: any) => {
+            const ids = (res?.results ?? [])
+              .map((item: any) => item?.details?.productId)
+              .filter(Boolean)
+              .map((id: string) => id.toUpperCase());
+            if (ids.length > 0) {
+              setXcloudRecentRank(buildPopularRank(ids));
+            }
+          }),
+        );
+      }
+
+      tasks.push(
+        fetchGfnGames()
+          .then(setGfnPublicGames)
+          .catch(() => {}),
+      );
+
+      if (isSignedIn()) {
+        tasks.push(
+          getValidGfnJwt().then(token => {
+            if (!token) {
+              return;
+            }
+            return Promise.all([
+              fetchGfnOwnedGames(token)
+                .then(owned => owned.length > 0 && setGfnOwnedGames(owned))
+                .catch(() => {}),
+              fetchGfnCatalogOrder(token, GFN_SORT_MOST_POPULAR).then(order => {
+                if (order.length > 0) {
+                  saveGfnRankOrder('popular', order);
+                  setGfnPopularRank(buildPopularRank(order));
+                }
+              }),
+              fetchGfnCatalogOrder(token, GFN_SORT_LAST_ADDED).then(order => {
+                if (order.length > 0) {
+                  saveGfnRankOrder('newest', order);
+                  setGfnNewestRank(buildPopularRank(order));
+                }
+              }),
+            ]);
+          }),
+        );
+      }
+
+      setFavoriteKeys(new Set(getFavoriteKeys()));
+
+      await Promise.all(tasks);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [streamingTokens?.xCloudToken]);
 
   const gfnGames = React.useMemo(
     () => mergeOwnedGames(gfnPublicGames, gfnOwnedGames),
@@ -765,6 +844,9 @@ function LibraryScreen() {
           initialNumToRender={18}
           windowSize={11}
           removeClippedSubviews
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
     </View>

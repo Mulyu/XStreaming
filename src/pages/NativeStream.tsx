@@ -377,7 +377,12 @@ export function NativeStreamScreenBase({
       if (layoutTimer) {
         clearTimeout(layoutTimer);
       }
-      Orientation.unlockAllOrientations();
+      // Re-lock to portrait rather than unlocking: unlockAllOrientations()
+      // forces SCREEN_ORIENTATION_SENSOR, which ignores the OS rotation
+      // lock and leaves the rest of the (portrait-only) app free-rotating
+      // once this effect's cleanup runs on the next portraitMode change or
+      // on unmount when leaving the stream.
+      Orientation.lockToPortrait();
     };
   }, [route.params?.sessionId, route.params?.streamType, portraitMode]);
 
@@ -669,7 +674,7 @@ export function NativeStreamScreenBase({
   const finishStreamExit = React.useCallback(() => {
     setIsExiting(false);
     setLoading(false);
-    Orientation.unlockAllOrientations();
+    Orientation.lockToPortrait();
     FullScreenManager.immersiveModeOff();
     if (getStreamDestination() === 'Library') {
       navigation.navigate('Main', {
@@ -1351,7 +1356,7 @@ export function NativeStreamScreenBase({
               setLoadingText(t('Disconnecting...'));
               setIsExiting(true);
               webrtcClient && webrtcClient.close();
-              Orientation.unlockAllOrientations();
+              Orientation.lockToPortrait();
               await waitStopStream(_streamApi);
               finishStreamExit();
             },
@@ -2006,7 +2011,7 @@ export function NativeStreamScreenBase({
                   text: t('Confirm'),
                   style: 'default',
                   onPress: () => {
-                    Orientation.unlockAllOrientations();
+                    Orientation.lockToPortrait();
                     if (route.params?.streamType === 'cloud') {
                       navigation.navigate('Main', {screen: 'Library'});
                     } else {

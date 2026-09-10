@@ -527,35 +527,50 @@ const refreshOnce = (tokens: GfnTokens): Promise<Record<string, any>> => {
   return inFlightRefresh;
 };
 
-// Best-effort, fire-and-forget: get a client token if this session doesn't
-// have one yet (or its own is close to expiring), using the still-valid
-// access token. Deliberately not awaited by getValidTokens()'s fast path --
-// this just needs to happen at some point while the access token is good, so
-// a client token is already on hand once a refresh is actually due.
-let inFlightClientTokenBootstrap: Promise<void> | null = null;
+// Get a client token if this session doesn't have one yet (or its own is
+// close to expiring), using the still-valid access token, and return the
+// tokens with it attached. Awaited by getValidTokens() -- unlike an earlier
+// version of this port, which only ever attempted this from the "plenty of
+// time left, nothing to refresh" branch and skipped it entirely once a
+// refresh was actually due. That meant a session that sat idle across its
+// entire access-token lifetime without any earlier GFN screen visit (so the
+// bootstrap never got a chance to run) would reach getValidTokens() with no
+// client token AND an already-expiring access/id token, and silently fall
+// back to the plain refresh_token grant every time -- the exact bug this
+// mechanism was meant to fix. OpenNOW's own SessionValidityCoordinator
+// (the reference this was ported from) runs this check unconditionally,
+// synchronously, before deciding whether a refresh is even due; this mirrors
+// that ordering so the client token has one last chance to be captured right
+// before it's needed, using whatever life the access token has left.
+let inFlightClientTokenBootstrap: Promise<{
+  clientToken: string;
+  clientTokenExpiresAt: number;
+} | null> | null = null;
 
-const bootstrapClientToken = (tokens: GfnTokens): void => {
+const ensureClientToken = async (tokens: GfnTokens): Promise<GfnTokens> => {
   const hasUsable =
     !!tokens.clientToken &&
     (tokens.clientTokenExpiresAt ?? 0) - Date.now() >
       CLIENT_TOKEN_REFRESH_WINDOW_MS;
-  if (hasUsable || inFlightClientTokenBootstrap) {
-    return;
+  if (hasUsable) {
+    return tokens;
   }
-  inFlightClientTokenBootstrap = requestClientToken(tokens.accessToken)
-    .then(({clientToken, clientTokenExpiresAt}) => {
-      // Re-read in case a refresh completed while this was in flight --
-      // never clobber a newer token set with a client token grafted onto
-      // the stale one this call started with.
-      const current = getStoredTokens();
-      if (current && current.accessToken === tokens.accessToken) {
-        setStoredTokens({...current, clientToken, clientTokenExpiresAt});
-      }
-    })
-    .catch(() => {})
-    .finally(() => {
-      inFlightClientTokenBootstrap = null;
-    });
+  if (!inFlightClientTokenBootstrap) {
+    inFlightClientTokenBootstrap = requestClientToken(tokens.accessToken)
+      .catch(() => null)
+      .finally(() => {
+        inFlightClientTokenBootstrap = null;
+      });
+  }
+  const result = await inFlightClientTokenBootstrap;
+  if (!result) {
+    return tokens;
+  }
+  return {
+    ...tokens,
+    clientToken: result.clientToken,
+    clientTokenExpiresAt: result.clientTokenExpiresAt,
+  };
 };
 
 // Return a valid token set, refreshing (and re-persisting) if it is expired or
@@ -567,30 +582,43 @@ export const getValidTokens = async (): Promise<GfnTokens | null> => {
     return null;
   }
   const expiry = effectiveExpiresAt(tokens);
-  if (expiry - Date.now() > REFRESH_WINDOW_MS) {
-    bootstrapClientToken(tokens);
-    return tokens;
+  const expired = expiry <= Date.now();
+
+  // One last chance to have a client token on hand before a refresh is due
+  // -- skipped only once the access token has actually expired, since the
+  // client-token endpoint itself needs a still-valid Bearer token.
+  const withClientToken = expired ? tokens : await ensureClientToken(tokens);
+  if (withClientToken !== tokens) {
+    setStoredTokens(withClientToken);
   }
-  if (!tokens.refreshToken && !tokens.clientToken) {
-    return expiry > Date.now() ? tokens : null;
+
+  if (expiry - Date.now() > REFRESH_WINDOW_MS) {
+    return withClientToken;
+  }
+  if (!withClientToken.refreshToken && !withClientToken.clientToken) {
+    return expiry > Date.now() ? withClientToken : null;
   }
   try {
-    const refreshed = await refreshOnce(tokens);
+    const refreshed = await refreshOnce(withClientToken);
     // Preserve an id/client token the refresh response may omit — but never
     // keep a stale id_token that has already expired (fall back to the access
     // token instead), and re-persist so the next call sees the fresh set.
     const oldIdValid = (jwtExpiresAt(tokens.idToken) ?? 0) > Date.now();
-    const merged: GfnTokens = {
+    let merged: GfnTokens = {
       accessToken: refreshed.access_token,
-      refreshToken: refreshed.refresh_token ?? tokens.refreshToken,
+      refreshToken: refreshed.refresh_token ?? withClientToken.refreshToken,
       idToken: refreshed.id_token ?? (oldIdValid ? tokens.idToken : undefined),
-      clientToken: refreshed.client_token ?? tokens.clientToken,
+      clientToken: refreshed.client_token ?? withClientToken.clientToken,
       clientTokenExpiresAt: refreshed.client_token
         ? undefined
-        : tokens.clientTokenExpiresAt,
+        : withClientToken.clientTokenExpiresAt,
       expiresAt: toExpiresAt(refreshed.expires_in),
-      authClientId: tokens.authClientId,
+      authClientId: withClientToken.authClientId,
     };
+    // Give the freshly-refreshed access token a chance to (re)obtain a
+    // client token for the *next* refresh cycle too, same as OpenNOW does
+    // right after every successful refresh.
+    merged = await ensureClientToken(merged);
     setStoredTokens(merged);
     return merged;
   } catch {
@@ -598,7 +626,7 @@ export const getValidTokens = async (): Promise<GfnTokens | null> => {
     // against a concurrent refresh that already consumed the same refresh
     // token. If the tokens we already have haven't actually expired yet, keep
     // using them instead of forcing a sign-out; the next call retries.
-    return expiry > Date.now() ? tokens : null;
+    return expiry > Date.now() ? withClientToken : null;
   }
 };
 
