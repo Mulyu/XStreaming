@@ -8,6 +8,7 @@ import {storage} from '../store/mmkv';
 
 const DEVICE_AUTHORIZE_ENDPOINT = 'https://login.nvidia.com/device/authorize';
 const TOKEN_ENDPOINT = 'https://login.nvidia.com/token';
+const CLIENT_TOKEN_ENDPOINT = 'https://login.nvidia.com/client_token';
 
 // NVIDIA's Steam Deck OAuth client. Its device-code flow needs no client secret
 // and grants the streaming scopes we need.
@@ -24,12 +25,17 @@ const DEVICE_ID_KEY = 'gfn.deviceId';
 const TOKENS_KEY = 'gfn.tokens';
 // Refresh proactively once the access token is within this window of expiry.
 const REFRESH_WINDOW_MS = 10 * 60 * 1000;
+// Same idea for the client token (see refreshWithClientToken() below).
+const CLIENT_TOKEN_REFRESH_WINDOW_MS = 5 * 60 * 1000;
 
 export type GfnTokens = {
   accessToken: string;
   refreshToken?: string;
   idToken?: string;
   clientToken?: string;
+  // The client token's own expiry -- distinct from `expiresAt` (the access/
+  // id token's). See refreshWithClientToken() below for why this exists.
+  clientTokenExpiresAt?: number;
   expiresAt: number;
   authClientId: string;
 };
@@ -291,6 +297,80 @@ export const refreshAuthTokens = async (
   };
 };
 
+// NVIDIA's actual long-session mechanism, confirmed from OpenNOW's real,
+// working client (the reference this whole flow was ported from): once a
+// session has a client token, refreshing THAT is what keeps a long-idle
+// session alive, tried before the plain refresh_token grant, not instead of
+// it. The port here previously only had the refresh_token half, which is
+// suspected to be why a session left idle for hours (backgrounded, no
+// periodic refresh) sometimes couldn't recover at all -- fetchUserInfo-style
+// per-account identity isn't needed since NVIDIA's own JWTs already carry the
+// `sub` this grant wants (see jwtSub() below).
+export const requestClientToken = async (
+  accessToken: string,
+): Promise<{clientToken: string; clientTokenExpiresAt: number}> => {
+  const response = await fetch(CLIENT_TOKEN_ENDPOINT, {
+    headers: {
+      ...buildAuthHeaders(),
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(
+      `GFN client token request failed (${response.status}): ${text.slice(
+        0,
+        300,
+      )}`,
+    );
+  }
+
+  const payload = (await response.json()) as Record<string, any>;
+  if (!payload.client_token) {
+    throw new Error('GFN client token response had no client_token');
+  }
+  return {
+    clientToken: payload.client_token,
+    clientTokenExpiresAt: toExpiresAt(payload.expires_in),
+  };
+};
+
+// Refresh using the client token instead of the OAuth refresh token --
+// NVIDIA's own `client_token` grant (not part of standard OAuth2/OIDC).
+export const refreshWithClientToken = async (
+  clientToken: string,
+  userId: string,
+  authClientId = STEAM_DECK_CLIENT_ID,
+): Promise<Record<string, any>> => {
+  const body = new URLSearchParams({
+    grant_type: 'urn:ietf:params:oauth:grant-type:client_token',
+    client_token: clientToken,
+    client_id: authClientId,
+    sub: userId,
+  });
+
+  const response = await fetch(TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: buildAuthHeaders(
+      'application/x-www-form-urlencoded; charset=UTF-8',
+    ),
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(
+      `GFN client-token refresh failed (${response.status}): ${text.slice(
+        0,
+        300,
+      )}`,
+    );
+  }
+
+  return (await response.json()) as Record<string, any>;
+};
+
 // ---- Token persistence (MMKV) ----
 
 export const getStoredTokens = (): GfnTokens | null => {
@@ -373,6 +453,25 @@ const effectiveExpiresAt = (tokens: GfnTokens): number => {
   return idExp ? Math.min(tokens.expiresAt, idExp) : tokens.expiresAt;
 };
 
+// The `sub` claim of a JWT (NVIDIA's own user id) -- refreshWithClientToken()
+// needs it and it's already sitting in the id/access token, no extra
+// userinfo round trip required.
+const jwtSub = (token?: string): string | null => {
+  if (!token) {
+    return null;
+  }
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const claims = JSON.parse(base64UrlDecode(parts[1]));
+    return typeof claims.sub === 'string' ? claims.sub : null;
+  } catch {
+    return null;
+  }
+};
+
 // Multiple call sites (the library screen's owned-games load, a stream launch,
 // ...) can call getValidTokens() within milliseconds of each other. If both
 // see the same near-expiry token and independently call refreshAuthTokens(),
@@ -381,18 +480,82 @@ const effectiveExpiresAt = (tokens: GfnTokens): number => {
 // token has already been consumed by the winner and its request fails. Share
 // one in-flight refresh across concurrent callers so only one request is ever
 // made for a given stale token.
-let inFlightRefresh: Promise<GfnTokens> | null = null;
+let inFlightRefresh: Promise<Record<string, any>> | null = null;
 
-const refreshOnce = (tokens: GfnTokens): Promise<GfnTokens> => {
+// Client-token grant first (NVIDIA's real long-session mechanism -- see
+// requestClientToken()/refreshWithClientToken() above), falling back to the
+// plain refresh_token grant, matching OpenNOW's own working order exactly.
+const refreshWithBestMethod = async (
+  tokens: GfnTokens,
+): Promise<Record<string, any>> => {
+  if (tokens.clientToken) {
+    const userId = jwtSub(tokens.idToken) ?? jwtSub(tokens.accessToken);
+    if (userId) {
+      try {
+        return await refreshWithClientToken(
+          tokens.clientToken,
+          userId,
+          tokens.authClientId,
+        );
+      } catch {
+        // Fall through to the refresh_token grant below.
+      }
+    }
+  }
+  if (!tokens.refreshToken) {
+    throw new Error('No refresh token or client token available');
+  }
+  const refreshed = await refreshAuthTokens(
+    tokens.refreshToken,
+    tokens.authClientId,
+  );
+  return {
+    access_token: refreshed.accessToken,
+    refresh_token: refreshed.refreshToken,
+    id_token: refreshed.idToken,
+    client_token: refreshed.clientToken,
+    expires_in: Math.round((refreshed.expiresAt - Date.now()) / 1000),
+  };
+};
+
+const refreshOnce = (tokens: GfnTokens): Promise<Record<string, any>> => {
   if (!inFlightRefresh) {
-    inFlightRefresh = refreshAuthTokens(
-      tokens.refreshToken!,
-      tokens.authClientId,
-    ).finally(() => {
+    inFlightRefresh = refreshWithBestMethod(tokens).finally(() => {
       inFlightRefresh = null;
     });
   }
   return inFlightRefresh;
+};
+
+// Best-effort, fire-and-forget: get a client token if this session doesn't
+// have one yet (or its own is close to expiring), using the still-valid
+// access token. Deliberately not awaited by getValidTokens()'s fast path --
+// this just needs to happen at some point while the access token is good, so
+// a client token is already on hand once a refresh is actually due.
+let inFlightClientTokenBootstrap: Promise<void> | null = null;
+
+const bootstrapClientToken = (tokens: GfnTokens): void => {
+  const hasUsable =
+    !!tokens.clientToken &&
+    (tokens.clientTokenExpiresAt ?? 0) - Date.now() >
+      CLIENT_TOKEN_REFRESH_WINDOW_MS;
+  if (hasUsable || inFlightClientTokenBootstrap) {
+    return;
+  }
+  inFlightClientTokenBootstrap = requestClientToken(tokens.accessToken)
+    .then(({clientToken, clientTokenExpiresAt}) => {
+      // Re-read in case a refresh completed while this was in flight --
+      // never clobber a newer token set with a client token grafted onto
+      // the stale one this call started with.
+      const current = getStoredTokens();
+      if (current && current.accessToken === tokens.accessToken) {
+        setStoredTokens({...current, clientToken, clientTokenExpiresAt});
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      inFlightClientTokenBootstrap = null;
+    });
 };
 
 // Return a valid token set, refreshing (and re-persisting) if it is expired or
@@ -405,9 +568,10 @@ export const getValidTokens = async (): Promise<GfnTokens | null> => {
   }
   const expiry = effectiveExpiresAt(tokens);
   if (expiry - Date.now() > REFRESH_WINDOW_MS) {
+    bootstrapClientToken(tokens);
     return tokens;
   }
-  if (!tokens.refreshToken) {
+  if (!tokens.refreshToken && !tokens.clientToken) {
     return expiry > Date.now() ? tokens : null;
   }
   try {
@@ -417,9 +581,15 @@ export const getValidTokens = async (): Promise<GfnTokens | null> => {
     // token instead), and re-persist so the next call sees the fresh set.
     const oldIdValid = (jwtExpiresAt(tokens.idToken) ?? 0) > Date.now();
     const merged: GfnTokens = {
-      ...refreshed,
-      idToken: refreshed.idToken ?? (oldIdValid ? tokens.idToken : undefined),
-      clientToken: refreshed.clientToken ?? tokens.clientToken,
+      accessToken: refreshed.access_token,
+      refreshToken: refreshed.refresh_token ?? tokens.refreshToken,
+      idToken: refreshed.id_token ?? (oldIdValid ? tokens.idToken : undefined),
+      clientToken: refreshed.client_token ?? tokens.clientToken,
+      clientTokenExpiresAt: refreshed.client_token
+        ? undefined
+        : tokens.clientTokenExpiresAt,
+      expiresAt: toExpiresAt(refreshed.expires_in),
+      authClientId: tokens.authClientId,
     };
     setStoredTokens(merged);
     return merged;
