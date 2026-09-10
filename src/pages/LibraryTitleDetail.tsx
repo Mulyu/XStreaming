@@ -12,8 +12,6 @@ import {launchWithProvider} from '../catalog/launchCatalogTitle';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
-const DIM_ICON_BG = 'rgba(140,140,150,0.16)';
-const DIM_ICON_TEXT = '#8A9A92';
 
 // A title's detail screen: "Play on" lists every provider it's actually
 // available through, and -- for GeForce NOW, where the same game can be
@@ -67,7 +65,12 @@ function LibraryTitleDetailScreen() {
   };
 
   const gfnVariants = catalogTitle.gfn?.variants ?? [];
-  const gfnAnyOwned = gfnVariants.some(variant => variant.owned);
+  // Cover art grays out when the title isn't playable via any listed
+  // service today; the provider row icons below stay full color regardless
+  // (they answer "which service", not "playable right now").
+  const isPlayable =
+    !!catalogTitle.xcloud?.hasEntitlement ||
+    gfnVariants.some(variant => variant.owned);
   const isPreferredXcloud = preference?.provider === 'xcloud';
   const isPreferredGfnVariant = (id: string, store: string) =>
     preference?.provider === 'gfn' &&
@@ -86,6 +89,7 @@ function LibraryTitleDetailScreen() {
             style={styles.heroImage}
           />
         ) : null}
+        {!isPlayable && <View style={styles.heroDim} pointerEvents="none" />}
         <View style={styles.heroOverlay}>
           <Text style={styles.heroTitle}>{catalogTitle.title}</Text>
           {catalogTitle.genres.length > 0 && (
@@ -102,22 +106,8 @@ function LibraryTitleDetailScreen() {
         {catalogTitle.xcloud && (
           <View style={styles.providerCard}>
             <Pressable style={styles.providerRow} onPress={playXcloud}>
-              <View
-                style={[
-                  styles.providerIcon,
-                  catalogTitle.xcloud.hasEntitlement
-                    ? styles.xcloudIconBg
-                    : styles.dimIconBg,
-                ]}>
-                <Text
-                  style={[
-                    styles.providerIconText,
-                    {
-                      color: catalogTitle.xcloud.hasEntitlement
-                        ? XBOX_ACCENT
-                        : DIM_ICON_TEXT,
-                    },
-                  ]}>
+              <View style={[styles.providerIcon, styles.xcloudIconBg]}>
+                <Text style={[styles.providerIconText, {color: XBOX_ACCENT}]}>
                   X
                 </Text>
               </View>
@@ -146,16 +136,8 @@ function LibraryTitleDetailScreen() {
                   ? setGfnExpanded(v => !v)
                   : playGfnVariant(gfnVariants[0])
               }>
-              <View
-                style={[
-                  styles.providerIcon,
-                  gfnAnyOwned ? styles.gfnIconBg : styles.dimIconBg,
-                ]}>
-                <Text
-                  style={[
-                    styles.providerIconText,
-                    {color: gfnAnyOwned ? NVIDIA_ACCENT : DIM_ICON_TEXT},
-                  ]}>
+              <View style={[styles.providerIcon, styles.gfnIconBg]}>
+                <Text style={[styles.providerIconText, {color: NVIDIA_ACCENT}]}>
                   N
                 </Text>
               </View>
@@ -236,6 +218,10 @@ const styles = StyleSheet.create({
   content: {paddingBottom: 32},
   hero: {aspectRatio: 16 / 9, justifyContent: 'flex-end'},
   heroImage: {...StyleSheet.absoluteFillObject},
+  heroDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20,21,24,0.55)',
+  },
   heroOverlay: {
     padding: 16,
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -272,7 +258,6 @@ const styles = StyleSheet.create({
   },
   xcloudIconBg: {backgroundColor: 'rgba(16,124,16,0.18)'},
   gfnIconBg: {backgroundColor: 'rgba(118,185,0,0.18)'},
-  dimIconBg: {backgroundColor: DIM_ICON_BG},
   providerIconText: {fontWeight: '800', fontSize: 13},
   providerText: {flex: 1, gap: 1},
   providerName: {fontSize: 14, fontWeight: '700'},

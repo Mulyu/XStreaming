@@ -576,6 +576,8 @@ export default {
     Popular: '人気順',
     Rating: '評価順',
     SortReleaseDate: 'リリース順',
+    SortNewest: '新着順',
+    LibrarySortXcloudOnly: 'Xbox Cloudのみ',
     View: '表示',
     Refine: '絞り込み',
     Done: '完了',
