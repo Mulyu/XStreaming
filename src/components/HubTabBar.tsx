@@ -11,13 +11,12 @@ const ACCENT = '#2FD24B';
 // presentational component driven by the navigation state.
 const TAB_META: Record<string, {labelKey: string; icon: string}> = {
   Library: {labelKey: 'Library', icon: 'view-grid'},
-  Discovery: {labelKey: 'Discovery', icon: 'cards'},
   Settings: {labelKey: 'Settings', icon: 'cog'},
 };
 
 // Custom tabBar for the bottom-tab navigator. It renders once and persists
 // across tab switches — only the screen content above it changes — so switching
-// Library / Discovery / Settings no longer transitions the whole screen.
+// Library / Settings no longer transitions the whole screen.
 function HubTabBar({state, navigation}: any) {
   const {t} = useTranslation();
   const theme = useTheme();

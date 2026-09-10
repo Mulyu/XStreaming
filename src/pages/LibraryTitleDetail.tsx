@@ -16,6 +16,10 @@ import {getSystemRegion} from '../utils/locale';
 import {getTitleProductId} from '../store/shortcutStore';
 import {getFreshPriceCache} from '../store/priceStore';
 import {
+  isCatalogTitleFavorite,
+  setCatalogTitleFavorite,
+} from '../store/catalogFavorites';
+import {
   PriceInfo,
   RatingInfo,
   TitleDetails,
@@ -80,6 +84,23 @@ function LibraryTitleDetailScreen() {
     () => (catalogTitle ? getCatalogPreference(catalogTitle.key) : null),
     [catalogTitle],
   );
+
+  // Favorites are keyed by the catalog's own normalized-title key, not tied
+  // to one provider -- a GFN-only title can be favorited exactly like an
+  // xCloud one. See store/catalogFavorites.ts.
+  const [isFavorite, setIsFavorite] = React.useState(
+    () => !!catalogTitle && isCatalogTitleFavorite(catalogTitle.key),
+  );
+  React.useEffect(() => {
+    setIsFavorite(!!catalogTitle && isCatalogTitleFavorite(catalogTitle.key));
+  }, [catalogTitle]);
+  const toggleFavorite = () => {
+    if (!catalogTitle) {
+      return;
+    }
+    setCatalogTitleFavorite(catalogTitle.key, !isFavorite);
+    setIsFavorite(!isFavorite);
+  };
 
   // xCloud's own rich detail: rating, capabilities, trailer/screenshots,
   // full description -- reuses the exact fetch TitleDetail.tsx already uses,
@@ -227,6 +248,16 @@ function LibraryTitleDetailScreen() {
             style={styles.heroImage}
           />
         ) : null}
+        <Pressable
+          style={styles.favoriteBtn}
+          onPress={toggleFavorite}
+          accessibilityLabel={t('LibraryFilterFavorite')}>
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={20}
+            color={isFavorite ? '#ff5347' : '#fff'}
+          />
+        </Pressable>
         <View style={styles.heroOverlay}>
           <Text style={styles.heroTitle}>{catalogTitle.title}</Text>
           {genres.length > 0 && (
@@ -506,6 +537,18 @@ const styles = StyleSheet.create({
   content: {paddingBottom: 32},
   hero: {aspectRatio: 16 / 9, justifyContent: 'flex-end'},
   heroImage: {...StyleSheet.absoluteFillObject},
+  favoriteBtn: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    zIndex: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(5,6,8,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   heroOverlay: {
     padding: 16,
     backgroundColor: 'rgba(0,0,0,0.35)',

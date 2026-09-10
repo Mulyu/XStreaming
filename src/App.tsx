@@ -49,7 +49,6 @@ import GfnStreamScreen from './pages/GfnStream';
 import SettingsScreen from './pages/Settings';
 import SettingDetailScreen from './pages/SettingDetail';
 import TitleDetailScreen from './pages/TitleDetail';
-import DiscoveryScreen from './pages/Discovery';
 import LibraryScreen from './pages/Library';
 import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
 import GameMapScreen from './pages/GameMap';
@@ -163,7 +162,6 @@ const withTabScreen = (ScreenComponent: any) => {
 };
 
 const LibraryTabScreen = withTabScreen(LibraryScreen);
-const DiscoveryTabScreen = withTabScreen(DiscoveryScreen);
 const SettingsTabScreen = withTabScreen(SettingsScreen);
 
 const HomeBackgroundScreen = withPageBackground(HomeScreen);
@@ -192,22 +190,21 @@ const GamepadTestBackgroundScreen = withPageBackground(GamepadTestScreen);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 const SearchBackgroundScreen = withPageBackground(SearchScreen);
 
-// The three hub screens live in a bottom-tab navigator so the tab bar persists
-// and only the content swaps between them (Library / Discovery / Settings).
-// Detail, stream and settings sub-screens are pushed on the root stack, above
-// the tabs, so they open full-screen without a tab bar.
+// The two hub screens live in a bottom-tab navigator so the tab bar persists
+// and only the content swaps between them (Library / Settings). Detail,
+// stream and settings sub-screens are pushed on the root stack, above the
+// tabs, so they open full-screen without a tab bar.
 // Library merges the xCloud and GeForce NOW catalogs into one grid (see
 // src/pages/Library.tsx); the previous separate Cloud/Gfn tabs are gone.
 // Cloud.tsx and GfnLibrary.tsx are kept in the repo, unregistered, as a
-// reference/rollback for the richer xCloud-only browsing (favorites, ignore
-// list, sale/rating/popularity sort) the merged screen doesn't carry yet.
+// reference/rollback for the richer xCloud-only browsing (rating/popularity
+// sort) the merged screen doesn't carry yet.
 function MainTabs() {
   return (
     <MainTab.Navigator
       screenOptions={{headerShown: false}}
       tabBar={props => <HubTabBar {...props} />}>
       <MainTab.Screen name="Library" component={LibraryTabScreen} />
-      <MainTab.Screen name="Discovery" component={DiscoveryTabScreen} />
       <MainTab.Screen name="Settings" component={SettingsTabScreen} />
     </MainTab.Navigator>
   );
