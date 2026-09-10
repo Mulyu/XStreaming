@@ -117,7 +117,11 @@ function CustomGamepadScreen({navigation, route}) {
     });
 
     return () => {
-      Orientation.unlockAllOrientations();
+      // Re-lock to portrait rather than unlocking: unlockAllOrientations()
+      // forces SCREEN_ORIENTATION_SENSOR, which ignores the OS rotation
+      // lock and leaves the rest of the (portrait-only) app free-rotating
+      // after leaving this screen.
+      Orientation.lockToPortrait();
       FullScreenManager.immersiveModeOff();
     };
   }, [navigation, route.params?.name]);
