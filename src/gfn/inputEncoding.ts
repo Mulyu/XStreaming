@@ -1,7 +1,8 @@
 // GeForce NOW input packet encoding. Ported from OpenNOW (MIT) / the official
-// GFN web client's wire format. We only implement the gamepad + heartbeat path
-// (keyboard/mouse are not needed for a controller-first client). Byte layouts
-// are matched exactly to the reference so the server accepts the packets.
+// GFN web client's wire format. Implements the gamepad, heartbeat and mouse
+// paths (keyboard is not implemented -- not needed for a controller/mouse
+// client). Byte layouts are matched exactly to the reference so the server
+// accepts the packets.
 
 // XInput button flags.
 export const GAMEPAD_DPAD_UP = 0x0001;
@@ -24,11 +25,23 @@ export const GAMEPAD_MAX_CONTROLLERS = 4;
 export const GAMEPAD_PACKET_SIZE = 38;
 
 const INPUT_HEARTBEAT = 2;
+const INPUT_MOUSE_ABS = 5;
+const INPUT_MOUSE_REL = 7;
+const INPUT_MOUSE_BUTTON_DOWN = 8;
+const INPUT_MOUSE_BUTTON_UP = 9;
+const INPUT_MOUSE_WHEEL = 10;
 const INPUT_GAMEPAD = 12;
 
 // All-controllers mask (bits 0..3).
 export const PARTIALLY_RELIABLE_GAMEPAD_MASK_ALL =
   (1 << GAMEPAD_MAX_CONTROLLERS) - 1;
+
+// Mouse button constants (1-based, matching the GFN protocol).
+export const MOUSE_LEFT = 1;
+export const MOUSE_MIDDLE = 2;
+export const MOUSE_RIGHT = 3;
+export const MOUSE_BACK = 4;
+export const MOUSE_FORWARD = 5;
 
 export type GamepadInput = {
   controllerId: number; // 0-3
@@ -130,6 +143,49 @@ const wrapGamepadPartiallyReliable = (
   return wrapped;
 };
 
+// Protocol v3+ wrapper for a single discrete event (mouse button/wheel,
+// keyboard): [0x23][8B ts][0x22][payload]. v1-v2: raw payload, unchanged.
+const wrapSingleEvent = (
+  payload: Uint8Array,
+  protocolVersion: number,
+): Uint8Array => {
+  if (protocolVersion <= 2) {
+    return payload;
+  }
+  const wrapped = new Uint8Array(9 + 1 + payload.length);
+  const view = new DataView(wrapped.buffer);
+  wrapped[0] = 0x23;
+  writeTimestampBE(view, 1);
+  wrapped[9] = 0x22;
+  wrapped.set(payload, 10);
+  return wrapped;
+};
+
+// Protocol v3+ wrapper for a mouse-move event (relative or absolute):
+// [0x23][8B ts][0x21][2B length BE][payload]. v1-v2: raw payload, unchanged.
+const wrapMouseMoveEvent = (
+  payload: Uint8Array,
+  protocolVersion: number,
+): Uint8Array => {
+  if (protocolVersion <= 2) {
+    return payload;
+  }
+  const wrapped = new Uint8Array(9 + 1 + 2 + payload.length);
+  const view = new DataView(wrapped.buffer);
+  wrapped[0] = 0x23;
+  writeTimestampBE(view, 1);
+  wrapped[9] = 0x21;
+  view.setUint16(10, payload.length, false);
+  wrapped.set(payload, 12);
+  return wrapped;
+};
+
+const clampI16 = (value: number): number =>
+  Math.max(-32768, Math.min(32767, Math.round(value)));
+
+const clampU16 = (value: number): number =>
+  Math.max(0, Math.min(65535, Math.round(value)));
+
 // ---- encoder ----
 
 export class GfnInputEncoder {
@@ -192,6 +248,76 @@ export class GfnInputEncoder {
       );
     }
     return wrapGamepadReliable(bytes, this.protocolVersion);
+  }
+
+  // Relative mouse move (type 7): dx/dy are pixel deltas since the last move.
+  encodeMouseMove(dx: number, dy: number): Uint8Array {
+    const bytes = new Uint8Array(22);
+    const view = new DataView(bytes.buffer);
+    // [type 4B LE][dx 2B BE][dy 2B BE][reserved 6B BE][timestamp 8B BE]
+    view.setUint32(0, INPUT_MOUSE_REL, true);
+    view.setInt16(4, clampI16(dx), false);
+    view.setInt16(6, clampI16(dy), false);
+    view.setUint16(8, 0, false);
+    view.setUint32(10, 0, false);
+    view.setBigUint64(14, sendTimestampUs(), false);
+    return wrapMouseMoveEvent(bytes, this.protocolVersion);
+  }
+
+  // Absolute mouse position (type 5): x/y inside a client-chosen width/height
+  // extent that the server scales onto the remote desktop.
+  encodeMouseAbsolute(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): Uint8Array {
+    const bytes = new Uint8Array(26);
+    const view = new DataView(bytes.buffer);
+    // [type 4B LE][x 2B BE][y 2B BE][reserved 2B BE][width 2B BE]
+    // [height 2B BE][reserved 4B BE][timestamp 8B BE]
+    view.setUint32(0, INPUT_MOUSE_ABS, true);
+    view.setUint16(4, clampU16(x), false);
+    view.setUint16(6, clampU16(y), false);
+    view.setUint16(8, 0, false);
+    view.setUint16(10, clampU16(width), false);
+    view.setUint16(12, clampU16(height), false);
+    view.setUint32(14, 0, false);
+    view.setBigUint64(18, sendTimestampUs(), false);
+    return wrapMouseMoveEvent(bytes, this.protocolVersion);
+  }
+
+  encodeMouseButtonDown(button: number): Uint8Array {
+    return this.encodeMouseButton(INPUT_MOUSE_BUTTON_DOWN, button);
+  }
+
+  encodeMouseButtonUp(button: number): Uint8Array {
+    return this.encodeMouseButton(INPUT_MOUSE_BUTTON_UP, button);
+  }
+
+  encodeMouseWheel(delta: number): Uint8Array {
+    const bytes = new Uint8Array(22);
+    const view = new DataView(bytes.buffer);
+    // [type 4B LE][horiz 2B BE][vert 2B BE][reserved 6B BE][timestamp 8B BE]
+    view.setUint32(0, INPUT_MOUSE_WHEEL, true);
+    view.setInt16(4, 0, false);
+    view.setInt16(6, clampI16(delta), false);
+    view.setUint16(8, 0, false);
+    view.setUint32(10, 0, false);
+    view.setBigUint64(14, sendTimestampUs(), false);
+    return wrapSingleEvent(bytes, this.protocolVersion);
+  }
+
+  private encodeMouseButton(type: number, button: number): Uint8Array {
+    const bytes = new Uint8Array(18);
+    const view = new DataView(bytes.buffer);
+    // [type 4B LE][button 1B][pad 1B][reserved 4B BE][timestamp 8B BE]
+    view.setUint32(0, type, true);
+    view.setUint8(4, button);
+    view.setUint8(5, 0);
+    view.setUint32(6, 0, false);
+    view.setBigUint64(10, sendTimestampUs(), false);
+    return wrapSingleEvent(bytes, this.protocolVersion);
   }
 }
 

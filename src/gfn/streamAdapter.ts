@@ -402,6 +402,18 @@ export class GfnStreamAdapter {
           );
         },
         flushGamepadInput: () => {},
+        queueMouseMove: (dx: number, dy: number) => {
+          this.gfnClient?.sendMouseMove(dx, dy);
+        },
+        sendMouseButtonDown: (button: number) => {
+          this.gfnClient?.sendMouseButtonDown(button);
+        },
+        sendMouseButtonUp: (button: number) => {
+          this.gfnClient?.sendMouseButtonUp(button);
+        },
+        queueMouseWheel: (delta: number) => {
+          this.gfnClient?.sendMouseWheel(delta);
+        },
         // xCloud anti-idle / resolution-stability frames and touch pointer
         // input have no GFN equivalent here — accept and drop them.
         addProcessedFrame: () => {},

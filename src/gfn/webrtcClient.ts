@@ -304,6 +304,53 @@ export class GfnWebRtcClient {
     } catch {}
   }
 
+  // Mouse move (relative delta, in pixels). Prefers the partially-reliable
+  // channel like gamepad state -- a dropped move is imperceptible, unlike a
+  // dropped click, so it doesn't need the reliable channel's guarantees.
+  sendMouseMove(dx: number, dy: number): void {
+    if (!this.inputReady) {
+      return;
+    }
+    const usePr = this.partiallyReliableInput?.readyState === 'open';
+    const channel = usePr ? this.partiallyReliableInput : this.reliableInput;
+    if (channel?.readyState !== 'open') {
+      return;
+    }
+    try {
+      channel.send(this.encoder.encodeMouseMove(dx, dy));
+    } catch {}
+  }
+
+  // Mouse buttons and wheel always go over the reliable channel -- unlike
+  // move deltas, dropping one of these leaves a button stuck down or a click
+  // that never registers.
+  sendMouseButtonDown(button: number): void {
+    if (!this.inputReady || this.reliableInput?.readyState !== 'open') {
+      return;
+    }
+    try {
+      this.reliableInput.send(this.encoder.encodeMouseButtonDown(button));
+    } catch {}
+  }
+
+  sendMouseButtonUp(button: number): void {
+    if (!this.inputReady || this.reliableInput?.readyState !== 'open') {
+      return;
+    }
+    try {
+      this.reliableInput.send(this.encoder.encodeMouseButtonUp(button));
+    } catch {}
+  }
+
+  sendMouseWheel(delta: number): void {
+    if (!this.inputReady || this.reliableInput?.readyState !== 'open') {
+      return;
+    }
+    try {
+      this.reliableInput.send(this.encoder.encodeMouseWheel(delta));
+    } catch {}
+  }
+
   private async addRemoteCandidate(candidate: GfnIceCandidate): Promise<void> {
     if (!this.pc || !(this.pc as any).remoteDescription) {
       this.queuedRemoteIce.push(candidate);
