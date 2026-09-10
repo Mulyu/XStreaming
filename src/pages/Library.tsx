@@ -11,7 +11,11 @@ import {
 } from 'react-native';
 import {Text, Icon, ActivityIndicator, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import XcloudApi from '../xCloud';
 import {
@@ -35,6 +39,7 @@ import {
   CatalogTitle,
 } from '../catalog/unifiedCatalog';
 import {getCatalogPreference} from '../store/catalogPreferences';
+import {getFavoriteKeys} from '../store/catalogFavorites';
 import {
   launchWithProvider,
   isPreferenceAvailable,
@@ -63,7 +68,7 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const SALE_ACCENT = '#E67E22';
 
-type SortMode = 'reco' | 'sale' | 'newest' | 'popular' | 'recent';
+type SortMode = 'reco' | 'newest' | 'popular' | 'recent';
 
 const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
 const EMPTY_RANK: Record<string, number> = {};
@@ -117,10 +122,26 @@ function LibraryScreen() {
     React.useState<Record<string, number>>(EMPTY_RANK);
 
   // Filter chips: provider (OR between active ones; neither active = all)
-  // and Owned, defaulting to owned-only.
+  // plus Favorite/Owned/On Sale, each an independent AND filter. Owned
+  // defaults on; the rest default off.
   const [filterXcloud, setFilterXcloud] = React.useState(false);
   const [filterGfn, setFilterGfn] = React.useState(false);
+  const [filterFavorite, setFilterFavorite] = React.useState(false);
   const [filterOwnedOnly, setFilterOwnedOnly] = React.useState(true);
+  const [filterOnSale, setFilterOnSale] = React.useState(false);
+
+  // Favorites live in their own catalog-key-based store (not tied to one
+  // provider) so a GFN-only title can be favorited too -- reloaded on focus
+  // since toggling one happens on the title detail screen, a separate
+  // screen instance.
+  const [favoriteKeys, setFavoriteKeys] = React.useState<Set<string>>(
+    () => new Set(getFavoriteKeys()),
+  );
+  useFocusEffect(
+    React.useCallback(() => {
+      setFavoriteKeys(new Set(getFavoriteKeys()));
+    }, []),
+  );
 
   const gameLanguage = getSettings().preferred_game_language;
   const deviceRegion = getSystemRegion();
@@ -386,31 +407,8 @@ function LibraryScreen() {
     [xcloudTitles, gfnGames],
   );
 
-  const providerOwnedFiltered = React.useMemo(() => {
-    let list = catalog;
-    if (filterXcloud || filterGfn) {
-      list = list.filter(
-        item => (filterXcloud && item.xcloud) || (filterGfn && item.gfn),
-      );
-    }
-    if (filterOwnedOnly) {
-      list = list.filter(isCatalogTitleOwned);
-    }
-    return list;
-  }, [catalog, filterXcloud, filterGfn, filterOwnedOnly]);
-
-  const filtered = React.useMemo(() => {
-    const q = keyword.trim().toLowerCase();
-    if (!q) {
-      return providerOwnedFiltered;
-    }
-    return providerOwnedFiltered.filter(item =>
-      item.title.toLowerCase().includes(q),
-    );
-  }, [providerOwnedFiltered, keyword]);
-
-  // xCloud-only discount percent for the sale badge/sort; 0 for anything not
-  // on sale (or not on xCloud at all).
+  // xCloud-only discount percent for the sale badge/filter; 0 for anything
+  // not on sale (or not on xCloud at all).
   const saleDiscount = React.useCallback(
     (item: CatalogTitle): number => {
       const productId = item.xcloud?.raw?.productId;
@@ -422,6 +420,44 @@ function LibraryScreen() {
     },
     [priceMap],
   );
+
+  const providerOwnedFiltered = React.useMemo(() => {
+    let list = catalog;
+    if (filterXcloud || filterGfn) {
+      list = list.filter(
+        item => (filterXcloud && item.xcloud) || (filterGfn && item.gfn),
+      );
+    }
+    if (filterFavorite) {
+      list = list.filter(item => favoriteKeys.has(item.key));
+    }
+    if (filterOwnedOnly) {
+      list = list.filter(isCatalogTitleOwned);
+    }
+    if (filterOnSale) {
+      list = list.filter(item => saleDiscount(item) > 0);
+    }
+    return list;
+  }, [
+    catalog,
+    filterXcloud,
+    filterGfn,
+    filterFavorite,
+    favoriteKeys,
+    filterOwnedOnly,
+    filterOnSale,
+    saleDiscount,
+  ]);
+
+  const filtered = React.useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+    if (!q) {
+      return providerOwnedFiltered;
+    }
+    return providerOwnedFiltered.filter(item =>
+      item.title.toLowerCase().includes(q),
+    );
+  }, [providerOwnedFiltered, keyword]);
 
   // Combines a title's xCloud rank and GFN rank (each an ordinal position
   // within that provider's own ordered list -- see the two memos above and
@@ -462,12 +498,7 @@ function LibraryScreen() {
       return filtered;
     }
     const list = [...filtered];
-    if (sortMode === 'sale') {
-      list.sort(
-        (a, b) =>
-          saleDiscount(b) - saleDiscount(a) || a.title.localeCompare(b.title),
-      );
-    } else if (sortMode === 'newest') {
+    if (sortMode === 'newest') {
       list.sort(
         (a, b) =>
           mergedRankOf(a, xcloudNewestRank, gfnNewestRank, false) -
@@ -493,7 +524,6 @@ function LibraryScreen() {
   }, [
     filtered,
     sortMode,
-    saleDiscount,
     mergedRankOf,
     xcloudNewestRank,
     gfnNewestRank,
@@ -505,7 +535,6 @@ function LibraryScreen() {
 
   const sortOptions: {value: SortMode; label: string; scope: string}[] = [
     {value: 'reco', label: t('Recommended'), scope: ''},
-    {value: 'sale', label: t('On sale'), scope: t('LibrarySortXcloudOnly')},
     {value: 'newest', label: t('SortNewest'), scope: ''},
     {value: 'popular', label: t('Popular'), scope: ''},
     {value: 'recent', label: t('SortRecent'), scope: ''},
@@ -637,6 +666,17 @@ function LibraryScreen() {
               </Text>
             </Pressable>
             <Pressable
+              style={[styles.filterChip, filterFavorite && styles.filterChipOn]}
+              onPress={() => setFilterFavorite(v => !v)}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterFavorite && styles.filterChipTextOn,
+                ]}>
+                {t('LibraryFilterFavorite')}
+              </Text>
+            </Pressable>
+            <Pressable
               style={[
                 styles.filterChip,
                 filterOwnedOnly && styles.filterChipOn,
@@ -648,6 +688,17 @@ function LibraryScreen() {
                   filterOwnedOnly && styles.filterChipTextOn,
                 ]}>
                 {t('LibraryFilterOwned')}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, filterOnSale && styles.filterChipOn]}
+              onPress={() => setFilterOnSale(v => !v)}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterOnSale && styles.filterChipTextOn,
+                ]}>
+                {t('LibraryFilterOnSale')}
               </Text>
             </Pressable>
 
