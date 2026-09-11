@@ -151,6 +151,7 @@ function TitleDetail({navigation, route}) {
         settings,
         streamType: 'cloud',
         postUrl,
+        title: titleItem.ProductTitle || '',
         isUsbMode,
         usbController,
       },

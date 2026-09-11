@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   View,
-  Image,
   Alert,
   NativeModules,
   NativeEventEmitter,
@@ -19,7 +18,8 @@ import {
 import {IconButton} from 'react-native-paper';
 import {RTCView, MediaStream, RTCRtpReceiver} from 'react-native-webrtc';
 import Orientation from 'react-native-orientation-locker';
-import Spinner from '../components/Spinner';
+import StreamHandshakeOverlay from '../components/StreamHandshakeOverlay';
+import type {LoadingPhase} from '../utils/loadingPhase';
 import {useSelector} from 'react-redux';
 import XcloudApi from '../xCloud';
 import WebApi from '../web';
@@ -236,6 +236,18 @@ export function NativeStreamScreenBase({
 
   const [loading, setLoading] = React.useState(false);
   const [loadingText, setLoadingText] = React.useState('');
+  // Drives the StreamHandshakeOverlay's phase ladder -- loadingText itself is
+  // unchanged (still shown verbatim as the overlay's telemetry line), this is
+  // just the friendly headline/progress alongside it.
+  const [loadingPhase, setLoadingPhase] =
+    React.useState<LoadingPhase>('handshake');
+  const [loadingQueuePosition, setLoadingQueuePosition] = React.useState<
+    number | undefined
+  >(undefined);
+  // Tracked continuously (not just once connected) so a xCloud/xHome connect
+  // that finishes while backgrounded can fire the same "ready" notification
+  // GFN's queue already gets -- see the CONNECTED branch below.
+  const currentAppStateRef = React.useRef(AppState.currentState);
   const [streamApi, setStreamApi] = React.useState<any>(null);
   const [settings, setSettings] = React.useState<any>({});
   const [isExiting, setIsExiting] = React.useState(false);
@@ -886,6 +898,7 @@ export function NativeStreamScreenBase({
     appStateSubscription.current = AppState.addEventListener(
       'change',
       state => {
+        currentAppStateRef.current = state;
         if (state === 'active') {
           // Back in the foreground: hide the in-stream keep-alive notification
           // and anti-idle, but keep the service itself armed (demote, not
@@ -1443,7 +1456,13 @@ export function NativeStreamScreenBase({
           new GfnStreamAdapter({
             appId: String(route.params?.appId ?? ''),
             title: String(route.params?.title ?? ''),
-            onProgress: setLoadingText,
+            onProgress: (text, phase, queuePosition) => {
+              setLoadingText(text);
+              if (phase) {
+                setLoadingPhase(phase);
+              }
+              setLoadingQueuePosition(queuePosition);
+            },
           }) as any,
         );
       } else {
@@ -1522,8 +1541,29 @@ export function NativeStreamScreenBase({
             }
           }
           setLoadingText(`${t(CONNECTED)}`);
+          setLoadingPhase('live');
           setLoading(false);
           isConnected.current = true;
+
+          // Drop the connecting-phase keep-alive: xCloud/xHome's own (started
+          // below, at "Connecting..."), or GFN's queue one -- already stopped
+          // by the adapter itself before it called us, so this is a harmless
+          // no-op there. Either way, the in-stream keep-alive below needs a
+          // clean slate to arm() onto.
+          StreamKeepAliveManager?.stop?.();
+          // If the user backgrounded the app while xCloud/xHome was still
+          // connecting, let them know it's ready the same way GFN's queue
+          // already does -- GFN fires its own equivalent earlier (once its
+          // queue seat is ready), so skip it here to avoid a duplicate.
+          if (
+            route.params?.streamType !== 'gfn' &&
+            currentAppStateRef.current !== 'active'
+          ) {
+            StreamKeepAliveManager?.notifyReady?.(
+              String(route.params?.title || t('Connecting...')),
+              t('StreamReadyNotifyBody'),
+            );
+          }
 
           // Get the keep-alive service running now, while definitely still in
           // the foreground, so that backgrounding later can reliably promote
@@ -1801,6 +1841,22 @@ export function NativeStreamScreenBase({
 
       setLoading(true);
       setLoadingText(`${t('Connecting...')}`);
+      setLoadingPhase('handshake');
+      // GFN reports its own queue/connecting keep-alive from inside
+      // GfnStreamAdapter (it can be a long wait); xCloud/xHome connect
+      // quickly but can still stall on a slow network, so give it the same
+      // "survives backgrounding, notifies once ready" treatment. Started
+      // here (definitely foreground -- the screen just mounted) so a later
+      // background can reliably promote/notify; stopped in the CONNECTED
+      // branch above.
+      if (route.params?.streamType !== 'gfn') {
+        StreamKeepAliveManager?.start?.(
+          String(route.params?.title || t('Connecting...')),
+          t('Connecting...'),
+          t('Disconnect'),
+          0,
+        );
+      }
 
       const setCodec = sdp => {
         const codec = _settings.codec;
@@ -1916,6 +1972,7 @@ export function NativeStreamScreenBase({
                 'Configuration obtained successfully, initiating offer...',
               )}`,
             );
+            setLoadingPhase('negotiating');
             webrtcClient.createOffer().then(offer => {
               // Set codec
               if (_settings.codec !== '') {
@@ -1942,6 +1999,7 @@ export function NativeStreamScreenBase({
                         );
                         webrtcClient.setIceCandidates(iceDetails);
                         setLoadingText(`${t('Exchange ICE successfully...')}`);
+                        setLoadingPhase('starting');
                       })
                       .catch(e => {
                         Alert.alert(
@@ -3294,7 +3352,6 @@ export function NativeStreamScreenBase({
   const screen_position = settings.screen_position || 'center';
   const loadingPosterUrl =
     typeof route.params?.postUrl === 'string' ? route.params.postUrl : '';
-  const showLoadingPoster = loading && !!loadingPosterUrl;
   const portraitSafeTop =
     portraitMode && Platform.OS === 'android'
       ? StatusBar.currentHeight || 0
@@ -3302,7 +3359,7 @@ export function NativeStreamScreenBase({
   const portraitVideoHeight = Math.round((screenWidth * 9) / 16);
 
   const renderStreamPlayer = (containerStyle: any, playerStyle: any) => {
-    if (showLoadingPoster || !remoteStream.current?.toURL()) {
+    if (loading || !remoteStream.current?.toURL()) {
       return null;
     }
 
@@ -3386,32 +3443,19 @@ export function NativeStreamScreenBase({
   if (portraitMode) {
     return (
       <View style={styles.portraitContainer}>
-        {showLoadingPoster && (
-          <View style={styles.loadingPosterContainer} pointerEvents="none">
-            <Image
-              source={{uri: loadingPosterUrl}}
-              style={styles.loadingPosterBackdrop}
-              resizeMode="cover"
-              blurRadius={8}
-            />
-            <Image
-              source={{uri: loadingPosterUrl}}
-              style={styles.loadingPoster}
-              resizeMode="contain"
-            />
-            <View style={styles.loadingPosterMask} />
-          </View>
-        )}
-
         {loading && (
-          <Spinner
-            loading={true}
-            text={loadingText}
-            textStyle={
-              showLoadingPoster ? styles.loadingSpinnerText : undefined
+          <StreamHandshakeOverlay
+            streamType={route.params?.streamType}
+            gameTitle={
+              typeof route.params?.title === 'string'
+                ? route.params.title
+                : undefined
             }
-            cancelable={true}
-            closeCb={() => {
+            posterUrl={loadingPosterUrl || undefined}
+            phase={loadingPhase}
+            queuePosition={loadingQueuePosition}
+            detailText={loadingText}
+            onCancel={() => {
               setLoading(false);
               confirmPortraitExit();
             }}
@@ -3441,30 +3485,19 @@ export function NativeStreamScreenBase({
 
   return (
     <View style={styles.container}>
-      {showLoadingPoster && !isInPictureInPicture && (
-        <View style={styles.loadingPosterContainer} pointerEvents="none">
-          <Image
-            source={{uri: loadingPosterUrl}}
-            style={styles.loadingPosterBackdrop}
-            resizeMode="cover"
-            blurRadius={8}
-          />
-          <Image
-            source={{uri: loadingPosterUrl}}
-            style={styles.loadingPoster}
-            resizeMode="contain"
-          />
-          <View style={styles.loadingPosterMask} />
-        </View>
-      )}
-
       {loading && !isInPictureInPicture && (
-        <Spinner
-          loading={true}
-          text={loadingText}
-          textStyle={showLoadingPoster ? styles.loadingSpinnerText : undefined}
-          cancelable={true}
-          closeCb={() => {
+        <StreamHandshakeOverlay
+          streamType={route.params?.streamType}
+          gameTitle={
+            typeof route.params?.title === 'string'
+              ? route.params.title
+              : undefined
+          }
+          posterUrl={loadingPosterUrl || undefined}
+          phase={loadingPhase}
+          queuePosition={loadingQueuePosition}
+          detailText={loadingText}
+          onCancel={() => {
             setLoading(false);
             setShowModal(true);
           }}
@@ -3512,27 +3545,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
-  },
-  loadingPosterContainer: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingPosterBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  loadingPosterMask: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.32)',
-  },
-  loadingPoster: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  loadingSpinnerText: {
-    fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: {width: 0, height: 2},
-    textShadowRadius: 6,
   },
   playerContainer: {
     flex: 1,

@@ -11,6 +11,7 @@ import {GfnWebRtcClient, GfnConnectionState} from './webrtcClient';
 import {getValidGfnJwt} from './auth';
 import {getSettings} from '../store/settingStore';
 import i18next from '../i18n';
+import type {LoadingPhase} from '../utils/loadingPhase';
 import {
   GamepadInput,
   normalizeAxisToInt16,
@@ -142,8 +143,15 @@ const {t} = i18next;
 type AdapterOptions = {
   appId: string;
   title: string;
-  // Loading/queue progress text for the connecting overlay.
-  onProgress?: (text: string) => void;
+  // Loading/queue progress for the connecting overlay: the raw detail text
+  // (unchanged, shown verbatim in the overlay's telemetry line) plus which
+  // phase of the shared ladder it corresponds to, and a queue position when
+  // phase is 'queue'.
+  onProgress?: (
+    text: string,
+    phase?: LoadingPhase,
+    queuePosition?: number,
+  ) => void;
 };
 
 export class GfnStreamAdapter {
@@ -262,6 +270,8 @@ export class GfnStreamAdapter {
             );
             this.options.onProgress?.(
               queued ? t('GfnLaunchQueued', {n}) : t('GfnLaunchStarting'),
+              queued ? 'queue' : 'handshake',
+              queued ? n : undefined,
             );
           }
         },
@@ -277,7 +287,10 @@ export class GfnStreamAdapter {
       // only in the (opt-in) performance overlay once already playing.
       const region = regionLabelFromBase(session.streamingBaseUrl);
       if (region) {
-        this.options.onProgress?.(t('GfnConnectingRegion', {region}));
+        this.options.onProgress?.(
+          t('GfnConnectingRegion', {region}),
+          'starting',
+        );
       }
 
       // Seat is ready. If the user backgrounded during the queue, alert them.
@@ -315,8 +328,13 @@ export class GfnStreamAdapter {
             this.connectedHandler?.(CLOSED, detail || s);
           } else {
             const region = regionLabelFromBase(this.session?.streamingBaseUrl);
+            const phase: LoadingPhase =
+              s === 'negotiating' || s === 'signaling'
+                ? 'negotiating'
+                : 'starting';
             this.options.onProgress?.(
               region ? `${detail || s} (${region})` : detail || s,
+              phase,
             );
           }
         },
