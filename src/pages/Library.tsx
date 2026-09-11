@@ -463,6 +463,7 @@ function LibraryScreen() {
   // comparing a real timestamp against a catalog position wouldn't mean
   // anything, but comparing two positions does.
   const xcloudNewestRank = React.useMemo(() => {
+    const now = Date.now();
     const withDates = xcloudTitles
       .map((item: any) => ({
         id: item.productId as string | undefined,
@@ -470,7 +471,11 @@ function LibraryScreen() {
           ? new Date(releaseDates[item.productId] || '').getTime()
           : NaN,
       }))
-      .filter(x => x.id && Number.isFinite(x.ms))
+      // A future release date is bad catalog data, not an actual newest
+      // title -- treat it the same as no date at all (excluded here, so it
+      // falls back to last-place in mergedRankOf) rather than letting it
+      // sort to the very top.
+      .filter(x => x.id && Number.isFinite(x.ms) && x.ms <= now)
       .sort((a, b) => b.ms - a.ms);
     const rank: Record<string, number> = {};
     withDates.forEach((x, i) => {
