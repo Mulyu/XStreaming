@@ -15,6 +15,10 @@ import {useTranslation} from 'react-i18next';
 import NetInfo from '@react-native-community/netinfo';
 import {debugFactory} from '../utils/debug';
 import MsalAuth from '../components/MsalAuth';
+import {
+  isSignedIn as isGfnSignedIn,
+  getValidTokens as getValidGfnTokens,
+} from '../gfn/auth';
 
 const log = debugFactory('HomeScreen');
 
@@ -95,6 +99,15 @@ function HomeScreen({navigation, route}) {
       );
       return;
     } else {
+      // GFN is opt-in, not the app's account gate like xCloud above, so this
+      // never blocks or prompts a sign-in -- it's the same "keep the token
+      // fresh at launch" treatment xCloud's check gets, just proportionate
+      // to GFN being optional: only runs, and only in the background, if a
+      // GFN session already exists.
+      if (isGfnSignedIn()) {
+        getValidGfnTokens().catch(() => {});
+      }
+
       // Auth completed callback: store tokens and forward to Cloud.
       const authenticationCompleted = async (_streamingTokens, _webToken) => {
         log.info('Authentication completed');
