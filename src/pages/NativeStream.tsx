@@ -60,9 +60,6 @@ import RTCFsrView from '../components/RTCFsrView';
 import NativeTouchOverlay from '../components/NativeTouchOverlay';
 import SwipeAimZone from '../components/SwipeAimZone';
 import MouseTrackpadZone from '../components/MouseTrackpadZone';
-import MouseCursorOverlay, {
-  MouseCursorOverlayHandle,
-} from '../components/MouseCursorOverlay';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {getCoverLayout} from '../store/coverLayoutStore';
 import PortraitVirtualGamepad, {
@@ -247,7 +244,6 @@ export function NativeStreamScreenBase({
   // GFN-only: a trackpad-style overlay for mouse-driven (Steam) titles,
   // mutually exclusive with the virtual gamepad -- see renderMouseTrackpad().
   const [showMouseTrackpad, setShowMouseTrackpad] = React.useState(false);
-  const mouseCursorRef = React.useRef<MouseCursorOverlayHandle>(null);
   const [connectState, setConnectState] = React.useState('');
   const [coverAvailable, setCoverAvailable] = React.useState(false);
   const [coverPresented, setCoverPresented] = React.useState(false);
@@ -3202,7 +3198,6 @@ export function NativeStreamScreenBase({
   const handleMouseMove = React.useCallback(
     (dx: number, dy: number) => {
       webrtcClient?.getChannelProcessor('input')?.queueMouseMove(dx, dy);
-      mouseCursorRef.current?.moveBy(dx, dy);
     },
     [webrtcClient],
   );
@@ -3239,22 +3234,15 @@ export function NativeStreamScreenBase({
       return null;
     }
     return (
-      <>
-        <MouseTrackpadZone
-          enabled
-          sensitivity={MOUSE_TRACKPAD_SENSITIVITY}
-          rect={mouseTrackpadRect}
-          onMove={handleMouseMove}
-          onButtonDown={handleMouseButtonDown}
-          onButtonUp={handleMouseButtonUp}
-          onWheel={handleMouseWheel}
-        />
-        <MouseCursorOverlay
-          ref={mouseCursorRef}
-          visible
-          rect={mouseTrackpadRect}
-        />
-      </>
+      <MouseTrackpadZone
+        enabled
+        sensitivity={MOUSE_TRACKPAD_SENSITIVITY}
+        rect={mouseTrackpadRect}
+        onMove={handleMouseMove}
+        onButtonDown={handleMouseButtonDown}
+        onButtonUp={handleMouseButtonUp}
+        onWheel={handleMouseWheel}
+      />
     );
   };
 
