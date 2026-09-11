@@ -64,6 +64,15 @@ import {
   isSaleForDisplay,
   discountPercent,
 } from '../utils/storePrice';
+import {
+  SteamPriceInfo,
+  fetchSteamPrices,
+  isSteamSaleForDisplay,
+} from '../utils/steamPrice';
+import {
+  getFreshSteamPriceCache,
+  saveSteamPriceCache,
+} from '../store/steamPriceStore';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
@@ -104,6 +113,12 @@ function LibraryScreen() {
   // notes), so these stay empty for GFN titles rather than faking a value.
   const [priceMap, setPriceMap] =
     React.useState<Record<string, PriceInfo>>(EMPTY_PRICE_MAP);
+  // GFN's linked Steam store variants, for the sale badge/filter -- GFN's own
+  // catalog has no price data of its own, but a title backed by Steam can
+  // still be on sale there, same as an xCloud title can be on Game Pass.
+  const [steamPriceMap, setSteamPriceMap] = React.useState<
+    Record<string, SteamPriceInfo>
+  >({});
   const [popularRank, setPopularRank] =
     React.useState<Record<string, number>>(EMPTY_RANK);
   const [releaseDates, setReleaseDates] = React.useState<
@@ -450,6 +465,38 @@ function LibraryScreen() {
     [gfnPublicGames, gfnOwnedGames],
   );
 
+  // Steam prices for GFN's Steam-linked store variants, batched and cached
+  // (24h) the same way xCloud's own prices are above.
+  const steamPriceSigRef = React.useRef('');
+  React.useEffect(() => {
+    const steamAppIds = Array.from(
+      new Set(
+        gfnGames.map(g => g.steamAppId).filter((id): id is string => !!id),
+      ),
+    );
+    if (steamAppIds.length === 0) {
+      return;
+    }
+    const cc = 'US';
+    const sig = `${cc}:${steamAppIds.length}`;
+    if (steamPriceSigRef.current === sig) {
+      return;
+    }
+    steamPriceSigRef.current = sig;
+
+    const cache = getFreshSteamPriceCache(cc);
+    if (cache) {
+      setSteamPriceMap(cache.priceMap);
+    }
+
+    fetchSteamPrices(steamAppIds, cc).then(prices => {
+      if (Object.keys(prices).length > 0) {
+        setSteamPriceMap(prev => ({...prev, ...prices}));
+      }
+      saveSteamPriceCache(prices, cc, sig);
+    });
+  }, [gfnGames]);
+
   // gfnOwnedGames arrives in the server's own lastPlayed/added order (see
   // gfn/catalog.ts) -- turn that position into a rank map the same way
   // xCloud's own recent/popular orders already are.
@@ -491,18 +538,29 @@ function LibraryScreen() {
     [xcloudTitles, gfnGames],
   );
 
-  // xCloud-only discount percent for the sale badge/filter; 0 for anything
-  // not on sale (or not on xCloud at all).
+  // Discount percent for the sale badge/filter: the best of xCloud's own
+  // price (Game Pass) and any of the title's GFN-linked Steam variants --
+  // whichever is on sale, or the bigger discount if both are. 0 for anything
+  // not on sale on either.
   const saleDiscount = React.useCallback(
     (item: CatalogTitle): number => {
       const productId = item.xcloud?.raw?.productId;
-      if (!productId) {
-        return 0;
-      }
-      const price = getPrice(priceMap, productId);
-      return price && isSaleForDisplay(price) ? discountPercent(price) : 0;
+      const xcloudPrice = productId ? getPrice(priceMap, productId) : null;
+      const xcloudDiscount =
+        xcloudPrice && isSaleForDisplay(xcloudPrice)
+          ? discountPercent(xcloudPrice)
+          : 0;
+
+      const steamDiscount = (item.gfn?.variants ?? []).reduce((best, v) => {
+        const steamPrice = v.steamAppId ? steamPriceMap[v.steamAppId] : null;
+        return isSteamSaleForDisplay(steamPrice)
+          ? Math.max(best, steamPrice!.discountPercent)
+          : best;
+      }, 0);
+
+      return Math.max(xcloudDiscount, steamDiscount);
     },
-    [priceMap],
+    [priceMap, steamPriceMap],
   );
 
   const providerOwnedFiltered = React.useMemo(() => {
