@@ -29,8 +29,11 @@ const HARMOBY_URL =
 
 const MSAL = 'msal';
 
-// Home is now a pure authentication gate: it drives the XAL/MSAL login flow and,
-// once tokens are ready, forwards to the Cloud screen (the app's real landing).
+// Home drives the XAL/MSAL login flow, but xCloud sign-in is optional (like
+// GFN's) rather than a mandatory gate: with no explicit sign-in intent, it
+// only does a silent, non-blocking token check/refresh and always forwards
+// to Main either way. It shows the actual interactive login UI only when
+// navigated to with {intent: 'login'} (from the Settings account row).
 // The Xbox console remote-play ("xhome") flow has been removed.
 function HomeScreen({navigation, route}) {
   const {t} = useTranslation();
@@ -99,11 +102,21 @@ function HomeScreen({navigation, route}) {
       );
       return;
     } else {
-      // GFN is opt-in, not the app's account gate like xCloud above, so this
-      // never blocks or prompts a sign-in -- it's the same "keep the token
-      // fresh at launch" treatment xCloud's check gets, just proportionate
-      // to GFN being optional: only runs, and only in the background, if a
-      // GFN session already exists.
+      // xCloud sign-in is optional now, same as GFN: reaching Home with no
+      // explicit intent (a normal app launch) never blocks on login or shows
+      // a login screen -- it's a silent, best-effort "keep the token fresh
+      // if we already have one" check (see the two branches below), same
+      // spirit as GFN's own opportunistic refresh right here. Sign-in is
+      // available any time from the Settings account row, which navigates
+      // back here with {intent: 'login'} to actually reach the interactive
+      // login UI.
+      const wantsLogin = route.params?.intent === 'login';
+
+      // GFN is opt-in, not the app's account gate, so this never blocks or
+      // prompts a sign-in -- the same "keep the token fresh at launch"
+      // treatment xCloud's check gets below, just proportionate to GFN being
+      // optional: only runs, and only in the background, if a GFN session
+      // already exists.
       if (isGfnSignedIn()) {
         getValidGfnTokens().catch(() => {});
       }
@@ -132,12 +145,27 @@ function HomeScreen({navigation, route}) {
 
         // The main tabs (Library / Settings) are the app entry point now --
         // replace so back exits the app instead of returning to this login
-        // gate.
-        navigation.replace('Main');
+        // gate. Land back on Settings specifically when that's where this
+        // sign-in was started from, instead of always resetting to Library.
+        navigation.replace(
+          'Main',
+          wantsLogin ? {screen: 'Settings'} : undefined,
+        );
       };
 
       // Auth failed callback
       const authenticationFailed = (msg, rollback = false) => {
+        if (!wantsLogin) {
+          // A silent background refresh attempt failed (e.g. a previously
+          // signed-in user's token finally expired for good) -- since
+          // xCloud is optional, that's just "not signed in" now, not an
+          // error worth interrupting the user with or restarting over.
+          log.info('Silent xCloud auth check failed (non-blocking):', msg);
+          if (!_isLogined.current) {
+            navigation.replace('Main');
+          }
+          return;
+        }
         if (rollback) {
           // Rollback to MSAL auth
           Alert.alert(t('Error'), t('XalAuthFailDesc') + msg, [
@@ -213,6 +241,22 @@ function HomeScreen({navigation, route}) {
               route.params.xalUrl,
             );
           }
+        } else if (!_isLogined.current && !wantsLogin) {
+          // Silent, non-blocking check: no login UI, no loading spinner --
+          // an already-signed-in user's token gets refreshed via
+          // authenticationCompleted() (called internally by
+          // checkAuthentication()'s silent flow) if it can be, and either
+          // way this never stops the user from reaching Main.
+          _authentication.current
+            .checkAuthentication()
+            .then(isAuth => {
+              if (!isAuth) {
+                navigation.replace('Main');
+              }
+            })
+            .catch(() => {
+              navigation.replace('Main');
+            });
         } else if (!_isLogined.current) {
           setLoading(true);
           setLoadingText(t('Checking login status...'));
@@ -279,7 +323,14 @@ function HomeScreen({navigation, route}) {
     return () => {
       unsubscribe();
     };
-  }, [t, route.params?.xalUrl, dispatch, navigation, isConnected]);
+  }, [
+    t,
+    route.params?.xalUrl,
+    route.params?.intent,
+    dispatch,
+    navigation,
+    isConnected,
+  ]);
 
   const renderHarmonyModal = () => {
     if (!showHarmonyModal) {

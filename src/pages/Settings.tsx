@@ -144,16 +144,17 @@ function SettingsScreen({navigation}) {
   };
 
   // Mirrors the GFN account row above: signed in -> confirm-then-logout
-  // (the existing 'logout' handler, unchanged); signed out -> back to Home,
-  // the app's actual sign-in gate (reachable here at all only via its own
-  // "Settings" escape hatch on the login screen, so this just returns the
-  // user to the same login UI they stepped away from).
+  // (the existing 'logout' handler, unchanged); signed out -> Home with
+  // {intent: 'login'}, which is what tells Home.tsx to actually show the
+  // interactive login UI instead of its normal silent, non-blocking check
+  // (xCloud sign-in is optional now, like GFN -- Home no longer gates app
+  // launch on it).
   const handleXcloudAccountPress = () => {
     if (isAuthed) {
       handleItemPress('logout');
       return;
     }
-    navigation.navigate('Home');
+    navigation.navigate('Home', {intent: 'login'});
   };
 
   const handleClearCache = () => {
