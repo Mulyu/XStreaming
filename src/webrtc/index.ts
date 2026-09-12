@@ -3,7 +3,6 @@ import {
   RTCSessionDescription,
   RTCIceCandidate,
 } from 'react-native-webrtc';
-import * as sdpTransform from 'sdp-transform';
 
 import InputChannel from './Channel/Input';
 import ControlChannel from './Channel/Control';
@@ -11,8 +10,6 @@ import MessageChannel from './Channel/Message';
 import ChatChannel from './Channel/Chat';
 
 import GamepadDriver from './Driver/Gamepad';
-
-import {getSettings} from '../store/settingStore';
 
 // import server from '../../server.json';
 
@@ -208,13 +205,6 @@ class webRTCClient {
           },
         })
         .then(offer => {
-          const settings = getSettings();
-          const stereoAudioEnabled =
-            (settings as any).enable_stereo_audio === true ||
-            (settings as any).enable_stereo_audio === 'true';
-          if (stereoAudioEnabled) {
-            offer.sdp = this.forceStereoAudio(offer.sdp);
-          }
           this._webrtcClient?.setLocalDescription(offer).then(() => {
             resolve(offer);
           });
@@ -726,31 +716,6 @@ class webRTCClient {
     }
 
     return DEFAULT_SUPPORTED_SYSTEM_UIS;
-  }
-
-  forceStereoAudio(sdp: string): string {
-    const parsedSDP = sdpTransform.parse(sdp);
-    const audioMedia = parsedSDP.media.find((m: any) => m.type === 'audio');
-    if (!audioMedia) {
-      throw Error('no audio media in SDP');
-    }
-    const opusCodec = audioMedia.rtp.find((c: any) => c.codec === 'opus');
-    if (!opusCodec) {
-      throw Error('no opus codec in SDP');
-    }
-    const opusFMTP = audioMedia.fmtp.find(
-      (c: any) => c.payload === opusCodec.payload,
-    );
-    if (!opusFMTP) {
-      throw Error('no opus fmtp in SDP');
-    }
-    const opusParams = sdpTransform.parseParams(opusFMTP.config);
-    opusParams.stereo = 1;
-    const newParams = Object.entries(opusParams)
-      .map(([k, v]) => `${k}=${v}`)
-      .join(';');
-    opusFMTP.config = newParams;
-    return sdpTransform.write(parsedSDP);
   }
 
   _resetAudioLevelTracking() {

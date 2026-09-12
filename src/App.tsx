@@ -47,7 +47,6 @@ import NativeStreamScreen from './pages/NativeStream';
 import NativePortraitStreamScreen from './pages/NativePortraitStream';
 import GfnStreamScreen from './pages/GfnStream';
 import SettingsScreen from './pages/Settings';
-import SettingDetailScreen from './pages/SettingDetail';
 import TitleDetailScreen from './pages/TitleDetail';
 import LibraryScreen from './pages/Library';
 import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
@@ -170,7 +169,6 @@ const AchivementDetailBackgroundScreen = withPageBackground(
   AchivementDetailScreen,
 );
 const LoginBackgroundScreen = withPageBackground(LoginScreen);
-const SettingDetailBackgroundScreen = withPageBackground(SettingDetailScreen);
 const TitleDetailBackgroundScreen = withPageBackground(TitleDetailScreen);
 const LibraryTitleDetailBackgroundScreen = withPageBackground(
   LibraryTitleDetailScreen,
@@ -529,10 +527,6 @@ function App() {
                   name="GameMap"
                   component={GameMapBackgroundScreen}
                   options={{title: t('GameMap')}}
-                />
-                <RootStack.Screen
-                  name="SettingDetail"
-                  component={SettingDetailBackgroundScreen}
                 />
                 <RootStack.Screen
                   name="NativeGameMap"

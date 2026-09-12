@@ -228,10 +228,8 @@ export default {
     SectionVideo: 'Video',
     SectionRegionSignaling: 'Region & Signaling',
     SectionSignInLanguage: 'Sign-in & Language',
-    SectionCoopControllers: 'Co-op & Controllers',
+    SectionControllers: 'Controllers',
     FlagGfnNoOp: '⚠️ Has no effect during a GeForce NOW stream',
-    FlagBitrateNotWired:
-      '⚠️ Not yet applied to the stream — reserved for a future update',
     TurnServerSettings: 'TURN server',
     Custom: 'Custom',
     Size: 'Size',
@@ -445,15 +443,15 @@ export default {
     LibraryViewDetails: 'View details',
     LibraryStoreCount: '{{n}} linked stores — choose one',
     RememberedChoice: 'Remembered — tap to change',
-    GfnResolutionTitle: 'GeForce NOW resolution',
+    GfnResolutionTitle: 'Resolution',
     GfnResolutionDesc:
       'Set the streaming resolution requested from GeForce NOW.',
-    GfnFpsTitle: 'GeForce NOW frame rate',
+    GfnFpsTitle: 'Frame rate',
     GfnFpsDesc: 'Set the streaming frame rate requested from GeForce NOW.',
-    GfnBitrateTitle: 'GeForce NOW bitrate',
+    GfnBitrateTitle: 'Bitrate',
     GfnBitrateDesc:
       'Set the maximum streaming bitrate for GeForce NOW (Note: a lower bitrate can help on weaker networks or devices).',
-    GfnRegionTitle: 'GeForce NOW server region',
+    GfnRegionTitle: 'Server region',
     GfnRegionDesc:
       'Pin a specific GeForce NOW region instead of letting CloudMatch pick the nearest one automatically. If a title fails to start, try switching back to Auto.',
     GfnPlaytimeTitle: 'Playtime remaining this month',

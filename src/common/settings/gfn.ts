@@ -39,7 +39,7 @@ const gfn = [
     type: 'radio',
     title: t('GfnRegionTitle'),
     description: t('GfnRegionDesc'),
-    // Populated at runtime from fetchGfnRegions() -- see SettingDetail.tsx,
+    // Populated at runtime from fetchGfnRegions() -- see Settings.tsx,
     // same pattern as xCloud's own 'signaling_cloud' region picker.
     data: [],
   },
