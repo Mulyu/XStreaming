@@ -198,10 +198,8 @@ export default {
     SectionVideo: '映像',
     SectionRegionSignaling: 'リージョン・シグナリング',
     SectionSignInLanguage: 'サインイン・言語',
-    SectionCoopControllers: 'コープ・コントローラー',
+    SectionControllers: 'コントローラー',
     FlagGfnNoOp: '⚠️ GeForce NOW ストリーム中は効果がありません',
-    FlagBitrateNotWired:
-      '⚠️ まだストリームには反映されません（今後の対応予定）',
     TurnServerSettings: 'TURNサーバー設定',
     Custom: 'カスタム',
     Size: 'サイズ',
@@ -407,16 +405,16 @@ export default {
     LibraryViewDetails: '詳細を見る',
     LibraryStoreCount: '{{n}}件のストアが連携済み・選択してください',
     RememberedChoice: '記憶済み・タップして変更',
-    GfnResolutionTitle: 'GeForce NOW 解像度',
+    GfnResolutionTitle: '解像度',
     GfnResolutionDesc:
       'GeForce NOW でリクエストするストリーミング解像度を設定します。',
-    GfnFpsTitle: 'GeForce NOW フレームレート',
+    GfnFpsTitle: 'フレームレート',
     GfnFpsDesc:
       'GeForce NOW でリクエストするストリーミングフレームレートを設定します。',
-    GfnBitrateTitle: 'GeForce NOW ビットレート',
+    GfnBitrateTitle: 'ビットレート',
     GfnBitrateDesc:
       'GeForce NOW の最大ストリーミングビットレートを設定します（注：回線や端末の性能が低い場合、ビットレートを下げると改善することがあります）。',
-    GfnRegionTitle: 'GeForce NOW サーバーリージョン',
+    GfnRegionTitle: 'サーバーリージョン',
     GfnRegionDesc:
       'CloudMatch による自動選択の代わりに、特定のGeForce NOWリージョンを固定します。起動に失敗する場合は自動に戻してみてください。',
     GfnPlaytimeTitle: '今月の残りプレイ時間',
