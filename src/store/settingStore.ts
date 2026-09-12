@@ -103,6 +103,11 @@ export type Settings = {
   gfn_bitrate_mode: string;
   /** Custom GeForce NOW bitrate in Mbps, used when gfn_bitrate_mode is 'custom'. */
   gfn_bitrate: number;
+  /**
+   * Pinned GeForce NOW CloudMatch region base URL (from fetchGfnRegions()),
+   * empty = auto (nearest region, CloudMatch's own default).
+   */
+  gfn_region: string;
   debug: boolean;
 };
 
@@ -193,6 +198,7 @@ const defaultSettings: Settings = {
   gfn_fps: 60,
   gfn_bitrate_mode: 'auto',
   gfn_bitrate: 20,
+  gfn_region: '',
   debug: false,
 };
 

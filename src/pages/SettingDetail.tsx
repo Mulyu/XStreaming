@@ -23,6 +23,8 @@ import {getSettings, saveSettings} from '../store/settingStore';
 import {clearStreamToken} from '../store/streamTokenStore';
 import {clearWebToken} from '../store/webTokenStore';
 import {clearXcloudData} from '../store/xcloudStore';
+import {getValidGfnJwt} from '../gfn/auth';
+import {fetchGfnRegions, GfnRegionOption} from '../gfn/session';
 
 import bases from '../common/settings/bases';
 import display from '../common/settings/display';
@@ -51,6 +53,7 @@ function SettingDetailScreen({navigation, route}) {
   const [currentMetas, setCurrentMetas] = React.useState<any>(null);
   const [settings, setSettings] = React.useState<any>({});
   const xgpuRegions = React.useRef<any>([]);
+  const [gfnRegions, setGfnRegions] = React.useState<GfnRegionOption[]>([]);
 
   const authentication = useSelector((state: any) => state.authentication);
   const streamingTokens = useSelector((state: any) => state.streamingTokens);
@@ -145,6 +148,26 @@ function SettingDetailScreen({navigation, route}) {
       });
     }
   }, [navigation, route.params?.id]);
+
+  React.useEffect(() => {
+    if (route.params?.id !== 'gfn_region') {
+      return;
+    }
+    let cancelled = false;
+    getValidGfnJwt().then(token => {
+      if (!token || cancelled) {
+        return;
+      }
+      fetchGfnRegions(token).then(regions => {
+        if (!cancelled) {
+          setGfnRegions(regions);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [route.params?.id]);
 
   const handleSaveSettings = () => {
     let settingValue: any = value;
@@ -297,6 +320,16 @@ function SettingDetailScreen({navigation, route}) {
                 />
               );
             })}
+        </RadioButton.Group>
+      );
+    }
+    if (currentMetas.name === 'gfn_region') {
+      const options = [{name: t('Auto'), url: ''}, ...gfnRegions];
+      return (
+        <RadioButton.Group onValueChange={val => setValue(val)} value={value}>
+          {options.map((item, idx) => (
+            <RadioButton.Item key={idx} label={item.name} value={item.url} />
+          ))}
         </RadioButton.Group>
       );
     }
