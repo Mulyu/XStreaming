@@ -469,12 +469,55 @@ const readJson = async <T>(response: Response): Promise<T> => {
   return JSON.parse(text) as T;
 };
 
+export type GfnRegionOption = {name: string; url: string};
+
+// The same metadata endpoint resolveRegionBase() reads to auto-pick the
+// nearest region, exposed here so the Settings screen can list every
+// available region for the user to pin one manually (mirrors the "Server
+// Region" picker in OpenNOW, the reference this whole flow was ported from).
+export const fetchGfnRegions = async (
+  token: string,
+): Promise<GfnRegionOption[]> => {
+  const clientId = uuid();
+  const deviceId = getStableDeviceId();
+  const headers = buildCloudMatchHeaders({
+    token,
+    clientId,
+    deviceId,
+    includeOrigin: false,
+  });
+  try {
+    const response = await fetchCloudMatch(
+      `${DEFAULT_BASE_URL}/v2/serverInfo`,
+      {method: 'GET', headers},
+    );
+    if (!response.ok) {
+      return [];
+    }
+    const payload = (await response.json()) as {
+      metaData?: Array<{key: string; value: string}>;
+    };
+    return (payload.metaData ?? [])
+      .filter(e => e.value.startsWith('https://') && !e.key.startsWith('gfn-'))
+      .map(e => ({name: e.key, url: e.value.replace(/\/$/, '')}))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
+};
+
 // Resolve the caller into the nearest region base, when starting from the
 // default prod endpoint. Tolerant of failure — falls back to the given base.
+// A user-pinned region (from fetchGfnRegions(), saved as settings.gfn_region)
+// always wins over auto-detection.
 const resolveRegionBase = async (
   base: string,
   headers: Record<string, string>,
+  overrideUrl?: string,
 ): Promise<string> => {
+  if (overrideUrl?.trim()) {
+    return overrideUrl.replace(/\/$/, '');
+  }
   if (!base.includes('prod.cloudmatchbeta.nvidiagrid.net')) {
     return base;
   }
@@ -509,6 +552,7 @@ export const createGfnSession = async (
   appId: string,
   token: string,
   settings: GfnStreamSettings = DEFAULT_GFN_SETTINGS,
+  regionOverrideUrl?: string,
 ): Promise<GfnSession> => {
   if (!/^\d+$/.test(appId)) {
     throw new Error(`Invalid GFN appId '${appId}' (must be numeric)`);
@@ -521,7 +565,11 @@ export const createGfnSession = async (
     deviceId,
     includeOrigin: false,
   });
-  const base = await resolveRegionBase(DEFAULT_BASE_URL, originHeaders);
+  const base = await resolveRegionBase(
+    DEFAULT_BASE_URL,
+    originHeaders,
+    regionOverrideUrl,
+  );
   const body = buildSessionRequestBody(appId, settings, deviceId);
   const query = new URLSearchParams({
     keyboardLayout: 'en-US',
@@ -636,6 +684,10 @@ export const launchGfnSession = async (
   token: string,
   options: {
     settings?: GfnStreamSettings;
+    // A region base URL from fetchGfnRegions(), pinned by the user in
+    // Settings; empty/undefined falls back to CloudMatch's own
+    // nearest-region auto-detection.
+    regionOverrideUrl?: string;
     onProgress?: (p: GfnLaunchProgress) => void;
     shouldCancel?: () => boolean;
     maxAttempts?: number;
@@ -648,7 +700,12 @@ export const launchGfnSession = async (
   const sleep =
     options.sleep ??
     ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)));
-  let session = await createGfnSession(appId, token, settings);
+  let session = await createGfnSession(
+    appId,
+    token,
+    settings,
+    options.regionOverrideUrl,
+  );
   options.onProgress?.({
     status: session.status,
     queuePosition: session.queuePosition,

@@ -251,6 +251,7 @@ export class GfnStreamAdapter {
       this.token = token;
       const session = await launchGfnSession(this.options.appId, token, {
         settings: readGfnStreamSettings(),
+        regionOverrideUrl: getSettings().gfn_region || undefined,
         shouldCancel: () => this.cancelled,
         sleep: ms => this.bgSleep(ms),
         onProgress: p => {

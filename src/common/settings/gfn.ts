@@ -34,6 +34,15 @@ const gfn = [
       {value: 'custom', text: t('Custom')},
     ],
   },
+  {
+    name: 'gfn_region',
+    type: 'radio',
+    title: t('GfnRegionTitle'),
+    description: t('GfnRegionDesc'),
+    // Populated at runtime from fetchGfnRegions() -- see SettingDetail.tsx,
+    // same pattern as xCloud's own 'signaling_cloud' region picker.
+    data: [],
+  },
 ];
 
 export default gfn;

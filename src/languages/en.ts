@@ -444,6 +444,9 @@ export default {
     GfnBitrateTitle: 'GeForce NOW bitrate',
     GfnBitrateDesc:
       'Set the maximum streaming bitrate for GeForce NOW (Note: a lower bitrate can help on weaker networks or devices).',
+    GfnRegionTitle: 'GeForce NOW server region',
+    GfnRegionDesc:
+      'Pin a specific GeForce NOW region instead of letting CloudMatch pick the nearest one automatically. If a title fails to start, try switching back to Auto.',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',
