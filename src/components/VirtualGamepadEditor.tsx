@@ -407,14 +407,16 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               <Text>{t('Touch controller profiles')}</Text>
               <Divider style={styles.divider} />
             </View>
-            <RadioButton.Group
-              onValueChange={handleSelectProfile}
-              value={activeProfile}>
-              <RadioButton.Item label={t('Default')} value="" />
-              {profiles.map(name => (
-                <RadioButton.Item key={name} label={name} value={name} />
-              ))}
-            </RadioButton.Group>
+            <ScrollView style={styles.profileList} nestedScrollEnabled>
+              <RadioButton.Group
+                onValueChange={handleSelectProfile}
+                value={activeProfile}>
+                <RadioButton.Item label={t('Default')} value="" />
+                {profiles.map(name => (
+                  <RadioButton.Item key={name} label={name} value={name} />
+                ))}
+              </RadioButton.Group>
+            </ScrollView>
 
             <Divider style={styles.divider} />
             <TextInput
@@ -687,6 +689,9 @@ const styles = StyleSheet.create({
   title: {
     paddingTop: 10,
     paddingBottom: 10,
+  },
+  profileList: {
+    maxHeight: 260,
   },
   divider: {
     marginTop: 10,
