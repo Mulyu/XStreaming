@@ -21,6 +21,12 @@ import {clearWebToken} from '../store/webTokenStore';
 import {clearXcloudData} from '../store/xcloudStore';
 import {useGfnSignIn} from '../gfn/useGfnSignIn';
 import GfnSignInModal from '../components/GfnSignInModal';
+import {getValidGfnJwt, getValidGfnUserId} from '../gfn/auth';
+import {
+  fetchGfnSubscription,
+  fetchGfnVpcId,
+  GfnSubscriptionInfo,
+} from '../gfn/session';
 
 import bases from '../common/settings/bases';
 import display from '../common/settings/display';
@@ -60,6 +66,11 @@ function SettingsScreen({navigation}) {
     cancelLogin: cancelGfnLogin,
     signOut: signOutGfn,
   } = useGfnSignIn();
+
+  const [gfnSubscription, setGfnSubscription] =
+    React.useState<GfnSubscriptionInfo | null>(null);
+  const [gfnPlaytimeLoading, setGfnPlaytimeLoading] = React.useState(false);
+  const [gfnPlaytimeFailed, setGfnPlaytimeFailed] = React.useState(false);
 
   const sisuToken = authentication._tokenStore.getSisuToken();
   const userToken = authentication._tokenStore.getUserToken();
@@ -155,6 +166,72 @@ function SettingsScreen({navigation}) {
       return;
     }
     navigation.navigate('Home', {intent: 'login'});
+  };
+
+  // Fetches the MES (subscription/quota) API for the signed-in GFN account --
+  // mainly useful on the free tier's monthly hour cap. Re-runs whenever the
+  // Settings tab regains focus (tab screens stay mounted, so a plain mount
+  // effect would only ever run once) so the figure doesn't go stale while the
+  // user is off streaming.
+  const loadGfnPlaytime = React.useCallback(async () => {
+    if (!gfnSignedIn) {
+      setGfnSubscription(null);
+      setGfnPlaytimeFailed(false);
+      return;
+    }
+    setGfnPlaytimeLoading(true);
+    setGfnPlaytimeFailed(false);
+    try {
+      const token = await getValidGfnJwt();
+      const userId = token ? await getValidGfnUserId() : null;
+      if (!token || !userId) {
+        setGfnPlaytimeFailed(true);
+        return;
+      }
+      const vpcId = (await fetchGfnVpcId(token)) ?? undefined;
+      const info = await fetchGfnSubscription(token, userId, vpcId);
+      if (info) {
+        setGfnSubscription(info);
+      } else {
+        setGfnPlaytimeFailed(true);
+      }
+    } catch {
+      setGfnPlaytimeFailed(true);
+    } finally {
+      setGfnPlaytimeLoading(false);
+    }
+  }, [gfnSignedIn]);
+
+  React.useEffect(() => {
+    loadGfnPlaytime();
+    const unsubscribe = navigation.addListener('focus', loadGfnPlaytime);
+    return unsubscribe;
+  }, [navigation, loadGfnPlaytime]);
+
+  const gfnPlaytimeDescription = (): string => {
+    if (!gfnSignedIn) {
+      return t('GfnPlaytimeSignedOutDesc');
+    }
+    if (gfnPlaytimeLoading && !gfnSubscription) {
+      return t('GfnPlaytimeLoading');
+    }
+    if (gfnSubscription) {
+      if (gfnSubscription.isUnlimited) {
+        return t('GfnPlaytimeUnlimited');
+      }
+      const totalMinutes = Math.max(
+        0,
+        Math.round(gfnSubscription.remainingHours * 60),
+      );
+      return t('GfnPlaytimeRemaining', {
+        hours: Math.floor(totalMinutes / 60),
+        minutes: totalMinutes % 60,
+      });
+    }
+    if (gfnPlaytimeFailed) {
+      return t('GfnPlaytimeUnavailable');
+    }
+    return t('GfnPlaytimeLoading');
   };
 
   const handleClearCache = () => {
@@ -342,6 +419,12 @@ function SettingsScreen({navigation}) {
               gfnSignedIn ? t('GfnSignedIn') : t('GfnAccountSignedOutDesc')
             }
             onPress={handleGfnAccountPress}
+          />
+
+          <SettingItem
+            title={t('GfnPlaytimeTitle')}
+            description={gfnPlaytimeDescription()}
+            onPress={loadGfnPlaytime}
           />
 
           {gfn.map((meta, idx) => {

@@ -506,6 +506,120 @@ export const fetchGfnRegions = async (
   }
 };
 
+// The same serverInfo payload also carries the caller's current VPC id
+// (requestStatus.serverId) -- MES (the subscription/quota API) needs it to
+// know which datacenter's plan to report against. Ported from OpenNOW's
+// fetchDynamicRegions(), which reads it off the identical endpoint.
+export const fetchGfnVpcId = async (token: string): Promise<string | null> => {
+  const clientId = uuid();
+  const deviceId = getStableDeviceId();
+  const headers = buildCloudMatchHeaders({
+    token,
+    clientId,
+    deviceId,
+    includeOrigin: false,
+  });
+  try {
+    const response = await fetchCloudMatch(
+      `${DEFAULT_BASE_URL}/v2/serverInfo`,
+      {method: 'GET', headers},
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const payload = (await response.json()) as {
+      requestStatus?: {serverId?: string};
+    };
+    return payload.requestStatus?.serverId ?? null;
+  } catch {
+    return null;
+  }
+};
+
+export type GfnSubscriptionInfo = {
+  membershipTier: string;
+  allottedHours: number;
+  purchasedHours: number;
+  rolledOverHours: number;
+  usedHours: number;
+  remainingHours: number;
+  totalHours: number;
+  isUnlimited: boolean;
+  currentSpanEndDateTime?: string;
+};
+
+// NVIDIA's real plan/quota API (MES), confirmed from OpenNOW's own working
+// client -- reports remaining playtime for the current billing span (mainly
+// relevant to the free tier's monthly hour cap; paid tiers report
+// isUnlimited or a much larger allotment). vpcId defaults to a common
+// European VPC, matching OpenNOW's own fallback, for the rare case
+// fetchGfnVpcId() can't resolve one.
+export const fetchGfnSubscription = async (
+  token: string,
+  userId: string,
+  vpcId = 'NP-AMS-08',
+): Promise<GfnSubscriptionInfo | null> => {
+  const url = new URL('https://mes.geforcenow.com/v4/subscriptions');
+  url.searchParams.set('serviceName', 'gfn_pc');
+  url.searchParams.set('languageCode', 'en_US');
+  url.searchParams.set('vpcId', vpcId);
+  url.searchParams.set('userId', userId);
+
+  const clientId = uuid();
+  const deviceId = getStableDeviceId();
+  const headers = buildCloudMatchHeaders({
+    token,
+    clientId,
+    deviceId,
+    includeOrigin: false,
+  });
+  try {
+    const response = await fetchCloudMatch(url.toString(), {
+      method: 'GET',
+      headers,
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const data = (await response.json()) as Record<string, any>;
+    const toMinutes = (v: unknown): number =>
+      typeof v === 'number' && Number.isFinite(v)
+        ? v
+        : typeof v === 'string' && Number.isFinite(Number(v))
+        ? Number(v)
+        : 0;
+
+    const allottedMinutes = toMinutes(data.allottedTimeInMinutes);
+    const purchasedMinutes = toMinutes(data.purchasedTimeInMinutes);
+    const rolledOverMinutes = toMinutes(data.rolledOverTimeInMinutes);
+    const fallbackTotalMinutes =
+      allottedMinutes + purchasedMinutes + rolledOverMinutes;
+    const totalMinutes = data.totalTimeInMinutes
+      ? toMinutes(data.totalTimeInMinutes)
+      : fallbackTotalMinutes;
+    const remainingMinutes = toMinutes(data.remainingTimeInMinutes);
+    const usedMinutes = Math.max(totalMinutes - remainingMinutes, 0);
+
+    return {
+      membershipTier:
+        typeof data.membershipTier === 'string' ? data.membershipTier : 'FREE',
+      allottedHours: allottedMinutes / 60,
+      purchasedHours: purchasedMinutes / 60,
+      rolledOverHours: rolledOverMinutes / 60,
+      usedHours: usedMinutes / 60,
+      remainingHours: remainingMinutes / 60,
+      totalHours: totalMinutes / 60,
+      isUnlimited: data.subType === 'UNLIMITED',
+      currentSpanEndDateTime:
+        typeof data.currentSpanEndDateTime === 'string'
+          ? data.currentSpanEndDateTime
+          : undefined,
+    };
+  } catch {
+    return null;
+  }
+};
+
 // Resolve the caller into the nearest region base, when starting from the
 // default prod endpoint. Tolerant of failure — falls back to the given base.
 // A user-pinned region (from fetchGfnRegions(), saved as settings.gfn_region)
