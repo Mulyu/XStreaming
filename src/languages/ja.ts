@@ -410,6 +410,14 @@ export default {
     GfnRegionTitle: 'GeForce NOW サーバーリージョン',
     GfnRegionDesc:
       'CloudMatch による自動選択の代わりに、特定のGeForce NOWリージョンを固定します。起動に失敗する場合は自動に戻してみてください。',
+    GfnPlaytimeTitle: '今月の残りプレイ時間',
+    GfnPlaytimeSignedOutDesc:
+      'サインインすると、今の請求期間内の残りプレイ時間を確認できます。',
+    GfnPlaytimeLoading: '残りプレイ時間を確認中…',
+    GfnPlaytimeUnlimited: '無制限',
+    GfnPlaytimeUnavailable:
+      '残りプレイ時間を確認できませんでした（タップして再試行）',
+    GfnPlaytimeRemaining: '今月の残り {{hours}}時間{{minutes}}分',
     CoverLayoutEditTitle: 'カバーのボタン配置',
     CoverLayoutEditHint:
       'ドラッグで移動、タップでサイズ/非表示。内側画面がカバーの代わりです。変更はカバー画面にライブで反映されます。',

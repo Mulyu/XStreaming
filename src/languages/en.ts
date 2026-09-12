@@ -447,6 +447,13 @@ export default {
     GfnRegionTitle: 'GeForce NOW server region',
     GfnRegionDesc:
       'Pin a specific GeForce NOW region instead of letting CloudMatch pick the nearest one automatically. If a title fails to start, try switching back to Auto.',
+    GfnPlaytimeTitle: 'Playtime remaining this month',
+    GfnPlaytimeSignedOutDesc:
+      'Sign in to see how much playtime is left in your current billing period.',
+    GfnPlaytimeLoading: 'Checking remaining playtime…',
+    GfnPlaytimeUnlimited: 'Unlimited',
+    GfnPlaytimeUnavailable: "Couldn't check remaining playtime — tap to retry",
+    GfnPlaytimeRemaining: '{{hours}}h {{minutes}}m left this month',
     CoverLayoutEditTitle: 'Cover buttons layout',
     CoverLayoutEditHint:
       'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',
