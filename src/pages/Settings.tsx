@@ -7,10 +7,11 @@ import {
   NativeModules,
   ToastAndroid,
 } from 'react-native';
-import {Text, useTheme} from 'react-native-paper';
+import {Text, SegmentedButtons} from 'react-native-paper';
 import Spinner from '../components/Spinner';
 import {getSettings, resetSettings} from '../store/settingStore';
 import SettingItem from '../components/SettingItem';
+import SettingSection from '../components/SettingSection';
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
@@ -44,17 +45,34 @@ const {UsbRumbleManager} = NativeModules;
 
 const log = debugFactory('SettingsScreen');
 
+// Every setting, regardless of which file defines it, so a setting can be
+// picked into the lane/section it actually belongs to (see pick() below)
+// without having to physically move it between the common/settings/*.ts
+// files those definitions also feed (SettingDetail.tsx merges the same
+// files the same way to resolve a tapped setting by name).
+const allMetas = [
+  ...bases,
+  ...display,
+  ...gamepad,
+  ...vgamepad,
+  ...audio,
+  ...xcloud,
+  ...gfn,
+  ...sensor,
+  ...others,
+];
+
+const pick = (names: string[]) =>
+  names.map(n => allMetas.find(m => m.name === n)).filter(Boolean) as any[];
+
+type Lane = 'common' | 'xbox' | 'gfn';
+
 function SettingsScreen({navigation}) {
   const {t} = useTranslation();
-  const theme = useTheme();
   const authentication = useSelector((state: any) => state.authentication);
 
-  const titleTextStyle = React.useMemo(
-    () => [styles.titleText, {color: theme.colors.primary}],
-    [theme.colors.primary],
-  );
-
   const [loading, setLoading] = React.useState(false);
+  const [lane, setLane] = React.useState<Lane>('common');
 
   const {
     signedIn: gfnSignedIn,
@@ -243,295 +261,315 @@ function SettingsScreen({navigation}) {
     }, 1000);
   };
 
+  const renderMetaRows = (metas: any[], flags: Record<string, string> = {}) =>
+    metas.map((meta, idx) => (
+      <SettingItem
+        key={meta.name || idx}
+        title={meta.title}
+        description={
+          flags[meta.name]
+            ? `${meta.description}\n${flags[meta.name]}`
+            : meta.description
+        }
+        onPress={() => handleItemPress(meta.name)}
+      />
+    ));
+
+  // ---- Common lane: local/device settings that behave the same for either
+  // provider, split by the same categories the settings used to be flatly
+  // listed under. `coop` moves out to the Xbox lane below (GfnStreamAdapter's
+  // setCoop() is a no-op), and xcloud.ts's anti_idle_max_minutes moves in
+  // (its background keep-alive has no streamType check -- it already runs
+  // the same for a GFN session, so it belongs here, not under Xbox).
+  const commonBasic = pick(['locale', 'theme', 'theme_primary_color']);
+  const commonDisplay = pick([
+    'fsr',
+    'video_format',
+    'show_performance',
+    'screen_position',
+    'native_low_latency_decoder',
+    'performance_style',
+    'show_menu',
+  ]);
+  const commonGamepad = pick([
+    'maping',
+    'polling_rate',
+    'vibration',
+    'gamepad_kernal',
+    'vibration_mode',
+    'bind_usb_device',
+    'rumble_intensity',
+    'dead_zone',
+    'edge_compensation',
+    'short_trigger',
+    'auto_sprint',
+  ]);
+  const commonVirtual = pick([
+    'show_virtual_gamead',
+    'virtual_gamepad_opacity',
+    'virtual_gamepad_joystick',
+  ]);
+  const commonAudio = pick([
+    'enable_stereo_audio',
+    'enable_audio_control',
+    'enable_audio_rumble',
+    'audio_rumble_threshold',
+    'enable_microphone',
+  ]);
+  const commonSensor = pick([
+    'sensor',
+    'sensor_type',
+    'sensor_sensitivity_x',
+    'sensor_sensitivity_y',
+    'sensor_invert',
+  ]);
+  const commonOthers = pick([
+    'native_touch',
+    'anti_idle_max_minutes',
+    'check_update',
+  ]);
+
+  // ---- Xbox Cloud Gaming lane
+  const xboxVideo = pick([
+    'resolution',
+    'codec',
+    'xcloud_bitrate_mode',
+    'audio_bitrate_mode',
+    'native_portrait_mode',
+  ]);
+  const xboxRegion = pick(['force_region_ip', 'signaling_cloud']);
+  const xboxSignIn = pick(['preferred_game_language', 'use_msal_login']);
+  const xboxCoop = pick(['coop']);
+
+  // ---- GeForce NOW lane
+  const gfnVideo = pick([
+    'gfn_resolution',
+    'gfn_fps',
+    'gfn_bitrate_mode',
+    'gfn_region',
+  ]);
+
+  const gfnNoOpFlag = t('FlagGfnNoOp');
+  const bitrateNotWiredFlag = t('FlagBitrateNotWired');
+
   return (
     <View style={styles.container}>
       <Spinner loading={loading} text={t('Loading...')} />
 
-      <ScrollView style={styles.settingsScroll}>
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              ⚙️ {t('BasesSettings')}
+      <View style={styles.laneTabs}>
+        <SegmentedButtons
+          value={lane}
+          onValueChange={value => setLane(value as Lane)}
+          buttons={[
+            {value: 'common', label: t('CommonSettings')},
+            {value: 'xbox', label: t('XcloudSettings')},
+            {value: 'gfn', label: t('GfnSettings')},
+          ]}
+        />
+      </View>
+
+      {lane === 'common' && (
+        <ScrollView style={styles.settingsScroll}>
+          <SettingSection
+            emoji="⚙️"
+            title={t('BasesSettings')}
+            count={commonBasic.length}
+            defaultOpen>
+            {renderMetaRows(commonBasic)}
+          </SettingSection>
+
+          <SettingSection
+            emoji="🖥️"
+            title={t('DisplaySettings')}
+            count={commonDisplay.length}>
+            {renderMetaRows(commonDisplay)}
+          </SettingSection>
+
+          <SettingSection
+            emoji="🎮"
+            title={t('GamepadSettings')}
+            count={commonGamepad.length + 1}>
+            {renderMetaRows(commonGamepad, {vibration: gfnNoOpFlag})}
+            <SettingItem
+              title={t('GamepadTestTitle')}
+              description={t('GamepadTestDescription')}
+              onPress={() => navigation.navigate('GamepadTest')}
+            />
+          </SettingSection>
+
+          <SettingSection
+            emoji="🧩"
+            title={t('vGamepadSettings')}
+            count={commonVirtual.length + 3}>
+            {renderMetaRows(commonVirtual)}
+            <SettingItem
+              title={t('Customize virtual buttons')}
+              description={t('Customize buttons of virtual gamepad')}
+              onPress={() => navigation.navigate('VirtualGamepadSettings')}
+            />
+            <SettingItem
+              title={t('Auto toggle hold buttons')}
+              description={t('Select what buttons become toggle holdable')}
+              onPress={() => navigation.navigate('HoldButtons')}
+            />
+            <SettingItem
+              title={t('Virtual macro settings')}
+              description={t(
+                'Enable macro button and edit its action sequence',
+              )}
+              onPress={() => navigation.navigate('VirtualMacroSettings')}
+            />
+          </SettingSection>
+
+          <SettingSection
+            emoji="🔊"
+            title={t('AudioSettings')}
+            count={commonAudio.length}>
+            {renderMetaRows(commonAudio, {enable_microphone: gfnNoOpFlag})}
+          </SettingSection>
+
+          <SettingSection
+            emoji="🌀"
+            title={t('SensorSettings')}
+            count={commonSensor.length}>
+            {renderMetaRows(commonSensor)}
+          </SettingSection>
+
+          <SettingSection
+            emoji="🗂️"
+            title={t('Others')}
+            count={commonOthers.length + 2}>
+            {renderMetaRows(commonOthers, {native_touch: gfnNoOpFlag})}
+            <SettingItem
+              title={t('Clear Cache')}
+              description={t('Clear XStreaming Cache Data(Keep login data)')}
+              onPress={() => handleClearCache()}
+            />
+            <SettingItem
+              title={t('HistoryTitle')}
+              description={`${t('HistoryDesc')}`}
+              onPress={() => navigation.navigate('History')}
+            />
+          </SettingSection>
+
+          <View style={styles.version}>
+            <Text style={styles.versionText} variant="titleMedium">
+              {t('Version')}: v{pkg.version}
+            </Text>
+            <Text style={styles.versionText} variant="titleSmall">
+              © 2024-{new Date().getFullYear()} Geocld
             </Text>
           </View>
+        </ScrollView>
+      )}
 
-          {bases.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-        </View>
+      {lane === 'xbox' && (
+        <ScrollView style={styles.settingsScroll}>
+          <SettingSection
+            emoji="👤"
+            title={t('SectionAccount')}
+            count={1}
+            defaultOpen>
+            <SettingItem
+              title={t('XcloudAccountTitle')}
+              description={
+                isAuthed
+                  ? user
+                    ? `${t('Current user')}: ${user}`
+                    : t('XcloudAccountSignedInDesc')
+                  : t('XcloudAccountSignedOutDesc')
+              }
+              onPress={handleXcloudAccountPress}
+            />
+          </SettingSection>
 
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              🖥️ {t('DisplaySettings')}
-            </Text>
-          </View>
+          <SettingSection
+            emoji="📺"
+            title={t('SectionVideo')}
+            count={xboxVideo.length}
+            defaultOpen>
+            {renderMetaRows(xboxVideo, {
+              xcloud_bitrate_mode: bitrateNotWiredFlag,
+              audio_bitrate_mode: bitrateNotWiredFlag,
+            })}
+          </SettingSection>
 
-          {display.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-        </View>
+          <SettingSection
+            emoji="📡"
+            title={t('SectionRegionSignaling')}
+            count={xboxRegion.length}
+            defaultOpen>
+            {renderMetaRows(xboxRegion)}
+          </SettingSection>
 
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              🎮 {t('GamepadSettings')}
-            </Text>
-          </View>
+          <SettingSection
+            emoji="🔑"
+            title={t('SectionSignInLanguage')}
+            count={xboxSignIn.length}
+            defaultOpen>
+            {renderMetaRows(xboxSignIn)}
+          </SettingSection>
 
-          {gamepad.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
+          <SettingSection
+            emoji="🕹️"
+            title={t('SectionCoopControllers')}
+            count={xboxCoop.length + 2}
+            defaultOpen>
+            {renderMetaRows(xboxCoop)}
+            <SettingItem
+              title={t('DualSense_adaptive_trigger_left')}
+              description={`${t('DualSense_adaptive_trigger_left_desc')}`}
+              onPress={() =>
+                navigation.navigate({
+                  name: 'Ds5',
+                  params: {type: 'left'},
+                })
+              }
+            />
+            <SettingItem
+              title={t('DualSense_adaptive_trigger_right')}
+              description={`${t('DualSense_adaptive_trigger_right_desc')}`}
+              onPress={() =>
+                navigation.navigate({
+                  name: 'Ds5',
+                  params: {type: 'right'},
+                })
+              }
+            />
+          </SettingSection>
+        </ScrollView>
+      )}
 
-          <SettingItem
-            title={t('GamepadTestTitle')}
-            description={t('GamepadTestDescription')}
-            onPress={() => {
-              navigation.navigate('GamepadTest');
-            }}
-          />
-        </View>
+      {lane === 'gfn' && (
+        <ScrollView style={styles.settingsScroll}>
+          <SettingSection
+            emoji="👤"
+            title={t('SectionAccount')}
+            count={2}
+            defaultOpen>
+            <SettingItem
+              title={t('GfnAccountTitle')}
+              description={
+                gfnSignedIn ? t('GfnSignedIn') : t('GfnAccountSignedOutDesc')
+              }
+              onPress={handleGfnAccountPress}
+            />
+            <SettingItem
+              title={t('GfnPlaytimeTitle')}
+              description={gfnPlaytimeDescription()}
+              onPress={loadGfnPlaytime}
+            />
+          </SettingSection>
 
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              🧩 {t('vGamepadSettings')}
-            </Text>
-          </View>
-
-          {vgamepad.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-
-          <SettingItem
-            title={t('Customize virtual buttons')}
-            description={t('Customize buttons of virtual gamepad')}
-            onPress={() => {
-              navigation.navigate('VirtualGamepadSettings');
-            }}
-          />
-
-          <SettingItem
-            title={t('Auto toggle hold buttons')}
-            description={t('Select what buttons become toggle holdable')}
-            onPress={() => {
-              navigation.navigate('HoldButtons');
-            }}
-          />
-
-          <SettingItem
-            title={t('Virtual macro settings')}
-            description={t('Enable macro button and edit its action sequence')}
-            onPress={() => {
-              navigation.navigate('VirtualMacroSettings');
-            }}
-          />
-        </View>
-
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              🔊 {t('AudioSettings')}
-            </Text>
-          </View>
-
-          {audio.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-        </View>
-
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              ☁️ {t('XcloudSettings')}
-            </Text>
-          </View>
-
-          <SettingItem
-            title={t('XcloudAccountTitle')}
-            description={
-              isAuthed
-                ? user
-                  ? `${t('Current user')}: ${user}`
-                  : t('XcloudAccountSignedInDesc')
-                : t('XcloudAccountSignedOutDesc')
-            }
-            onPress={handleXcloudAccountPress}
-          />
-
-          {xcloud.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-        </View>
-
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              🟢 {t('GfnSettings')}
-            </Text>
-          </View>
-
-          <SettingItem
-            title={t('GfnAccountTitle')}
-            description={
-              gfnSignedIn ? t('GfnSignedIn') : t('GfnAccountSignedOutDesc')
-            }
-            onPress={handleGfnAccountPress}
-          />
-
-          <SettingItem
-            title={t('GfnPlaytimeTitle')}
-            description={gfnPlaytimeDescription()}
-            onPress={loadGfnPlaytime}
-          />
-
-          {gfn.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-        </View>
-
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              {t('SensorSettings')}
-            </Text>
-          </View>
-
-          {sensor.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-        </View>
-
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              {t('DualSense')}
-            </Text>
-          </View>
-
-          <SettingItem
-            title={t('DualSense_adaptive_trigger_left')}
-            description={`${t('DualSense_adaptive_trigger_left_desc')}`}
-            onPress={() =>
-              navigation.navigate({
-                name: 'Ds5',
-                params: {
-                  type: 'left',
-                },
-              })
-            }
-          />
-
-          <SettingItem
-            title={t('DualSense_adaptive_trigger_right')}
-            description={`${t('DualSense_adaptive_trigger_right_desc')}`}
-            onPress={() =>
-              navigation.navigate({
-                name: 'Ds5',
-                params: {
-                  type: 'right',
-                },
-              })
-            }
-          />
-        </View>
-
-        <View>
-          <View style={styles.contentTitle}>
-            <Text variant="titleLarge" style={titleTextStyle}>
-              {t('Others')}
-            </Text>
-          </View>
-
-          {others.map((meta, idx) => {
-            return (
-              <SettingItem
-                key={meta.name || idx}
-                title={meta.title}
-                description={meta.description}
-                onPress={() => handleItemPress(meta.name)}
-              />
-            );
-          })}
-
-          <SettingItem
-            title={t('Clear Cache')}
-            description={t('Clear XStreaming Cache Data(Keep login data)')}
-            onPress={() => handleClearCache()}
-          />
-
-          <SettingItem
-            title={t('HistoryTitle')}
-            description={`${t('HistoryDesc')}`}
-            onPress={() => navigation.navigate('History')}
-          />
-        </View>
-
-        <View style={styles.version}>
-          <Text style={styles.versionText} variant="titleMedium">
-            {t('Version')}: v{pkg.version}
-          </Text>
-          <Text style={styles.versionText} variant="titleSmall">
-            © 2024-{new Date().getFullYear()} Geocld
-          </Text>
-        </View>
-      </ScrollView>
+          <SettingSection
+            emoji="📺"
+            title={t('SectionVideo')}
+            count={gfnVideo.length}
+            defaultOpen>
+            {renderMetaRows(gfnVideo)}
+          </SettingSection>
+        </ScrollView>
+      )}
 
       <GfnSignInModal
         visible={gfnLoginVisible}
@@ -551,15 +589,13 @@ const styles = StyleSheet.create({
   settingsScroll: {
     flex: 1,
   },
+  laneTabs: {
+    paddingHorizontal: 15,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
   backdrop: {
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  contentTitle: {
-    padding: 15,
-    paddingBottom: 0,
-  },
-  titleText: {
-    color: '#fff',
   },
   version: {
     paddingTop: 20,
