@@ -33,6 +33,9 @@ import {
   fetchGfnCatalogOrder,
   GFN_SORT_MOST_POPULAR,
   GFN_SORT_LAST_ADDED,
+  fetchGfnFullCatalog,
+  getFreshFullCatalog,
+  getCachedFullCatalog,
 } from '../gfn/catalog';
 import {
   buildUnifiedCatalog,
@@ -98,6 +101,11 @@ function LibraryScreen() {
   const [xcloudTitles, setXcloudTitles] = React.useState<any[]>([]);
   const [gfnPublicGames, setGfnPublicGames] = React.useState<GfnGame[]>(
     () => getCachedGfnGames() || [],
+  );
+  // The full GFN browse catalog when signed in -- much larger than the
+  // public JSON snapshot above, which stays the fallback while signed out.
+  const [gfnFullCatalog, setGfnFullCatalog] = React.useState<GfnGame[]>(
+    () => getCachedFullCatalog() || [],
   );
   const [gfnOwnedGames, setGfnOwnedGames] = React.useState<GfnGame[]>(
     () => getFreshOwnedGames() || [],
@@ -337,6 +345,36 @@ function LibraryScreen() {
     });
   }, []);
 
+  // GFN's full browse catalog -- every cataloged title, not just what's owned
+  // or in the public JSON's much smaller snapshot. Needs a signed-in token
+  // like the rank orders below, so it simply stays empty (falling back to the
+  // public JSON) while signed out. Cached 24h since a full paginated fetch is
+  // dozens of sequential requests, not one.
+  const loadGfnFullCatalog = React.useCallback((force = false) => {
+    if (!isSignedIn()) {
+      return;
+    }
+    if (!force) {
+      const fresh = getFreshFullCatalog();
+      if (fresh) {
+        setGfnFullCatalog(fresh);
+        return;
+      }
+    }
+    getValidGfnJwt().then(token => {
+      if (!token) {
+        return;
+      }
+      fetchGfnFullCatalog(token)
+        .then(games => games.length > 0 && setGfnFullCatalog(games))
+        .catch(() => {});
+    });
+  }, []);
+
+  React.useEffect(() => {
+    loadGfnFullCatalog();
+  }, [loadGfnFullCatalog]);
+
   // GFN's catalog-wide Most Popular / Newest order, cached (24h). Requires a
   // signed-in token -- GFN's catalog-browse endpoint doesn't serve this
   // anonymously (same precondition as the owned-library query above) -- so
@@ -455,6 +493,11 @@ function LibraryScreen() {
             ]);
           }),
         );
+        // Deliberately not in `tasks`: a full paginated re-fetch is dozens of
+        // sequential requests, and the pull-to-refresh spinner shouldn't sit
+        // there that long. It paints whenever it resolves, same as any other
+        // background state update.
+        loadGfnFullCatalog(true);
       }
 
       setFavoriteKeys(new Set(getFavoriteKeys()));
@@ -463,11 +506,16 @@ function LibraryScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [streamingTokens?.xCloudToken]);
+  }, [streamingTokens?.xCloudToken, loadGfnFullCatalog]);
 
+  // The full browse catalog supersedes the public JSON snapshot once it's
+  // loaded (signed in); until then, or while signed out, the public JSON is
+  // still what there is to browse.
+  const gfnBaseGames =
+    gfnFullCatalog.length > 0 ? gfnFullCatalog : gfnPublicGames;
   const gfnGames = React.useMemo(
-    () => mergeOwnedGames(gfnPublicGames, gfnOwnedGames),
-    [gfnPublicGames, gfnOwnedGames],
+    () => mergeOwnedGames(gfnBaseGames, gfnOwnedGames),
+    [gfnBaseGames, gfnOwnedGames],
   );
 
   // Steam prices for GFN's Steam-linked store variants, batched and cached

@@ -12,6 +12,11 @@ const APPDETAILS_URL = 'https://store.steampowered.com/api/appdetails';
 // ~200 req/5min per-IP throttle even for a title with many Steam-linked
 // GFN store variants (there's only ever a handful per title in practice).
 const BATCH_SIZE = 20;
+// How many chunk requests run at once. The caller can pass thousands of ids
+// now that the GFN catalog covers the full browse list, not just the ~1500
+// public-JSON snapshot -- firing every chunk in parallel would mean hundreds
+// of simultaneous requests, well past that same throttle.
+const CHUNK_CONCURRENCY = 5;
 
 export type SteamPriceInfo = {
   currencyCode: string;
@@ -40,36 +45,48 @@ export const fetchSteamPrices = async (
     chunks.push(ids.slice(i, i + BATCH_SIZE));
   }
 
-  await Promise.all(
-    chunks.map(async chunk => {
-      try {
-        const res = await axios.get(APPDETAILS_URL, {
-          params: {
-            appids: chunk.join(','),
-            cc,
-            l: language,
-            filters: 'price_overview',
-          },
-          timeout: 15000,
-        });
-        const data = res?.data;
-        chunk.forEach(id => {
-          const entry = data?.[id];
-          const overview = entry?.data?.price_overview;
-          if (entry?.success && overview) {
-            result[id] = {
-              currencyCode: overview.currency || '',
-              initial: overview.initial ?? overview.final ?? 0,
-              final: overview.final ?? 0,
-              discountPercent: overview.discount_percent ?? 0,
-            };
-          }
-        });
-      } catch (e) {
-        log.info('fetchSteamPrices batch failed:', e);
+  const fetchChunk = async (chunk: string[]) => {
+    try {
+      const res = await axios.get(APPDETAILS_URL, {
+        params: {
+          appids: chunk.join(','),
+          cc,
+          l: language,
+          filters: 'price_overview',
+        },
+        timeout: 15000,
+      });
+      const data = res?.data;
+      chunk.forEach(id => {
+        const entry = data?.[id];
+        const overview = entry?.data?.price_overview;
+        if (entry?.success && overview) {
+          result[id] = {
+            currencyCode: overview.currency || '',
+            initial: overview.initial ?? overview.final ?? 0,
+            final: overview.final ?? 0,
+            discountPercent: overview.discount_percent ?? 0,
+          };
+        }
+      });
+    } catch (e) {
+      log.info('fetchSteamPrices batch failed:', e);
+    }
+  };
+
+  // A small worker pool instead of Promise.all(chunks.map(...)) -- caps how
+  // many chunk requests are ever in flight together, regardless of how many
+  // chunks there are.
+  let next = 0;
+  const workers = Array.from(
+    {length: Math.min(CHUNK_CONCURRENCY, chunks.length)},
+    async () => {
+      while (next < chunks.length) {
+        await fetchChunk(chunks[next++]);
       }
-    }),
+    },
   );
+  await Promise.all(workers);
 
   return result;
 };
