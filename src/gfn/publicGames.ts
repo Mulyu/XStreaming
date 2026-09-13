@@ -73,11 +73,16 @@ const toGfnGame = (item: RawPublicGame): GfnGame => {
   };
 };
 
+// Not re-sorted here: every caller (Library.tsx, via mergeOwnedGames ->
+// buildUnifiedCatalog) already sorts its own final output by title, so
+// sorting ~1500+ entries with a locale-aware comparator here would just be
+// redundant CPU work discarded by the next sort downstream -- felt mainly
+// on weaker hardware (e.g. Google TV boxes) where it's slow enough to
+// notice.
 const mapPayload = (payload: RawPublicGame[]): GfnGame[] =>
   (Array.isArray(payload) ? payload : [])
     .filter(item => item.status === 'AVAILABLE' && !!item.title)
-    .map(toGfnGame)
-    .sort((a, b) => a.title.localeCompare(b.title));
+    .map(toGfnGame);
 
 // Cached list if still fresh, else null.
 export const getFreshGfnGames = (): GfnGame[] | null => {

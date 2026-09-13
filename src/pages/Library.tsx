@@ -692,10 +692,18 @@ function LibraryScreen() {
   // Square-tile grid. A denser 110/150 target read as too small for
   // browsing comfortably (was 260/300 before that pass) -- back up to a
   // size that lands around 2 columns on a phone in portrait.
+  //
+  // TV gets its own (larger) target and a lower column cap: a TV screen's
+  // dp width is much wider than a phone's, so the same per-column target
+  // used for landscape phones/tablets would scale up toward 7-8 columns --
+  // that many more simultaneously-visible *and* FlatList-windowed image
+  // tiles, on hardware that's typically far weaker (CPU/RAM) than a modern
+  // phone, is what makes the grid feel heavy on Google TV specifically.
   const isLandscape = screenWidth > screenHeight;
   const numColumns = React.useMemo(() => {
-    const target = isLandscape || Platform.isTV ? 260 : 190;
-    return Math.max(2, Math.min(8, Math.floor(screenWidth / target)));
+    const target = Platform.isTV ? 340 : isLandscape ? 260 : 190;
+    const maxColumns = Platform.isTV ? 5 : 8;
+    return Math.max(2, Math.min(maxColumns, Math.floor(screenWidth / target)));
   }, [isLandscape, screenWidth]);
 
   const openTitle = React.useCallback(
@@ -921,8 +929,12 @@ function LibraryScreen() {
           keyExtractor={item => item.key}
           renderItem={renderCard}
           contentContainerStyle={styles.list}
-          initialNumToRender={18}
-          windowSize={11}
+          // A smaller virtualized window trades a bit of scroll-ahead
+          // smoothness for a lot less concurrently-decoded image memory --
+          // worth it on TV, where the wider screen already means more tiles
+          // per row (see numColumns above) on hardware with less headroom.
+          initialNumToRender={Platform.isTV ? 10 : 18}
+          windowSize={Platform.isTV ? 5 : 11}
           removeClippedSubviews
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

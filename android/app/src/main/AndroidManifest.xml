@@ -1,10 +1,22 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature android:name="android.hardware.audio.output" />
-    <uses-feature android:name="android.hardware.microphone" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.gamepad"
         android:required="false" />
+    <!-- Without an explicit declaration, Android assumes touchscreen input
+         is required and the Play Store filters the app off every
+         touchscreen-less device, including Google TV/Android TV boxes. -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.faketouch"
+        android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE"/>
