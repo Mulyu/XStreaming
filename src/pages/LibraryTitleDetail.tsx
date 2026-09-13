@@ -1,5 +1,12 @@
 import React from 'react';
-import {StyleSheet, View, Image, Pressable, ScrollView} from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Image,
+  Pressable,
+  ScrollView,
+  Linking,
+} from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useTranslation} from 'react-i18next';
@@ -29,6 +36,7 @@ import {
   formatPrice,
   discountPercent,
   isSaleForDisplay,
+  getStoreUrl,
 } from '../utils/storePrice';
 import {
   fetchSteamPrices,
@@ -235,6 +243,8 @@ function LibraryTitleDetailScreen() {
   const xcloudEntitled = !!catalogTitle.xcloud?.hasEntitlement;
   const xcloudDiscount =
     price && isSaleForDisplay(price) ? discountPercent(price) : 0;
+  const xcloudProductId = getTitleProductId(catalogTitle.xcloud?.raw);
+  const openStore = (url: string) => Linking.openURL(url).catch(() => {});
 
   return (
     <ScrollView
@@ -344,6 +354,14 @@ function LibraryTitleDetailScreen() {
                 {isPreferredXcloud && (
                   <Icon source="check-circle" size={18} color={XBOX_ACCENT} />
                 )}
+                {xcloudProductId && (
+                  <Pressable
+                    style={styles.storeLinkBtn}
+                    hitSlop={8}
+                    onPress={() => openStore(getStoreUrl(xcloudProductId))}>
+                    <Icon source="open-in-new" size={16} color="#8A9A92" />
+                  </Pressable>
+                )}
                 <Icon source="chevron-right" size={18} color="#8A9A92" />
               </Pressable>
             </View>
@@ -401,7 +419,7 @@ function LibraryTitleDetailScreen() {
                     const steamPrice = variant.steamAppId
                       ? steamPrices[variant.steamAppId]
                       : undefined;
-                    const showSaleBadge =
+                    const showSale =
                       !variant.owned && isSteamSaleForDisplay(steamPrice);
                     return (
                       <Pressable
@@ -416,19 +434,52 @@ function LibraryTitleDetailScreen() {
                             {variant.store.slice(0, 2).toUpperCase()}
                           </Text>
                         </View>
-                        <Text style={styles.storeName}>{variant.store}</Text>
+                        <View style={styles.storeText}>
+                          <Text style={styles.storeName}>{variant.store}</Text>
+                          {!variant.owned && steamPrice && (
+                            <View style={styles.priceRow}>
+                              <Text
+                                style={[
+                                  styles.priceNow,
+                                  showSale && styles.priceNowSale,
+                                ]}>
+                                {formatPrice(
+                                  steamPrice.final / 100,
+                                  steamPrice.currencyCode,
+                                )}
+                              </Text>
+                              {showSale && (
+                                <Text style={styles.priceWas}>
+                                  {formatPrice(
+                                    steamPrice.initial / 100,
+                                    steamPrice.currencyCode,
+                                  )}
+                                </Text>
+                              )}
+                            </View>
+                          )}
+                        </View>
                         <View style={styles.storeRowEnd}>
                           {variant.owned && (
                             <Text style={styles.ownedText}>
                               {t('GfnOwned')}
                             </Text>
                           )}
-                          {showSaleBadge && (
-                            <View style={styles.saleBadge}>
-                              <Text style={styles.saleBadgeText}>
-                                -{steamPrice!.discountPercent}%
-                              </Text>
-                            </View>
+                          {variant.steamAppId && (
+                            <Pressable
+                              style={styles.storeLinkBtn}
+                              hitSlop={8}
+                              onPress={() =>
+                                openStore(
+                                  `https://store.steampowered.com/app/${variant.steamAppId}`,
+                                )
+                              }>
+                              <Icon
+                                source="open-in-new"
+                                size={14}
+                                color="#8A9A92"
+                              />
+                            </Pressable>
                           )}
                           {isPreferredGfnVariant(variant.id, variant.store) && (
                             <Icon
@@ -642,16 +693,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   storeMarkText: {fontSize: 9, fontWeight: '800', color: '#8A9A92'},
-  storeName: {flex: 1, fontSize: 13, fontWeight: '600'},
+  storeText: {flex: 1, gap: 1},
+  storeName: {fontSize: 13, fontWeight: '600'},
   storeRowEnd: {flexDirection: 'row', alignItems: 'center', gap: 6},
   ownedText: {fontSize: 11, fontWeight: '700', color: NVIDIA_ACCENT},
-  saleBadge: {
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 5,
-    backgroundColor: '#ff9a3c',
-  },
-  saleBadgeText: {fontSize: 10, fontWeight: '800', color: '#2b1400'},
+  storeLinkBtn: {padding: 2},
   rememberedNote: {
     fontSize: 11.5,
     color: '#8A9A92',

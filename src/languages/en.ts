@@ -664,6 +664,7 @@ export default {
     Genre: 'Genre',
     Sort: 'Sort',
     Recommended: 'Recommended',
+    SortByName: 'Name',
     Popular: 'Popular',
     Rating: 'Rating',
     SortReleaseDate: 'Release date',

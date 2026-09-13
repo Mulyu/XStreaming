@@ -1,12 +1,18 @@
 import {storage} from '../store/mmkv';
+import {getGfnLocaleSlug} from './locale';
 
 // GeForce NOW's supported-games list is served as a public, no-auth JSON, so we
 // can show a browsable catalog before any NVIDIA login is wired up. Steam-backed
 // titles get cover art from Steam's CDN; other stores (Epic, etc.) have none.
-const PUBLIC_GAMES_URL =
-  'https://static.nvidiagrid.net/supported-public-game-list/locales/gfnpc-en-US.json';
+// One such JSON exists per locale (confirmed live -- see gfn/locale.ts), with
+// actually-translated titles, not just an English list under a different URL.
+const publicGamesUrl = (slug: string): string =>
+  `https://static.nvidiagrid.net/supported-public-game-list/locales/gfnpc-${slug}.json`;
 
-const CACHE_KEY = 'gfn.publicGames';
+// Locale-scoped so switching the app's language (which restarts the app --
+// see Settings.tsx) doesn't serve a stale English-cached list under a
+// Japanese session, or vice versa.
+const cacheKey = (slug: string): string => `gfn.publicGames.${slug}`;
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12h
 
 export type GfnGame = {
@@ -75,7 +81,7 @@ const mapPayload = (payload: RawPublicGame[]): GfnGame[] =>
 
 // Cached list if still fresh, else null.
 export const getFreshGfnGames = (): GfnGame[] | null => {
-  const raw = storage.getString(CACHE_KEY);
+  const raw = storage.getString(cacheKey(getGfnLocaleSlug()));
   if (!raw) {
     return null;
   }
@@ -95,7 +101,7 @@ export const getFreshGfnGames = (): GfnGame[] | null => {
 
 // Any cached list regardless of age (for an instant paint while refreshing).
 export const getCachedGfnGames = (): GfnGame[] | null => {
-  const raw = storage.getString(CACHE_KEY);
+  const raw = storage.getString(cacheKey(getGfnLocaleSlug()));
   if (!raw) {
     return null;
   }
@@ -108,14 +114,15 @@ export const getCachedGfnGames = (): GfnGame[] | null => {
 };
 
 export const fetchGfnGames = async (): Promise<GfnGame[]> => {
-  const res = await fetch(PUBLIC_GAMES_URL);
+  const slug = getGfnLocaleSlug();
+  const res = await fetch(publicGamesUrl(slug));
   if (!res.ok) {
     throw new Error(`GFN public games fetch failed (${res.status})`);
   }
   const payload = (await res.json()) as RawPublicGame[];
   const games = mapPayload(payload);
   try {
-    storage.set(CACHE_KEY, JSON.stringify({ts: Date.now(), games}));
+    storage.set(cacheKey(slug), JSON.stringify({ts: Date.now(), games}));
   } catch {}
   return games;
 };

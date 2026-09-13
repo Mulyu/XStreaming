@@ -1,5 +1,6 @@
 import {storage} from '../store/mmkv';
 import {GfnGame, steamAppIdFromUrl} from './publicGames';
+import {getGfnLocaleSlug, getGfnGraphqlLocale} from './locale';
 
 // GeForce NOW authenticated catalog. The public supported-games list has no
 // ownership info and omits account-linked titles (e.g. Battle.net games like
@@ -16,7 +17,11 @@ const GFN_PLAY_REFERER = 'https://play.geforcenow.com/';
 const GFN_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 NVIDIACEFClient/HEAD/debb5919f6 GFN-PC/2.0.80.173';
 
-const OWNED_CACHE_KEY = 'gfn.ownedGames';
+// Locale-scoped for the same reason as publicGames.ts's own cache: a
+// title's `title` text is locale-specific, and the app's language only ever
+// changes via a full restart, so there's no risk of serving a stale-locale
+// list mid-session.
+const ownedCacheKey = (): string => `gfn.ownedGames.${getGfnLocaleSlug()}`;
 const OWNED_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h
 
 const deviceHeaders = {
@@ -218,7 +223,7 @@ export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
         query: LIBRARY_QUERY,
         variables: {
           vpcId,
-          locale: 'en_US',
+          locale: getGfnGraphqlLocale(),
           sortString: LIBRARY_SORT,
           fetchCount: 200,
           cursor: '',
@@ -245,13 +250,13 @@ export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
   // alphabetical order (mergeOwnedGames) already re-sort their own output.
   const games = items.flatMap(toOwnedGames);
   try {
-    storage.set(OWNED_CACHE_KEY, JSON.stringify({ts: Date.now(), games}));
+    storage.set(ownedCacheKey(), JSON.stringify({ts: Date.now(), games}));
   } catch {}
   return games;
 };
 
 export const getFreshOwnedGames = (): GfnGame[] | null => {
-  const raw = storage.getString(OWNED_CACHE_KEY);
+  const raw = storage.getString(ownedCacheKey());
   if (!raw) {
     return null;
   }
@@ -270,7 +275,7 @@ export const getFreshOwnedGames = (): GfnGame[] | null => {
 
 export const clearOwnedGames = (): void => {
   try {
-    storage.delete(OWNED_CACHE_KEY);
+    storage.delete(ownedCacheKey());
   } catch {}
 };
 
@@ -322,7 +327,7 @@ export const fetchGfnCatalogOrder = async (
         query: CATALOG_RANK_QUERY,
         variables: {
           vpcId,
-          locale: 'en_US',
+          locale: getGfnGraphqlLocale(),
           sortString: orderBy,
           fetchCount,
           // No filter -- rank the whole catalog, matching how OpenNOW's own
@@ -416,7 +421,7 @@ export const fetchGfnAppDetails = async (
       headers: graphqlHeaders(token),
       body: JSON.stringify({
         query: APP_DETAILS_QUERY,
-        variables: {vpcId, locale: 'en_US', appIds: [appId]},
+        variables: {vpcId, locale: getGfnGraphqlLocale(), appIds: [appId]},
       }),
     });
   } catch {
