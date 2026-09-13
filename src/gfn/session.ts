@@ -1,4 +1,5 @@
 import {storage} from '../store/mmkv';
+import {getGfnLocaleSlug, getGfnGraphqlLocale} from './locale';
 
 // GeForce NOW CloudMatch session layer. This requests a game session from
 // NVIDIA's CloudMatch service, polls it until a GPU seat is ready, and resolves
@@ -561,7 +562,7 @@ export const fetchGfnSubscription = async (
 ): Promise<GfnSubscriptionInfo | null> => {
   const url = new URL('https://mes.geforcenow.com/v4/subscriptions');
   url.searchParams.set('serviceName', 'gfn_pc');
-  url.searchParams.set('languageCode', 'en_US');
+  url.searchParams.set('languageCode', getGfnGraphqlLocale());
   url.searchParams.set('vpcId', vpcId);
   url.searchParams.set('userId', userId);
 
@@ -685,9 +686,13 @@ export const createGfnSession = async (
     regionOverrideUrl,
   );
   const body = buildSessionRequestBody(appId, settings, deviceId);
+  // Both were hardcoded to English regardless of the user's own language --
+  // the actual streamed game boots in whatever languageCode says here (the
+  // catalog's own locale.ts already drives the game *list*; this is what
+  // drives the game session itself).
   const query = new URLSearchParams({
-    keyboardLayout: 'en-US',
-    languageCode: 'en_US',
+    keyboardLayout: getGfnLocaleSlug(),
+    languageCode: getGfnGraphqlLocale(),
   }).toString();
   const response = await fetchCloudMatch(`${base}/v2/session?${query}`, {
     method: 'POST',
