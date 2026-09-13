@@ -684,6 +684,8 @@ export default {
     LibraryFilterOwned: 'Owned',
     LibraryFilterOnSale: 'On Sale',
     Store: 'Store',
+    StoreTabXbox: 'Xbox',
+    StoreTabSteam: 'Steam',
     StoreBestSellers: 'Best Sellers',
     StoreNewReleases: 'New Releases',
     StoreFilteredNote: 'Showing only titles playable on this service',
