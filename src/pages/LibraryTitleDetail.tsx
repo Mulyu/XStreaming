@@ -183,7 +183,7 @@ function LibraryTitleDetailScreen() {
       return;
     }
     let cancelled = false;
-    fetchSteamPrices(steamAppIds).then(result => {
+    fetchSteamPrices(steamAppIds, deviceRegion || 'US').then(result => {
       if (!cancelled) {
         setSteamPrices(result);
       }
@@ -191,7 +191,7 @@ function LibraryTitleDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [catalogTitle?.gfn]);
+  }, [catalogTitle?.gfn, deviceRegion]);
 
   if (!catalogTitle) {
     return null;
@@ -217,6 +217,18 @@ function LibraryTitleDetailScreen() {
 
   const gfnVariants = catalogTitle.gfn?.variants ?? [];
   const gfnAnyOwned = gfnVariants.some(variant => variant.owned);
+  // Most titles only have one GFN store variant, in which case the per-store
+  // list below never renders (tapping the row launches straight away instead
+  // of expanding) -- so the sole variant's price and store link need to live
+  // on the top-level row itself, not just the multi-variant list.
+  const soleGfnVariant = gfnVariants.length === 1 ? gfnVariants[0] : null;
+  const soleGfnSteamPrice = soleGfnVariant?.steamAppId
+    ? steamPrices[soleGfnVariant.steamAppId]
+    : undefined;
+  const soleGfnShowSale =
+    !!soleGfnVariant &&
+    !soleGfnVariant.owned &&
+    isSteamSaleForDisplay(soleGfnSteamPrice);
   const isPreferredXcloud = preference?.provider === 'xcloud';
   const isPreferredGfnVariant = (id: string, store: string) =>
     preference?.provider === 'gfn' &&
@@ -396,9 +408,45 @@ function LibraryTitleDetailScreen() {
                       ? t('LibraryStoreCount', {n: gfnVariants.length})
                       : gfnVariants[0]?.store}
                   </Text>
+                  {soleGfnVariant &&
+                    !soleGfnVariant.owned &&
+                    soleGfnSteamPrice && (
+                      <View style={styles.priceRow}>
+                        <Text
+                          style={[
+                            styles.priceNow,
+                            soleGfnShowSale && styles.priceNowSale,
+                          ]}>
+                          {formatPrice(
+                            soleGfnSteamPrice.final / 100,
+                            soleGfnSteamPrice.currencyCode,
+                          )}
+                        </Text>
+                        {soleGfnShowSale && (
+                          <Text style={styles.priceWas}>
+                            {formatPrice(
+                              soleGfnSteamPrice.initial / 100,
+                              soleGfnSteamPrice.currencyCode,
+                            )}
+                          </Text>
+                        )}
+                      </View>
+                    )}
                 </View>
                 {preference?.provider === 'gfn' && (
                   <Icon source="check-circle" size={18} color={NVIDIA_ACCENT} />
+                )}
+                {soleGfnVariant?.steamAppId && (
+                  <Pressable
+                    style={styles.storeLinkBtn}
+                    hitSlop={8}
+                    onPress={() =>
+                      openStore(
+                        `https://store.steampowered.com/app/${soleGfnVariant.steamAppId}`,
+                      )
+                    }>
+                    <Icon source="open-in-new" size={16} color="#8A9A92" />
+                  </Pressable>
                 )}
                 <Icon
                   source={

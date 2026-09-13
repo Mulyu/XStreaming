@@ -477,7 +477,7 @@ function LibraryScreen() {
     if (steamAppIds.length === 0) {
       return;
     }
-    const cc = 'US';
+    const cc = deviceRegion || 'US';
     const sig = `${cc}:${steamAppIds.length}`;
     if (steamPriceSigRef.current === sig) {
       return;
@@ -495,7 +495,7 @@ function LibraryScreen() {
       }
       saveSteamPriceCache(prices, cc, sig);
     });
-  }, [gfnGames]);
+  }, [gfnGames, deviceRegion]);
 
   // gfnOwnedGames arrives in the server's own lastPlayed/added order (see
   // gfn/catalog.ts) -- turn that position into a rank map the same way
