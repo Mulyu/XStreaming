@@ -675,20 +675,26 @@ function LibraryScreen() {
     gfnRecentRank,
   ]);
 
+  // 'reco' was never an actual recommendation ranking -- it's just the
+  // catalog's own unsorted order, which is alphabetical (publicGames.ts and
+  // catalog.ts's mergeOwnedGames both sort by title before this screen ever
+  // sees the list). Labeled for what it actually does instead of implying a
+  // ranking that isn't there.
   const sortOptions: {value: SortMode; label: string; scope: string}[] = [
-    {value: 'reco', label: t('Recommended'), scope: ''},
+    {value: 'reco', label: t('SortByName'), scope: ''},
     {value: 'newest', label: t('SortNewest'), scope: ''},
     {value: 'popular', label: t('Popular'), scope: ''},
     {value: 'recent', label: t('SortRecent'), scope: ''},
   ];
   const activeSortLabel =
-    sortOptions.find(o => o.value === sortMode)?.label || t('Recommended');
+    sortOptions.find(o => o.value === sortMode)?.label || t('SortByName');
 
-  // Square-tile grid: denser than the old 16:10 cards, so a smaller target
-  // width per column is intentional here (was 260/300).
+  // Square-tile grid. A denser 110/150 target read as too small for
+  // browsing comfortably (was 260/300 before that pass) -- back up to a
+  // size that lands around 2 columns on a phone in portrait.
   const isLandscape = screenWidth > screenHeight;
   const numColumns = React.useMemo(() => {
-    const target = isLandscape || Platform.isTV ? 150 : 110;
+    const target = isLandscape || Platform.isTV ? 260 : 190;
     return Math.max(2, Math.min(8, Math.floor(screenWidth / target)));
   }, [isLandscape, screenWidth]);
 
@@ -1027,14 +1033,14 @@ const styles = StyleSheet.create({
   // via any of its listed services right now.
   coverDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(20,21,24,0.6)',
+    backgroundColor: 'rgba(15,16,18,0.8)',
   },
   bottomScrim: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '55%',
+    height: '28%',
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   availOverlay: {

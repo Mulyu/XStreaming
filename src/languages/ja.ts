@@ -594,6 +594,7 @@ export default {
     Genre: 'ジャンル',
     Sort: '並び替え',
     Recommended: 'おすすめ順',
+    SortByName: '名前順',
     Popular: '人気順',
     Rating: '評価順',
     SortReleaseDate: 'リリース順',
