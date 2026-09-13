@@ -459,7 +459,13 @@ export const normalizeTitle = (title: string): string =>
     .trim();
 
 // Merge owned games into the public catalog: mark matching public titles as
-// owned, and append owned titles the public list doesn't carry (e.g. Overwatch).
+// owned, and append owned titles the public list doesn't carry (e.g.
+// Overwatch). Output order is whatever `publicGames` + the appended extras
+// happen to be in -- not re-sorted, since every real caller
+// (unifiedCatalog.ts's buildUnifiedCatalog) already sorts its own final
+// output by title, and a locale-aware sort over ~1500+ entries is real,
+// noticeable CPU work to spend on an order the next sort would discard
+// anyway (most apparent on weaker hardware, e.g. Google TV boxes).
 export const mergeOwnedGames = (
   publicGames: GfnGame[],
   ownedGames: GfnGame[],
@@ -494,5 +500,5 @@ export const mergeOwnedGames = (
     g => !presentTitles.has(normalizeTitle(g.title)),
   );
 
-  return [...merged, ...extras].sort((a, b) => a.title.localeCompare(b.title));
+  return [...merged, ...extras];
 };
