@@ -13,6 +13,12 @@ import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import XcloudApi from '../xCloud';
 import {fetchGfnGames, getCachedGfnGames, GfnGame} from '../gfn/publicGames';
+import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
+import {
+  fetchGfnFullCatalog,
+  getFreshFullCatalog,
+  getCachedFullCatalog,
+} from '../gfn/catalog';
 import {
   buildXcloudCatalogTitle,
   buildGfnCatalogTitle,
@@ -82,6 +88,26 @@ const hasMorePages = (
   return totalCount === undefined || cumulativeStart < totalCount;
 };
 
+// Both charts are live, frequently-reordering rankings fetched via a
+// stateless numeric offset or a cursor spanning several sequential requests
+// -- confirmed live that the same title can resurface at a much later
+// position if the underlying ranking shifts between requests (e.g. a sale
+// starting or ending mid-scroll). Deduping by key keeps that from showing as
+// a duplicate row (and from breaking FlatList's key uniqueness).
+const dedupeByKey = <T,>(items: T[], keyOf: (item: T) => string): T[] => {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const item of items) {
+    const key = keyOf(item);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(item);
+  }
+  return result;
+};
+
 const STEAM_LANGUAGE: Record<string, string> = {
   en: 'english',
   zh: 'schinese',
@@ -122,6 +148,16 @@ function StoreScreen() {
   const [xcloudTitles, setXcloudTitles] = React.useState<any[]>([]);
   const [gfnGames, setGfnGames] = React.useState<GfnGame[]>(
     () => getCachedGfnGames() || [],
+  );
+  // The public list (~1,100 titles) NVIDIA publishes for anonymous browsing
+  // is missing plenty of titles that are genuinely on GFN (confirmed live:
+  // Onimusha: Way of the Sword, Monster Hunter Wilds, PUBG, and VRChat are
+  // all absent from it despite being real GFN titles) -- it's a stale
+  // snapshot, not the source of truth. Signed-in users get the full,
+  // authenticated catalog instead (same call Library.tsx makes), which
+  // covers those; the public list stays the fallback while signed out.
+  const [gfnFullCatalog, setGfnFullCatalog] = React.useState<GfnGame[]>(
+    () => getCachedFullCatalog() || [],
   );
 
   // Bumped every time the provider or chart kind changes, so an async
@@ -169,9 +205,8 @@ function StoreScreen() {
   }, [streamingTokens?.xCloudToken]);
 
   // GFN's public catalog (no sign-in needed), for matching Steam chart
-  // entries back to a launchable title. The public list is enough here --
-  // it's only used to answer "is this Steam app on GFN at all", not to
-  // browse the full catalog.
+  // entries back to a launchable title while signed out, or before the full
+  // catalog below has loaded.
   React.useEffect(() => {
     const cached = getCachedGfnGames();
     if (cached) {
@@ -181,6 +216,34 @@ function StoreScreen() {
       .then(setGfnGames)
       .catch(() => {});
   }, []);
+
+  // The full, authenticated catalog -- requires a signed-in token, so it
+  // simply stays empty (falling back to the public list) while signed out.
+  // Cached 24h since a full paginated fetch is dozens of sequential
+  // requests, not one.
+  React.useEffect(() => {
+    if (!isSignedIn()) {
+      return;
+    }
+    const fresh = getFreshFullCatalog();
+    if (fresh) {
+      setGfnFullCatalog(fresh);
+      return;
+    }
+    getValidGfnJwt().then(token => {
+      if (!token) {
+        return;
+      }
+      fetchGfnFullCatalog(token)
+        .then(games => games.length > 0 && setGfnFullCatalog(games))
+        .catch(() => {});
+    });
+  }, []);
+
+  // Steam-app matching prefers the full catalog whenever it's available --
+  // see the state comment above for why the public list alone misses real
+  // GFN titles.
+  const gfnBaseGames = gfnFullCatalog.length > 0 ? gfnFullCatalog : gfnGames;
 
   const xcloudByProductId = React.useMemo(() => {
     const map = new Map<string, any>();
@@ -225,7 +288,9 @@ function StoreScreen() {
         if (!force) {
           const fresh = getFreshXboxBrowsePage(sort, xboxLocale);
           if (fresh) {
-            setXboxProductIds(fresh.productIds);
+            setXboxProductIds(
+              dedupeByKey(fresh.productIds, id => id.toUpperCase()),
+            );
             setXboxNextCT(fresh.nextCT);
             setXboxHasMore(
               hasMorePages(
@@ -244,7 +309,9 @@ function StoreScreen() {
             if (!stillCurrent()) {
               return;
             }
-            setXboxProductIds(page.productIds);
+            setXboxProductIds(
+              dedupeByKey(page.productIds, id => id.toUpperCase()),
+            );
             setXboxNextCT(page.nextCT);
             setXboxHasMore(
               hasMorePages(
@@ -265,7 +332,7 @@ function StoreScreen() {
         if (!force) {
           const fresh = getFreshSteamChart(kind, steamCc);
           if (fresh) {
-            setSteamEntries(fresh);
+            setSteamEntries(dedupeByKey(fresh, e => e.appId));
             setLoading(false);
             return;
           }
@@ -276,7 +343,7 @@ function StoreScreen() {
             if (!stillCurrent()) {
               return;
             }
-            setSteamEntries(page.entries);
+            setSteamEntries(dedupeByKey(page.entries, e => e.appId));
             setSteamHasMore(
               hasMorePages(
                 page.entries.length,
@@ -325,11 +392,11 @@ function StoreScreen() {
   const gfnSteamAppIds = React.useMemo(
     () =>
       new Set(
-        gfnGames
+        gfnBaseGames
           .map(game => game.steamAppId)
           .filter((id): id is string => !!id),
       ),
-    [gfnGames],
+    [gfnBaseGames],
   );
 
   // Both providers' charts can add a page that grows the raw list without
@@ -371,6 +438,12 @@ function StoreScreen() {
       loadMoreInFlightRef.current = true;
       setLoadingMore(true);
       try {
+        // Tracks ids already committed to xboxProductIds (plus any seen
+        // earlier in this same loop) so a title the live ranking reshuffles
+        // into a later page doesn't show up twice, and so a page that only
+        // re-surfaces already-shown ids correctly doesn't count as
+        // "found a new visible row".
+        const seenIds = new Set(xboxProductIds.map(id => id.toUpperCase()));
         let ct = xboxNextCT;
         let count = xboxProductIds.length;
         let more = true;
@@ -386,11 +459,17 @@ function StoreScreen() {
           }
           count += page.productIds.length;
           ct = page.nextCT;
-          foundVisibleRow = page.productIds.some(isVisibleMatch);
           more =
             hasMorePages(page.productIds.length, count, page.totalCount) &&
             !!ct;
-          setXboxProductIds(prev => [...prev, ...page.productIds]);
+          const newIds = page.productIds.filter(
+            id => !seenIds.has(id.toUpperCase()),
+          );
+          newIds.forEach(id => seenIds.add(id.toUpperCase()));
+          foundVisibleRow = newIds.some(isVisibleMatch);
+          if (newIds.length > 0) {
+            setXboxProductIds(prev => [...prev, ...newIds]);
+          }
           setXboxNextCT(ct);
         }
         setXboxHasMore(more && count < MAX_CHART_ENTRIES);
@@ -415,6 +494,11 @@ function StoreScreen() {
       loadMoreInFlightRef.current = true;
       setLoadingMore(true);
       try {
+        // Same reasoning as the Xbox branch above -- Steam's own ranking can
+        // reshuffle between the several sequential requests one loadMore
+        // call can make, so a title already shown can resurface on a later
+        // page.
+        const seenAppIds = new Set(steamEntries.map(e => e.appId));
         let start = steamEntries.length;
         let more = true;
         let foundVisibleRow = false;
@@ -433,9 +517,13 @@ function StoreScreen() {
             break;
           }
           start += page.entries.length;
-          foundVisibleRow = page.entries.some(isVisibleMatch);
           more = hasMorePages(page.entries.length, start, page.totalCount);
-          setSteamEntries(prev => [...prev, ...page.entries]);
+          const newEntries = page.entries.filter(e => !seenAppIds.has(e.appId));
+          newEntries.forEach(e => seenAppIds.add(e.appId));
+          foundVisibleRow = newEntries.some(isVisibleMatch);
+          if (newEntries.length > 0) {
+            setSteamEntries(prev => [...prev, ...newEntries]);
+          }
         }
         setSteamHasMore(more && start < MAX_CHART_ENTRIES);
       } finally {
@@ -450,10 +538,10 @@ function StoreScreen() {
     chartKind,
     steamCc,
     steamLanguage,
-    steamEntries.length,
+    steamEntries,
     steamHasMore,
     xboxLocale,
-    xboxProductIds.length,
+    xboxProductIds,
     xboxNextCT,
     xboxHasMore,
     xcloudByProductId,
@@ -497,7 +585,7 @@ function StoreScreen() {
     }
 
     const byAppId = new Map<string, GfnGame>();
-    gfnGames.forEach(game => {
+    gfnBaseGames.forEach(game => {
       if (game.steamAppId) {
         byAppId.set(game.steamAppId, game);
       }
@@ -528,7 +616,7 @@ function StoreScreen() {
     xcloudByProductId,
     xboxPriceMap,
     steamEntries,
-    gfnGames,
+    gfnBaseGames,
   ]);
 
   const visibleRows = React.useMemo(
