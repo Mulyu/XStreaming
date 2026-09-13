@@ -30,6 +30,12 @@ export interface StreamControlRailProps {
   showCoverControls: boolean;
   coverPresented: boolean;
   onToggleCoverControls: () => void;
+  screenPosition: 'top' | 'center' | 'bottom';
+  onSetScreenPosition: (position: 'top' | 'center' | 'bottom') => void;
+  videoFormat: string;
+  onCycleVideoFormat: () => void;
+  fsrEnabled: boolean;
+  onToggleFsr: () => void;
   showConsoleActions: boolean;
   onPressNexus: () => void;
   onLongPressNexus: () => void;
@@ -115,6 +121,12 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   showCoverControls,
   coverPresented,
   onToggleCoverControls,
+  screenPosition,
+  onSetScreenPosition,
+  videoFormat,
+  onCycleVideoFormat,
+  fsrEnabled,
+  onToggleFsr,
   showConsoleActions,
   onPressNexus,
   onLongPressNexus,
@@ -125,6 +137,14 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
 }) => {
   const {t} = useTranslation();
   const accent = streamType === 'gfn' ? NVIDIA_ACCENT : XBOX_ACCENT;
+  const videoFormatLabel =
+    videoFormat === ''
+      ? t('Aspect ratio')
+      : videoFormat === 'Stretch'
+      ? t('Stretch')
+      : videoFormat === 'Zoom'
+      ? t('Zoom')
+      : videoFormat;
   const [liveVolume, setLiveVolume] = React.useState(volume);
   React.useEffect(() => setLiveVolume(volume), [volume]);
   const slideIn = React.useRef(new Animated.Value(0)).current;
@@ -262,6 +282,46 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                 onPress={onToggleCoverControls}
               />
             )}
+          </View>
+
+          <View style={styles.group}>
+            <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
+            <View style={styles.segRow}>
+              <SegOption
+                icon="align-vertical-top"
+                label={t('Top')}
+                active={screenPosition === 'top'}
+                accent={accent}
+                onPress={() => onSetScreenPosition('top')}
+              />
+              <SegOption
+                icon="align-vertical-center"
+                label={t('Center')}
+                active={screenPosition === 'center'}
+                accent={accent}
+                onPress={() => onSetScreenPosition('center')}
+              />
+              <SegOption
+                icon="align-vertical-bottom"
+                label={t('Bottom')}
+                active={screenPosition === 'bottom'}
+                accent={accent}
+                onPress={() => onSetScreenPosition('bottom')}
+              />
+            </View>
+            <RailButton
+              icon="aspect-ratio"
+              label={videoFormatLabel}
+              accent={accent}
+              onPress={onCycleVideoFormat}
+            />
+            <RailButton
+              icon="auto-fix"
+              label={t('FSR')}
+              active={fsrEnabled}
+              accent={accent}
+              onPress={onToggleFsr}
+            />
           </View>
 
           <View style={[styles.group, styles.sessionGroup]}>
