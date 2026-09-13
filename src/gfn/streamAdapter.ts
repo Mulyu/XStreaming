@@ -31,6 +31,7 @@ import {
   GAMEPAD_DPAD_DOWN,
   GAMEPAD_DPAD_LEFT,
   GAMEPAD_DPAD_RIGHT,
+  MOUSE_LEFT,
 } from './inputEncoding';
 
 // GfnStreamAdapter makes a GeForce NOW session look like the xCloud
@@ -433,10 +434,30 @@ export class GfnStreamAdapter {
         queueMouseWheel: (delta: number) => {
           this.gfnClient?.sendMouseWheel(delta);
         },
-        // xCloud anti-idle / resolution-stability frames and touch pointer
-        // input have no GFN equivalent here — accept and drop them.
+        // xCloud anti-idle / resolution-stability frames have no GFN
+        // equivalent — accept and drop them.
         addProcessedFrame: () => {},
-        queuePointerInput: () => {},
+        // GFN has no native multi-touch wire format, but NVST's absolute
+        // mouse message (type 5) can emulate a single-finger tap/drag: warp
+        // to the touch position and hold the left button down for its
+        // duration. Only the primary pointer is tracked -- multi-touch
+        // gestures aren't representable this way.
+        queuePointerInput: (events: any[]) => {
+          events?.forEach(event => {
+            if (!event) {
+              return;
+            }
+            if (event.type === 'pointerdown') {
+              this.gfnClient?.sendMouseAbsolute(event.x, event.y, true);
+              this.gfnClient?.sendMouseButtonDown(MOUSE_LEFT);
+            } else if (event.type === 'pointermove') {
+              this.gfnClient?.sendMouseAbsolute(event.x, event.y);
+            } else if (event.type === 'pointerup') {
+              this.gfnClient?.sendMouseAbsolute(event.x, event.y, true);
+              this.gfnClient?.sendMouseButtonUp(MOUSE_LEFT);
+            }
+          });
+        },
       };
     }
     if (name === 'chat') {

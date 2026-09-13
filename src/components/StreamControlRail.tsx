@@ -4,7 +4,7 @@ import {Text, Icon} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import {useTranslation} from 'react-i18next';
 
-export type StreamInputMode = 'off' | 'gamepad' | 'mouse';
+export type StreamInputMode = 'off' | 'gamepad' | 'mouse' | 'touch';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
@@ -171,8 +171,8 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
             <Text style={styles.groupLabel}>{t('Input')}</Text>
             <View style={styles.segRow}>
               <SegOption
-                icon="cursor-default-click-outline"
-                label={t('Touch off')}
+                icon="close-circle-outline"
+                label={t('Off')}
                 active={inputMode === 'off'}
                 accent={accent}
                 onPress={() => onSetInputMode('off')}
@@ -193,6 +193,13 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   onPress={() => onSetInputMode('mouse')}
                 />
               )}
+              <SegOption
+                icon="gesture-tap"
+                label={t('Native touch')}
+                active={inputMode === 'touch'}
+                accent={accent}
+                onPress={() => onSetInputMode('touch')}
+              />
             </View>
             {showEditGamepadLayout && (
               <RailButton

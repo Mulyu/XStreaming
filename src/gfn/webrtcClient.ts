@@ -321,6 +321,38 @@ export class GfnWebRtcClient {
     } catch {}
   }
 
+  // Absolute pointer position (touch tap/drag emulation). x/y are normalized
+  // 0..1 within the video viewport; encoded into a fixed 0..65535 extent --
+  // the same scale the official client uses for its own absolute-cursor
+  // warps, so the server-side scaling behavior matches. Mid-drag updates
+  // prefer the partially-reliable channel like sendMouseMove: a dropped one
+  // is imperceptible, the next supersedes it. The touch-down/touch-up
+  // position is different -- it has to land before (touch-down) or land
+  // exactly with (touch-up) the reliable button event on the same spot, or a
+  // tap can click wherever the cursor happened to be before it, so those
+  // pass `reliable: true` to use the same ordered channel as the click.
+  sendMouseAbsolute(
+    normalizedX: number,
+    normalizedY: number,
+    reliable = false,
+  ): void {
+    if (!this.inputReady) {
+      return;
+    }
+    const usePr =
+      !reliable && this.partiallyReliableInput?.readyState === 'open';
+    const channel = usePr ? this.partiallyReliableInput : this.reliableInput;
+    if (channel?.readyState !== 'open') {
+      return;
+    }
+    const extent = 65535;
+    const x = Math.max(0, Math.min(extent, Math.round(normalizedX * extent)));
+    const y = Math.max(0, Math.min(extent, Math.round(normalizedY * extent)));
+    try {
+      channel.send(this.encoder.encodeMouseAbsolute(x, y, extent, extent));
+    } catch {}
+  }
+
   // Mouse buttons and wheel always go over the reliable channel -- unlike
   // move deltas, dropping one of these leaves a button stuck down or a click
   // that never registers.
