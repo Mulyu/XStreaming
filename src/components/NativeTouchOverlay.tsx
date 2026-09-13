@@ -17,45 +17,68 @@ type VideoRect = {
   height: number;
 };
 
+type ScreenPosition = 'top' | 'center' | 'bottom';
+
 type NativeTouchOverlayProps = {
   enabled: boolean;
   videoFormat?: string;
+  screenPosition?: ScreenPosition;
   onPointerInput?: (event: PointerWireData) => void;
 };
 
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
+// A "W:H" video format string (16:10, 18:9, 20:9, 21:9, 4:3, ...) -- anything
+// that doesn't parse falls back to the 16:9 stream aspect assumption below.
+const parseFixedAspectRatio = (format: string): number | null => {
+  const [w, h] = format.split(':').map(Number);
+  return Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0
+    ? w / h
+    : null;
+};
+
+// Mirrors WebRTCView's native layout exactly (see the screenPosition patch on
+// react-native-webrtc): Stretch and Zoom both fill the given bounds exactly
+// (Zoom crops inside that rect on the native side rather than the ViewGroup
+// leaving letterboxing space to offset), everything else is letterboxed at
+// the requested aspect ratio and anchored per screenPosition -- top pins the
+// video to y=0, bottom pins it to the far edge, center (the default) splits
+// the leftover space evenly. Getting this wrong is exactly why touches
+// landed in the wrong place whenever screen position was top or bottom.
 const resolveVideoRect = (
   width: number,
   height: number,
   videoFormat?: string,
+  screenPosition: ScreenPosition = 'center',
 ): VideoRect => {
   if (width <= 0 || height <= 0) {
     return {x: 0, y: 0, width: 1, height: 1};
   }
 
-  if (videoFormat === 'Zoom') {
+  const format = videoFormat ?? '';
+  if (format === 'Stretch' || format === 'Zoom') {
     return {x: 0, y: 0, width, height};
   }
 
+  const aspect = parseFixedAspectRatio(format) ?? STREAM_ASPECT_RATIO;
   const containerAspect = width / height;
 
-  if (containerAspect > STREAM_ASPECT_RATIO) {
-    const fittedWidth = height * STREAM_ASPECT_RATIO;
-    return {
-      x: (width - fittedWidth) / 2,
-      y: 0,
-      width: fittedWidth,
-      height,
-    };
-  }
+  const fittedWidth = containerAspect > aspect ? height * aspect : width;
+  const fittedHeight = containerAspect > aspect ? height : width / aspect;
 
-  const fittedHeight = width / STREAM_ASPECT_RATIO;
+  const verticalSpace = height - fittedHeight;
+  const y =
+    screenPosition === 'top'
+      ? 0
+      : screenPosition === 'bottom'
+      ? verticalSpace
+      : verticalSpace / 2;
+
   return {
-    x: 0,
-    y: (height - fittedHeight) / 2,
-    width,
+    x: (width - fittedWidth) / 2,
+    y,
+    width: fittedWidth,
     height: fittedHeight,
   };
 };
@@ -63,6 +86,7 @@ const resolveVideoRect = (
 const NativeTouchOverlay = ({
   enabled,
   videoFormat,
+  screenPosition,
   onPointerInput,
 }: NativeTouchOverlayProps) => {
   const [layout, setLayout] = React.useState({width: 0, height: 0});
@@ -75,8 +99,14 @@ const NativeTouchOverlay = ({
   }, [enabled]);
 
   const videoRect = React.useMemo(
-    () => resolveVideoRect(layout.width, layout.height, videoFormat),
-    [layout.height, layout.width, videoFormat],
+    () =>
+      resolveVideoRect(
+        layout.width,
+        layout.height,
+        videoFormat,
+        screenPosition,
+      ),
+    [layout.height, layout.width, videoFormat, screenPosition],
   );
 
   const buildPointerEvent = React.useCallback(

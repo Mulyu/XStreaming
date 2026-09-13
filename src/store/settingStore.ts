@@ -30,7 +30,6 @@ export type Settings = {
   signaling_home_name: string;
   signaling_cloud_name: string;
   codec: string;
-  show_performance: boolean;
   performance_style: boolean;
   vibration: boolean;
   vibration_mode: string;
@@ -78,7 +77,6 @@ export type Settings = {
   power_on: boolean;
   theme: string;
   theme_primary_color: string;
-  show_menu: boolean;
   fsr: boolean;
   coop: boolean;
   use_msal_login: boolean;
@@ -115,7 +113,6 @@ const defaultSettings: Settings = {
   signaling_home_name: '',
   signaling_cloud_name: '',
   codec: '',
-  show_performance: false,
   performance_style: true,
   vibration: true,
   vibration_mode: 'Native',
@@ -173,7 +170,6 @@ const defaultSettings: Settings = {
   hold_buttons: [],
   theme: 'dark',
   theme_primary_color: DEFAULT_THEME_PRIMARY_COLOR,
-  show_menu: false,
   fsr: false,
   coop: false,
   use_msal_login: false,

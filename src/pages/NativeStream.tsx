@@ -84,6 +84,18 @@ const CLOSED = 'closed';
 const FAILED = 'failed';
 const DUALSENSE = 'DualSenseController';
 const LIVE_GAMEPAD_PROFILE = 'LiveLayout';
+// Cycled in order by the control rail's Video format button -- was the
+// DropdownRow option list on the old Settings screen entry.
+const VIDEO_FORMAT_OPTIONS = [
+  '',
+  'Stretch',
+  'Zoom',
+  '16:10',
+  '18:9',
+  '20:9',
+  '21:9',
+  '4:3',
+];
 const {
   FullScreenManager,
   GamepadManager,
@@ -1625,11 +1637,6 @@ export function NativeStreamScreenBase({
             setShowVirtualGamepad(true);
           }
 
-          // Alway show performance
-          if (!portraitMode && _settings.show_performance) {
-            setShowPerformance(true);
-          }
-
           setRemote(remoteStream.current.toURL());
 
           const sendFrame = () => {
@@ -3004,6 +3011,40 @@ export function NativeStreamScreenBase({
     [clearMacroTimers, showMouseTrackpad, showNativeTouch, showVirtualGamepad],
   );
 
+  // Screen position, video format and FSR used to be pre-game Settings
+  // entries; they're calibration-like (tied to the device/display, not the
+  // session) so they still persist via saveSettings, just edited from here
+  // now instead of a separate screen -- `settings` already drives the
+  // renderer props below, so a change here re-renders live in this stream
+  // too, not just on the next one.
+  const handleSetScreenPosition = React.useCallback(
+    (position: 'top' | 'center' | 'bottom') => {
+      const nextSettings = {...getSettings(), screen_position: position};
+      saveSettings(nextSettings);
+      setSettings(nextSettings);
+    },
+    [],
+  );
+
+  const handleCycleVideoFormat = React.useCallback(() => {
+    const currentIndex = VIDEO_FORMAT_OPTIONS.indexOf(settings.video_format);
+    const nextIndex =
+      (currentIndex + 1 + VIDEO_FORMAT_OPTIONS.length) %
+      VIDEO_FORMAT_OPTIONS.length;
+    const nextSettings = {
+      ...getSettings(),
+      video_format: VIDEO_FORMAT_OPTIONS[nextIndex],
+    };
+    saveSettings(nextSettings);
+    setSettings(nextSettings);
+  }, [settings.video_format]);
+
+  const handleToggleFsr = React.useCallback(() => {
+    const nextSettings = {...getSettings(), fsr: !settings.fsr};
+    saveSettings(nextSettings);
+    setSettings(nextSettings);
+  }, [settings.fsr]);
+
   const handleToggleCoverControls = React.useCallback(async () => {
     if (coverPresented) {
       // Manual hide: remember it so the auto-present doesn't turn it back
@@ -3197,7 +3238,7 @@ export function NativeStreamScreenBase({
   };
 
   const renderMenu = () => {
-    if (!portraitMode && settings.show_menu && !isInPictureInPicture) {
+    if (!portraitMode && !isInPictureInPicture) {
       return (
         <View style={styles.quickMenu}>
           <IconButton
@@ -3249,6 +3290,12 @@ export function NativeStreamScreenBase({
         showCoverControls={coverAvailable}
         coverPresented={coverPresented}
         onToggleCoverControls={handleToggleCoverControls}
+        screenPosition={settings.screen_position || 'center'}
+        onSetScreenPosition={handleSetScreenPosition}
+        videoFormat={settings.video_format || ''}
+        onCycleVideoFormat={handleCycleVideoFormat}
+        fsrEnabled={!!settings.fsr}
+        onToggleFsr={handleToggleFsr}
         showConsoleActions={isConsoleStream}
         onPressNexus={handleRailPressNexus}
         onLongPressNexus={handleRailLongPressNexus}
@@ -3306,6 +3353,7 @@ export function NativeStreamScreenBase({
           <NativeTouchOverlay
             enabled={showNativeTouch && !isInPictureInPicture}
             videoFormat={video_format || ''}
+            screenPosition={screen_position}
             onPointerInput={handleNativePointerInput}
           />
         </View>
@@ -3325,6 +3373,7 @@ export function NativeStreamScreenBase({
         <NativeTouchOverlay
           enabled={showNativeTouch && !isInPictureInPicture}
           videoFormat={video_format || ''}
+          screenPosition={screen_position}
           onPointerInput={handleNativePointerInput}
         />
       </View>

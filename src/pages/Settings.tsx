@@ -450,32 +450,6 @@ function SettingsScreen({navigation}) {
 
           <SectionLabel title={t('DisplaySettings')} />
           <SwitchRow
-            title={M('fsr').title}
-            desc={M('fsr').description}
-            value={settings.fsr}
-            onChange={v => updateSetting('fsr', v)}
-          />
-          <DropdownRow
-            title={M('video_format').title}
-            desc={M('video_format').description}
-            options={M('video_format').data}
-            value={settings.video_format}
-            onChange={v => updateSetting('video_format', v)}
-          />
-          <SwitchRow
-            title={M('show_performance').title}
-            desc={M('show_performance').description}
-            value={settings.show_performance}
-            onChange={v => updateSetting('show_performance', v)}
-          />
-          <SegmentedRow
-            title={M('screen_position').title}
-            desc={M('screen_position').description}
-            options={M('screen_position').data}
-            value={settings.screen_position}
-            onChange={v => updateSetting('screen_position', v)}
-          />
-          <SwitchRow
             title={M('native_low_latency_decoder').title}
             desc={M('native_low_latency_decoder').description}
             value={settings.native_low_latency_decoder}
@@ -487,12 +461,6 @@ function SettingsScreen({navigation}) {
             options={M('performance_style').data}
             value={settings.performance_style}
             onChange={v => updateSetting('performance_style', v)}
-          />
-          <SwitchRow
-            title={M('show_menu').title}
-            desc={M('show_menu').description}
-            value={settings.show_menu}
-            onChange={v => updateSetting('show_menu', v)}
           />
 
           <SectionLabel title={t('GamepadSettings')} />
