@@ -614,6 +614,8 @@ export default {
     LibraryFilterOwned: '所有済み',
     LibraryFilterOnSale: 'セール中',
     Store: 'ストア',
+    StoreTabXbox: 'Xbox',
+    StoreTabSteam: 'Steam',
     StoreBestSellers: '売り上げ順',
     StoreNewReleases: '新着順',
     StoreFilteredNote: 'このサービスでプレイできるタイトルのみ表示しています',

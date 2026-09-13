@@ -29,12 +29,19 @@ import {
 import {
   fetchSteamChart,
   getFreshSteamChart,
+  STEAM_CHART_PAGE_SIZE,
   SteamChartEntry,
 } from '../storeCharts/steamCharts';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const SALE_ACCENT = '#E67E22';
+
+// Steam's chart is a live search scan, not a curated top-N list -- deeper
+// pages exist for as long as the caller wants to scroll. Cap total fetched
+// entries so a "New Releases" scroll session (matches against GFN's catalog
+// are sparse -- see steamCharts.ts) can't scan the whole store.
+const MAX_STEAM_ENTRIES = 3000;
 
 type Provider = 'xcloud' | 'gfn';
 type ChartKind = 'best' | 'new';
@@ -70,11 +77,19 @@ function StoreScreen() {
 
   const [provider, setProvider] = React.useState<Provider>('xcloud');
   const [chartKind, setChartKind] = React.useState<ChartKind>('best');
+  const [saleOnly, setSaleOnly] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const [loadingMore, setLoadingMore] = React.useState(false);
 
   const [xboxEntries, setXboxEntries] = React.useState<XboxChartEntry[]>([]);
   const [steamEntries, setSteamEntries] = React.useState<SteamChartEntry[]>([]);
+  // The Xbox chart is a fixed top-50 page (confirmed live -- query params
+  // that would normally page a listing have no effect on it), so there's
+  // never more to fetch there. Steam's is a live search scan that pages via
+  // `start`, so it starts optimistic and flips false once a page comes back
+  // short or past the endpoint's own total_count.
+  const [steamHasMore, setSteamHasMore] = React.useState(true);
 
   // The two catalogs a chart entry gets matched against -- the same raw
   // shapes buildUnifiedCatalog already knows how to turn into a launchable
@@ -144,6 +159,7 @@ function StoreScreen() {
           .finally(() => setLoading(false));
       } else {
         const kind = nextKind === 'best' ? 'topsellers' : 'new';
+        setSteamHasMore(true);
         if (!force) {
           const fresh = getFreshSteamChart(kind, steamCc);
           if (fresh) {
@@ -153,8 +169,11 @@ function StoreScreen() {
           }
         }
         setLoading(true);
-        fetchSteamChart(kind, steamCc, steamLanguage)
-          .then(setSteamEntries)
+        fetchSteamChart(kind, steamCc, steamLanguage, 0)
+          .then(page => {
+            setSteamEntries(page.entries);
+            setSteamHasMore(page.entries.length >= STEAM_CHART_PAGE_SIZE);
+          })
           .finally(() => setLoading(false));
       }
     },
@@ -171,6 +190,45 @@ function StoreScreen() {
     loadChart(provider, chartKind, true);
     setRefreshing(false);
   }, [provider, chartKind, loadChart]);
+
+  // Steam's chart is a live search scan -- there's always another page until
+  // the endpoint says otherwise, so scrolling to the end just keeps fetching
+  // deeper. The Xbox chart has no further pages to fetch (see steamHasMore's
+  // comment above), so this is a no-op there.
+  const loadMore = React.useCallback(() => {
+    if (
+      provider !== 'gfn' ||
+      loading ||
+      loadingMore ||
+      !steamHasMore ||
+      steamEntries.length >= MAX_STEAM_ENTRIES
+    ) {
+      return;
+    }
+    const kind = chartKind === 'best' ? 'topsellers' : 'new';
+    const nextStart = steamEntries.length;
+    setLoadingMore(true);
+    fetchSteamChart(kind, steamCc, steamLanguage, nextStart)
+      .then(page => {
+        setSteamEntries(prev => [...prev, ...page.entries]);
+        const reachedTotal =
+          page.totalCount !== undefined &&
+          nextStart + page.entries.length >= page.totalCount;
+        setSteamHasMore(
+          page.entries.length >= STEAM_CHART_PAGE_SIZE && !reachedTotal,
+        );
+      })
+      .finally(() => setLoadingMore(false));
+  }, [
+    provider,
+    chartKind,
+    steamCc,
+    steamLanguage,
+    steamEntries.length,
+    steamHasMore,
+    loading,
+    loadingMore,
+  ]);
 
   // Match this provider's raw chart against this provider's own catalog,
   // keeping the chart's own rank so a filtered-out title still leaves a
@@ -233,7 +291,10 @@ function StoreScreen() {
     return result;
   }, [provider, xboxEntries, steamEntries, xcloudTitles, gfnGames]);
 
-  const accent = provider === 'gfn' ? NVIDIA_ACCENT : XBOX_ACCENT;
+  const visibleRows = React.useMemo(
+    () => (saleOnly ? rows.filter(row => !!row.originalPrice) : rows),
+    [rows, saleOnly],
+  );
 
   const openRow = React.useCallback(
     (row: StoreRow) => {
@@ -270,11 +331,15 @@ function StoreScreen() {
           </View>
         )}
       </View>
-      <View style={[styles.badge, {backgroundColor: accent}]}>
-        <Text style={styles.badgeText}>{provider === 'gfn' ? 'N' : 'X'}</Text>
-      </View>
     </Pressable>
   );
+
+  const renderFooter = () =>
+    loadingMore ? (
+      <View style={styles.footer}>
+        <ActivityIndicator size="small" />
+      </View>
+    ) : null;
 
   return (
     <View style={styles.root}>
@@ -295,7 +360,7 @@ function StoreScreen() {
                 styles.tabText,
                 provider === 'xcloud' && styles.tabTextOn,
               ]}>
-              {t('LibraryFilterXcloud')}
+              {t('StoreTabXbox')}
             </Text>
           </Pressable>
           <Pressable
@@ -309,7 +374,7 @@ function StoreScreen() {
             onPress={() => setProvider('gfn')}>
             <Text
               style={[styles.tabText, provider === 'gfn' && styles.tabTextOn]}>
-              {t('LibraryFilterGfn')}
+              {t('StoreTabSteam')}
             </Text>
           </Pressable>
         </View>
@@ -336,26 +401,36 @@ function StoreScreen() {
               {t('StoreNewReleases')}
             </Text>
           </Pressable>
+          <Pressable
+            style={[styles.kindChip, saleOnly && styles.kindOnSale]}
+            onPress={() => setSaleOnly(prev => !prev)}>
+            <Text style={[styles.kindText, saleOnly && styles.kindTextOnSale]}>
+              {t('LibraryFilterOnSale')}
+            </Text>
+          </Pressable>
         </View>
         <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
       </View>
 
-      {loading && rows.length === 0 ? (
+      {loading && visibleRows.length === 0 ? (
         <View style={styles.centre}>
           <ActivityIndicator />
           <Text style={styles.centreText}>{t('Loading...')}</Text>
         </View>
-      ) : rows.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <View style={styles.centre}>
           <Icon source="cart-off" size={34} color="#5C6963" />
           <Text style={styles.centreText}>{t('StoreEmpty')}</Text>
         </View>
       ) : (
         <FlatList
-          data={rows}
+          data={visibleRows}
           keyExtractor={item => item.catalogTitle.key}
           renderItem={renderRow}
           contentContainerStyle={styles.list}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -382,7 +457,7 @@ const styles = StyleSheet.create({
   },
   tabText: {fontSize: 12.5, fontWeight: '700', color: '#8A9A92'},
   tabTextOn: {color: '#EAFFF0'},
-  kindRow: {flexDirection: 'row', gap: 6},
+  kindRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
   kindChip: {
     height: 28,
     paddingHorizontal: 12,
@@ -392,8 +467,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   kindOn: {backgroundColor: 'rgba(232,179,74,0.9)'},
+  kindOnSale: {backgroundColor: SALE_ACCENT},
   kindText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
   kindTextOn: {color: '#2B1D02'},
+  kindTextOnSale: {color: '#2B1200'},
   subnote: {fontSize: 11, color: '#5C6963'},
   list: {paddingHorizontal: 14, paddingBottom: 24},
   row: {
@@ -422,14 +499,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   onSale: {color: SALE_ACCENT, fontWeight: '700'},
-  badge: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: {fontSize: 9, fontWeight: '800', color: '#0B0F0C'},
+  footer: {paddingVertical: 16, alignItems: 'center'},
   centre: {
     flex: 1,
     alignItems: 'center',
