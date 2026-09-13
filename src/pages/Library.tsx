@@ -104,7 +104,7 @@ function LibraryScreen() {
   );
   const [loading, setLoading] = React.useState(true);
   const [keyword, setKeyword] = React.useState('');
-  const [sortMode, setSortMode] = React.useState<SortMode>('reco');
+  const [sortMode, setSortMode] = React.useState<SortMode>('recent');
   const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
   // Which tile currently has D-pad/remote focus -- Android TV moves this via
   // standard View focus as the user navigates with the remote, but nothing
@@ -692,7 +692,7 @@ function LibraryScreen() {
     {value: 'recent', label: t('SortRecent'), scope: ''},
   ];
   const activeSortLabel =
-    sortOptions.find(o => o.value === sortMode)?.label || t('SortByName');
+    sortOptions.find(o => o.value === sortMode)?.label || t('SortRecent');
 
   // Square-tile grid. A denser 110/150 target read as too small for
   // browsing comfortably (was 260/300 before that pass) -- back up to a
@@ -887,20 +887,20 @@ function LibraryScreen() {
             <Pressable
               style={[
                 styles.sortChip,
-                sortMode !== 'reco' && styles.sortChipOn,
+                sortMode !== 'recent' && styles.sortChipOn,
               ]}
               onPress={() => setSortMenuOpen(v => !v)}>
               <Text
                 style={[
                   styles.sortChipText,
-                  sortMode !== 'reco' && styles.sortChipTextOn,
+                  sortMode !== 'recent' && styles.sortChipTextOn,
                 ]}>
                 {`${t('Sort')}: ${activeSortLabel}`}
               </Text>
               <Icon
                 source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
                 size={14}
-                color={sortMode !== 'reco' ? '#0B0F0C' : '#8A9A92'}
+                color={sortMode !== 'recent' ? '#0B0F0C' : '#8A9A92'}
               />
             </Pressable>
           </View>
