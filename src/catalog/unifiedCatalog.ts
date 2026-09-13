@@ -94,3 +94,35 @@ export const buildUnifiedCatalog = (
 // variant on GFN -- as opposed to merely being present in the catalog.
 export const isCatalogTitleOwned = (item: CatalogTitle): boolean =>
   !!item.xcloud?.hasEntitlement || !!item.gfn?.variants.some(v => v.owned);
+
+// Single-service CatalogTitle builders -- same field construction
+// buildUnifiedCatalog does per source, exposed standalone for callers (the
+// Store screen) that match one chart entry back to one raw title/game rather
+// than merging a whole list.
+export const buildXcloudCatalogTitle = (item: any): CatalogTitle | null => {
+  const title: string | undefined = item?.ProductTitle?.trim();
+  if (!title) {
+    return null;
+  }
+  return {
+    key: normalizeTitle(title),
+    title,
+    imageUrl: xcloudImageUrl(item),
+    genres: xcloudGenres(item),
+    xcloud: {raw: item, hasEntitlement: item?.details?.hasEntitlement === true},
+  };
+};
+
+export const buildGfnCatalogTitle = (game: GfnGame): CatalogTitle | null => {
+  const title = game.title?.trim();
+  if (!title) {
+    return null;
+  }
+  return {
+    key: normalizeTitle(title),
+    title,
+    imageUrl: game.imageUrl,
+    genres: game.genres ?? [],
+    gfn: {variants: [game]},
+  };
+};

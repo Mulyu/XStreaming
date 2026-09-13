@@ -11,6 +11,7 @@ const ACCENT = '#2FD24B';
 // presentational component driven by the navigation state.
 const TAB_META: Record<string, {labelKey: string; icon: string}> = {
   Library: {labelKey: 'Library', icon: 'view-grid'},
+  Store: {labelKey: 'Store', icon: 'cart'},
   Settings: {labelKey: 'Settings', icon: 'cog'},
 };
 
