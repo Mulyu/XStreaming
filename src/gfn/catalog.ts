@@ -505,6 +505,7 @@ const CATALOG_RANK_QUERY = `query GetCatalogRank(
   $locale: String!,
   $sortString: String!,
   $fetchCount: Int!,
+  $cursor: String!,
   $filters: AppFilterFields!
 ) {
   apps(
@@ -512,9 +513,10 @@ const CATALOG_RANK_QUERY = `query GetCatalogRank(
     language: $locale,
     orderBy: $sortString,
     first: $fetchCount,
-    after: "",
+    after: $cursor,
     filters: $filters
   ) {
+    pageInfo { hasNextPage endCursor }
     items { id variants { id } }
   }
 }`;
@@ -524,62 +526,83 @@ const CATALOG_RANK_QUERY = `query GetCatalogRank(
 // (not raw scores), built from every numeric store-variant id so it can be
 // looked up the same way GfnGame.id already is everywhere else. Requires a
 // signed-in token, same as the owned-library query -- GFN's catalog-browse
-// endpoint doesn't serve this to anonymous callers. Returns [] on failure.
+// endpoint doesn't serve this to anonymous callers.
+//
+// Paginated to the end (like fetchGfnFullCatalog) rather than a single fixed
+// page -- with the catalog now in the thousands (see fetchGfnFullCatalog), a
+// single 200-title page only ranked a sliver of it and left everything past
+// that page tied at "unranked", which the caller's tie-break sorts
+// alphabetically. That looked like the whole "Popular"/"Newest" sort had
+// silently become alphabetical once the catalog grew past a couple hundred
+// titles. Returns whatever was fetched before the first error.
 export const fetchGfnCatalogOrder = async (
   token: string,
   orderBy: string,
-  fetchCount = 200,
 ): Promise<string[]> => {
   const vpcId = await getVpcId(token);
-  let res: Response;
-  try {
-    res = await fetch(GRAPHQL_URL, {
-      method: 'POST',
-      headers: graphqlHeaders(token),
-      body: JSON.stringify({
-        query: CATALOG_RANK_QUERY,
-        variables: {
-          vpcId,
-          locale: getGfnGraphqlLocale(),
-          sortString: orderBy,
-          fetchCount,
-          // No filter -- rank the whole catalog, matching how OpenNOW's own
-          // browse-with-no-filters call passes an empty object rather than
-          // omitting the (non-null) filters argument.
-          filters: {},
-        },
-      }),
-    });
-  } catch {
-    return [];
-  }
-  if (!res.ok) {
-    return [];
-  }
-  let payload: any;
-  try {
-    payload = await res.json();
-  } catch {
-    return [];
-  }
-  const items: RawApp[] = payload?.data?.apps?.items ?? [];
   const order: string[] = [];
   const seen = new Set<string>();
-  items.forEach(app => {
-    const variants = (app.variants ?? []).filter(v => isNumeric(v.id));
-    const ids =
-      variants.length > 0
-        ? variants.map(v => v.id!)
-        : isNumeric(app.id)
-        ? [app.id!]
-        : [];
-    ids.forEach(id => {
-      if (!seen.has(id)) {
-        seen.add(id);
-        order.push(id);
-      }
+  let cursor = '';
+  for (let page = 0; page < BROWSE_MAX_PAGES; page++) {
+    let res: Response;
+    try {
+      res = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        headers: graphqlHeaders(token),
+        body: JSON.stringify({
+          query: CATALOG_RANK_QUERY,
+          variables: {
+            vpcId,
+            locale: getGfnGraphqlLocale(),
+            sortString: orderBy,
+            fetchCount: BROWSE_PAGE_SIZE,
+            cursor,
+            // No filter -- rank the whole catalog, matching how OpenNOW's own
+            // browse-with-no-filters call passes an empty object rather than
+            // omitting the (non-null) filters argument.
+            filters: {},
+          },
+        }),
+      });
+    } catch {
+      break;
+    }
+    if (!res.ok) {
+      break;
+    }
+    let payload: any;
+    try {
+      payload = await res.json();
+    } catch {
+      break;
+    }
+    const apps = payload?.data?.apps;
+    const items: RawApp[] = apps?.items ?? [];
+    if (items.length === 0) {
+      break;
+    }
+    items.forEach(app => {
+      const variants = (app.variants ?? []).filter(v => isNumeric(v.id));
+      const ids =
+        variants.length > 0
+          ? variants.map(v => v.id!)
+          : isNumeric(app.id)
+          ? [app.id!]
+          : [];
+      ids.forEach(id => {
+        if (!seen.has(id)) {
+          seen.add(id);
+          order.push(id);
+        }
+      });
     });
-  });
+    const pageInfo = apps?.pageInfo;
+    const next = pageInfo?.endCursor;
+    if (pageInfo?.hasNextPage !== true || !next || next === cursor) {
+      break;
+    }
+    cursor = next;
+  }
   return order;
 };
 
