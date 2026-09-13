@@ -527,10 +527,23 @@ function LibraryScreen() {
   // (24h) the same way xCloud's own prices are above.
   const steamPriceSigRef = React.useRef('');
   React.useEffect(() => {
+    // Owned titles first: the full GFN browse catalog is thousands of
+    // Steam-linked ids now (see fetchGfnFullCatalog), and fetchSteamPrices
+    // only processes a handful of chunks at a time (see its own concurrency
+    // cap) -- fetched in catalog order, the sale badge on the titles someone
+    // actually owns (the default "Owned" filter view) could sit behind
+    // thousands of other titles' worth of requests before ever arriving.
+    // A Set preserves insertion order and dedupes, so listing owned ids
+    // first just reorders them to the front of the queue.
+    const ownedSteamAppIds = gfnGames
+      .filter(g => g.owned)
+      .map(g => g.steamAppId)
+      .filter((id): id is string => !!id);
+    const allSteamAppIds = gfnGames
+      .map(g => g.steamAppId)
+      .filter((id): id is string => !!id);
     const steamAppIds = Array.from(
-      new Set(
-        gfnGames.map(g => g.steamAppId).filter((id): id is string => !!id),
-      ),
+      new Set([...ownedSteamAppIds, ...allSteamAppIds]),
     );
     if (steamAppIds.length === 0) {
       return;
@@ -548,10 +561,11 @@ function LibraryScreen() {
     }
 
     fetchSteamPrices(steamAppIds, cc).then(prices => {
-      if (Object.keys(prices).length > 0) {
-        setSteamPriceMap(prev => ({...prev, ...prices}));
-      }
-      saveSteamPriceCache(prices, cc, sig);
+      setSteamPriceMap(prev => {
+        const merged = {...prev, ...prices};
+        saveSteamPriceCache(merged, cc, sig);
+        return merged;
+      });
     });
   }, [gfnGames, deviceRegion]);
 
