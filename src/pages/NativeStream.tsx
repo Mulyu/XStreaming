@@ -56,6 +56,9 @@ import VirtualGamepadEditor, {
   ButtonConfig,
 } from '../components/VirtualGamepadEditor';
 import PerfPanel from '../components/PerfPanel';
+import StreamControlRail, {
+  StreamInputMode,
+} from '../components/StreamControlRail';
 import RTCFsrView from '../components/RTCFsrView';
 import NativeTouchOverlay from '../components/NativeTouchOverlay';
 import SwipeAimZone from '../components/SwipeAimZone';
@@ -251,7 +254,7 @@ export function NativeStreamScreenBase({
   const [streamApi, setStreamApi] = React.useState<any>(null);
   const [settings, setSettings] = React.useState<any>({});
   const [isExiting, setIsExiting] = React.useState(false);
-  const [showModal, setShowModal] = React.useState(false);
+  const [showControlRail, setShowControlRail] = React.useState(false);
   const [showVirtualGamepad, setShowVirtualGamepad] = React.useState(false);
   // GFN-only: a trackpad-style overlay for mouse-driven (Steam) titles,
   // mutually exclusive with the virtual gamepad -- see renderMouseTrackpad().
@@ -332,7 +335,6 @@ export function NativeStreamScreenBase({
   const batteryOptPromptRef = React.useRef(false);
   const isRequestExit = React.useRef(false);
   const isConnected = React.useRef(false);
-  const optionsDialogOpenRef = React.useRef(false);
   const macroSequenceTimersRef = React.useRef<any[]>([]);
   const activeMacroButtonsRef = React.useRef<Set<string>>(new Set());
   const activeMacroSticksRef = React.useRef<Set<string>>(new Set());
@@ -1074,7 +1076,7 @@ export function NativeStreamScreenBase({
               menuLongPressTimer.current = undefined;
               menuLongPressTriggered.current = true;
               targetState.Menu = 0;
-              setShowModal(true);
+              setShowControlRail(true);
             }, 2000);
           }
         },
@@ -1401,7 +1403,7 @@ export function NativeStreamScreenBase({
           e.preventDefault();
 
           // Show confirm modal
-          setShowModal(true);
+          setShowControlRail(true);
           GamepadManager.setCurrentScreen('');
         }
       }
@@ -2293,8 +2295,8 @@ export function NativeStreamScreenBase({
   );
   handleExitRef.current = handleExit;
 
-  const handleCloseModal = React.useCallback(() => {
-    setShowModal(false);
+  const handleCloseControlRail = React.useCallback(() => {
+    setShowControlRail(false);
     GamepadManager.setCurrentScreen('stream');
 
     if (!isConnected.current) {
@@ -2763,7 +2765,7 @@ export function NativeStreamScreenBase({
       setShowPerformance(false);
       setShowVirtualGamepad(false);
       webrtcClient && webrtcClient.close();
-      setShowModal(false);
+      setShowControlRail(false);
       if (settings.sensor) {
         SensorModule.stopSensor();
         GamepadSensorModule.stopSensor();
@@ -2795,8 +2797,8 @@ export function NativeStreamScreenBase({
       setOpenMicro(false);
     }
 
-    handleCloseModal();
-  }, [handleCloseModal, t, webrtcClient]);
+    handleCloseControlRail();
+  }, [handleCloseControlRail, t, webrtcClient]);
 
   const getActiveProfileName = React.useCallback(() => {
     return settings.custom_virtual_gamepad || LIVE_GAMEPAD_PROFILE;
@@ -2968,220 +2970,81 @@ export function NativeStreamScreenBase({
     setSettings(nextSettings);
   }, []);
 
-  const showNativeOptionsDialog = React.useCallback(
-    async (items: Array<{id: string; title: string}>, options: any = {}) => {
-      if (!NativeInputDialog?.showOptions) {
-        return null;
+  const handleSetInputMode = React.useCallback(
+    (mode: StreamInputMode) => {
+      if (mode !== 'gamepad' && showVirtualGamepad) {
+        clearMacroTimers();
+        setShowVirtualGamepad(false);
       }
-
-      try {
-        return await NativeInputDialog.showOptions({
-          items,
-          ...options,
-        });
-      } catch (error) {
-        return null;
+      if (mode !== 'mouse' && showMouseTrackpad) {
+        setShowMouseTrackpad(false);
+      }
+      if (mode === 'gamepad') {
+        setShowVirtualGamepad(true);
+      } else if (mode === 'mouse') {
+        setShowMouseTrackpad(true);
       }
     },
-    [],
+    [clearMacroTimers, showMouseTrackpad, showVirtualGamepad],
   );
 
-  const openOptionsModal = React.useCallback(async () => {
-    if (optionsDialogOpenRef.current) {
-      return;
-    }
-    if (portraitMode || isInPictureInPicture) {
-      handleCloseModal();
-      return;
-    }
-
-    optionsDialogOpenRef.current = true;
-    GamepadManager.setCurrentScreen('');
-
-    const items: Array<{id: string; title: string}> = [];
-    if (connectState === CONNECTED) {
-      items.push({
-        id: 'togglePerformance',
-        title: t('Toggle Performance'),
-      });
-      items.push({
-        id: 'toggleVirtualGamepad',
-        title: t('Toggle Virtual Gamepad'),
-      });
-      if (showVirtualGamepad) {
-        items.push({
-          id: 'editVirtualGamepad',
-          title: t('Edit Virtual Gamepad'),
-        });
-      }
-      if (route.params?.streamType === 'gfn') {
-        items.push({
-          id: 'toggleMouseTrackpad',
-          title: t('Toggle Mouse Trackpad'),
-        });
-      }
-      if (coverAvailable) {
-        items.push({
-          id: 'toggleCoverControls',
-          title: coverPresented
-            ? t('Hide cover controls')
-            : t('Show cover controls'),
-        });
-      }
-      if (settings.enable_microphone) {
-        items.push({
-          id: 'toggleMicrophone',
-          title: openMicro ? t('Close Microphone') : t('Open Microphone'),
-        });
-      }
-      items.push({
-        id: 'pressNexus',
-        title: t('Press Nexus'),
-      });
-      if (
-        route.params?.streamType !== 'cloud' &&
-        route.params?.streamType !== 'gfn'
-      ) {
-        items.push({
-          id: 'longPressNexus',
-          title: t('Long press Nexus'),
-        });
-        items.push({
-          id: 'sendText',
-          title: t('Send text'),
-        });
-      }
-      if (
-        settings.power_on &&
-        route.params?.streamType !== 'cloud' &&
-        route.params?.streamType !== 'gfn'
-      ) {
-        items.push({
-          id: 'disconnectPowerOff',
-          title: t('Disconnect and power off'),
-        });
+  const handleToggleCoverControls = React.useCallback(async () => {
+    if (coverPresented) {
+      // Manual hide: remember it so the auto-present doesn't turn it back
+      // on until the user re-enables or the device is re-opened.
+      coverHiddenRef.current = true;
+      CoverDisplayManager?.dismiss?.();
+      setCoverPresented(false);
+    } else {
+      coverHiddenRef.current = false;
+      try {
+        await CoverDisplayManager?.present?.('XCoverScreen');
+        setCoverPresented(true);
+      } catch (e) {
+        log.warn('present cover failed:', e);
       }
     }
-    items.push({
-      id: 'disconnect',
-      title: t('Disconnect'),
-    });
+  }, [coverPresented]);
 
-    const result = await showNativeOptionsDialog(items, {
-      showAudioGainControl: connectState === CONNECTED,
-      audioGain,
-    });
-    optionsDialogOpenRef.current = false;
+  const handleRailPressNexus = React.useCallback(() => {
+    gpState.Nexus = 1;
+    setTimeout(() => {
+      gpState.Nexus = 0;
+    }, 120);
+  }, []);
 
-    if (result?.action !== 'select') {
-      handleCloseModal();
-      return;
-    }
+  const handleRailLongPressNexus = React.useCallback(() => {
+    gpState.Nexus = 1;
+    setTimeout(() => {
+      gpState.Nexus = 0;
+    }, 1000);
+  }, []);
 
-    handleCloseModal();
+  const handleRailSendText = React.useCallback(() => {
+    handleCloseControlRail();
+    openSendTextDialog();
+  }, [handleCloseControlRail, openSendTextDialog]);
 
-    switch (result.id) {
-      case 'togglePerformance':
-        setShowPerformance(!showPerformance);
-        break;
-      case 'toggleVirtualGamepad': {
-        if (showVirtualGamepad) {
-          clearMacroTimers();
-        }
-        const nextShowGamepad = !showVirtualGamepad;
-        setShowVirtualGamepad(nextShowGamepad);
-        // Mutually exclusive with the mouse trackpad -- both are full-screen
-        // touch overlays.
-        if (nextShowGamepad) {
-          setShowMouseTrackpad(false);
-        }
-        break;
-      }
-      case 'editVirtualGamepad':
-        handleOpenGamepadEditor();
-        break;
-      case 'toggleMouseTrackpad': {
-        const nextShowTrackpad = !showMouseTrackpad;
-        setShowMouseTrackpad(nextShowTrackpad);
-        if (nextShowTrackpad && showVirtualGamepad) {
-          clearMacroTimers();
-          setShowVirtualGamepad(false);
-        }
-        break;
-      }
-      case 'toggleCoverControls':
-        if (coverPresented) {
-          // Manual hide: remember it so the auto-present doesn't turn it back
-          // on until the user re-enables or the device is re-opened.
-          coverHiddenRef.current = true;
-          CoverDisplayManager?.dismiss?.();
-          setCoverPresented(false);
-        } else {
-          coverHiddenRef.current = false;
-          try {
-            await CoverDisplayManager?.present?.('XCoverScreen');
-            setCoverPresented(true);
-          } catch (e) {
-            log.warn('present cover failed:', e);
-          }
-        }
-        break;
-      case 'toggleMicrophone':
-        await handleToggleMic();
-        break;
-      case 'pressNexus':
-        gpState.Nexus = 1;
-        setTimeout(() => {
-          gpState.Nexus = 0;
-        }, 120);
-        break;
-      case 'longPressNexus':
-        gpState.Nexus = 1;
-        setTimeout(() => {
-          gpState.Nexus = 0;
-        }, 1000);
-        break;
-      case 'sendText':
-        openSendTextDialog();
-        break;
-      case 'disconnectPowerOff':
-        requestExit(true);
-        break;
-      case 'disconnect':
-        requestExit(false);
-        break;
-      default:
-        break;
-    }
-  }, [
-    clearMacroTimers,
-    audioGain,
-    connectState,
-    coverAvailable,
-    coverPresented,
-    handleCloseModal,
-    handleOpenGamepadEditor,
-    handleToggleMic,
-    isInPictureInPicture,
-    openMicro,
-    openSendTextDialog,
-    portraitMode,
-    requestExit,
-    route.params?.streamType,
-    settings.enable_microphone,
-    settings.power_on,
-    showNativeOptionsDialog,
-    showPerformance,
-    showVirtualGamepad,
-    showMouseTrackpad,
-    t,
-  ]);
+  const handleRailEditGamepad = React.useCallback(() => {
+    handleCloseControlRail();
+    handleOpenGamepadEditor();
+  }, [handleCloseControlRail, handleOpenGamepadEditor]);
+
+  const handleRailDisconnectPowerOff = React.useCallback(() => {
+    handleCloseControlRail();
+    requestExit(true);
+  }, [handleCloseControlRail, requestExit]);
+
+  const handleRailDisconnect = React.useCallback(() => {
+    handleCloseControlRail();
+    requestExit(false);
+  }, [handleCloseControlRail, requestExit]);
 
   React.useEffect(() => {
-    if (showModal) {
-      openOptionsModal();
+    if (showControlRail) {
+      GamepadManager.setCurrentScreen('');
     }
-  }, [openOptionsModal, showModal]);
+  }, [showControlRail]);
 
   const renderVirtualGamepad = () => {
     if (portraitMode) {
@@ -3325,7 +3188,7 @@ export function NativeStreamScreenBase({
             icon="menu"
             size={28}
             onPress={() => {
-              setShowModal(true);
+              setShowControlRail(true);
             }}
           />
         </View>
@@ -3333,6 +3196,50 @@ export function NativeStreamScreenBase({
     } else {
       return null;
     }
+  };
+
+  const renderControlRail = () => {
+    if (portraitMode || isInPictureInPicture) {
+      return null;
+    }
+    const inputMode: StreamInputMode = showVirtualGamepad
+      ? 'gamepad'
+      : showMouseTrackpad
+      ? 'mouse'
+      : 'off';
+    const isConsoleStream =
+      route.params?.streamType !== 'cloud' &&
+      route.params?.streamType !== 'gfn';
+    return (
+      <StreamControlRail
+        visible={showControlRail}
+        onClose={handleCloseControlRail}
+        streamType={route.params?.streamType}
+        connected={connectState === CONNECTED}
+        inputMode={inputMode}
+        onSetInputMode={handleSetInputMode}
+        showMouseOption={route.params?.streamType === 'gfn'}
+        showEditGamepadLayout={inputMode === 'gamepad'}
+        onEditGamepadLayout={handleRailEditGamepad}
+        showMicrophone={!!settings.enable_microphone}
+        microphoneOpen={openMicro}
+        onToggleMicrophone={handleToggleMic}
+        volume={audioGain}
+        onVolumeChange={handleAudioGainChange}
+        performanceVisible={showPerformance}
+        onTogglePerformance={() => setShowPerformance(!showPerformance)}
+        showCoverControls={coverAvailable}
+        coverPresented={coverPresented}
+        onToggleCoverControls={handleToggleCoverControls}
+        showConsoleActions={isConsoleStream}
+        onPressNexus={handleRailPressNexus}
+        onLongPressNexus={handleRailLongPressNexus}
+        onSendText={handleRailSendText}
+        showPowerOff={!!settings.power_on && isConsoleStream}
+        onDisconnectPowerOff={handleRailDisconnectPowerOff}
+        onDisconnect={handleRailDisconnect}
+      />
+    );
   };
 
   const useFsrRenderer = !!settings.fsr;
@@ -3499,7 +3406,7 @@ export function NativeStreamScreenBase({
           detailText={loadingText}
           onCancel={() => {
             setLoading(false);
-            setShowModal(true);
+            setShowControlRail(true);
           }}
         />
       )}
@@ -3537,6 +3444,8 @@ export function NativeStreamScreenBase({
       />
 
       {renderMenu()}
+
+      {renderControlRail()}
     </View>
   );
 }
