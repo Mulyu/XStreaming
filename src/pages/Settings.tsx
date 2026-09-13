@@ -645,13 +645,6 @@ function SettingsScreen({navigation}) {
           />
 
           <SectionLabel title={t('Others')} />
-          <SwitchRow
-            title={M('native_touch').title}
-            desc={M('native_touch').description}
-            value={settings.native_touch}
-            onChange={v => updateSetting('native_touch', v)}
-            flag={gfnNoOpFlag}
-          />
           <SliderRow
             title={M('anti_idle_max_minutes').title}
             desc={M('anti_idle_max_minutes').description}

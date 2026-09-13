@@ -259,6 +259,14 @@ export function NativeStreamScreenBase({
   // GFN-only: a trackpad-style overlay for mouse-driven (Steam) titles,
   // mutually exclusive with the virtual gamepad -- see renderMouseTrackpad().
   const [showMouseTrackpad, setShowMouseTrackpad] = React.useState(false);
+  // A control-rail input mode rather than a persisted setting -- unlike the
+  // other two overlays it renders no on-screen UI itself (it forwards raw
+  // touches straight through), so there's nothing to draw here, but it's
+  // mutually exclusive with them the same way. Xbox forwards it verbatim as
+  // touch (NativeTouchOverlay); GFN has no touch wire format, so it emulates
+  // single-finger tap/drag with the absolute-mouse message instead -- see
+  // GfnStreamAdapter's queuePointerInput.
+  const [showNativeTouch, setShowNativeTouch] = React.useState(false);
   const [connectState, setConnectState] = React.useState('');
   const [coverAvailable, setCoverAvailable] = React.useState(false);
   const [coverPresented, setCoverPresented] = React.useState(false);
@@ -1478,9 +1486,12 @@ export function NativeStreamScreenBase({
       remoteStream.current = new MediaStream(undefined);
 
       webrtcClient.setPollRate(_settings.polling_rate);
-      webrtcClient.setMaxTouchPoints(
-        Platform.isTV ? 0 : _settings.native_touch ? 10 : 0,
-      );
+      // Xbox negotiates touch-point capability once, at connect time, so this
+      // can't be deferred to whenever the control rail's touch mode gets
+      // toggled mid-session -- declare it up front whenever the device could
+      // plausibly use it. The rail's own enabled flag (showNativeTouch) is
+      // what actually gates whether any touch event ever gets sent.
+      webrtcClient.setMaxTouchPoints(Platform.isTV ? 0 : 10);
       webrtcClient.setSupportedSystemUis(supportedSystemUis);
       webrtcClient.setSystemUiHandler(handleSystemUiEvent);
       webrtcClient.setMessageHandler(handleStreamingMessage);
@@ -2979,13 +2990,18 @@ export function NativeStreamScreenBase({
       if (mode !== 'mouse' && showMouseTrackpad) {
         setShowMouseTrackpad(false);
       }
+      if (mode !== 'touch' && showNativeTouch) {
+        setShowNativeTouch(false);
+      }
       if (mode === 'gamepad') {
         setShowVirtualGamepad(true);
       } else if (mode === 'mouse') {
         setShowMouseTrackpad(true);
+      } else if (mode === 'touch') {
+        setShowNativeTouch(true);
       }
     },
-    [clearMacroTimers, showMouseTrackpad, showVirtualGamepad],
+    [clearMacroTimers, showMouseTrackpad, showNativeTouch, showVirtualGamepad],
   );
 
   const handleToggleCoverControls = React.useCallback(async () => {
@@ -3084,7 +3100,7 @@ export function NativeStreamScreenBase({
     if (
       portraitMode ||
       isInPictureInPicture ||
-      settings.native_touch ||
+      showNativeTouch ||
       connectState !== CONNECTED ||
       sens <= 0 ||
       activeSwipeRect.show === false
@@ -3202,7 +3218,9 @@ export function NativeStreamScreenBase({
     if (portraitMode || isInPictureInPicture) {
       return null;
     }
-    const inputMode: StreamInputMode = showVirtualGamepad
+    const inputMode: StreamInputMode = showNativeTouch
+      ? 'touch'
+      : showVirtualGamepad
       ? 'gamepad'
       : showMouseTrackpad
       ? 'mouse'
@@ -3246,16 +3264,16 @@ export function NativeStreamScreenBase({
   const fsrSharpness = settings.fsr_display_options?.sharpness ?? 2;
   const handleNativePointerInput = React.useCallback(
     (event: PointerWireData) => {
-      if (!webrtcClient || !settings.native_touch) {
+      if (!webrtcClient || !showNativeTouch) {
         return;
       }
 
       webrtcClient.getChannelProcessor('input')?.queuePointerInput([event]);
     },
-    [settings.native_touch, webrtcClient],
+    [showNativeTouch, webrtcClient],
   );
 
-  const video_format = settings.native_touch ? '' : settings.video_format;
+  const video_format = showNativeTouch ? '' : settings.video_format;
   const screen_position = settings.screen_position || 'center';
   const loadingPosterUrl =
     typeof route.params?.postUrl === 'string' ? route.params.postUrl : '';
@@ -3286,7 +3304,7 @@ export function NativeStreamScreenBase({
             fsrSharpness={fsrSharpness}
           />
           <NativeTouchOverlay
-            enabled={!!settings.native_touch && !isInPictureInPicture}
+            enabled={showNativeTouch && !isInPictureInPicture}
             videoFormat={video_format || ''}
             onPointerInput={handleNativePointerInput}
           />
@@ -3305,7 +3323,7 @@ export function NativeStreamScreenBase({
           screenPosition={screen_position}
         />
         <NativeTouchOverlay
-          enabled={!!settings.native_touch && !isInPictureInPicture}
+          enabled={showNativeTouch && !isInPictureInPicture}
           videoFormat={video_format || ''}
           onPointerInput={handleNativePointerInput}
         />
