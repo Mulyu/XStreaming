@@ -106,6 +106,11 @@ function LibraryScreen() {
   const [keyword, setKeyword] = React.useState('');
   const [sortMode, setSortMode] = React.useState<SortMode>('reco');
   const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
+  // Which tile currently has D-pad/remote focus -- Android TV moves this via
+  // standard View focus as the user navigates with the remote, but nothing
+  // rendered that fact until now, so a tile focused by the remote looked
+  // identical to every other tile.
+  const [focusedKey, setFocusedKey] = React.useState<string | null>(null);
 
   // xCloud-only enrichment for the sale badge and the Sale/Newest/Popular
   // sorts -- GFN has no equivalent price, release-date or popularity data on
@@ -735,13 +740,23 @@ function LibraryScreen() {
     // since they answer "which service" rather than "playable right now".
     const isPlayable = isCatalogTitleOwned(item);
     const discount = saleDiscount(item);
+    const isFocused = focusedKey === item.key;
 
     return (
-      <View style={[styles.cell, {width: `${100 / numColumns}%`}]}>
+      <View
+        style={[
+          styles.cell,
+          {width: `${100 / numColumns}%`},
+          isFocused && styles.cellFocused,
+        ]}>
         <Pressable
-          style={styles.card}
+          style={[styles.card, isFocused && styles.cardFocused]}
           onPress={() => openTitle(item)}
           onLongPress={() => openTitleDetail(item)}
+          onFocus={() => setFocusedKey(item.key)}
+          onBlur={() =>
+            setFocusedKey(prev => (prev === item.key ? null : prev))
+          }
           android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
           {item.imageUrl ? (
             <Image
@@ -1019,6 +1034,10 @@ const styles = StyleSheet.create({
   centreText: {color: '#8A9A92', fontSize: 14},
   list: {paddingHorizontal: 6, paddingBottom: 20},
   cell: {padding: 4},
+  // Raises the whole cell (and the card's focus scale-up inside it) above
+  // its row siblings, so the popped-out tile never paints underneath the
+  // next one over.
+  cellFocused: {zIndex: 10},
   // Square-cropped tile: the card IS the art, badges/title overlay on top of
   // it so more titles fit on screen at once (was a 16:10 card + text footer).
   card: {
@@ -1027,6 +1046,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: 'rgba(140,140,150,0.14)',
+  },
+  // D-pad/remote focus indicator (Android TV navigates by moving View focus,
+  // not touch) -- without this every tile looked identical regardless of
+  // which one the remote had actually landed on.
+  cardFocused: {
+    borderWidth: 3,
+    borderColor: '#FFD54A',
+    transform: [{scale: 1.045}],
   },
   thumb: {...StyleSheet.absoluteFillObject},
   thumbEmpty: {
