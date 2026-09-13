@@ -29,7 +29,6 @@ import {
 import {
   fetchSteamChart,
   getFreshSteamChart,
-  STEAM_CHART_PAGE_SIZE,
   SteamChartEntry,
 } from '../storeCharts/steamCharts';
 
@@ -56,6 +55,24 @@ type StoreRow = {
   price?: string;
   originalPrice?: string;
   catalogTitle: CatalogTitle;
+};
+
+// Whether another Steam chart page is worth requesting after one that ended
+// at `cumulativeStart`. Steam's search endpoint doesn't reliably return a
+// full `count`-sized page even mid-list (confirmed live: a page can come
+// back with 95-98 of a requested 100 rows while total_count is still in the
+// thousands), so "got fewer than we asked for" is not a valid end-of-results
+// signal -- only an empty page, or reaching the endpoint's own total_count,
+// is.
+const hasMoreSteamPages = (
+  entriesLength: number,
+  cumulativeStart: number,
+  totalCount?: number,
+): boolean => {
+  if (entriesLength === 0) {
+    return false;
+  }
+  return totalCount === undefined || cumulativeStart < totalCount;
 };
 
 const STEAM_LANGUAGE: Record<string, string> = {
@@ -172,7 +189,13 @@ function StoreScreen() {
         fetchSteamChart(kind, steamCc, steamLanguage, 0)
           .then(page => {
             setSteamEntries(page.entries);
-            setSteamHasMore(page.entries.length >= STEAM_CHART_PAGE_SIZE);
+            setSteamHasMore(
+              hasMoreSteamPages(
+                page.entries.length,
+                page.entries.length,
+                page.totalCount,
+              ),
+            );
           })
           .finally(() => setLoading(false));
       }
@@ -254,9 +277,7 @@ function StoreScreen() {
         }
         start += page.entries.length;
         foundVisibleRow = page.entries.some(isVisibleMatch);
-        const reachedTotal =
-          page.totalCount !== undefined && start >= page.totalCount;
-        more = page.entries.length >= STEAM_CHART_PAGE_SIZE && !reachedTotal;
+        more = hasMoreSteamPages(page.entries.length, start, page.totalCount);
         setSteamEntries(prev => [...prev, ...page.entries]);
       }
       setSteamHasMore(more && start < MAX_STEAM_ENTRIES);
