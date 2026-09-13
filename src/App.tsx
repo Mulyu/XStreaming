@@ -50,6 +50,7 @@ import SettingsScreen from './pages/Settings';
 import TitleDetailScreen from './pages/TitleDetail';
 import LibraryScreen from './pages/Library';
 import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
+import StoreScreen from './pages/Store';
 import GameMapScreen from './pages/GameMap';
 import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
@@ -161,6 +162,7 @@ const withTabScreen = (ScreenComponent: any) => {
 };
 
 const LibraryTabScreen = withTabScreen(LibraryScreen);
+const StoreTabScreen = withTabScreen(StoreScreen);
 const SettingsTabScreen = withTabScreen(SettingsScreen);
 
 const HomeBackgroundScreen = withPageBackground(HomeScreen);
@@ -203,6 +205,7 @@ function MainTabs() {
       screenOptions={{headerShown: false}}
       tabBar={props => <HubTabBar {...props} />}>
       <MainTab.Screen name="Library" component={LibraryTabScreen} />
+      <MainTab.Screen name="Store" component={StoreTabScreen} />
       <MainTab.Screen name="Settings" component={SettingsTabScreen} />
     </MainTab.Navigator>
   );
