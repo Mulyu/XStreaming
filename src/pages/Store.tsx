@@ -182,6 +182,18 @@ function StoreScreen() {
   );
 
   React.useEffect(() => {
+    // Drop the previous selection's rows immediately -- otherwise they stay
+    // on screen (mixed in under the new selection's ranks/prices) until the
+    // new chart's fetch resolves. Pull-to-refresh calls loadChart directly
+    // for the *same* selection and intentionally skips this, so the old list
+    // stays visible under the native refresh spinner instead of flashing
+    // empty.
+    if (provider === 'xcloud') {
+      setXboxEntries([]);
+    } else {
+      setSteamEntries([]);
+      setSteamHasMore(true);
+    }
     loadChart(provider, chartKind);
   }, [provider, chartKind, loadChart]);
 
@@ -191,11 +203,27 @@ function StoreScreen() {
     setRefreshing(false);
   }, [provider, chartKind, loadChart]);
 
-  // Steam's chart is a live search scan -- there's always another page until
-  // the endpoint says otherwise, so scrolling to the end just keeps fetching
-  // deeper. The Xbox chart has no further pages to fetch (see steamHasMore's
-  // comment above), so this is a no-op there.
-  const loadMore = React.useCallback(() => {
+  // Steam-backed titles on GFN are a small, slow-growing set (~1,100) next to
+  // Steam's own charts, so a single 100-item page can easily add zero titles
+  // that are actually on GFN -- and when a page adds nothing, the rendered
+  // list's content size doesn't change, so FlatList's onEndReached never
+  // fires again (it only re-arms once the content size it last fired at
+  // changes). So a single call here doesn't stop at the next page: it keeps
+  // fetching until a page actually grows the visible list (or the sale
+  // filter's subset of it), Steam's own endpoint says there's no more, or the
+  // per-session cap is hit -- guaranteeing every scroll-to-bottom either grows
+  // the list or permanently ends pagination, never silently does nothing.
+  const gfnSteamAppIds = React.useMemo(
+    () =>
+      new Set(
+        gfnGames
+          .map(game => game.steamAppId)
+          .filter((id): id is string => !!id),
+      ),
+    [gfnGames],
+  );
+
+  const loadMore = React.useCallback(async () => {
     if (
       provider !== 'gfn' ||
       loading ||
@@ -206,19 +234,35 @@ function StoreScreen() {
       return;
     }
     const kind = chartKind === 'best' ? 'topsellers' : 'new';
-    const nextStart = steamEntries.length;
+    const isVisibleMatch = (entry: SteamChartEntry): boolean => {
+      if (!gfnSteamAppIds.has(entry.appId)) {
+        return false;
+      }
+      return saleOnly ? !!entry.originalPrice : true;
+    };
+
     setLoadingMore(true);
-    fetchSteamChart(kind, steamCc, steamLanguage, nextStart)
-      .then(page => {
-        setSteamEntries(prev => [...prev, ...page.entries]);
+    try {
+      let start = steamEntries.length;
+      let more = true;
+      let foundVisibleRow = false;
+      while (!foundVisibleRow && more && start < MAX_STEAM_ENTRIES) {
+        const page = await fetchSteamChart(kind, steamCc, steamLanguage, start);
+        if (page.entries.length === 0) {
+          more = false;
+          break;
+        }
+        start += page.entries.length;
+        foundVisibleRow = page.entries.some(isVisibleMatch);
         const reachedTotal =
-          page.totalCount !== undefined &&
-          nextStart + page.entries.length >= page.totalCount;
-        setSteamHasMore(
-          page.entries.length >= STEAM_CHART_PAGE_SIZE && !reachedTotal,
-        );
-      })
-      .finally(() => setLoadingMore(false));
+          page.totalCount !== undefined && start >= page.totalCount;
+        more = page.entries.length >= STEAM_CHART_PAGE_SIZE && !reachedTotal;
+        setSteamEntries(prev => [...prev, ...page.entries]);
+      }
+      setSteamHasMore(more && start < MAX_STEAM_ENTRIES);
+    } finally {
+      setLoadingMore(false);
+    }
   }, [
     provider,
     chartKind,
@@ -226,6 +270,8 @@ function StoreScreen() {
     steamLanguage,
     steamEntries.length,
     steamHasMore,
+    saleOnly,
+    gfnSteamAppIds,
     loading,
     loadingMore,
   ]);
