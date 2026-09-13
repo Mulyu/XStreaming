@@ -5,6 +5,12 @@ import {getGfnLocaleSlug, getGfnGraphqlLocale} from './locale';
 // GeForce NOW authenticated catalog. The public supported-games list has no
 // ownership info and omits account-linked titles (e.g. Battle.net games like
 // Overwatch), so the user's owned library comes from the authed GraphQL API.
+// That same API also exposes the full browse catalog (fetchGfnFullCatalog
+// below) -- much larger than the public JSON's ~1500-title snapshot, closer
+// to what NVIDIA's own site lists. Neither this nor the public JSON can see
+// Install-to-Play titles (NVIDIA's separate, much larger "install any game
+// from your own Steam library" tier) -- there's no known public API for
+// that catalog dimension at all.
 // Ported/condensed from OpenNOW (MIT).
 
 const GRAPHQL_URL = 'https://games.geforce.com/graphql';
@@ -277,6 +283,213 @@ export const clearOwnedGames = (): void => {
   try {
     storage.delete(ownedCacheKey());
   } catch {}
+};
+
+// Same variant-flattening as toOwnedGames, but for the unfiltered full-catalog
+// browse query below -- most items here are NOT owned, so ownership is read
+// per variant from gfn.library.status (present whenever the caller is signed
+// in) instead of being hardcoded true.
+const toBrowseGames = (app: RawApp): GfnGame[] => {
+  const title = app.title?.trim();
+  if (!title) {
+    return [];
+  }
+  const variants = app.variants ?? [];
+  const numericVariants = variants.filter(v => isNumeric(v.id));
+  const usable = numericVariants.length > 0 ? numericVariants : variants;
+  const image = firstImage(app.images, [
+    'HERO_IMAGE',
+    'TV_BANNER',
+    'KEY_ART',
+    'GAME_BOX_ART',
+  ]);
+  const appId = app.id && !isNumeric(app.id) ? app.id : undefined;
+
+  if (usable.length === 0) {
+    return [
+      {
+        id: isNumeric(app.id) ? app.id! : String(app.id ?? title),
+        title,
+        store: 'GFN',
+        genres: [],
+        imageUrl: image,
+        appId,
+      },
+    ];
+  }
+
+  const seen = new Set<string>();
+  return usable.reduce<GfnGame[]>((acc, variant) => {
+    const id = variant.id ?? String(app.id ?? title);
+    const store = variant.appStore ?? 'GFN';
+    const key = `${store}:${id}`;
+    if (seen.has(key)) {
+      return acc;
+    }
+    seen.add(key);
+    acc.push({
+      id,
+      title,
+      store,
+      genres: [],
+      imageUrl: image,
+      owned: variant.gfn?.library?.status
+        ? variant.gfn.library.status !== 'NOT_OWNED'
+        : undefined,
+      appId,
+      steamAppId:
+        store.toUpperCase() === 'STEAM'
+          ? steamAppIdFromUrl(variant.storeUrl)
+          : undefined,
+    });
+    return acc;
+  }, []);
+};
+
+const BROWSE_QUERY = `query GetStoreBrowseApps(
+  $vpcId: String!,
+  $locale: String!,
+  $sortString: String!,
+  $fetchCount: Int!,
+  $cursor: String!,
+  $filters: AppFilterFields!
+) {
+  apps(
+    vpcId: $vpcId,
+    language: $locale,
+    orderBy: $sortString,
+    first: $fetchCount,
+    after: $cursor,
+    filters: $filters
+  ) {
+    pageInfo { hasNextPage endCursor totalCount }
+    items {
+      id
+      title
+      images { HERO_IMAGE TV_BANNER KEY_ART GAME_BOX_ART }
+      variants {
+        id
+        appStore
+        storeUrl
+        gfn { library { status } }
+      }
+    }
+  }
+}`;
+
+const fullCatalogCacheKey = (): string =>
+  `gfn.fullCatalog.${getGfnLocaleSlug()}`;
+// 24h -- unlike the other caches above, a full paginated fetch here is dozens
+// of sequential requests, not one, so it's worth holding onto longer.
+const FULL_CATALOG_TTL_MS = 24 * 60 * 60 * 1000;
+const BROWSE_PAGE_SIZE = 200;
+// NVIDIA's own site advertises 4000+ games (2200+ of them Install-to-Play,
+// which this query can't see -- see the module comment). Cap comfortably
+// above that so a pagination bug (a cursor the server never advances) can't
+// loop forever.
+const BROWSE_MAX_PAGES = 40;
+
+// The full GFN browse catalog -- every title NVIDIA has cataloged, not just
+// what's in the signed-in user's library (fetchGfnOwnedGames) or the much
+// smaller static public JSON (publicGames.ts, ~1500 titles, a separate
+// snapshot NVIDIA publishes for anonymous browsing). Same `apps()` query and
+// AppFilterFields schema as the owned-library/rank queries above, just with
+// no ownership filter and paginated to the end via cursor/hasNextPage.
+// Ported from OpenNOW's GetStoreBrowseApps (MIT) -- the same query that backs
+// NVIDIA's own official "Games" browse page. Requires a signed-in token, same
+// precondition as the rank-order queries above; publicGames.ts stays the
+// fallback while signed out. Returns whatever was fetched before the first
+// error (possibly a partial list, possibly empty) rather than throwing --
+// callers should keep the previous list on an empty result.
+export const fetchGfnFullCatalog = async (
+  token: string,
+): Promise<GfnGame[]> => {
+  const vpcId = await getVpcId(token);
+  const games: GfnGame[] = [];
+  let cursor = '';
+  for (let page = 0; page < BROWSE_MAX_PAGES; page++) {
+    let res: Response;
+    try {
+      res = await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        headers: graphqlHeaders(token),
+        body: JSON.stringify({
+          query: BROWSE_QUERY,
+          variables: {
+            vpcId,
+            locale: getGfnGraphqlLocale(),
+            sortString: 'sortName:ASC',
+            fetchCount: BROWSE_PAGE_SIZE,
+            cursor,
+            filters: {},
+          },
+        }),
+      });
+    } catch {
+      break;
+    }
+    if (!res.ok) {
+      break;
+    }
+    let payload: any;
+    try {
+      payload = await res.json();
+    } catch {
+      break;
+    }
+    const apps = payload?.data?.apps;
+    const items: RawApp[] = apps?.items ?? [];
+    if (items.length === 0) {
+      break;
+    }
+    games.push(...items.flatMap(toBrowseGames));
+    const pageInfo = apps?.pageInfo;
+    const next = pageInfo?.endCursor;
+    if (pageInfo?.hasNextPage !== true || !next || next === cursor) {
+      break;
+    }
+    cursor = next;
+  }
+  if (games.length > 0) {
+    try {
+      storage.set(
+        fullCatalogCacheKey(),
+        JSON.stringify({ts: Date.now(), games}),
+      );
+    } catch {}
+  }
+  return games;
+};
+
+export const getFreshFullCatalog = (): GfnGame[] | null => {
+  const raw = storage.getString(fullCatalogCacheKey());
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (
+      Array.isArray(parsed?.games) &&
+      typeof parsed.ts === 'number' &&
+      Date.now() - parsed.ts < FULL_CATALOG_TTL_MS
+    ) {
+      return parsed.games as GfnGame[];
+    }
+  } catch {}
+  return null;
+};
+
+export const getCachedFullCatalog = (): GfnGame[] | null => {
+  const raw = storage.getString(fullCatalogCacheKey());
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.games) ? (parsed.games as GfnGame[]) : null;
+  } catch {
+    return null;
+  }
 };
 
 // Server-side sort strings confirmed live against GFN's own
