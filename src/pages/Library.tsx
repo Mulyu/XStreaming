@@ -98,7 +98,12 @@ function LibraryScreen() {
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const streamingTokens = useSelector((state: any) => state.streamingTokens);
 
-  const [xcloudTitles, setXcloudTitles] = React.useState<any[]>([]);
+  // Cached instant-paint like the GFN lists below -- this had no synchronous
+  // cache at all before, so the grid stayed empty until the network round
+  // trip finished on every single launch, not just the first one.
+  const [xcloudTitles, setXcloudTitles] = React.useState<any[]>(
+    () => getXcloudData()?.titles || [],
+  );
   const [gfnPublicGames, setGfnPublicGames] = React.useState<GfnGame[]>(
     () => getCachedGfnGames() || [],
   );
@@ -110,7 +115,6 @@ function LibraryScreen() {
   const [gfnOwnedGames, setGfnOwnedGames] = React.useState<GfnGame[]>(
     () => getFreshOwnedGames() || [],
   );
-  const [loading, setLoading] = React.useState(true);
   const [keyword, setKeyword] = React.useState('');
   const [sortMode, setSortMode] = React.useState<SortMode>('recent');
   const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
@@ -186,6 +190,13 @@ function LibraryScreen() {
   // only needs enough to show a card, hand off to TitleDetail, and (below)
   // enrich with the same price/popularity/release-date sources Cloud.tsx
   // used, for the sale badge and the Sale/Newest/Popular sorts.
+  // Persists alongside the instant-paint cache read above so the next
+  // launch doesn't have to wait on the network for this list either.
+  const persistXcloudTitles = React.useCallback((titles: any[]) => {
+    setXcloudTitles(titles);
+    saveXcloudData({...getXcloudData(), titles});
+  }, []);
+
   React.useEffect(() => {
     if (!streamingTokens?.xCloudToken) {
       return;
@@ -197,10 +208,10 @@ function LibraryScreen() {
     );
     api.getTitles().then((res: any) => {
       if (res?.results?.length > 0) {
-        api.getGamePassProducts(res.results).then(setXcloudTitles);
+        api.getGamePassProducts(res.results).then(persistXcloudTitles);
       }
     });
-  }, [streamingTokens?.xCloudToken]);
+  }, [streamingTokens?.xCloudToken, persistXcloudTitles]);
 
   // Store prices + sale status, batched and cached (24h) exactly like
   // Cloud.tsx's price fetch.
@@ -417,14 +428,6 @@ function LibraryScreen() {
     });
   }, []);
 
-  React.useEffect(() => {
-    // Nothing to actually await -- both fetches above resolve independently
-    // and paint as they arrive. This just clears the initial spinner once
-    // we've had a chance to show cached GFN data (xCloud may still be
-    // loading quietly in the background if this is the very first fetch).
-    setLoading(false);
-  }, []);
-
   // Pull-to-refresh: re-runs the same fetches the mount-time effects above
   // do (xCloud entitlements/recent, GFN public+owned catalog, GFN rank
   // orders, favorites), bypassing the 24h price/popularity caches is
@@ -445,7 +448,9 @@ function LibraryScreen() {
         tasks.push(
           api.getTitles().then((res: any) => {
             if (res?.results?.length > 0) {
-              return api.getGamePassProducts(res.results).then(setXcloudTitles);
+              return api
+                .getGamePassProducts(res.results)
+                .then(persistXcloudTitles);
             }
           }),
         );
@@ -506,7 +511,7 @@ function LibraryScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [streamingTokens?.xCloudToken, loadGfnFullCatalog]);
+  }, [streamingTokens?.xCloudToken, loadGfnFullCatalog, persistXcloudTitles]);
 
   // The full browse catalog supersedes the public JSON snapshot once it's
   // loaded (signed in); until then, or while signed out, the public JSON is
@@ -979,7 +984,7 @@ function LibraryScreen() {
         </View>
       </View>
 
-      {loading && catalog.length === 0 ? (
+      {catalog.length === 0 ? (
         <View style={styles.centre}>
           <ActivityIndicator />
           <Text style={styles.centreText}>{t('Loading...')}</Text>
