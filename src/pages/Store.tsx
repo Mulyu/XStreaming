@@ -20,12 +20,19 @@ import {
 } from '../catalog/unifiedCatalog';
 import {getSettings} from '../store/settingStore';
 import {getSystemRegion} from '../utils/locale';
-import {deriveMarketLanguage} from '../utils/storePrice';
 import {
-  fetchXboxChart,
-  getFreshXboxChart,
-  XboxChartEntry,
-} from '../storeCharts/xboxCharts';
+  deriveMarketLanguage,
+  fetchPricesWithRetry,
+  formatPrice,
+  getPrice,
+  isSaleForDisplay,
+  PriceInfo,
+} from '../utils/storePrice';
+import {
+  fetchXboxBrowsePage,
+  getFreshXboxBrowsePage,
+  XboxBrowseSort,
+} from '../storeCharts/xboxBrowse';
 import {
   fetchSteamChart,
   getFreshSteamChart,
@@ -36,11 +43,10 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const SALE_ACCENT = '#E67E22';
 
-// Steam's chart is a live search scan, not a curated top-N list -- deeper
-// pages exist for as long as the caller wants to scroll. Cap total fetched
-// entries so a "New Releases" scroll session (matches against GFN's catalog
-// are sparse -- see steamCharts.ts) can't scan the whole store.
-const MAX_STEAM_ENTRIES = 3000;
+// Both Xbox's and Steam's charts are live search scans, not curated top-N
+// lists -- deeper pages exist for as long as the caller wants to scroll. Cap
+// total fetched entries so a deep scroll session can't scan the whole store.
+const MAX_CHART_ENTRIES = 3000;
 
 type Provider = 'xcloud' | 'gfn';
 type ChartKind = 'best' | 'new';
@@ -57,14 +63,15 @@ type StoreRow = {
   catalogTitle: CatalogTitle;
 };
 
-// Whether another Steam chart page is worth requesting after one that ended
-// at `cumulativeStart`. Steam's search endpoint doesn't reliably return a
-// full `count`-sized page even mid-list (confirmed live: a page can come
-// back with 95-98 of a requested 100 rows while total_count is still in the
+// Whether another page is worth requesting after one that left the cursor at
+// `cumulativeStart`. Steam's search endpoint doesn't reliably return a full
+// `count`-sized page even mid-list (confirmed live: a page can come back
+// with 95-98 of a requested 100 rows while total_count is still in the
 // thousands), so "got fewer than we asked for" is not a valid end-of-results
-// signal -- only an empty page, or reaching the endpoint's own total_count,
-// is.
-const hasMoreSteamPages = (
+// signal -- only an empty page, or reaching the endpoint's own total count,
+// is. Xbox's browse endpoint reports its own total the same way, so the same
+// check applies to both.
+const hasMorePages = (
   entriesLength: number,
   cumulativeStart: number,
   totalCount?: number,
@@ -99,13 +106,14 @@ function StoreScreen() {
   const [loading, setLoading] = React.useState(true);
   const [loadingMore, setLoadingMore] = React.useState(false);
 
-  const [xboxEntries, setXboxEntries] = React.useState<XboxChartEntry[]>([]);
+  const [xboxProductIds, setXboxProductIds] = React.useState<string[]>([]);
+  const [xboxNextCT, setXboxNextCT] = React.useState<string | undefined>();
+  const [xboxHasMore, setXboxHasMore] = React.useState(true);
+  const [xboxPriceMap, setXboxPriceMap] = React.useState<
+    Record<string, PriceInfo>
+  >({});
+
   const [steamEntries, setSteamEntries] = React.useState<SteamChartEntry[]>([]);
-  // The Xbox chart is a fixed top-50 page (confirmed live -- query params
-  // that would normally page a listing have no effect on it), so there's
-  // never more to fetch there. Steam's is a live search scan that pages via
-  // `start`, so it starts optimistic and flips false once a page comes back
-  // short or past the endpoint's own total_count.
   const [steamHasMore, setSteamHasMore] = React.useState(true);
 
   // The two catalogs a chart entry gets matched against -- the same raw
@@ -116,6 +124,19 @@ function StoreScreen() {
     () => getCachedGfnGames() || [],
   );
 
+  // Bumped every time the provider or chart kind changes, so an async
+  // fetch/loadMore chain started for a since-abandoned selection can tell it
+  // was superseded and stop committing state instead of leaking stale rows
+  // into whatever selection is now showing (pull-to-refresh re-fetches the
+  // *same* selection, so it doesn't bump this).
+  const selectionGenerationRef = React.useRef(0);
+  // Synchronous re-entrancy guard for loadMore -- React state (loadingMore)
+  // only updates on the next render, so two onEndReached calls fired back to
+  // back before that render (a known FlatList quirk) would otherwise both
+  // read the same stale "not loading" value and both fetch the same page,
+  // duplicating rows.
+  const loadMoreInFlightRef = React.useRef(false);
+
   const gameLanguage = getSettings().preferred_game_language;
   const deviceRegion = getSystemRegion();
   const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
@@ -125,9 +146,12 @@ function StoreScreen() {
   const steamCc = market || 'US';
   const steamLanguage = STEAM_LANGUAGE[getSettings().locale] || 'english';
 
-  // xCloud's own catalog, for matching Xbox Store chart entries back to a
-  // launchable title -- same call Library.tsx makes, just not merged into a
-  // combined grid here.
+  // xCloud's own catalog, for matching Xbox browse results back to a
+  // launchable title (and the only source of the internal titleId a stream
+  // actually starts with -- no public Store API exposes that, so this step
+  // can't be skipped even though the browse results are already
+  // CloudGaming-filtered). Same call Library.tsx makes, just not merged into
+  // a combined grid here.
   React.useEffect(() => {
     if (!streamingTokens?.xCloudToken) {
       return;
@@ -158,22 +182,83 @@ function StoreScreen() {
       .catch(() => {});
   }, []);
 
+  const xcloudByProductId = React.useMemo(() => {
+    const map = new Map<string, any>();
+    xcloudTitles.forEach(item => {
+      if (item?.productId) {
+        map.set(String(item.productId).toUpperCase(), item);
+      }
+    });
+    return map;
+  }, [xcloudTitles]);
+
+  // Store prices aren't in the Game Pass catalog response (or the browse
+  // endpoint, which returns bare ids) -- fetched in bulk for the whole
+  // entitled catalog up front, same as Library.tsx does, so a price is
+  // already known for any row by the time it's matched regardless of how
+  // deep the browse pagination has gone.
+  React.useEffect(() => {
+    const productIds = xcloudTitles
+      .map((item: any) => item.productId)
+      .filter(Boolean);
+    if (productIds.length === 0) {
+      return;
+    }
+    fetchPricesWithRetry(productIds, market, language).then(({prices}) => {
+      if (Object.keys(prices).length > 0) {
+        setXboxPriceMap(prev => ({...prev, ...prices}));
+      }
+    });
+  }, [xcloudTitles, market, language]);
+
   const loadChart = React.useCallback(
-    (nextProvider: Provider, nextKind: ChartKind, force = false) => {
+    (
+      nextProvider: Provider,
+      nextKind: ChartKind,
+      force: boolean,
+      generation: number,
+    ) => {
+      const stillCurrent = () => selectionGenerationRef.current === generation;
       if (nextProvider === 'xcloud') {
-        const kind = nextKind === 'best' ? 'topPaid' : 'new';
+        const sort: XboxBrowseSort =
+          nextKind === 'best' ? 'MostPopular desc' : 'ReleaseDate desc';
         if (!force) {
-          const fresh = getFreshXboxChart(kind, xboxLocale);
+          const fresh = getFreshXboxBrowsePage(sort, xboxLocale);
           if (fresh) {
-            setXboxEntries(fresh);
+            setXboxProductIds(fresh.productIds);
+            setXboxNextCT(fresh.nextCT);
+            setXboxHasMore(
+              hasMorePages(
+                fresh.productIds.length,
+                fresh.productIds.length,
+                fresh.totalCount,
+              ),
+            );
             setLoading(false);
             return;
           }
         }
         setLoading(true);
-        fetchXboxChart(kind, xboxLocale)
-          .then(setXboxEntries)
-          .finally(() => setLoading(false));
+        fetchXboxBrowsePage(sort, xboxLocale)
+          .then(page => {
+            if (!stillCurrent()) {
+              return;
+            }
+            setXboxProductIds(page.productIds);
+            setXboxNextCT(page.nextCT);
+            setXboxHasMore(
+              hasMorePages(
+                page.productIds.length,
+                page.productIds.length,
+                page.totalCount,
+              ),
+            );
+          })
+          .finally(() => {
+            if (stillCurrent()) {
+              setLoading(false);
+            }
+          });
       } else {
         const kind = nextKind === 'best' ? 'topsellers' : 'new';
         setSteamHasMore(true);
@@ -188,54 +273,55 @@ function StoreScreen() {
         setLoading(true);
         fetchSteamChart(kind, steamCc, steamLanguage, 0)
           .then(page => {
+            if (!stillCurrent()) {
+              return;
+            }
             setSteamEntries(page.entries);
             setSteamHasMore(
-              hasMoreSteamPages(
+              hasMorePages(
                 page.entries.length,
                 page.entries.length,
                 page.totalCount,
               ),
             );
           })
-          .finally(() => setLoading(false));
+          .finally(() => {
+            if (stillCurrent()) {
+              setLoading(false);
+            }
+          });
       }
     },
-
     [xboxLocale, steamCc, steamLanguage],
   );
 
   React.useEffect(() => {
-    // Drop the previous selection's rows immediately -- otherwise they stay
-    // on screen (mixed in under the new selection's ranks/prices) until the
-    // new chart's fetch resolves. Pull-to-refresh calls loadChart directly
-    // for the *same* selection and intentionally skips this, so the old list
-    // stays visible under the native refresh spinner instead of flashing
-    // empty.
+    // A selection change supersedes whatever the previous one was doing --
+    // bump the generation so a still-in-flight fetch or loadMore chain from
+    // it notices and stops committing state, then drop its rows immediately
+    // so they don't linger under the new selection's ranks/prices while the
+    // fresh chart loads. Pull-to-refresh calls loadChart directly for the
+    // *same* selection and intentionally does neither, so the old list stays
+    // visible under the native refresh spinner instead of flashing empty.
+    selectionGenerationRef.current += 1;
+    const generation = selectionGenerationRef.current;
     if (provider === 'xcloud') {
-      setXboxEntries([]);
+      setXboxProductIds([]);
+      setXboxNextCT(undefined);
+      setXboxHasMore(true);
     } else {
       setSteamEntries([]);
       setSteamHasMore(true);
     }
-    loadChart(provider, chartKind);
+    loadChart(provider, chartKind, false, generation);
   }, [provider, chartKind, loadChart]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    loadChart(provider, chartKind, true);
+    loadChart(provider, chartKind, true, selectionGenerationRef.current);
     setRefreshing(false);
   }, [provider, chartKind, loadChart]);
 
-  // Steam-backed titles on GFN are a small, slow-growing set (~1,100) next to
-  // Steam's own charts, so a single 100-item page can easily add zero titles
-  // that are actually on GFN -- and when a page adds nothing, the rendered
-  // list's content size doesn't change, so FlatList's onEndReached never
-  // fires again (it only re-arms once the content size it last fired at
-  // changes). So a single call here doesn't stop at the next page: it keeps
-  // fetching until a page actually grows the visible list (or the sale
-  // filter's subset of it), Steam's own endpoint says there's no more, or the
-  // per-session cap is hit -- guaranteeing every scroll-to-bottom either grows
-  // the list or permanently ends pagination, never silently does nothing.
   const gfnSteamAppIds = React.useMemo(
     () =>
       new Set(
@@ -246,43 +332,118 @@ function StoreScreen() {
     [gfnGames],
   );
 
+  // Both providers' charts can add a page that grows the raw list without
+  // growing what's actually visible (an unmatched Xbox id, or -- much more
+  // commonly -- a Steam id that isn't on GFN's much smaller catalog). When
+  // that happens the rendered list's content size doesn't change, and
+  // FlatList only re-arms onEndReached once the content size it last fired
+  // at changes -- so a single call here doesn't stop at the next page: it
+  // keeps fetching until a page actually grows the visible list (or the sale
+  // filter's subset of it), the endpoint says there's no more, or the
+  // per-session cap is hit -- guaranteeing every scroll-to-bottom either
+  // grows the list or permanently ends pagination, never silently does
+  // nothing.
   const loadMore = React.useCallback(async () => {
-    if (
-      provider !== 'gfn' ||
-      loading ||
-      loadingMore ||
-      !steamHasMore ||
-      steamEntries.length >= MAX_STEAM_ENTRIES
-    ) {
+    if (loading || loadMoreInFlightRef.current) {
       return;
     }
-    const kind = chartKind === 'best' ? 'topsellers' : 'new';
-    const isVisibleMatch = (entry: SteamChartEntry): boolean => {
-      if (!gfnSteamAppIds.has(entry.appId)) {
-        return false;
-      }
-      return saleOnly ? !!entry.originalPrice : true;
-    };
+    const generation = selectionGenerationRef.current;
+    const stale = () => selectionGenerationRef.current !== generation;
 
-    setLoadingMore(true);
-    try {
-      let start = steamEntries.length;
-      let more = true;
-      let foundVisibleRow = false;
-      while (!foundVisibleRow && more && start < MAX_STEAM_ENTRIES) {
-        const page = await fetchSteamChart(kind, steamCc, steamLanguage, start);
-        if (page.entries.length === 0) {
-          more = false;
-          break;
-        }
-        start += page.entries.length;
-        foundVisibleRow = page.entries.some(isVisibleMatch);
-        more = hasMoreSteamPages(page.entries.length, start, page.totalCount);
-        setSteamEntries(prev => [...prev, ...page.entries]);
+    if (provider === 'xcloud') {
+      if (!xboxHasMore || xboxProductIds.length >= MAX_CHART_ENTRIES) {
+        return;
       }
-      setSteamHasMore(more && start < MAX_STEAM_ENTRIES);
-    } finally {
-      setLoadingMore(false);
+      const sort: XboxBrowseSort =
+        chartKind === 'best' ? 'MostPopular desc' : 'ReleaseDate desc';
+      const isVisibleMatch = (id: string): boolean => {
+        const item = xcloudByProductId.get(id.toUpperCase());
+        if (!item) {
+          return false;
+        }
+        if (!saleOnly) {
+          return true;
+        }
+        const price = getPrice(xboxPriceMap, id);
+        return !!price && isSaleForDisplay(price);
+      };
+
+      loadMoreInFlightRef.current = true;
+      setLoadingMore(true);
+      try {
+        let ct = xboxNextCT;
+        let count = xboxProductIds.length;
+        let more = true;
+        let foundVisibleRow = false;
+        while (!foundVisibleRow && more && count < MAX_CHART_ENTRIES) {
+          const page = await fetchXboxBrowsePage(sort, xboxLocale, ct);
+          if (stale()) {
+            return;
+          }
+          if (page.productIds.length === 0) {
+            more = false;
+            break;
+          }
+          count += page.productIds.length;
+          ct = page.nextCT;
+          foundVisibleRow = page.productIds.some(isVisibleMatch);
+          more =
+            hasMorePages(page.productIds.length, count, page.totalCount) &&
+            !!ct;
+          setXboxProductIds(prev => [...prev, ...page.productIds]);
+          setXboxNextCT(ct);
+        }
+        setXboxHasMore(more && count < MAX_CHART_ENTRIES);
+      } finally {
+        loadMoreInFlightRef.current = false;
+        if (!stale()) {
+          setLoadingMore(false);
+        }
+      }
+    } else {
+      if (!steamHasMore || steamEntries.length >= MAX_CHART_ENTRIES) {
+        return;
+      }
+      const kind = chartKind === 'best' ? 'topsellers' : 'new';
+      const isVisibleMatch = (entry: SteamChartEntry): boolean => {
+        if (!gfnSteamAppIds.has(entry.appId)) {
+          return false;
+        }
+        return saleOnly ? !!entry.originalPrice : true;
+      };
+
+      loadMoreInFlightRef.current = true;
+      setLoadingMore(true);
+      try {
+        let start = steamEntries.length;
+        let more = true;
+        let foundVisibleRow = false;
+        while (!foundVisibleRow && more && start < MAX_CHART_ENTRIES) {
+          const page = await fetchSteamChart(
+            kind,
+            steamCc,
+            steamLanguage,
+            start,
+          );
+          if (stale()) {
+            return;
+          }
+          if (page.entries.length === 0) {
+            more = false;
+            break;
+          }
+          start += page.entries.length;
+          foundVisibleRow = page.entries.some(isVisibleMatch);
+          more = hasMorePages(page.entries.length, start, page.totalCount);
+          setSteamEntries(prev => [...prev, ...page.entries]);
+        }
+        setSteamHasMore(more && start < MAX_CHART_ENTRIES);
+      } finally {
+        loadMoreInFlightRef.current = false;
+        if (!stale()) {
+          setLoadingMore(false);
+        }
+      }
     }
   }, [
     provider,
@@ -291,10 +452,15 @@ function StoreScreen() {
     steamLanguage,
     steamEntries.length,
     steamHasMore,
+    xboxLocale,
+    xboxProductIds.length,
+    xboxNextCT,
+    xboxHasMore,
+    xcloudByProductId,
+    xboxPriceMap,
     saleOnly,
     gfnSteamAppIds,
     loading,
-    loadingMore,
   ]);
 
   // Match this provider's raw chart against this provider's own catalog,
@@ -302,15 +468,9 @@ function StoreScreen() {
   // visible gap rather than silently compacting the list.
   const rows = React.useMemo((): StoreRow[] => {
     if (provider === 'xcloud') {
-      const byProductId = new Map<string, any>();
-      xcloudTitles.forEach(item => {
-        if (item?.productId) {
-          byProductId.set(String(item.productId).toUpperCase(), item);
-        }
-      });
       const result: StoreRow[] = [];
-      xboxEntries.forEach((entry, index) => {
-        const item = byProductId.get(entry.productId.toUpperCase());
+      xboxProductIds.forEach((productId, index) => {
+        const item = xcloudByProductId.get(productId.toUpperCase());
         if (!item) {
           return;
         }
@@ -318,12 +478,18 @@ function StoreScreen() {
         if (!catalogTitle) {
           return;
         }
+        const priceInfo = getPrice(xboxPriceMap, productId);
         result.push({
           rank: index + 1,
-          title: entry.title,
-          imageUrl: entry.imageUrl,
-          price: entry.price,
-          originalPrice: entry.originalPrice,
+          title: catalogTitle.title,
+          imageUrl: catalogTitle.imageUrl,
+          price: priceInfo
+            ? formatPrice(priceInfo.listPrice, priceInfo.currencyCode)
+            : undefined,
+          originalPrice:
+            priceInfo && isSaleForDisplay(priceInfo)
+              ? formatPrice(priceInfo.msrp, priceInfo.currencyCode)
+              : undefined,
           catalogTitle,
         });
       });
@@ -356,7 +522,14 @@ function StoreScreen() {
       });
     });
     return result;
-  }, [provider, xboxEntries, steamEntries, xcloudTitles, gfnGames]);
+  }, [
+    provider,
+    xboxProductIds,
+    xcloudByProductId,
+    xboxPriceMap,
+    steamEntries,
+    gfnGames,
+  ]);
 
   const visibleRows = React.useMemo(
     () => (saleOnly ? rows.filter(row => !!row.originalPrice) : rows),
