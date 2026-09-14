@@ -841,11 +841,31 @@ export const fetchGfnAppDetails = async (
   };
 };
 
+// The catalog-wide identity key: groups xCloud/GFN entries for the same
+// title (buildUnifiedCatalog), matches owned games back onto the base
+// catalog (mergeOwnedGames), and keys favorites/provider-preference storage
+// and the Library grid's own FlatList. Strips case, punctuation and
+// trademark symbols so e.g. "Marvel's Spider-Man: Remastered" and "MARVEL'S
+// SPIDER MAN REMASTERED" collapse to the same key.
+//
+// \p{L}/\p{N} (Unicode letter/number categories, not the ASCII-only a-z0-9
+// this used to check) is required, not cosmetic: a title in Japanese --
+// GFN's ja_JP-locale catalog serves these, e.g. "モンスターハンターワイルズ"
+// -- has NO a-z0-9 characters in it at all, so the old ASCII-only pattern
+// replaced the *entire* title with spaces and normalized it to "". Every
+// Japanese-only-titled game collapsed onto that same "" key, silently
+// merging them into whichever one was processed last and losing the rest
+// from the catalog, favorites, and provider preferences alike -- confirmed
+// live against a real ja_JP account's owned library (Overwatch, Monster
+// Hunter Wilds, and most of the rest of a ~200-title library all produced
+// the P{L}-empty "" key). \p{L}/\p{N} keeps any script's own letters/digits
+// as themselves instead of discarding them, so distinct titles in Japanese
+// (or Chinese, Korean, Cyrillic, ...) stay distinct.
 export const normalizeTitle = (title: string): string =>
   title
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim();
 
 // Merge owned games into the public catalog: mark matching public titles as
