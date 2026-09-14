@@ -25,6 +25,7 @@ import {
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../utils/debug';
 import {clearStreamToken} from '../store/streamTokenStore';
@@ -436,6 +437,13 @@ function SettingsScreen({navigation}) {
   const [debugGfnToken, setDebugGfnToken] = React.useState('');
   const handleShowGfnToken = () => {
     getValidGfnJwt().then(token => setDebugGfnToken(token || '(no token)'));
+  };
+  const handleCopyGfnToken = () => {
+    if (!debugGfnToken) {
+      return;
+    }
+    Clipboard.setString(debugGfnToken);
+    ToastAndroid.show('Copied', ToastAndroid.SHORT);
   };
 
   // Fetches the MES (subscription/quota) API for the signed-in GFN account --
@@ -905,17 +913,23 @@ function SettingsScreen({navigation}) {
           {/* TEMPORARY DEBUG -- remove after the locale investigation. */}
           <SettingItem
             title="[DEBUG] Show GFN token"
-            description="Tap to reveal, then long-press the text below to copy"
+            description="Tap to reveal the token below"
             onPress={handleShowGfnToken}
           />
           {!!debugGfnToken && (
-            <TextInput
-              value={debugGfnToken}
-              editable={false}
-              multiline
-              selectTextOnFocus
-              style={styles.debugTokenBox}
-            />
+            <>
+              <TextInput
+                value={debugGfnToken}
+                editable={false}
+                multiline
+                style={styles.debugTokenBox}
+              />
+              <SettingItem
+                title="[DEBUG] Copy token to clipboard"
+                description="Copies the token shown above"
+                onPress={handleCopyGfnToken}
+              />
+            </>
           )}
           <InfoRow
             title={t('GfnPlaytimeTitle')}
