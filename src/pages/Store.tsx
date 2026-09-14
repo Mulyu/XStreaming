@@ -153,9 +153,10 @@ function StoreScreen() {
   // is missing plenty of titles that are genuinely on GFN (confirmed live:
   // Onimusha: Way of the Sword, Monster Hunter Wilds, PUBG, and VRChat are
   // all absent from it despite being real GFN titles) -- it's a stale
-  // snapshot, not the source of truth. Signed-in users get the full,
-  // authenticated catalog instead (same call Library.tsx makes), which
-  // covers those; the public list stays the fallback while signed out.
+  // snapshot, not the source of truth. Signed-in users additionally get the
+  // full, authenticated catalog (same call Library.tsx makes) merged in
+  // alongside it -- see gfnBaseGames below for why this is a merge, not a
+  // replacement.
   const [gfnFullCatalog, setGfnFullCatalog] = React.useState<GfnGame[]>(
     () => getCachedFullCatalog() || [],
   );
@@ -240,10 +241,20 @@ function StoreScreen() {
     });
   }, []);
 
-  // Steam-app matching prefers the full catalog whenever it's available --
-  // see the state comment above for why the public list alone misses real
-  // GFN titles.
-  const gfnBaseGames = gfnFullCatalog.length > 0 ? gfnFullCatalog : gfnGames;
+  // Union, not "prefer the full catalog" -- live-verified the full catalog's
+  // steamAppId is populated for only a tiny fraction of browse results (a
+  // scan that should hit ~12% of Steam's topsellers on the public list's own
+  // numbers instead found roughly 1-in-650, and the one hit found was a
+  // title the account plausibly owns), so treating it as a strict
+  // replacement silently threw away the public list's own reliable
+  // steamAppId coverage. Concatenating keeps every reliable mapping from
+  // either source; downstream Set/Map building already collapses duplicate
+  // steamAppIds, and ordering the full catalog second lets its (richer,
+  // when present) entry win a collision.
+  const gfnBaseGames = React.useMemo(
+    () => [...gfnGames, ...gfnFullCatalog],
+    [gfnGames, gfnFullCatalog],
+  );
 
   const xcloudByProductId = React.useMemo(() => {
     const map = new Map<string, any>();
