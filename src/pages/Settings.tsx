@@ -6,7 +6,6 @@ import {
   View,
   NativeModules,
   ToastAndroid,
-  TextInput,
 } from 'react-native';
 import {Text, SegmentedButtons} from 'react-native-paper';
 import Spinner from '../components/Spinner';
@@ -25,7 +24,6 @@ import {
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
-import Clipboard from '@react-native-clipboard/clipboard';
 import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../utils/debug';
 import {clearStreamToken} from '../store/streamTokenStore';
@@ -428,22 +426,6 @@ function SettingsScreen({navigation}) {
     return gfnCatalogStatus.complete
       ? t('CatalogStatusComplete', {count: gfnCatalogStatus.count})
       : t('CatalogStatusPartial', {count: gfnCatalogStatus.count});
-  };
-
-  // TEMPORARY DEBUG ROW -- investigating why GFN's ja_JP-locale catalog
-  // resolves fewer owned titles than en_US does for the same account.
-  // Surfaces the current GFN JWT so it can be copied out and used to probe
-  // the GraphQL API directly with both locales. Remove once that's done.
-  const [debugGfnToken, setDebugGfnToken] = React.useState('');
-  const handleShowGfnToken = () => {
-    getValidGfnJwt().then(token => setDebugGfnToken(token || '(no token)'));
-  };
-  const handleCopyGfnToken = () => {
-    if (!debugGfnToken) {
-      return;
-    }
-    Clipboard.setString(debugGfnToken);
-    ToastAndroid.show('Copied', ToastAndroid.SHORT);
   };
 
   // Fetches the MES (subscription/quota) API for the signed-in GFN account --
@@ -910,27 +892,6 @@ function SettingsScreen({navigation}) {
             description={gfnCatalogDescription()}
             onPress={handleGfnCatalogReload}
           />
-          {/* TEMPORARY DEBUG -- remove after the locale investigation. */}
-          <SettingItem
-            title="[DEBUG] Show GFN token"
-            description="Tap to reveal the token below"
-            onPress={handleShowGfnToken}
-          />
-          {!!debugGfnToken && (
-            <>
-              <TextInput
-                value={debugGfnToken}
-                editable={false}
-                multiline
-                style={styles.debugTokenBox}
-              />
-              <SettingItem
-                title="[DEBUG] Copy token to clipboard"
-                description="Copies the token shown above"
-                onPress={handleCopyGfnToken}
-              />
-            </>
-          )}
           <InfoRow
             title={t('GfnPlaytimeTitle')}
             value={gfnPlaytimeDescription()}
@@ -1003,16 +964,6 @@ const styles = StyleSheet.create({
   },
   settingsScroll: {
     flex: 1,
-  },
-  // TEMPORARY DEBUG -- remove alongside the debug row above.
-  debugTokenBox: {
-    marginHorizontal: 16,
-    marginBottom: 10,
-    padding: 8,
-    fontSize: 11,
-    color: '#8A9A92',
-    backgroundColor: 'rgba(140,140,150,0.14)',
-    borderRadius: 8,
   },
   header: {paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6, gap: 10},
   title: {fontSize: 18, fontWeight: '800'},
