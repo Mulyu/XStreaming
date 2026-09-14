@@ -28,7 +28,17 @@ import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../utils/debug';
 import {clearStreamToken} from '../store/streamTokenStore';
 import {clearWebToken} from '../store/webTokenStore';
-import {clearXcloudData} from '../store/xcloudStore';
+import {
+  clearXcloudData,
+  getXcloudData,
+  saveXcloudData,
+} from '../store/xcloudStore';
+import {
+  loadXcloudCatalog,
+  getXcloudCatalogStatus,
+  clearXcloudCatalogStatus,
+  XcloudCatalogStatus,
+} from '../xCloud/loadCatalog';
 import {useGfnSignIn} from '../gfn/useGfnSignIn';
 import GfnSignInModal from '../components/GfnSignInModal';
 import {getValidGfnJwt, getValidGfnUserId} from '../gfn/auth';
@@ -39,6 +49,12 @@ import {
   GfnSubscriptionInfo,
   GfnRegionOption,
 } from '../gfn/session';
+import {
+  fetchGfnFullCatalog,
+  clearGfnFullCatalog,
+  getGfnFullCatalogStatus,
+  GfnFullCatalogStatus,
+} from '../gfn/catalog';
 import {
   DEFAULT_THEME_PRIMARY_COLOR,
   normalizeHexColor,
@@ -101,6 +117,19 @@ function SettingsScreen({navigation}) {
     signOut: signOutGfn,
   } = useGfnSignIn();
 
+  // Catalog cache status for each service's "clear + reload" row below --
+  // read from storage on mount so it reflects whatever the last load (by
+  // this screen or Library/Store) actually found, without needing a fetch
+  // just to display it.
+  const [xcloudCatalogStatus, setXcloudCatalogStatus] =
+    React.useState<XcloudCatalogStatus | null>(() => getXcloudCatalogStatus());
+  const [xcloudCatalogLoading, setXcloudCatalogLoading] = React.useState(false);
+  const [gfnCatalogStatus, setGfnCatalogStatus] =
+    React.useState<GfnFullCatalogStatus | null>(() =>
+      getGfnFullCatalogStatus(),
+    );
+  const [gfnCatalogLoading, setGfnCatalogLoading] = React.useState(false);
+
   const [gfnSubscription, setGfnSubscription] =
     React.useState<GfnSubscriptionInfo | null>(null);
   const [gfnPlaytimeLoading, setGfnPlaytimeLoading] = React.useState(false);
@@ -143,6 +172,18 @@ function SettingsScreen({navigation}) {
   // focus so an inline control never shows a stale value.
   React.useEffect(() => {
     const reload = () => setSettings(getSettings());
+    const unsubscribe = navigation.addListener('focus', reload);
+    return unsubscribe;
+  }, [navigation]);
+
+  // Library.tsx/Store.tsx can load either catalog in the background while
+  // this tab isn't focused -- refresh the status shown here so it doesn't
+  // keep reading "not loaded" after that happens elsewhere.
+  React.useEffect(() => {
+    const reload = () => {
+      setXcloudCatalogStatus(getXcloudCatalogStatus());
+      setGfnCatalogStatus(getGfnFullCatalogStatus());
+    };
     const unsubscribe = navigation.addListener('focus', reload);
     return unsubscribe;
   }, [navigation]);
@@ -299,6 +340,92 @@ function SettingsScreen({navigation}) {
       return;
     }
     navigation.navigate('Home', {intent: 'login'});
+  };
+
+  // Clears the cached xCloud catalog and immediately re-fetches it, so a
+  // truncated or stale entitled-titles list (Library.tsx/Store.tsx load this
+  // in the background on their own, with no way to tell the user something
+  // went wrong) can be retried on demand. The status this shows is also
+  // updated by those background loads, not just this button.
+  const handleXcloudCatalogReload = () => {
+    if (!streamingTokens?.xCloudToken || xcloudCatalogLoading) {
+      return;
+    }
+    clearXcloudData();
+    clearXcloudCatalogStatus();
+    setXcloudCatalogStatus(null);
+    setXcloudCatalogLoading(true);
+    loadXcloudCatalog(streamingTokens.xCloudToken)
+      .then(({titles, status}) => {
+        if (titles.length > 0) {
+          saveXcloudData({...getXcloudData(), titles});
+        }
+        setXcloudCatalogStatus(status);
+      })
+      .finally(() => setXcloudCatalogLoading(false));
+  };
+
+  const xcloudCatalogDescription = (): string => {
+    if (!streamingTokens?.xCloudToken) {
+      return t('CatalogStatusSignInFirst');
+    }
+    if (xcloudCatalogLoading) {
+      return t('CatalogStatusLoading');
+    }
+    if (!xcloudCatalogStatus) {
+      return t('CatalogStatusNotLoaded');
+    }
+    if (xcloudCatalogStatus.state === 'failed') {
+      return t('CatalogStatusFailed');
+    }
+    if (xcloudCatalogStatus.state === 'empty') {
+      return t('CatalogStatusEmpty');
+    }
+    return t('CatalogStatusComplete', {
+      count: xcloudCatalogStatus.hydratedCount,
+    });
+  };
+
+  // Same idea for GFN's full browse catalog -- unlike xCloud's one-shot
+  // fetch, this one is a many-page crawl that can now report a genuine
+  // "complete" vs "partial" outcome (see fetchGfnFullCatalog in gfn/catalog.ts).
+  const handleGfnCatalogReload = () => {
+    if (!gfnSignedIn || gfnCatalogLoading) {
+      return;
+    }
+    clearGfnFullCatalog();
+    setGfnCatalogStatus(null);
+    setGfnCatalogLoading(true);
+    getValidGfnJwt()
+      .then(token => {
+        if (!token) {
+          return;
+        }
+        return fetchGfnFullCatalog(token).then(() => {
+          setGfnCatalogStatus(getGfnFullCatalogStatus());
+        });
+      })
+      .finally(() => setGfnCatalogLoading(false));
+  };
+
+  const gfnCatalogDescription = (): string => {
+    if (!gfnSignedIn) {
+      return t('CatalogStatusSignInFirst');
+    }
+    if (gfnCatalogLoading) {
+      return t('CatalogStatusLoading');
+    }
+    if (!gfnCatalogStatus) {
+      return t('CatalogStatusNotLoaded');
+    }
+    if (gfnCatalogStatus.count === 0) {
+      return gfnCatalogStatus.complete
+        ? t('CatalogStatusEmpty')
+        : t('CatalogStatusFailed');
+    }
+    return gfnCatalogStatus.complete
+      ? t('CatalogStatusComplete', {count: gfnCatalogStatus.count})
+      : t('CatalogStatusPartial', {count: gfnCatalogStatus.count});
   };
 
   // Fetches the MES (subscription/quota) API for the signed-in GFN account --
@@ -665,6 +792,11 @@ function SettingsScreen({navigation}) {
             }
             onPress={handleXcloudAccountPress}
           />
+          <SettingItem
+            title={t('CatalogCacheTitle')}
+            description={xcloudCatalogDescription()}
+            onPress={handleXcloudCatalogReload}
+          />
 
           <SectionLabel title={t('SectionVideo')} />
           <SegmentedRow
@@ -754,6 +886,11 @@ function SettingsScreen({navigation}) {
               gfnSignedIn ? t('GfnSignedIn') : t('GfnAccountSignedOutDesc')
             }
             onPress={handleGfnAccountPress}
+          />
+          <SettingItem
+            title={t('CatalogCacheTitle')}
+            description={gfnCatalogDescription()}
+            onPress={handleGfnCatalogReload}
           />
           <InfoRow
             title={t('GfnPlaytimeTitle')}
