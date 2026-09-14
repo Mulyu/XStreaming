@@ -55,6 +55,16 @@ const SALE_ACCENT = '#E67E22';
 // total fetched entries so a deep scroll session can't scan the whole store.
 const MAX_CHART_ENTRIES = 3000;
 
+// Keep auto-continuing the initial load until at least this many rows are
+// visible (or pages run out) -- not just until the first non-empty page.
+// GFN's catalog only overlaps a small slice of Steam's chart (confirmed live:
+// a 100-title Top Sellers page can match a literal handful of GFN titles), so
+// stopping as soon as *any* match was found used to strand the screen on a
+// short list that fits entirely on-screen with nothing to scroll -- and
+// FlatList's onEndReached doesn't reliably re-fire for a list that never
+// grows past the viewport, so it silently never fetched page 2 onward.
+const MIN_VISIBLE_ROWS = 15;
+
 type Provider = 'xcloud' | 'gfn';
 type ChartKind = 'best' | 'new';
 
@@ -498,22 +508,29 @@ function StoreScreen() {
   );
 
   // The initial page-0 fetch above only ever tries one page, and it's common
-  // for that single page to match zero cloud-playable titles -- confirmed
-  // live that Steam's "New Releases" page 0 alone matches 0 of GFN's much
-  // smaller catalog. Since the empty-state view below replaces the FlatList
-  // entirely, its onEndReached (and with it, loadMore's own keep-fetching
-  // loop) would otherwise never get a chance to run, permanently stranding
-  // the screen on "not found" even though a match exists a few pages
-  // deeper. So: once the initial load settles with nothing visible yet and
-  // more pages exist, kick loadMore directly instead of waiting for a
-  // scroll gesture on a list that was never rendered. Gated on the relevant
-  // catalog having loaded at least once, so this doesn't burn through pages
-  // while xcloudTitles/gfnFullCatalog are still empty because *they* haven't
+  // for that single page to match few or zero cloud-playable titles --
+  // confirmed live that Steam's "New Releases" page 0 alone matches 0 of
+  // GFN's much smaller catalog, and even "Top Sellers" only matches a
+  // handful out of 100. Since a short match list can fit entirely on-screen
+  // with nothing to scroll, its onEndReached (and with it, loadMore's own
+  // keep-fetching loop) would otherwise never get a chance to run, silently
+  // stranding the screen on whatever the first page happened to match even
+  // though plenty more exist a few pages deeper. So: once the initial load
+  // settles below MIN_VISIBLE_ROWS and more pages exist, kick loadMore
+  // directly instead of waiting for a scroll gesture that may never come on
+  // a list that's too short to need one. Gated on the relevant catalog
+  // having loaded at least once, so this doesn't burn through pages while
+  // xcloudTitles/gfnFullCatalog are still empty because *they* haven't
   // arrived yet (every row would look "no match" for that unrelated reason).
   const catalogReady =
     provider === 'xcloud' ? xcloudTitles.length > 0 : gfnFullCatalog.length > 0;
   React.useEffect(() => {
-    if (loading || loadingMore || visibleRows.length > 0 || !catalogReady) {
+    if (
+      loading ||
+      loadingMore ||
+      visibleRows.length >= MIN_VISIBLE_ROWS ||
+      !catalogReady
+    ) {
       return;
     }
     if (provider === 'xcloud' ? !xboxHasMore : !steamHasMore) {
