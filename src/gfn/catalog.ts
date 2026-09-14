@@ -379,6 +379,8 @@ const BROWSE_QUERY = `query GetStoreBrowseApps(
 
 const fullCatalogCacheKey = (): string =>
   `gfn.fullCatalog.${getGfnLocaleSlug()}`;
+const fullCatalogStatusKey = (): string =>
+  `gfn.fullCatalog.status.${getGfnLocaleSlug()}`;
 // 24h -- unlike the other caches above, a full paginated fetch here is dozens
 // of sequential requests, not one, so it's worth holding onto longer.
 const FULL_CATALOG_TTL_MS = 24 * 60 * 60 * 1000;
@@ -388,29 +390,25 @@ const BROWSE_PAGE_SIZE = 200;
 // above that so a pagination bug (a cursor the server never advances) can't
 // loop forever.
 const BROWSE_MAX_PAGES = 40;
+// Extra attempts for a single page before giving up on the whole crawl -- a
+// transient failure on any one of up to 40 sequential requests used to end
+// the crawl right there (see GfnFullCatalogResult's `complete` below for why
+// that matters now that nothing else backstops this catalog).
+const BROWSE_PAGE_RETRIES = 2;
+const BROWSE_PAGE_RETRY_DELAY_MS = 1000;
 
-// The full GFN browse catalog -- every title NVIDIA has cataloged, not just
-// what's in the signed-in user's library (fetchGfnOwnedGames) or the much
-// smaller static public JSON (publicGames.ts, ~1500 titles, a separate
-// snapshot NVIDIA publishes for anonymous browsing). Same `apps()` query and
-// AppFilterFields schema as the owned-library/rank queries above, just with
-// no ownership filter and paginated to the end via cursor/hasNextPage.
-// Ported from OpenNOW's GetStoreBrowseApps (MIT) -- the same query that backs
-// NVIDIA's own official "Games" browse page. Requires a signed-in token, same
-// precondition as the rank-order queries above; publicGames.ts stays the
-// fallback while signed out. Returns whatever was fetched before the first
-// error (possibly a partial list, possibly empty) rather than throwing --
-// callers should keep the previous list on an empty result.
-export const fetchGfnFullCatalog = async (
+const delay = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+const fetchBrowsePage = async (
   token: string,
-): Promise<GfnGame[]> => {
-  const vpcId = await getVpcId(token);
-  const games: GfnGame[] = [];
-  let cursor = '';
-  for (let page = 0; page < BROWSE_MAX_PAGES; page++) {
-    let res: Response;
+  vpcId: string,
+  cursor: string,
+): Promise<any> => {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= BROWSE_PAGE_RETRIES; attempt++) {
     try {
-      res = await fetch(GRAPHQL_URL, {
+      const res = await fetch(GRAPHQL_URL, {
         method: 'POST',
         headers: graphqlHeaders(token),
         body: JSON.stringify({
@@ -425,31 +423,132 @@ export const fetchGfnFullCatalog = async (
           },
         }),
       });
-    } catch {
-      break;
+      if (!res.ok) {
+        throw new Error(`GFN browse page failed (${res.status})`);
+      }
+      return await res.json();
+    } catch (e) {
+      lastError = e;
+      if (attempt < BROWSE_PAGE_RETRIES) {
+        await delay(BROWSE_PAGE_RETRY_DELAY_MS * (attempt + 1));
+      }
     }
-    if (!res.ok) {
-      break;
-    }
+  }
+  throw lastError;
+};
+
+export type GfnFullCatalogResult = {
+  games: GfnGame[];
+  // False whenever the crawl gave up before genuinely exhausting the
+  // catalog (a page failed even after retries, or the server handed back a
+  // cursor that didn't advance) -- as opposed to a real end-of-catalog
+  // signal (hasNextPage: false, or an empty page). See getGfnFullCatalogStatus
+  // for how this is surfaced to the user.
+  complete: boolean;
+  totalCount?: number;
+};
+
+export type GfnFullCatalogStatus = {
+  ts: number;
+  complete: boolean;
+  count: number;
+  totalCount?: number;
+};
+
+const setFullCatalogStatus = (status: GfnFullCatalogStatus): void => {
+  try {
+    storage.set(fullCatalogStatusKey(), JSON.stringify(status));
+  } catch {}
+};
+
+// Last known outcome of fetchGfnFullCatalog, independent of whether it ran
+// in this session -- lets the Settings screen show "loaded / partial /
+// failed" without needing to trigger a fetch itself.
+export const getGfnFullCatalogStatus = (): GfnFullCatalogStatus | null => {
+  const raw = storage.getString(fullCatalogStatusKey());
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed.ts === 'number' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+// Discards both the cached catalog and its status, so the next load starts
+// from a genuinely clean slate instead of one a stale partial result could
+// still be backstopping. Used by Settings' manual "clear + reload".
+export const clearGfnFullCatalog = (): void => {
+  try {
+    storage.delete(fullCatalogCacheKey());
+    storage.delete(fullCatalogStatusKey());
+  } catch {}
+};
+
+// The full GFN browse catalog -- every title NVIDIA has cataloged, not just
+// what's in the signed-in user's library (fetchGfnOwnedGames). This is now
+// the ONLY source the app reads GFN's catalog membership from (the small,
+// stale public JSON snapshot in publicGames.ts is no longer consulted here --
+// live-verified it omits entire franchises, e.g. every Monster Hunter and
+// Battle.net-linked title). Same `apps()` query and AppFilterFields schema as
+// the owned-library/rank queries above, just with no ownership filter and
+// paginated to the end via cursor/hasNextPage. Ported from OpenNOW's
+// GetStoreBrowseApps (MIT) -- the same query that backs NVIDIA's own official
+// "Games" browse page. Requires a signed-in token.
+//
+// Returns whatever was fetched before the crawl stopped (possibly partial,
+// possibly empty) rather than throwing, and reports whether it actually
+// reached the end via `complete` -- each page gets a few retries first (see
+// fetchBrowsePage), but a persistent failure still truncates the crawl at
+// that point rather than blocking forever. Callers should still use a
+// partial result (better than nothing, now that there's no public-list
+// fallback) but may want to prompt a retry when `complete` is false.
+export const fetchGfnFullCatalog = async (
+  token: string,
+): Promise<GfnFullCatalogResult> => {
+  const vpcId = await getVpcId(token);
+  const games: GfnGame[] = [];
+  let cursor = '';
+  let complete = false;
+  let totalCount: number | undefined;
+  for (let page = 0; page < BROWSE_MAX_PAGES; page++) {
     let payload: any;
     try {
-      payload = await res.json();
+      payload = await fetchBrowsePage(token, vpcId, cursor);
     } catch {
-      break;
+      break; // Gave up on this page even after retries -- not complete.
     }
     const apps = payload?.data?.apps;
     const items: RawApp[] = apps?.items ?? [];
+    const pageInfo = apps?.pageInfo;
+    if (typeof pageInfo?.totalCount === 'number') {
+      totalCount = pageInfo.totalCount;
+    }
     if (items.length === 0) {
+      complete = true;
       break;
     }
     games.push(...items.flatMap(toBrowseGames));
-    const pageInfo = apps?.pageInfo;
+    if (pageInfo?.hasNextPage !== true) {
+      complete = true;
+      break;
+    }
     const next = pageInfo?.endCursor;
-    if (pageInfo?.hasNextPage !== true || !next || next === cursor) {
+    if (!next || next === cursor) {
+      // The cursor didn't advance -- a server anomaly, not genuine
+      // exhaustion, so this is NOT a complete crawl.
       break;
     }
     cursor = next;
   }
+  setFullCatalogStatus({
+    ts: Date.now(),
+    complete,
+    count: games.length,
+    totalCount,
+  });
   if (games.length > 0) {
     try {
       storage.set(
@@ -458,7 +557,7 @@ export const fetchGfnFullCatalog = async (
       );
     } catch {}
   }
-  return games;
+  return {games, complete, totalCount};
 };
 
 export const getFreshFullCatalog = (): GfnGame[] | null => {

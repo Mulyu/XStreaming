@@ -11,8 +11,8 @@ import {Text, Icon, ActivityIndicator} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
-import XcloudApi from '../xCloud';
-import {fetchGfnGames, getCachedGfnGames, GfnGame} from '../gfn/publicGames';
+import {loadXcloudCatalog} from '../xCloud/loadCatalog';
+import {GfnGame} from '../gfn/publicGames';
 import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
 import {
   fetchGfnFullCatalog,
@@ -96,17 +96,11 @@ function StoreScreen() {
   // shapes buildUnifiedCatalog already knows how to turn into a launchable
   // CatalogTitle, just fetched here instead of merged into one grid.
   const [xcloudTitles, setXcloudTitles] = React.useState<any[]>([]);
-  const [gfnGames, setGfnGames] = React.useState<GfnGame[]>(
-    () => getCachedGfnGames() || [],
-  );
-  // The public list (~1,100 titles) NVIDIA publishes for anonymous browsing
-  // is missing plenty of titles that are genuinely on GFN (confirmed live:
-  // Onimusha: Way of the Sword, Monster Hunter Wilds, PUBG, and VRChat are
-  // all absent from it despite being real GFN titles) -- it's a stale
-  // snapshot, not the source of truth. Signed-in users additionally get the
-  // full, authenticated catalog (same call Library.tsx makes) merged in
-  // alongside it -- see gfnBaseGames below for why this is a merge, not a
-  // replacement.
+  // The full, authenticated GFN browse catalog -- the ONLY source this
+  // screen matches Steam chart entries against (see fetchGfnFullCatalog's
+  // own comment: the small public JSON snapshot is no longer consulted here,
+  // since it's live-verified to omit entire franchises). Empty while signed
+  // out or before the first successful load.
   const [gfnFullCatalog, setGfnFullCatalog] = React.useState<GfnGame[]>(
     () => getCachedFullCatalog() || [],
   );
@@ -143,35 +137,18 @@ function StoreScreen() {
     if (!streamingTokens?.xCloudToken) {
       return;
     }
-    const api = new XcloudApi(
-      streamingTokens.xCloudToken.getDefaultRegion().baseUri,
-      streamingTokens.xCloudToken.data.gsToken,
-      'cloud',
-    );
-    api.getTitles().then((res: any) => {
-      if (res?.results?.length > 0) {
-        api.getGamePassProducts(res.results).then(setXcloudTitles);
+    loadXcloudCatalog(streamingTokens.xCloudToken).then(({titles}) => {
+      if (titles.length > 0) {
+        setXcloudTitles(titles);
       }
     });
   }, [streamingTokens?.xCloudToken]);
 
-  // GFN's public catalog (no sign-in needed), for matching Steam chart
-  // entries back to a launchable title while signed out, or before the full
-  // catalog below has loaded.
-  React.useEffect(() => {
-    const cached = getCachedGfnGames();
-    if (cached) {
-      setGfnGames(cached);
-    }
-    fetchGfnGames()
-      .then(setGfnGames)
-      .catch(() => {});
-  }, []);
-
   // The full, authenticated catalog -- requires a signed-in token, so it
-  // simply stays empty (falling back to the public list) while signed out.
-  // Cached 24h since a full paginated fetch is dozens of sequential
-  // requests, not one.
+  // simply stays empty while signed out (there is no fallback catalog to
+  // match Steam chart entries against instead -- see gfnFullCatalog's own
+  // comment above). Cached 24h since a full paginated fetch is dozens of
+  // sequential requests, not one.
   React.useEffect(() => {
     if (!isSignedIn()) {
       return;
@@ -186,25 +163,10 @@ function StoreScreen() {
         return;
       }
       fetchGfnFullCatalog(token)
-        .then(games => games.length > 0 && setGfnFullCatalog(games))
+        .then(({games}) => games.length > 0 && setGfnFullCatalog(games))
         .catch(() => {});
     });
   }, []);
-
-  // Union, not "prefer the full catalog" -- live-verified the full catalog's
-  // steamAppId is populated for only a tiny fraction of browse results (a
-  // scan that should hit ~12% of Steam's topsellers on the public list's own
-  // numbers instead found roughly 1-in-650, and the one hit found was a
-  // title the account plausibly owns), so treating it as a strict
-  // replacement silently threw away the public list's own reliable
-  // steamAppId coverage. Concatenating keeps every reliable mapping from
-  // either source; downstream Set/Map building already collapses duplicate
-  // steamAppIds, and ordering the full catalog second lets its (richer,
-  // when present) entry win a collision.
-  const gfnBaseGames = React.useMemo(
-    () => [...gfnGames, ...gfnFullCatalog],
-    [gfnGames, gfnFullCatalog],
-  );
 
   const xcloudByProductId = React.useMemo(() => {
     const map = new Map<string, any>();
@@ -353,11 +315,11 @@ function StoreScreen() {
   const gfnSteamAppIds = React.useMemo(
     () =>
       new Set(
-        gfnBaseGames
+        gfnFullCatalog
           .map(game => game.steamAppId)
           .filter((id): id is string => !!id),
       ),
-    [gfnBaseGames],
+    [gfnFullCatalog],
   );
 
   // Both providers' charts can add a page that grows the raw list without
@@ -519,14 +481,14 @@ function StoreScreen() {
     (): StoreRow[] =>
       provider === 'xcloud'
         ? buildXboxStoreRows(xboxProductIds, xcloudByProductId, xboxPriceMap)
-        : buildGfnStoreRows(steamEntries, gfnBaseGames),
+        : buildGfnStoreRows(steamEntries, gfnFullCatalog),
     [
       provider,
       xboxProductIds,
       xcloudByProductId,
       xboxPriceMap,
       steamEntries,
-      gfnBaseGames,
+      gfnFullCatalog,
     ],
   );
 
@@ -546,10 +508,10 @@ function StoreScreen() {
   // more pages exist, kick loadMore directly instead of waiting for a
   // scroll gesture on a list that was never rendered. Gated on the relevant
   // catalog having loaded at least once, so this doesn't burn through pages
-  // while xcloudTitles/gfnBaseGames are still empty because *they* haven't
+  // while xcloudTitles/gfnFullCatalog are still empty because *they* haven't
   // arrived yet (every row would look "no match" for that unrelated reason).
   const catalogReady =
-    provider === 'xcloud' ? xcloudTitles.length > 0 : gfnBaseGames.length > 0;
+    provider === 'xcloud' ? xcloudTitles.length > 0 : gfnFullCatalog.length > 0;
   React.useEffect(() => {
     if (loading || loadingMore || visibleRows.length > 0 || !catalogReady) {
       return;

@@ -19,12 +19,8 @@ import {
 } from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import XcloudApi from '../xCloud';
-import {
-  GfnGame,
-  fetchGfnGames,
-  getFreshGfnGames,
-  getCachedGfnGames,
-} from '../gfn/publicGames';
+import {loadXcloudCatalog} from '../xCloud/loadCatalog';
+import {GfnGame} from '../gfn/publicGames';
 import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
 import {
   fetchGfnOwnedGames,
@@ -104,11 +100,13 @@ function LibraryScreen() {
   const [xcloudTitles, setXcloudTitles] = React.useState<any[]>(
     () => getXcloudData()?.titles || [],
   );
-  const [gfnPublicGames, setGfnPublicGames] = React.useState<GfnGame[]>(
-    () => getCachedGfnGames() || [],
-  );
-  // The full GFN browse catalog when signed in -- much larger than the
-  // public JSON snapshot above, which stays the fallback while signed out.
+  // The full, authenticated GFN browse catalog -- the ONLY source this
+  // screen reads GFN's catalog membership from (see fetchGfnFullCatalog's
+  // own comment for why the small public JSON snapshot is no longer
+  // consulted as a fallback: live-verified it omits entire franchises).
+  // Empty while signed out or before the first successful load, in which
+  // case the GFN side of the Library is simply empty rather than showing
+  // stale/incomplete data.
   const [gfnFullCatalog, setGfnFullCatalog] = React.useState<GfnGame[]>(
     () => getCachedFullCatalog() || [],
   );
@@ -206,14 +204,9 @@ function LibraryScreen() {
     if (!streamingTokens?.xCloudToken) {
       return;
     }
-    const api = new XcloudApi(
-      streamingTokens.xCloudToken.getDefaultRegion().baseUri,
-      streamingTokens.xCloudToken.data.gsToken,
-      'cloud',
-    );
-    api.getTitles().then((res: any) => {
-      if (res?.results?.length > 0) {
-        api.getGamePassProducts(res.results).then(persistXcloudTitles);
+    loadXcloudCatalog(streamingTokens.xCloudToken).then(({titles}) => {
+      if (titles.length > 0) {
+        persistXcloudTitles(titles);
       }
     });
   }, [streamingTokens?.xCloudToken, persistXcloudTitles]);
@@ -328,25 +321,9 @@ function LibraryScreen() {
     });
   }, [streamingTokens?.xCloudToken]);
 
-  // GFN: public catalog (no sign-in needed) + the signed-in user's owned
-  // library merged in, exactly as GfnLibrary did.
-  const loadGfnPublic = React.useCallback((force = false) => {
-    if (!force) {
-      const fresh = getFreshGfnGames();
-      if (fresh) {
-        setGfnPublicGames(fresh);
-        return;
-      }
-    }
-    fetchGfnGames()
-      .then(setGfnPublicGames)
-      .catch(() => {});
-  }, []);
-
-  React.useEffect(() => {
-    loadGfnPublic();
-  }, [loadGfnPublic]);
-
+  // GFN: the signed-in user's owned library, merged onto the full catalog
+  // below (mergeOwnedGames also appends any owned title the catalog fetch
+  // itself missed).
   React.useEffect(() => {
     if (!isSignedIn()) {
       return;
@@ -361,11 +338,11 @@ function LibraryScreen() {
     });
   }, []);
 
-  // GFN's full browse catalog -- every cataloged title, not just what's owned
-  // or in the public JSON's much smaller snapshot. Needs a signed-in token
-  // like the rank orders below, so it simply stays empty (falling back to the
-  // public JSON) while signed out. Cached 24h since a full paginated fetch is
-  // dozens of sequential requests, not one.
+  // GFN's full browse catalog -- every cataloged title, not just what's
+  // owned. Needs a signed-in token like the rank orders below, so it simply
+  // stays empty while signed out -- there is no fallback catalog to show
+  // instead (see gfnFullCatalog's own comment above). Cached 24h since a full
+  // paginated fetch is dozens of sequential requests, not one.
   const loadGfnFullCatalog = React.useCallback((force = false) => {
     if (!isSignedIn()) {
       return;
@@ -384,7 +361,7 @@ function LibraryScreen() {
         return;
       }
       fetchGfnFullCatalog(token)
-        .then(games => games.length > 0 && setGfnFullCatalog(games))
+        .then(({games}) => games.length > 0 && setGfnFullCatalog(games))
         .catch(() => {})
         .finally(() => setGfnFullCatalogLoading(false));
     });
@@ -448,19 +425,17 @@ function LibraryScreen() {
       const tasks: Promise<any>[] = [];
 
       if (streamingTokens?.xCloudToken) {
+        tasks.push(
+          loadXcloudCatalog(streamingTokens.xCloudToken).then(({titles}) => {
+            if (titles.length > 0) {
+              persistXcloudTitles(titles);
+            }
+          }),
+        );
         const api = new XcloudApi(
           streamingTokens.xCloudToken.getDefaultRegion().baseUri,
           streamingTokens.xCloudToken.data.gsToken,
           'cloud',
-        );
-        tasks.push(
-          api.getTitles().then((res: any) => {
-            if (res?.results?.length > 0) {
-              return api
-                .getGamePassProducts(res.results)
-                .then(persistXcloudTitles);
-            }
-          }),
         );
         tasks.push(
           api.getRecentTitles().then((res: any) => {
@@ -474,12 +449,6 @@ function LibraryScreen() {
           }),
         );
       }
-
-      tasks.push(
-        fetchGfnGames()
-          .then(setGfnPublicGames)
-          .catch(() => {}),
-      );
 
       if (isSignedIn()) {
         tasks.push(
@@ -521,14 +490,9 @@ function LibraryScreen() {
     }
   }, [streamingTokens?.xCloudToken, loadGfnFullCatalog, persistXcloudTitles]);
 
-  // The full browse catalog supersedes the public JSON snapshot once it's
-  // loaded (signed in); until then, or while signed out, the public JSON is
-  // still what there is to browse.
-  const gfnBaseGames =
-    gfnFullCatalog.length > 0 ? gfnFullCatalog : gfnPublicGames;
   const gfnGames = React.useMemo(
-    () => mergeOwnedGames(gfnBaseGames, gfnOwnedGames),
-    [gfnBaseGames, gfnOwnedGames],
+    () => mergeOwnedGames(gfnFullCatalog, gfnOwnedGames),
+    [gfnFullCatalog, gfnOwnedGames],
   );
 
   // Steam prices for GFN's Steam-linked store variants, batched and cached
