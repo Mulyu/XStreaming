@@ -48,7 +48,7 @@ export const STEAM_CHART_PAGE_SIZE = 100;
 // chunk up to the next one is simpler and more robust than balancing tags.
 const ROW_SPLIT = '<a href="https://store.steampowered.com/app/';
 
-const parseResultsHtml = (html: string): SteamChartEntry[] => {
+export const parseResultsHtml = (html: string): SteamChartEntry[] => {
   const rows = html.split(ROW_SPLIT).slice(1);
   const entries: SteamChartEntry[] = [];
   for (const row of rows) {

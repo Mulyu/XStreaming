@@ -19,17 +19,11 @@ import {
   getFreshFullCatalog,
   getCachedFullCatalog,
 } from '../gfn/catalog';
-import {
-  buildXcloudCatalogTitle,
-  buildGfnCatalogTitle,
-  CatalogTitle,
-} from '../catalog/unifiedCatalog';
 import {getSettings} from '../store/settingStore';
 import {getSystemRegion} from '../utils/locale';
 import {
   deriveMarketLanguage,
   fetchPricesWithRetry,
-  formatPrice,
   getPrice,
   isSaleForDisplay,
   PriceInfo,
@@ -44,6 +38,13 @@ import {
   getFreshSteamChart,
   SteamChartEntry,
 } from '../storeCharts/steamCharts';
+import {
+  buildGfnStoreRows,
+  buildXboxStoreRows,
+  dedupeByKey,
+  hasMorePages,
+  StoreRow,
+} from './storeLogic';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
@@ -56,57 +57,6 @@ const MAX_CHART_ENTRIES = 3000;
 
 type Provider = 'xcloud' | 'gfn';
 type ChartKind = 'best' | 'new';
-
-// One row's worth of display data, already matched back to a launchable
-// catalog title -- rows that don't match anything cloud-playable never reach
-// this shape, they're filtered out before render.
-type StoreRow = {
-  rank: number;
-  title: string;
-  imageUrl?: string;
-  price?: string;
-  originalPrice?: string;
-  catalogTitle: CatalogTitle;
-};
-
-// Whether another page is worth requesting after one that left the cursor at
-// `cumulativeStart`. Steam's search endpoint doesn't reliably return a full
-// `count`-sized page even mid-list (confirmed live: a page can come back
-// with 95-98 of a requested 100 rows while total_count is still in the
-// thousands), so "got fewer than we asked for" is not a valid end-of-results
-// signal -- only an empty page, or reaching the endpoint's own total count,
-// is. Xbox's browse endpoint reports its own total the same way, so the same
-// check applies to both.
-const hasMorePages = (
-  entriesLength: number,
-  cumulativeStart: number,
-  totalCount?: number,
-): boolean => {
-  if (entriesLength === 0) {
-    return false;
-  }
-  return totalCount === undefined || cumulativeStart < totalCount;
-};
-
-// Both charts are live, frequently-reordering rankings fetched via a
-// stateless numeric offset or a cursor spanning several sequential requests
-// -- confirmed live that the same title can resurface at a much later
-// position if the underlying ranking shifts between requests (e.g. a sale
-// starting or ending mid-scroll). Deduping by key keeps that from showing as
-// a duplicate row (and from breaking FlatList's key uniqueness).
-const dedupeByKey = <T,>(items: T[], keyOf: (item: T) => string): T[] => {
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (const item of items) {
-    const key = keyOf(item);
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    result.push(item);
-  }
-  return result;
-};
 
 const STEAM_LANGUAGE: Record<string, string> = {
   en: 'english',
@@ -565,70 +515,20 @@ function StoreScreen() {
   // Match this provider's raw chart against this provider's own catalog,
   // keeping the chart's own rank so a filtered-out title still leaves a
   // visible gap rather than silently compacting the list.
-  const rows = React.useMemo((): StoreRow[] => {
-    if (provider === 'xcloud') {
-      const result: StoreRow[] = [];
-      xboxProductIds.forEach((productId, index) => {
-        const item = xcloudByProductId.get(productId.toUpperCase());
-        if (!item) {
-          return;
-        }
-        const catalogTitle = buildXcloudCatalogTitle(item);
-        if (!catalogTitle) {
-          return;
-        }
-        const priceInfo = getPrice(xboxPriceMap, productId);
-        result.push({
-          rank: index + 1,
-          title: catalogTitle.title,
-          imageUrl: catalogTitle.imageUrl,
-          price: priceInfo
-            ? formatPrice(priceInfo.listPrice, priceInfo.currencyCode)
-            : undefined,
-          originalPrice:
-            priceInfo && isSaleForDisplay(priceInfo)
-              ? formatPrice(priceInfo.msrp, priceInfo.currencyCode)
-              : undefined,
-          catalogTitle,
-        });
-      });
-      return result;
-    }
-
-    const byAppId = new Map<string, GfnGame>();
-    gfnBaseGames.forEach(game => {
-      if (game.steamAppId) {
-        byAppId.set(game.steamAppId, game);
-      }
-    });
-    const result: StoreRow[] = [];
-    steamEntries.forEach((entry, index) => {
-      const game = byAppId.get(entry.appId);
-      if (!game) {
-        return;
-      }
-      const catalogTitle = buildGfnCatalogTitle(game);
-      if (!catalogTitle) {
-        return;
-      }
-      result.push({
-        rank: index + 1,
-        title: entry.title,
-        imageUrl: entry.imageUrl,
-        price: entry.price,
-        originalPrice: entry.originalPrice,
-        catalogTitle,
-      });
-    });
-    return result;
-  }, [
-    provider,
-    xboxProductIds,
-    xcloudByProductId,
-    xboxPriceMap,
-    steamEntries,
-    gfnBaseGames,
-  ]);
+  const rows = React.useMemo(
+    (): StoreRow[] =>
+      provider === 'xcloud'
+        ? buildXboxStoreRows(xboxProductIds, xcloudByProductId, xboxPriceMap)
+        : buildGfnStoreRows(steamEntries, gfnBaseGames),
+    [
+      provider,
+      xboxProductIds,
+      xcloudByProductId,
+      xboxPriceMap,
+      steamEntries,
+      gfnBaseGames,
+    ],
+  );
 
   const visibleRows = React.useMemo(
     () => (saleOnly ? rows.filter(row => !!row.originalPrice) : rows),
@@ -798,7 +698,7 @@ function StoreScreen() {
       ) : (
         <FlatList
           data={visibleRows}
-          keyExtractor={item => item.catalogTitle.key}
+          keyExtractor={item => item.id}
           renderItem={renderRow}
           contentContainerStyle={styles.list}
           onEndReached={loadMore}
