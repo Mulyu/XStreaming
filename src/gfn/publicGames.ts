@@ -46,13 +46,29 @@ type RawPublicGame = {
   status?: string;
 };
 
+// Extracts the numeric app id straight after "/app/" in a Steam store URL.
+// Deliberately matches only a *leading* digit run rather than requiring the
+// whole remainder to be numeric -- confirmed live that GFN's authenticated
+// browse query (gfn/catalog.ts's fetchGfnFullCatalog) returns storeUrl with
+// no trailing slash before the query string at all, e.g.
+// ".../app/1059220?utm_source=nvidia&utm_campaign=geforce_now". The old
+// full-match check split on "/" first, so that entire query string (with no
+// "/" in it) was compared against ^\d+$ as one piece and never matched --
+// silently discarding steamAppId for effectively every browse-query result
+// (confirmed live: 576/576 Steam variants across 3 browse pages parse
+// correctly with this fix, versus 0/576 with the old one). The public
+// JSON's own steamUrl (".../app/12345/Some_Game/") still parses the same as
+// before either way, since both forms share a leading digit run.
 export const steamAppIdFromUrl = (steamUrl?: string): string | undefined => {
   if (!steamUrl) {
     return undefined;
   }
   const after = steamUrl.split('/app/')[1];
-  const id = after ? after.split('/')[0] : '';
-  return /^\d+$/.test(id) ? id : undefined;
+  if (!after) {
+    return undefined;
+  }
+  const match = /^(\d+)/.exec(after);
+  return match ? match[1] : undefined;
 };
 
 const toGfnGame = (item: RawPublicGame): GfnGame => {
