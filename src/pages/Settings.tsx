@@ -53,6 +53,7 @@ import {
   fetchGfnFullCatalog,
   clearGfnFullCatalog,
   getGfnFullCatalogStatus,
+  getCachedFullCatalog,
   GfnFullCatalogStatus,
 } from '../gfn/catalog';
 import {
@@ -426,6 +427,24 @@ function SettingsScreen({navigation}) {
     return gfnCatalogStatus.complete
       ? t('CatalogStatusComplete', {count: gfnCatalogStatus.count})
       : t('CatalogStatusPartial', {count: gfnCatalogStatus.count});
+  };
+
+  // TEMPORARY DEBUG -- investigating the Store screen's Steam tab showing
+  // empty even though the full catalog itself loads fine (thousands of
+  // titles). buildGfnStoreRows matches a Steam chart entry to a GFN game by
+  // steamAppId, which toBrowseGames only derives when the browse query's
+  // variant.storeUrl is populated -- suspected sparse for browse (as
+  // opposed to owned) entries. Computed entirely on-device from the
+  // already-cached catalog, no network call or token needed. Remove once
+  // this is resolved.
+  const [debugSteamAppIdCoverage, setDebugSteamAppIdCoverage] =
+    React.useState('');
+  const handleCheckSteamAppIdCoverage = () => {
+    const games = getCachedFullCatalog() || [];
+    const withSteamAppId = games.filter(g => !!g.steamAppId).length;
+    setDebugSteamAppIdCoverage(
+      `${withSteamAppId} / ${games.length} entries have a steamAppId`,
+    );
   };
 
   // Fetches the MES (subscription/quota) API for the signed-in GFN account --
@@ -891,6 +910,14 @@ function SettingsScreen({navigation}) {
             title={t('CatalogCacheTitle')}
             description={gfnCatalogDescription()}
             onPress={handleGfnCatalogReload}
+          />
+          {/* TEMPORARY DEBUG -- remove once the Store Steam-tab investigation is done. */}
+          <SettingItem
+            title="[DEBUG] Check steamAppId coverage"
+            description={
+              debugSteamAppIdCoverage || 'Tap to check the cached catalog'
+            }
+            onPress={handleCheckSteamAppIdCoverage}
           />
           <InfoRow
             title={t('GfnPlaytimeTitle')}
