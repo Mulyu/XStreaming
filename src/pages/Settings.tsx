@@ -441,9 +441,15 @@ function SettingsScreen({navigation}) {
     React.useState('');
   const handleCheckSteamAppIdCoverage = () => {
     const games = getCachedFullCatalog() || [];
-    const withSteamAppId = games.filter(g => !!g.steamAppId).length;
+    const withId = games.filter(g => !!g.steamAppId);
+    const sample = withId
+      .slice(0, 10)
+      .map(g => `${g.title} (${g.steamAppId}, owned=${g.owned})`)
+      .join(' | ');
     setDebugSteamAppIdCoverage(
-      `${withSteamAppId} / ${games.length} entries have a steamAppId`,
+      `${withId.length} / ${games.length} have a steamAppId. Sample: ${
+        sample || '(none)'
+      }`,
     );
   };
 
