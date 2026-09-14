@@ -50,7 +50,7 @@ const BASE64_CHARS =
 // btoa isn't guaranteed available on RN's JS engine -- encode by hand. Only
 // ever fed plain-ASCII JSON (filter ids, sort names), so no multi-byte
 // handling is needed.
-const base64Encode = (input: string): string => {
+export const base64Encode = (input: string): string => {
   let output = '';
   for (let i = 0; i < input.length; i += 3) {
     const c1 = input.charCodeAt(i);
@@ -71,7 +71,7 @@ const base64Encode = (input: string): string => {
   return output;
 };
 
-const encodeFilters = (sort: XboxBrowseSort): string =>
+export const encodeFilters = (sort: XboxBrowseSort): string =>
   base64Encode(
     JSON.stringify({
       PlayWith: {id: 'PlayWith', choices: [{id: 'CloudGaming'}]},
