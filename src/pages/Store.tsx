@@ -624,6 +624,40 @@ function StoreScreen() {
     [rows, saleOnly],
   );
 
+  // The initial page-0 fetch above only ever tries one page, and it's common
+  // for that single page to match zero cloud-playable titles -- confirmed
+  // live that Steam's "New Releases" page 0 alone matches 0 of GFN's much
+  // smaller catalog. Since the empty-state view below replaces the FlatList
+  // entirely, its onEndReached (and with it, loadMore's own keep-fetching
+  // loop) would otherwise never get a chance to run, permanently stranding
+  // the screen on "not found" even though a match exists a few pages
+  // deeper. So: once the initial load settles with nothing visible yet and
+  // more pages exist, kick loadMore directly instead of waiting for a
+  // scroll gesture on a list that was never rendered. Gated on the relevant
+  // catalog having loaded at least once, so this doesn't burn through pages
+  // while xcloudTitles/gfnBaseGames are still empty because *they* haven't
+  // arrived yet (every row would look "no match" for that unrelated reason).
+  const catalogReady =
+    provider === 'xcloud' ? xcloudTitles.length > 0 : gfnBaseGames.length > 0;
+  React.useEffect(() => {
+    if (loading || loadingMore || visibleRows.length > 0 || !catalogReady) {
+      return;
+    }
+    if (provider === 'xcloud' ? !xboxHasMore : !steamHasMore) {
+      return;
+    }
+    loadMore();
+  }, [
+    loading,
+    loadingMore,
+    visibleRows.length,
+    catalogReady,
+    provider,
+    xboxHasMore,
+    steamHasMore,
+    loadMore,
+  ]);
+
   const openRow = React.useCallback(
     (row: StoreRow) => {
       navigation.navigate('LibraryTitleDetail', {
@@ -740,7 +774,7 @@ function StoreScreen() {
         <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
       </View>
 
-      {loading && visibleRows.length === 0 ? (
+      {visibleRows.length === 0 && (loading || loadingMore) ? (
         <View style={styles.centre}>
           <ActivityIndicator />
           <Text style={styles.centreText}>{t('Loading...')}</Text>
