@@ -112,6 +112,11 @@ function LibraryScreen() {
   const [gfnFullCatalog, setGfnFullCatalog] = React.useState<GfnGame[]>(
     () => getCachedFullCatalog() || [],
   );
+  // True only while the full catalog fetch below is actually in flight (a
+  // fresh cache hit resolves synchronously, so it never flips this) -- drives
+  // the small spinner next to the header's title count.
+  const [gfnFullCatalogLoading, setGfnFullCatalogLoading] =
+    React.useState(false);
   const [gfnOwnedGames, setGfnOwnedGames] = React.useState<GfnGame[]>(
     () => getFreshOwnedGames() || [],
   );
@@ -372,13 +377,16 @@ function LibraryScreen() {
         return;
       }
     }
+    setGfnFullCatalogLoading(true);
     getValidGfnJwt().then(token => {
       if (!token) {
+        setGfnFullCatalogLoading(false);
         return;
       }
       fetchGfnFullCatalog(token)
         .then(games => games.length > 0 && setGfnFullCatalog(games))
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setGfnFullCatalogLoading(false));
     });
   }, []);
 
@@ -878,6 +886,9 @@ function LibraryScreen() {
             <Text style={styles.count}>
               {filtered.length}/{catalog.length}
             </Text>
+          )}
+          {gfnFullCatalogLoading && (
+            <ActivityIndicator size={12} color="#8A9A92" />
           )}
         </View>
         <View style={styles.searchBox}>
