@@ -52,11 +52,25 @@ const graphqlHeaders = (token: string): Record<string, string> => ({
   ...deviceHeaders,
 });
 
-// The GFN "virtual PC id"; identifies the client build to the catalog. Best
-// effort — falls back to the constant NVIDIA's clients use.
-const getVpcId = async (token: string): Promise<string> => {
+const delay = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+const SERVER_INFO_TIMEOUT_MS = 15000;
+const VPC_ID_RETRIES = 2;
+const VPC_ID_RETRY_DELAY_MS = 1000;
+
+// Resolved once per token and reused for the rest of the session -- every
+// catalog query below used to call this independently, multiplying the
+// number of chances for a single flaky request to silently degrade one of
+// them.
+let cachedVpcId: {token: string; vpcId: string} | null = null;
+
+const fetchServerInfoOnce = async (token: string): Promise<string | null> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SERVER_INFO_TIMEOUT_MS);
   try {
     const res = await fetch(SERVER_INFO_URL, {
+      signal: controller.signal,
       headers: {
         Accept: 'application/json',
         Authorization: `GFNJWT ${token}`,
@@ -69,13 +83,44 @@ const getVpcId = async (token: string): Promise<string> => {
       },
     });
     if (!res.ok) {
-      return 'GFN-PC';
+      return null;
     }
     const payload = (await res.json()) as any;
-    return payload?.requestStatus?.serverId ?? 'GFN-PC';
+    const serverId = payload?.requestStatus?.serverId;
+    return typeof serverId === 'string' && serverId ? serverId : null;
   } catch {
-    return 'GFN-PC';
+    return null;
+  } finally {
+    clearTimeout(timer);
   }
+};
+
+// The GFN "virtual PC id" every catalog query below needs -- confirmed live
+// this isn't just a cosmetic client-identity field: querying with the
+// account's real, server-resolved vpcId returns the account's actual ~200+
+// owned titles and a 6,000+-title browse catalog, while the hardcoded
+// 'GFN-PC' placeholder this used to silently fall back to on ANY failure
+// (no retry, no timeout) gets back a near-empty demo-sized response instead
+// (totalCount 2, 0 owned) -- one that still looks like a completed, successful
+// fetch to every caller, not a failure. Retries a couple of times before
+// giving up, and returns null (rather than that placeholder) so callers can
+// tell "genuinely failed" from "resolved, here's the id" and treat the
+// former as the failure it is instead of quietly fetching a hollow catalog.
+const getVpcId = async (token: string): Promise<string | null> => {
+  if (cachedVpcId?.token === token) {
+    return cachedVpcId.vpcId;
+  }
+  for (let attempt = 0; attempt <= VPC_ID_RETRIES; attempt++) {
+    const serverId = await fetchServerInfoOnce(token);
+    if (serverId) {
+      cachedVpcId = {token, vpcId: serverId};
+      return serverId;
+    }
+    if (attempt < VPC_ID_RETRIES) {
+      await delay(VPC_ID_RETRY_DELAY_MS * (attempt + 1));
+    }
+  }
+  return null;
 };
 
 // Owned-library filter + sort matching the official client.
@@ -220,6 +265,9 @@ const toOwnedGames = (app: RawApp): GfnGame[] => {
 // virtually every library). Returns [] on any failure.
 export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
   const vpcId = await getVpcId(token);
+  if (!vpcId) {
+    return [];
+  }
   let res: Response;
   try {
     res = await fetch(GRAPHQL_URL, {
@@ -397,9 +445,6 @@ const BROWSE_MAX_PAGES = 40;
 const BROWSE_PAGE_RETRIES = 2;
 const BROWSE_PAGE_RETRY_DELAY_MS = 1000;
 
-const delay = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms));
-
 const fetchBrowsePage = async (
   token: string,
   vpcId: string,
@@ -509,6 +554,10 @@ export const fetchGfnFullCatalog = async (
   token: string,
 ): Promise<GfnFullCatalogResult> => {
   const vpcId = await getVpcId(token);
+  if (!vpcId) {
+    setFullCatalogStatus({ts: Date.now(), complete: false, count: 0});
+    return {games: [], complete: false};
+  }
   const games: GfnGame[] = [];
   let cursor = '';
   let complete = false;
@@ -639,6 +688,9 @@ export const fetchGfnCatalogOrder = async (
   orderBy: string,
 ): Promise<string[]> => {
   const vpcId = await getVpcId(token);
+  if (!vpcId) {
+    return [];
+  }
   const order: string[] = [];
   const seen = new Set<string>();
   let cursor = '';
@@ -749,6 +801,9 @@ export const fetchGfnAppDetails = async (
   appId: string,
 ): Promise<GfnAppDetails | null> => {
   const vpcId = await getVpcId(token);
+  if (!vpcId) {
+    return null;
+  }
   let res: Response;
   try {
     res = await fetch(GRAPHQL_URL, {
