@@ -247,12 +247,28 @@ function App() {
 
   const openTitleShortcut = React.useCallback(
     (shortcut: any) => {
-      if (!shortcut?.productId) {
+      const isGfn = shortcut?.provider === 'gfn';
+      if (!isGfn && !shortcut?.productId) {
+        return;
+      }
+      if (isGfn && !shortcut?.gfnAppId) {
         return;
       }
 
       if (!navigationRef.isReady()) {
         pendingTitleShortcutRef.current = shortcut;
+        return;
+      }
+
+      if (isGfn) {
+        // GFN never needed a saved snapshot to relaunch -- the shortcut's own
+        // Intent extras already carry everything NativeStream needs to start
+        // streaming (see shortcutStore.ts's TitleShortcutSnapshot).
+        navigationRef.navigate('NativeStream', {
+          streamType: 'gfn',
+          appId: shortcut.gfnAppId,
+          title: shortcut.titleName,
+        });
         return;
       }
 

@@ -29,11 +29,16 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
     public static final String ACTION_OPEN_TITLE_DETAIL = "com.xstreaming.OPEN_TITLE_DETAIL";
     public static final String EVENT_OPEN_TITLE_SHORTCUT = "onTitleShortcutOpen";
 
+    private static final String EXTRA_PROVIDER = "provider";
     private static final String EXTRA_PRODUCT_ID = "productId";
     private static final String EXTRA_TITLE_ID = "titleId";
     private static final String EXTRA_XCLOUD_TITLE_ID = "xCloudTitleId";
+    private static final String EXTRA_GFN_APP_ID = "gfnAppId";
+    private static final String EXTRA_GFN_STORE = "gfnStore";
     private static final String EXTRA_TITLE_NAME = "titleName";
     private static final String EXTRA_ICON_URL = "iconUrl";
+    private static final String PROVIDER_XCLOUD = "xcloud";
+    private static final String PROVIDER_GFN = "gfn";
     private static final int SHORTCUT_ICON_SIZE_PX = 288;
 
     private final ReactApplicationContext reactContext;
@@ -62,9 +67,19 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
             return;
         }
 
+        String provider = getString(options, EXTRA_PROVIDER);
+        if (TextUtils.isEmpty(provider)) {
+            provider = PROVIDER_XCLOUD;
+        }
         String productId = getString(options, EXTRA_PRODUCT_ID);
+        String gfnAppId = getString(options, EXTRA_GFN_APP_ID);
         String titleName = getString(options, EXTRA_TITLE_NAME);
-        if (TextUtils.isEmpty(productId)) {
+        if (PROVIDER_GFN.equals(provider)) {
+            if (TextUtils.isEmpty(gfnAppId)) {
+                promise.reject("MISSING_GFN_APP_ID", "gfnAppId is required");
+                return;
+            }
+        } else if (TextUtils.isEmpty(productId)) {
             promise.reject("MISSING_PRODUCT_ID", "productId is required");
             return;
         }
@@ -75,13 +90,23 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
         final Context context = reactContext.getApplicationContext();
         final Intent intent = new Intent(context, MainActivity.class);
         intent.setAction(ACTION_OPEN_TITLE_DETAIL);
-        intent.putExtra(EXTRA_PRODUCT_ID, productId);
-        intent.putExtra(EXTRA_TITLE_ID, getString(options, EXTRA_TITLE_ID));
-        intent.putExtra(EXTRA_XCLOUD_TITLE_ID, getString(options, EXTRA_XCLOUD_TITLE_ID));
+        intent.putExtra(EXTRA_PROVIDER, provider);
         intent.putExtra(EXTRA_TITLE_NAME, titleName);
+        if (PROVIDER_GFN.equals(provider)) {
+            intent.putExtra(EXTRA_GFN_APP_ID, gfnAppId);
+            intent.putExtra(EXTRA_GFN_STORE, getString(options, EXTRA_GFN_STORE));
+        } else {
+            intent.putExtra(EXTRA_PRODUCT_ID, productId);
+            intent.putExtra(EXTRA_TITLE_ID, getString(options, EXTRA_TITLE_ID));
+            intent.putExtra(EXTRA_XCLOUD_TITLE_ID, getString(options, EXTRA_XCLOUD_TITLE_ID));
+        }
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-        final String shortcutId = "title-detail-" + productId;
+        // Provider-prefixed so an xCloud title and a GFN title that happen to
+        // share an id (different stores, different id spaces) never collide.
+        final String shortcutId = PROVIDER_GFN.equals(provider)
+                ? "title-detail-gfn-" + gfnAppId
+                : "title-detail-xcloud-" + productId;
         final String label = titleName;
         final String iconUrl = getString(options, EXTRA_ICON_URL);
         final android.content.pm.ShortcutManager manager = shortcutManager;
@@ -141,7 +166,15 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
                 return null;
             }
             Bitmap square = cropCenterSquare(bitmap, SHORTCUT_ICON_SIZE_PX);
-            return Icon.createWithBitmap(square);
+            // createWithBitmap() hands the launcher a plain square, which most
+            // adaptive-icon-aware launchers then wrap in their own "legacy icon"
+            // treatment -- shrinking it to a fraction of the slot and drawing a
+            // background behind it, which is exactly the visible ring of
+            // whitespace around every shortcut icon this app created. Bitmaps
+            // built with createWithAdaptiveBitmap() are already treated as
+            // edge-to-edge adaptive-icon content, so the launcher masks them
+            // directly instead of insetting them.
+            return Icon.createWithAdaptiveBitmap(square);
         } catch (Throwable t) {
             return null;
         } finally {
@@ -196,15 +229,29 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
             return null;
         }
 
-        String productId = intent.getStringExtra(EXTRA_PRODUCT_ID);
-        if (TextUtils.isEmpty(productId)) {
-            return null;
+        String provider = intent.getStringExtra(EXTRA_PROVIDER);
+        if (TextUtils.isEmpty(provider)) {
+            provider = PROVIDER_XCLOUD;
         }
 
         WritableMap params = Arguments.createMap();
-        params.putString(EXTRA_PRODUCT_ID, productId);
-        params.putString(EXTRA_TITLE_ID, intent.getStringExtra(EXTRA_TITLE_ID));
-        params.putString(EXTRA_XCLOUD_TITLE_ID, intent.getStringExtra(EXTRA_XCLOUD_TITLE_ID));
+        if (PROVIDER_GFN.equals(provider)) {
+            String gfnAppId = intent.getStringExtra(EXTRA_GFN_APP_ID);
+            if (TextUtils.isEmpty(gfnAppId)) {
+                return null;
+            }
+            params.putString(EXTRA_GFN_APP_ID, gfnAppId);
+            params.putString(EXTRA_GFN_STORE, intent.getStringExtra(EXTRA_GFN_STORE));
+        } else {
+            String productId = intent.getStringExtra(EXTRA_PRODUCT_ID);
+            if (TextUtils.isEmpty(productId)) {
+                return null;
+            }
+            params.putString(EXTRA_PRODUCT_ID, productId);
+            params.putString(EXTRA_TITLE_ID, intent.getStringExtra(EXTRA_TITLE_ID));
+            params.putString(EXTRA_XCLOUD_TITLE_ID, intent.getStringExtra(EXTRA_XCLOUD_TITLE_ID));
+        }
+        params.putString(EXTRA_PROVIDER, provider);
         params.putString(EXTRA_TITLE_NAME, intent.getStringExtra(EXTRA_TITLE_NAME));
         return params;
     }

@@ -600,11 +600,20 @@ export default {
       '設定で有効化可能',
     'Enable macro button and edit its action sequence in one place.':
       'マクロ設定',
+    'Add to desktop': 'ホーム画面に追加',
     'Game Pass': 'Game Pass',
     'View in store': 'ストアで見る',
     'Add to favorites': 'お気に入りに追加',
     'Remove from favorites': 'お気に入りから解除',
     'Sale ends': 'セール終了',
+    TitleShortcutRequested: 'ショートカットの追加をリクエストしました',
+    TitleShortcutUnavailable:
+      'この端末またはランチャーはショートカットの追加に対応していません。',
+    TitleShortcutMissingProduct:
+      'この作品には商品データがないため、ホーム画面に追加できません。',
+    TitleShortcutFailed: 'ショートカットの追加に失敗しました',
+    TitleShortcutExpired:
+      'ショートカットのデータが見つかりません。クラウドゲームの一覧を更新してから再度お試しください。',
     'On sale': 'セール中',
     Filters: 'フィルター',
     Clear: 'クリア',
