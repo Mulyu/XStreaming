@@ -6,6 +6,10 @@ import {
   Pressable,
   ScrollView,
   Linking,
+  NativeModules,
+  Platform,
+  ToastAndroid,
+  Alert,
 } from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -20,7 +24,7 @@ import {getCatalogPreference} from '../store/catalogPreferences';
 import {launchWithProvider} from '../catalog/launchCatalogTitle';
 import {getSettings} from '../store/settingStore';
 import {getSystemRegion} from '../utils/locale';
-import {getTitleProductId} from '../store/shortcutStore';
+import {getTitleProductId, requestTitleShortcut} from '../store/shortcutStore';
 import {getFreshPriceCache} from '../store/priceStore';
 import {
   isCatalogTitleFavorite,
@@ -49,6 +53,8 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const DIM_ICON_BG = 'rgba(140,140,150,0.16)';
 const DIM_TEXT = '#8A9A92';
+
+const {ShortcutManager} = NativeModules;
 
 // A title's detail screen: rich info first (xCloud's own rich fields, with
 // GFN's filling gaps), then "Play on" -- every provider it's actually
@@ -215,6 +221,48 @@ function LibraryTitleDetailScreen() {
     launch();
   };
 
+  const canAddShortcut =
+    Platform.OS === 'android' &&
+    !Platform.isTV &&
+    !!ShortcutManager?.addTitleShortcut;
+
+  const addShortcut = async (
+    snapshot: Parameters<typeof requestTitleShortcut>[1],
+  ) => {
+    try {
+      await requestTitleShortcut(ShortcutManager, snapshot);
+      ToastAndroid.show(t('TitleShortcutRequested'), ToastAndroid.SHORT);
+    } catch (e: any) {
+      const message =
+        e?.code === 'SHORTCUT_UNSUPPORTED' ||
+        e?.code === 'UNSUPPORTED_ANDROID_VERSION'
+          ? t('TitleShortcutUnavailable')
+          : `${t('TitleShortcutFailed')}: ${e?.message || e}`;
+      Alert.alert(t('Warning'), message);
+    }
+  };
+
+  const addXcloudShortcut = () => {
+    if (!catalogTitle.xcloud?.raw) {
+      return;
+    }
+    addShortcut({provider: 'xcloud', titleItem: catalogTitle.xcloud.raw});
+  };
+
+  const addGfnShortcut = (variant: {
+    id: string;
+    store: string;
+    imageUrl?: string;
+  }) => {
+    addShortcut({
+      provider: 'gfn',
+      appId: variant.id,
+      store: variant.store,
+      title: catalogTitle.title,
+      imageUrl: variant.imageUrl || catalogTitle.imageUrl,
+    });
+  };
+
   const gfnVariants = catalogTitle.gfn?.variants ?? [];
   const gfnAnyOwned = gfnVariants.some(variant => variant.owned);
   // Most titles only have one GFN store variant, in which case the per-store
@@ -374,6 +422,15 @@ function LibraryTitleDetailScreen() {
                     <Icon source="open-in-new" size={16} color="#8A9A92" />
                   </Pressable>
                 )}
+                {canAddShortcut && (
+                  <Pressable
+                    style={styles.storeLinkBtn}
+                    hitSlop={8}
+                    accessibilityLabel={t('Add to desktop')}
+                    onPress={addXcloudShortcut}>
+                    <Icon source="plus-box-outline" size={16} color="#8A9A92" />
+                  </Pressable>
+                )}
                 <Icon source="chevron-right" size={18} color="#8A9A92" />
               </Pressable>
             </View>
@@ -446,6 +503,15 @@ function LibraryTitleDetailScreen() {
                       )
                     }>
                     <Icon source="open-in-new" size={16} color="#8A9A92" />
+                  </Pressable>
+                )}
+                {canAddShortcut && soleGfnVariant && (
+                  <Pressable
+                    style={styles.storeLinkBtn}
+                    hitSlop={8}
+                    accessibilityLabel={t('Add to desktop')}
+                    onPress={() => addGfnShortcut(soleGfnVariant)}>
+                    <Icon source="plus-box-outline" size={16} color="#8A9A92" />
                   </Pressable>
                 )}
                 <Icon
@@ -524,6 +590,19 @@ function LibraryTitleDetailScreen() {
                               }>
                               <Icon
                                 source="open-in-new"
+                                size={14}
+                                color="#8A9A92"
+                              />
+                            </Pressable>
+                          )}
+                          {canAddShortcut && (
+                            <Pressable
+                              style={styles.storeLinkBtn}
+                              hitSlop={8}
+                              accessibilityLabel={t('Add to desktop')}
+                              onPress={() => addGfnShortcut(variant)}>
+                              <Icon
+                                source="plus-box-outline"
                                 size={14}
                                 color="#8A9A92"
                               />

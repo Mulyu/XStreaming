@@ -29,8 +29,7 @@ import {getSettings} from '../store/settingStore';
 import {
   findTitleByProductId,
   getTitleProductId,
-  getTitleStreamingId,
-  saveTitleShortcutSnapshot,
+  requestTitleShortcut,
 } from '../store/shortcutStore';
 import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../utils/debug';
@@ -357,26 +356,15 @@ function TitleDetail({navigation, route}) {
       return;
     }
 
-    const productId = getTitleProductId(titleItem);
-    if (!productId) {
+    if (!getTitleProductId(titleItem)) {
       Alert.alert(t('Warning'), t('TitleShortcutMissingProduct'));
       return;
     }
 
-    const titleName = titleItem.ProductTitle || productId;
-    const artworkUrl =
-      titleItem.Image_Poster?.URL || titleItem.Image_Tile?.URL || '';
-    const iconUrl = artworkUrl ? `https:${artworkUrl}` : '';
-
-    saveTitleShortcutSnapshot(titleItem);
-
     try {
-      await ShortcutManager.addTitleShortcut({
-        productId,
-        titleId: getTitleStreamingId(titleItem),
-        xCloudTitleId: titleItem.XCloudTitleId || '',
-        titleName,
-        iconUrl,
+      await requestTitleShortcut(ShortcutManager, {
+        provider: 'xcloud',
+        titleItem,
       });
       ToastAndroid.show(t('TitleShortcutRequested'), ToastAndroid.SHORT);
     } catch (e: any) {
