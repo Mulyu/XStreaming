@@ -20,6 +20,9 @@ export interface StreamControlRailProps {
   showMouseOption: boolean;
   showEditGamepadLayout: boolean;
   onEditGamepadLayout: () => void;
+  showMouseSensitivity: boolean;
+  mouseSensitivity: number;
+  onMouseSensitivityChange: (value: number) => void;
   showMicrophone: boolean;
   microphoneOpen: boolean;
   onToggleMicrophone: () => void;
@@ -111,6 +114,9 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   showMouseOption,
   showEditGamepadLayout,
   onEditGamepadLayout,
+  showMouseSensitivity,
+  mouseSensitivity,
+  onMouseSensitivityChange,
   showMicrophone,
   microphoneOpen,
   onToggleMicrophone,
@@ -147,6 +153,12 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
       : videoFormat;
   const [liveVolume, setLiveVolume] = React.useState(volume);
   React.useEffect(() => setLiveVolume(volume), [volume]);
+  const [liveMouseSensitivity, setLiveMouseSensitivity] =
+    React.useState(mouseSensitivity);
+  React.useEffect(
+    () => setLiveMouseSensitivity(mouseSensitivity),
+    [mouseSensitivity],
+  );
   const slideIn = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -228,6 +240,30 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                 accent={accent}
                 onPress={onEditGamepadLayout}
               />
+            )}
+            {showMouseSensitivity && (
+              <View style={styles.sliderRow}>
+                <View style={styles.sliderHead}>
+                  <Text style={styles.sliderHeadLabel}>
+                    {t('Mouse sensitivity')}
+                  </Text>
+                  <Text style={styles.sliderHeadValue}>
+                    {liveMouseSensitivity.toFixed(1)}x
+                  </Text>
+                </View>
+                <RNSlider
+                  style={styles.sliderTrack}
+                  minimumValue={0.5}
+                  maximumValue={3}
+                  step={0.1}
+                  value={mouseSensitivity}
+                  onValueChange={setLiveMouseSensitivity}
+                  onSlidingComplete={onMouseSensitivityChange}
+                  minimumTrackTintColor={accent}
+                  maximumTrackTintColor="rgba(255,255,255,0.14)"
+                  thumbTintColor={accent}
+                />
+              </View>
             )}
           </View>
 

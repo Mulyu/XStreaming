@@ -31,8 +31,8 @@ import {
   GAMEPAD_DPAD_DOWN,
   GAMEPAD_DPAD_LEFT,
   GAMEPAD_DPAD_RIGHT,
-  MOUSE_LEFT,
 } from './inputEncoding';
+import {GfnTouchGestureTracker} from './touchGesture';
 
 // GfnStreamAdapter makes a GeForce NOW session look like the xCloud
 // `webRTCClient` so NativeStream can drive it with its full UI: virtual
@@ -179,6 +179,16 @@ export class GfnStreamAdapter {
   private keepAliveText = '';
   private appState: string = AppState.currentState ?? 'active';
   private appStateSub: any = null;
+
+  // Disambiguates single- vs two-finger gestures for the absolute-touch
+  // input path (native touch mode) -- see touchGesture.ts and
+  // getChannelProcessor('input')'s queuePointerInput below.
+  private readonly touchGesture = new GfnTouchGestureTracker({
+    moveCursor: (x, y, warp) => this.gfnClient?.sendMouseAbsolute(x, y, warp),
+    buttonDown: button => this.gfnClient?.sendMouseButtonDown(button),
+    buttonUp: button => this.gfnClient?.sendMouseButtonUp(button),
+    wheel: delta => this.gfnClient?.sendMouseWheel(delta),
+  });
 
   constructor(private readonly options: AdapterOptions) {
     this.appStateSub = AppState.addEventListener('change', next => {
@@ -378,6 +388,7 @@ export class GfnStreamAdapter {
     this.cancelled = true;
     this.stopInputLoop();
     this.stopKeepAlive();
+    this.touchGesture.dispose();
     if (this.appStateSub) {
       this.appStateSub.remove?.();
       this.appStateSub = null;
@@ -438,25 +449,13 @@ export class GfnStreamAdapter {
         // equivalent — accept and drop them.
         addProcessedFrame: () => {},
         // GFN has no native multi-touch wire format, but NVST's absolute
-        // mouse message (type 5) can emulate a single-finger tap/drag: warp
-        // to the touch position and hold the left button down for its
-        // duration. Only the primary pointer is tracked -- multi-touch
-        // gestures aren't representable this way.
+        // mouse message (type 5) can emulate touch: warp to the touch
+        // position and hold the left button down for its duration for a
+        // single finger, or -- via touchGesture.ts's GfnTouchGestureTracker
+        // -- interpret a second finger as a trackpad-style two-finger
+        // gesture (right-click / scroll) instead of a second cursor.
         queuePointerInput: (events: any[]) => {
-          events?.forEach(event => {
-            if (!event) {
-              return;
-            }
-            if (event.type === 'pointerdown') {
-              this.gfnClient?.sendMouseAbsolute(event.x, event.y, true);
-              this.gfnClient?.sendMouseButtonDown(MOUSE_LEFT);
-            } else if (event.type === 'pointermove') {
-              this.gfnClient?.sendMouseAbsolute(event.x, event.y);
-            } else if (event.type === 'pointerup') {
-              this.gfnClient?.sendMouseAbsolute(event.x, event.y, true);
-              this.gfnClient?.sendMouseButtonUp(MOUSE_LEFT);
-            }
-          });
+          this.touchGesture.handleEvents(events);
         },
       };
     }

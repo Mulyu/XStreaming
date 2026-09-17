@@ -99,6 +99,9 @@ export type Settings = {
    * empty = auto (nearest region, CloudMatch's own default).
    */
   gfn_region: string;
+  /** Multiplier applied to MouseTrackpadZone's per-move finger delta before
+   * it's sent -- see components/MouseTrackpadZone.tsx. */
+  gfn_mouse_trackpad_sensitivity: number;
   debug: boolean;
 };
 
@@ -181,6 +184,7 @@ const defaultSettings: Settings = {
   gfn_bitrate_mode: 'auto',
   gfn_bitrate: 20,
   gfn_region: '',
+  gfn_mouse_trackpad_sensitivity: 1.4,
   debug: false,
 };
 
