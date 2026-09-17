@@ -73,6 +73,7 @@ export default {
     Display: 'Display',
     'Touch off': 'Touch off',
     'Mouse trackpad': 'Mouse trackpad',
+    'Mouse sensitivity': 'Mouse sensitivity',
     'Perf stats': 'Perf stats',
     'Cover controls': 'Cover controls',
     Microphone: 'Microphone',

@@ -57,6 +57,7 @@ export default {
     Display: '表示',
     'Touch off': 'タッチ無効',
     'Mouse trackpad': 'マウストラックパッド',
+    'Mouse sensitivity': 'マウス感度',
     'Perf stats': 'パフォーマンス',
     'Cover controls': 'カバー操作',
     Microphone: 'マイク',

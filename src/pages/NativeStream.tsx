@@ -303,6 +303,10 @@ export function NativeStreamScreenBase({
     const g = Number(getSettings().audio_gain);
     return Number.isFinite(g) ? Math.max(0, Math.min(1, g)) : 1;
   });
+  const [mouseSensitivity, setMouseSensitivity] = React.useState(() => {
+    const s = Number(getSettings().gfn_mouse_trackpad_sensitivity);
+    return Number.isFinite(s) && s > 0 ? Math.max(0.5, Math.min(3, s)) : 1.4;
+  });
   const [portraitGamepadEditing, setPortraitGamepadEditing] =
     React.useState(false);
   const [openMicro, setOpenMicro] = React.useState(false);
@@ -699,6 +703,22 @@ export function NativeStreamScreenBase({
     },
     [applyRemoteAudioGain],
   );
+
+  const handleMouseSensitivityChange = React.useCallback((value: number) => {
+    const nextSensitivity = Math.max(
+      0.5,
+      Math.min(3, Math.round(value * 10) / 10),
+    );
+    setMouseSensitivity(nextSensitivity);
+    // Persist so the chosen trackpad sensitivity is remembered across
+    // sessions, same as the audio gain slider above.
+    try {
+      saveSettings({
+        ...getSettings(),
+        gfn_mouse_trackpad_sensitivity: nextSensitivity,
+      });
+    } catch {}
+  }, []);
 
   const getStreamDestination = React.useCallback(() => {
     // Cloud and GFN both browse from the single merged Library tab now;
@@ -3167,7 +3187,8 @@ export function NativeStreamScreenBase({
 
   // GFN-only mouse trackpad: relative move + click/right-click/scroll for
   // Steam/PC titles. See gfn/inputEncoding.ts and components/MouseTrackpadZone.
-  const MOUSE_TRACKPAD_SENSITIVITY = 1.4;
+  // Sensitivity is user-adjustable (StreamControlRail's Mouse group) and
+  // persisted via handleMouseSensitivityChange above.
   const mouseTrackpadRect = React.useMemo(
     () => ({x: 0, y: 0, width: screenWidth, height: screenHeight}),
     [screenWidth, screenHeight],
@@ -3214,7 +3235,7 @@ export function NativeStreamScreenBase({
     return (
       <MouseTrackpadZone
         enabled
-        sensitivity={MOUSE_TRACKPAD_SENSITIVITY}
+        sensitivity={mouseSensitivity}
         rect={mouseTrackpadRect}
         onMove={handleMouseMove}
         onButtonDown={handleMouseButtonDown}
@@ -3285,6 +3306,11 @@ export function NativeStreamScreenBase({
         onToggleMicrophone={handleToggleMic}
         volume={audioGain}
         onVolumeChange={handleAudioGainChange}
+        showMouseSensitivity={
+          route.params?.streamType === 'gfn' && inputMode === 'mouse'
+        }
+        mouseSensitivity={mouseSensitivity}
+        onMouseSensitivityChange={handleMouseSensitivityChange}
         performanceVisible={showPerformance}
         onTogglePerformance={() => setShowPerformance(!showPerformance)}
         showCoverControls={coverAvailable}
