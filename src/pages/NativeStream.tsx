@@ -2870,6 +2870,17 @@ export function NativeStreamScreenBase({
     setShowGamepadEditor(true);
   }, [getActiveProfileName, refreshGamepadProfiles]);
 
+  // The stable per-title id the last-used-profile memory is keyed on. xCloud
+  // titles carry it as `sessionId`; GFN launches never set that (only
+  // `appId`, see GfnLibrary.tsx/launchCatalogTitle.ts/App.tsx shortcut
+  // relaunch), so falling back to `sessionId` alone silently no-ops the
+  // feature for every GFN game.
+  const getProfileGameId = React.useCallback(() => {
+    return route.params?.streamType === 'gfn'
+      ? String(route.params?.appId || '')
+      : String(route.params?.sessionId || '');
+  }, [route.params?.streamType, route.params?.sessionId, route.params?.appId]);
+
   // Switch the live/active touch layout. '' selects the built-in Default.
   const applyActiveProfile = React.useCallback(
     (name: string) => {
@@ -2883,9 +2894,9 @@ export function NativeStreamScreenBase({
       setShowVirtualGamepad(true);
       // Remember this as the profile last used for this game so it is restored
       // the next time the game launches.
-      setLastProfileForGame(String(route.params?.sessionId || ''), name);
+      setLastProfileForGame(getProfileGameId(), name);
     },
-    [route.params?.sessionId],
+    [getProfileGameId],
   );
 
   const handleSwitchGamepadProfile = React.useCallback(
@@ -2957,7 +2968,7 @@ export function NativeStreamScreenBase({
     setShowVirtualGamepad(true);
     setShowGamepadEditor(false);
     setLastProfileForGame(
-      String(route.params?.sessionId || ''),
+      getProfileGameId(),
       settings.custom_virtual_gamepad || '',
     );
   };
@@ -2969,7 +2980,7 @@ export function NativeStreamScreenBase({
       return;
     }
     profileRestoredRef.current = true;
-    const gameId = String(route.params?.sessionId || '');
+    const gameId = getProfileGameId();
     if (!gameId) {
       return;
     }
@@ -2990,7 +3001,7 @@ export function NativeStreamScreenBase({
     setSettings(next);
     setGamepadLayoutVersion(prev => prev + 1);
     setSwipeConfigVersion(prev => prev + 1);
-  }, [route.params?.sessionId]);
+  }, [getProfileGameId]);
 
   // Once connected, remember whatever profile is active for this game, so a
   // game the user never re-profiles still restores its current layout.
@@ -2998,12 +3009,12 @@ export function NativeStreamScreenBase({
     if (connectState !== CONNECTED) {
       return;
     }
-    const gameId = String(route.params?.sessionId || '');
+    const gameId = getProfileGameId();
     if (!gameId) {
       return;
     }
     setLastProfileForGame(gameId, getSettings().custom_virtual_gamepad || '');
-  }, [connectState, route.params?.sessionId]);
+  }, [connectState, getProfileGameId]);
 
   const savePortraitGamepadLayout = React.useCallback(
     (layout: PortraitGamepadControl[]) => {
