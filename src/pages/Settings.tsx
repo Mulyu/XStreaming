@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  StyleSheet,
-  ScrollView,
-  Alert,
-  View,
-  NativeModules,
-  ToastAndroid,
-} from 'react-native';
+import {StyleSheet, ScrollView, Alert, View, ToastAndroid} from 'react-native';
 import {Text, SegmentedButtons} from 'react-native-paper';
 import Spinner from '../components/Spinner';
 import {getSettings, saveSettings, resetSettings} from '../store/settingStore';
@@ -64,8 +57,6 @@ import gfn from '../common/settings/gfn';
 import others from '../common/settings/others';
 
 import pkg from '../../package.json';
-
-const {UsbRumbleManager} = NativeModules;
 
 const log = debugFactory('SettingsScreen');
 
@@ -229,19 +220,6 @@ function SettingsScreen({navigation}) {
     restartDelayed();
   };
 
-  const handleGamepadKernalChange = (value: string) => {
-    applyAndSave({
-      gamepad_kernal: value,
-      gamepad_maping: null,
-      native_gamepad_maping: null,
-    });
-  };
-
-  const handleBindUsbDeviceChange = (value: boolean) => {
-    UsbRumbleManager.setBindUsbDevice(value);
-    updateSetting('bind_usb_device', value);
-  };
-
   // signaling_cloud is stored as {name, isDefault}[] pairs on the xCloud
   // token itself (see xgpuRegions above) rather than a plain value list, so
   // its current value and its write-back both need this small resolution
@@ -262,7 +240,7 @@ function SettingsScreen({navigation}) {
     updateSetting('signaling_cloud_name', value);
   };
 
-  const handleItemPress = async id => {
+  const handleItemPress = id => {
     if (id === 'logout') {
       Alert.alert(t('Warning'), t('Do you want to logout?'), [
         {
@@ -286,21 +264,7 @@ function SettingsScreen({navigation}) {
         },
       ]);
     } else if (id === 'maping') {
-      const hasValidUsbDevice = await UsbRumbleManager.getHasValidUsbDevice();
-      const isUsbMode = settings.bind_usb_device && hasValidUsbDevice;
-      if (isUsbMode) {
-        Alert.alert(
-          t(
-            'After replacing the Android controller driver, controller button mapping is temporarily not supported',
-          ),
-        );
-        return;
-      }
-      if (settings.gamepad_kernal === 'Web') {
-        navigation.navigate('GameMap');
-      } else {
-        navigation.navigate('NativeGameMap');
-      }
+      navigation.navigate('NativeGameMap');
     }
   };
 
@@ -571,33 +535,6 @@ function SettingsScreen({navigation}) {
             value={settings.vibration}
             onChange={v => updateSetting('vibration', v)}
           />
-          <SegmentedRow
-            title={M('gamepad_kernal').title}
-            desc={M('gamepad_kernal').description}
-            options={M('gamepad_kernal').data}
-            value={settings.gamepad_kernal}
-            onChange={handleGamepadKernalChange}
-          />
-          <SegmentedRow
-            title={M('vibration_mode').title}
-            desc={M('vibration_mode').description}
-            options={M('vibration_mode').data}
-            value={settings.vibration_mode}
-            onChange={v => updateSetting('vibration_mode', v)}
-          />
-          <SwitchRow
-            title={M('bind_usb_device').title}
-            desc={M('bind_usb_device').description}
-            value={settings.bind_usb_device}
-            onChange={handleBindUsbDeviceChange}
-          />
-          <SegmentedRow
-            title={M('rumble_intensity').title}
-            desc={M('rumble_intensity').description}
-            options={M('rumble_intensity').data}
-            value={settings.rumble_intensity}
-            onChange={v => updateSetting('rumble_intensity', v)}
-          />
           <SliderRow
             title={M('dead_zone').title}
             desc={M('dead_zone').description}
@@ -607,33 +544,6 @@ function SettingsScreen({navigation}) {
             value={settings.dead_zone}
             onChange={v => updateSetting('dead_zone', v)}
             formatValue={v => v.toFixed(2)}
-          />
-          <SliderRow
-            title={M('edge_compensation').title}
-            desc={M('edge_compensation').description}
-            min={M('edge_compensation').min}
-            max={M('edge_compensation').max}
-            step={M('edge_compensation').step}
-            value={settings.edge_compensation}
-            onChange={v => updateSetting('edge_compensation', v)}
-            formatValue={v => String(v)}
-          />
-          <SwitchRow
-            title={M('short_trigger').title}
-            desc={M('short_trigger').description}
-            value={settings.short_trigger}
-            onChange={v => updateSetting('short_trigger', v)}
-          />
-          <SwitchRow
-            title={M('auto_sprint').title}
-            desc={M('auto_sprint').description}
-            value={settings.auto_sprint}
-            onChange={v => updateSetting('auto_sprint', v)}
-          />
-          <SettingItem
-            title={t('GamepadTestTitle')}
-            description={t('GamepadTestDescription')}
-            onPress={() => navigation.navigate('GamepadTest')}
           />
 
           <SectionLabel title={t('vGamepadSettings')} />

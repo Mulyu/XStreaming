@@ -31,7 +31,7 @@ import {
 import merge from 'deepmerge';
 import {Provider} from 'react-redux';
 import store from './store';
-import {getSettings, saveSettings} from './store/settingStore';
+import {getSettings} from './store/settingStore';
 import {findTitleByProductId} from './store/shortcutStore';
 
 import customDarkTheme from './theme/index.dark';
@@ -55,7 +55,6 @@ import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';
 import CustomGamepadScreen from './pages/CustomGamepad';
 import HoldButtonsScreen from './pages/HoldButtons';
 import Ds5SettingsScreen from './pages/Ds5Settings';
-import GamepadTestScreen from './pages/GamepadTest';
 import HistoryScreen from './pages/History';
 import updater from './utils/updater';
 import {
@@ -75,8 +74,7 @@ const RootStack = createStackNavigator();
 const MainTab = createBottomTabNavigator();
 const navigationRef = createNavigationContainerRef<any>();
 
-const {UsbRumbleManager, FullScreenManager, UpdateManager, ShortcutManager} =
-  NativeModules;
+const {UpdateManager, ShortcutManager} = NativeModules;
 const UPDATE_PROGRESS_EVENT = 'UpdateManagerProgress';
 const TITLE_SHORTCUT_EVENT = 'onTitleShortcutOpen';
 
@@ -162,7 +160,6 @@ const VirtualGamepadSettingsBackgroundScreen = withPageBackground(
 );
 const HoldButtonsBackgroundScreen = withPageBackground(HoldButtonsScreen);
 const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
-const GamepadTestBackgroundScreen = withPageBackground(GamepadTestScreen);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 const SearchBackgroundScreen = withPageBackground(SearchScreen);
 
@@ -190,7 +187,6 @@ function MainTabs() {
 function App() {
   const {t} = useTranslation();
   const settings = getSettings();
-  const deviceInfos = FullScreenManager.getDeviceInfos();
   const updateCheckedRef = React.useRef(false);
   const pendingTitleShortcutRef = React.useRef<any>(null);
   const [updateProgressVisible, setUpdateProgressVisible] =
@@ -361,12 +357,6 @@ function App() {
     });
   }, [settings.check_update, t]);
 
-  React.useEffect(() => {
-    if (settings.bind_usb_device !== undefined) {
-      UsbRumbleManager.setBindUsbDevice(settings.bind_usb_device);
-    }
-  }, [settings.bind_usb_device]);
-
   const paperDarkTheme = applyPrimaryColorToPaperTheme(
     {
       ...MD3DarkTheme,
@@ -381,16 +371,6 @@ function App() {
 
   const paperTheme = paperDarkTheme;
   const navigationTheme = CombinedDarkTheme;
-
-  if (
-    deviceInfos.factor?.toLocaleUpperCase().indexOf('NINTENDO') > -1 &&
-    deviceInfos.model?.toLocaleUpperCase().indexOf('SWITCHLITE') > -1
-  ) {
-    if (!settings.short_trigger) {
-      settings.short_trigger = true;
-      saveSettings(settings);
-    }
-  }
 
   const hasDownloadTotal = updateProgress.totalBytes > 0;
   const normalizedUpdateProgress = hasDownloadTotal
@@ -502,11 +482,6 @@ function App() {
                   name="Ds5"
                   component={Ds5SettingsBackgroundScreen}
                   options={{title: t('DualSense')}}
-                />
-                <RootStack.Screen
-                  name="GamepadTest"
-                  component={GamepadTestBackgroundScreen}
-                  options={{title: t('GamepadTestTitle')}}
                 />
               </RootStack.Group>
 

@@ -109,7 +109,6 @@ const {
 } = NativeModules;
 
 let defaultMaping: any = GAMEPAD_MAPING;
-let triggerMax = 0.8;
 
 const GAMEPAD_DIGITAL_KEYS = [
   'A',
@@ -382,7 +381,6 @@ export function NativeStreamScreenBase({
   // the turbo set below, since both are per-profile per-button config.
   const macroConfigsRef = React.useRef<Map<string, any>>(new Map());
   const manualLeftThumbPressedRef = React.useRef(false);
-  const autoSprintLeftThumbPressedRef = React.useRef(false);
   const supportedSystemUis = React.useMemo(() => [10, 19], []);
 
   const isTriggerWork = React.useRef(false);
@@ -391,31 +389,13 @@ export function NativeStreamScreenBase({
     if (!state || state !== gpState) {
       return;
     }
-    state.LeftThumb =
-      manualLeftThumbPressedRef.current || autoSprintLeftThumbPressedRef.current
-        ? 1
-        : 0;
+    state.LeftThumb = manualLeftThumbPressedRef.current ? 1 : 0;
   }, []);
 
   const setManualLeftThumbPressed = React.useCallback(
     (pressed: boolean) => {
       manualLeftThumbPressedRef.current = pressed;
       syncLeftThumbButton(gpState);
-    },
-    [syncLeftThumbButton],
-  );
-
-  const syncAutoSprint = React.useCallback(
-    (state: any, autoSprintEnabled: boolean) => {
-      if (!state || state !== gpState) {
-        return;
-      }
-
-      autoSprintLeftThumbPressedRef.current =
-        autoSprintEnabled &&
-        (Math.abs(state.LeftThumbXAxis) > 0 ||
-          Math.abs(state.LeftThumbYAxis) > 0);
-      syncLeftThumbButton(state);
     },
     [syncLeftThumbButton],
   );
@@ -783,7 +763,6 @@ export function NativeStreamScreenBase({
     setSettings(_settings);
     resetGamepadState(gpState, 0);
     manualLeftThumbPressedRef.current = false;
-    autoSprintLeftThumbPressedRef.current = false;
     const coopDeviceIndexMap = new Map<number, number>();
     const coopGpStates = _settings.coop
       ? [gpState, createGamepadState(1)]
@@ -807,7 +786,6 @@ export function NativeStreamScreenBase({
     if (!isUsbMode && _settings.native_gamepad_maping) {
       gpMaping = sweap(_settings.native_gamepad_maping);
     }
-    const isSdlKernel = !isUsbMode && _settings.gamepad_kernal === 'SDL';
 
     const normaliseAxis = value => {
       if (_settings.dead_zone) {
@@ -818,17 +796,6 @@ export function NativeStreamScreenBase({
         value = value - Math.sign(value) * _settings.dead_zone;
         value /= 1.0 - _settings.dead_zone;
 
-        // Joystick edge compensation
-        const THRESHOLD = 0.8;
-        const MAX_VALUE = 1;
-        const compensation = _settings.edge_compensation / 100 || 0;
-        if (Math.abs(value) > THRESHOLD) {
-          if (value > 0) {
-            value = Math.min(value + compensation, MAX_VALUE);
-          } else {
-            value = Math.max(value - compensation, -MAX_VALUE);
-          }
-        }
         return value;
       } else {
         return value;
@@ -1076,7 +1043,7 @@ export function NativeStreamScreenBase({
           // Joystick
           gpState.LeftThumbXAxis = normaliseAxis(leftStickX);
           gpState.LeftThumbYAxis = normaliseAxis(leftStickY);
-          syncAutoSprint(gpState, !!_settings.auto_sprint);
+          syncLeftThumbButton(gpState);
           gpState.RightThumbXAxis = normaliseAxis(rightStickX);
           gpState.RightThumbYAxis = normaliseAxis(rightStickY);
         },
@@ -1086,17 +1053,7 @@ export function NativeStreamScreenBase({
         webrtcClient && webrtcClient.setGamepadState(gpState);
       }, 1000 / _settings.polling_rate);
     } else {
-      log.info(isSdlKernel ? 'Entry SDL gamepad mode' : 'Entry normal mode');
-      if (isSdlKernel) {
-        Promise.resolve(
-          SdlGamepadManager?.startController?.(
-            _settings.dead_zone ?? 0,
-            _settings.edge_compensation ?? 0,
-            !!_settings.short_trigger,
-            false,
-          ),
-        ).catch(() => {});
-      }
+      log.info('Entry normal mode');
       gpDownEventListener.current = eventEmitter.addListener(
         'onGamepadKeyDown',
         event => {
@@ -1112,11 +1069,7 @@ export function NativeStreamScreenBase({
             return;
           }
 
-          if (keyName === 'LeftTrigger' || keyName === 'RightTrigger') {
-            if (_settings.short_trigger) {
-              targetState[keyName] = 1;
-            }
-          } else {
+          if (keyName !== 'LeftTrigger' && keyName !== 'RightTrigger') {
             targetState[keyName] = 1;
           }
           if (keyName === 'LeftThumb' && targetState === gpState) {
@@ -1154,11 +1107,7 @@ export function NativeStreamScreenBase({
             return;
           }
 
-          if (keyName === 'LeftTrigger' || keyName === 'RightTrigger') {
-            if (_settings.short_trigger) {
-              targetState[keyName] = 0;
-            }
-          } else {
+          if (keyName !== 'LeftTrigger' && keyName !== 'RightTrigger') {
             targetState[keyName] = 0;
           }
           if (keyName === 'LeftThumb' && targetState === gpState) {
@@ -1228,7 +1177,7 @@ export function NativeStreamScreenBase({
 
           targetState.LeftThumbXAxis = normaliseAxis(event.leftStickX);
           targetState.LeftThumbYAxis = normaliseAxis(event.leftStickY);
-          syncAutoSprint(targetState, !!_settings.auto_sprint);
+          syncLeftThumbButton(targetState);
 
           if (
             Math.abs(event.rightStickX) > 0.1 ||
@@ -1265,46 +1214,20 @@ export function NativeStreamScreenBase({
             return;
           }
 
-          // Short trigger
-          if (_settings.short_trigger) {
-            triggerMax = _settings.dead_zone;
-            if (event.leftTrigger >= triggerMax) {
-              targetState.LeftTrigger = 1;
-            } else {
-              setTimeout(() => {
-                targetState.LeftTrigger = 0;
-              }, 16);
-            }
+          if (event.leftTrigger >= 0.05) {
+            targetState.LeftTrigger = event.leftTrigger;
           } else {
-            // Line trigger
-            if (event.leftTrigger >= 0.05) {
-              targetState.LeftTrigger = event.leftTrigger;
-            } else {
-              setTimeout(() => {
-                targetState.LeftTrigger = 0;
-              }, 16);
-            }
+            setTimeout(() => {
+              targetState.LeftTrigger = 0;
+            }, 16);
           }
 
-          // Short trigger
-          if (_settings.short_trigger) {
-            triggerMax = _settings.dead_zone;
-            if (event.rightTrigger >= triggerMax) {
-              targetState.RightTrigger = 1;
-            } else {
-              setTimeout(() => {
-                targetState.RightTrigger = 0;
-              }, 16);
-            }
+          if (event.rightTrigger >= 0.05) {
+            targetState.RightTrigger = event.rightTrigger;
           } else {
-            // Line trigger
-            if (event.rightTrigger >= 0.05) {
-              targetState.RightTrigger = event.rightTrigger;
-            } else {
-              setTimeout(() => {
-                targetState.RightTrigger = 0;
-              }, 16);
-            }
+            setTimeout(() => {
+              targetState.RightTrigger = 0;
+            }, 16);
           }
         },
       );
@@ -1719,14 +1642,7 @@ export function NativeStreamScreenBase({
             audioRumbleTimer.current = setInterval(() => {
               webrtcClient.getAudioVolume().then(vol => {
                 if (vol >= _settings.audio_rumble_threshold) {
-                  GamepadManager.vibrate(
-                    30,
-                    10,
-                    0,
-                    0,
-                    0,
-                    _settings.rumble_intensity || 3,
-                  );
+                  GamepadManager.vibrate(30, 10, 0, 0, 0, 3);
                 }
               });
             }, 16);
@@ -1867,14 +1783,7 @@ export function NativeStreamScreenBase({
             rightTrigger <= 0;
           if (shouldStop) {
             isRumbling.current = false;
-            GamepadManager.vibrate(
-              0,
-              0,
-              0,
-              0,
-              0,
-              _settings.rumble_intensity || 3,
-            );
+            GamepadManager.vibrate(0, 0, 0, 0, 0, 3);
             return;
           }
 
@@ -1885,7 +1794,7 @@ export function NativeStreamScreenBase({
             strongMagnitude,
             leftTrigger,
             rightTrigger,
-            _settings.rumble_intensity || 3,
+            3,
           );
         }
       });
@@ -2201,7 +2110,6 @@ export function NativeStreamScreenBase({
       );
       macroSequenceTimersRef.current = [];
       manualLeftThumbPressedRef.current = false;
-      autoSprintLeftThumbPressedRef.current = false;
       syncLeftThumbButton(gpState);
       GamepadManager.setCurrentScreen('');
       SdlGamepadManager?.stopController?.();
@@ -2233,7 +2141,6 @@ export function NativeStreamScreenBase({
     portraitMode,
     isInPictureInPicture,
     setManualLeftThumbPressed,
-    syncAutoSprint,
     syncLeftThumbButton,
   ]);
 
@@ -2384,11 +2291,11 @@ export function NativeStreamScreenBase({
       } else {
         gpState.LeftThumbXAxis = 0;
         gpState.LeftThumbYAxis = 0;
-        syncAutoSprint(gpState, !!settings.auto_sprint);
+        syncLeftThumbButton(gpState);
       }
     });
     activeMacroSticksRef.current.clear();
-  }, [setManualLeftThumbPressed, settings.auto_sprint, syncAutoSprint]);
+  }, [setManualLeftThumbPressed, syncLeftThumbButton]);
 
   const runMacroSteps = (rawSteps: any) => {
     const allowedButtons = new Set<string>(VIRTUAL_MACRO_ALLOWED_BUTTONS);
@@ -2422,7 +2329,7 @@ export function NativeStreamScreenBase({
           } else {
             gpState.LeftThumbXAxis = x;
             gpState.LeftThumbYAxis = y;
-            syncAutoSprint(gpState, !!settings.auto_sprint);
+            syncLeftThumbButton(gpState);
           }
         });
         schedule(accumulatedDelay + duration, () => {
@@ -2433,7 +2340,7 @@ export function NativeStreamScreenBase({
           } else {
             gpState.LeftThumbXAxis = 0;
             gpState.LeftThumbYAxis = 0;
-            syncAutoSprint(gpState, !!settings.auto_sprint);
+            syncLeftThumbButton(gpState);
           }
         });
         accumulatedDelay += duration + waitAfter;
@@ -2767,7 +2674,7 @@ export function NativeStreamScreenBase({
     } else {
       gpState.LeftThumbXAxis = Number(leveledX);
       gpState.LeftThumbYAxis = Number(leveledY);
-      syncAutoSprint(gpState, !!settings.auto_sprint);
+      syncLeftThumbButton(gpState);
     }
   };
 
