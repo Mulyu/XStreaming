@@ -1,10 +1,14 @@
 import React from 'react';
-import {TouchableOpacity} from 'react-native';
+import {TouchableOpacity, Text, StyleSheet} from 'react-native';
 import {GestureDetector, Gesture} from 'react-native-gesture-handler';
 import {SvgXml} from 'react-native-svg';
 import {useTheme} from 'react-native-paper';
 import icons from '../common/virtualgp';
-import {VIRTUAL_MACRO_BUTTON_NAME} from '../utils/virtualMacro';
+import {
+  isMacroButtonName,
+  macroButtonNumber,
+  MACRO_ICON_KEY,
+} from '../utils/virtualMacro';
 import {colorizeMacroIconXml, normalizeHexColor} from '../utils/themeColor';
 
 type Props = {
@@ -42,23 +46,42 @@ const GamepadButton: React.FC<Props> = ({
     width = 60;
     height = 60;
   }
-  if (name === VIRTUAL_MACRO_BUTTON_NAME) {
+  if (isMacroButtonName(name)) {
     width = 60;
     height = 60;
   }
 
-  const xml =
-    name === VIRTUAL_MACRO_BUTTON_NAME
-      ? colorizeMacroIconXml(icons[name], primaryColor)
-      : icons[name];
+  const xml = isMacroButtonName(name)
+    ? colorizeMacroIconXml(icons[MACRO_ICON_KEY], primaryColor)
+    : icons[name];
+  const badge = macroButtonNumber(name);
 
   return (
     <GestureDetector gesture={longPressGesture}>
       <TouchableOpacity style={style}>
         <SvgXml xml={xml} width={width} height={height} />
+        {badge !== null && (
+          <Text style={styles.macroBadge} pointerEvents="none">
+            {badge}
+          </Text>
+        )}
       </TouchableOpacity>
     </GestureDetector>
   );
 };
+
+const styles = StyleSheet.create({
+  macroBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 4,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: {width: 0, height: 1},
+    textShadowRadius: 2,
+  },
+});
 
 export default GamepadButton;

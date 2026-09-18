@@ -163,6 +163,8 @@ export default {
       'ボタン位置が実際と異なる場合があります।',
     'Customize virtual buttons': 'ボタンのカスタマイズ',
     'Customize buttons of virtual gamepad': '仮想パッドのレイアウト編集',
+    CustomizeButtonsWithMacroHint:
+      '仮想パッドのレイアウトを編集(マクロボタン3個を含む)。編集画面でマクロボタンをタップすると、そのボタン専用のアクション列を設定できます。',
     'Edit Virtual Gamepad': '仮想パッドを編集',
     'Click on an element to set its size and display':
       'クリックしてサイズと表示を設定।',

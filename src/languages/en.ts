@@ -187,6 +187,8 @@ export default {
     'Customize virtual buttons': 'Customize virtual buttons',
     'Customize buttons of virtual gamepad':
       'Customize your virtual gamepad layout. You can edit multiple layouts and use them as needed.',
+    CustomizeButtonsWithMacroHint:
+      'Customize your virtual gamepad layout, including the 3 macro buttons -- tap one in the editor to set its own action sequence.',
     'Edit Virtual Gamepad': 'Edit Virtual Gamepad',
     'Click on an element to set its size and display':
       'Tap an element to set its size and visibility',

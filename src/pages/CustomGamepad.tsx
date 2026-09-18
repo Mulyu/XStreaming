@@ -9,6 +9,10 @@ import {
   RadioButton,
   Text,
   Divider,
+  IconButton,
+  Checkbox,
+  Switch,
+  Button,
   useTheme,
 } from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
@@ -28,8 +32,13 @@ import {
   saveSettings as saveUserSettings,
 } from '../store/settingStore';
 import {
-  createDefaultMacroLayoutButton,
-  ensureMacroLayoutButton,
+  createDefaultMacroLayoutButtons,
+  ensureMacroLayoutButtons,
+  isMacroButtonName,
+  normalizeMacroLoopIntervalMs,
+  normalizeMacroStep,
+  VIRTUAL_MACRO_ALLOWED_BUTTONS,
+  VirtualMacroStep,
 } from '../utils/virtualMacro';
 import {
   buildDefaultLayout,
@@ -63,6 +72,19 @@ function CustomGamepadScreen({navigation, route}) {
   const [currentShow, setCurrentShow] = React.useState(true);
   const [currentTurbo, setCurrentTurbo] = React.useState(false);
 
+  // Macro1/Macro2/Macro3 only -- this button's own action sequence, edited
+  // right here in the layout editor instead of a shared global screen (see
+  // utils/virtualMacro.ts). Mirrors currentScale/currentShow/currentTurbo:
+  // seeded from the tapped button's config, written back into `buttons` on
+  // every change, persisted together with everything else on Save.
+  const [macroSteps, setMacroSteps] = React.useState<VirtualMacroStep[]>([]);
+  const [macroLoopEnabled, setMacroLoopEnabled] = React.useState(false);
+  const [macroLoopIntervalMs, setMacroLoopIntervalMs] = React.useState(500);
+  const [editingMacroStep, setEditingMacroStep] = React.useState<{
+    index: number;
+    step: VirtualMacroStep;
+  } | null>(null);
+
   React.useEffect(() => {
     const _settings = getSettings();
     let _title = '';
@@ -89,13 +111,16 @@ function CustomGamepadScreen({navigation, route}) {
     setTimeout(() => {
       const {width, height} = Dimensions.get('window');
 
-      const macroDefaultButton = createDefaultMacroLayoutButton(width, height);
+      const macroDefaultButtons = createDefaultMacroLayoutButtons(
+        width,
+        height,
+      );
       const _buttons = buildDefaultLayout(width, height);
       if (_settings[_title]) {
         const exitButtons = _settings[_title];
-        const withMacro = ensureMacroLayoutButton(
+        const withMacro = ensureMacroLayoutButtons(
           exitButtons,
-          macroDefaultButton,
+          macroDefaultButtons,
         );
         setButtons(
           ensureSwipePad(withMacro, createDefaultSwipePad(width, height)),
@@ -179,6 +204,103 @@ function CustomGamepadScreen({navigation, route}) {
       }
     });
     setButtons([...buttons]);
+  };
+
+  // Writes the given macro fields onto currentButton's own entry in
+  // `buttons`, same write-through-immediately pattern as show/turbo above.
+  const writeMacroFields = (fields: Partial<VirtualMacroStep> & any) => {
+    buttons.forEach(b => {
+      if (b.name === currentButton) {
+        Object.assign(b, fields);
+      }
+    });
+    setButtons([...buttons]);
+  };
+
+  const handleChangeMacroLoopEnabled = (value: boolean) => {
+    setMacroLoopEnabled(value);
+    writeMacroFields({macroLoopEnabled: value});
+  };
+
+  const handleChangeMacroLoopIntervalMs = (value: number, commit = false) => {
+    const next = normalizeMacroLoopIntervalMs(value);
+    setMacroLoopIntervalMs(next);
+    if (commit) {
+      writeMacroFields({macroLoopIntervalMs: next});
+    }
+  };
+
+  const openAddMacroStep = () => {
+    setEditingMacroStep({
+      index: -1,
+      step: {
+        type: 'buttons',
+        buttons: ['A'],
+        stick: 'left',
+        x: 0,
+        y: 0,
+        durationMs: 80,
+        waitAfterMs: 0,
+      },
+    });
+  };
+
+  const openEditMacroStep = (index: number) => {
+    const step = macroSteps[index];
+    if (!step) {
+      return;
+    }
+    setEditingMacroStep({index, step: {...step}});
+  };
+
+  const saveMacroStep = () => {
+    if (!editingMacroStep) {
+      return;
+    }
+    const fallbackButton = macroSteps[0]?.buttons?.[0] || 'A';
+    const normalized = normalizeMacroStep(
+      editingMacroStep.step,
+      fallbackButton,
+    );
+    const next = [...macroSteps];
+    if (editingMacroStep.index >= 0) {
+      next[editingMacroStep.index] = normalized;
+    } else {
+      next.push(normalized);
+    }
+    setMacroSteps(next);
+    writeMacroFields({macroSteps: next});
+    setEditingMacroStep(null);
+  };
+
+  const deleteMacroStep = () => {
+    if (!editingMacroStep || editingMacroStep.index < 0) {
+      return;
+    }
+    const next = macroSteps.filter((_, idx) => idx !== editingMacroStep.index);
+    setMacroSteps(next);
+    writeMacroFields({macroSteps: next});
+    setEditingMacroStep(null);
+  };
+
+  const getMacroStepTitle = (step: VirtualMacroStep, index: number) => {
+    if (step.type === 'stick') {
+      return `${index + 1}. ${t('Stick')}: ${t(
+        step.stick === 'right' ? 'Right stick' : 'Left stick',
+      )}`;
+    }
+    return `${index + 1}. ${step.buttons.join(' + ')}`;
+  };
+
+  const getMacroStepDescription = (step: VirtualMacroStep) => {
+    if (step.type === 'stick') {
+      return `X: ${step.x.toFixed(2)} · Y: ${step.y.toFixed(2)} · ${t(
+        'Move',
+      )}: ${step.durationMs}ms · ${t('Wait')}: ${step.waitAfterMs}ms`;
+    }
+    return `${t('Hold')}: ${step.durationMs}ms · ${t('Wait')}: ${
+      step.waitAfterMs
+    }ms`;
   };
 
   const background = {
@@ -405,6 +527,330 @@ function CustomGamepadScreen({navigation, route}) {
                     </RadioButton.Group>
                   </>
                 )}
+
+              {isMacroButtonName(currentButton) && (
+                <>
+                  <View style={styles.macroHeaderRow}>
+                    <Text style={styles.macroSectionTitle}>
+                      {t('Macro action sequence')}
+                    </Text>
+                    <IconButton
+                      icon="plus-circle-outline"
+                      onPress={openAddMacroStep}
+                    />
+                  </View>
+                  <Divider />
+                  {macroSteps.length === 0 ? (
+                    <Text style={styles.emptyText}>
+                      {t('No action steps, tap + to add')}
+                    </Text>
+                  ) : (
+                    <View style={styles.macroStepsScroll}>
+                      {macroSteps.map((step, index) => (
+                        <List.Item
+                          key={`macro-step-${index}`}
+                          title={getMacroStepTitle(step, index)}
+                          description={getMacroStepDescription(step)}
+                          left={props => (
+                            <List.Icon
+                              {...props}
+                              icon={
+                                step.type === 'stick'
+                                  ? 'gamepad-variant-outline'
+                                  : 'gesture-tap-button'
+                              }
+                            />
+                          )}
+                          right={props => (
+                            <IconButton
+                              {...props}
+                              icon="pencil-outline"
+                              onPress={() => openEditMacroStep(index)}
+                            />
+                          )}
+                          onPress={() => openEditMacroStep(index)}
+                        />
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={styles.switchRow}>
+                    <Text>{t('Loop macro')}</Text>
+                    <Switch
+                      value={macroLoopEnabled}
+                      onValueChange={handleChangeMacroLoopEnabled}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                  <Text style={styles.title}>
+                    {t('Loop interval')}: {macroLoopIntervalMs}ms
+                  </Text>
+                  <Slider
+                    value={macroLoopIntervalMs}
+                    minimumValue={0}
+                    maximumValue={10000}
+                    step={50}
+                    onValueChange={val => handleChangeMacroLoopIntervalMs(val)}
+                    onSlidingComplete={val =>
+                      handleChangeMacroLoopIntervalMs(val, true)
+                    }
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor="grey"
+                  />
+                </>
+              )}
+            </Card.Content>
+          </Card>
+        </Modal>
+      </Portal>
+
+      <Portal>
+        <Modal
+          visible={!!editingMacroStep}
+          onDismiss={() => setEditingMacroStep(null)}
+          contentContainerStyle={styles.modal}>
+          <Card>
+            <Card.Title
+              title={
+                editingMacroStep?.index !== -1
+                  ? t('Edit action')
+                  : t('Add action')
+              }
+            />
+            <Card.Content>
+              <Text style={styles.title}>{t('Action type')}</Text>
+              <View style={styles.macroTypeRow}>
+                <Button
+                  mode={
+                    editingMacroStep?.step.type === 'stick'
+                      ? 'outlined'
+                      : 'contained'
+                  }
+                  style={styles.macroTypeButton}
+                  onPress={() => {
+                    if (!editingMacroStep) {
+                      return;
+                    }
+                    setEditingMacroStep({
+                      ...editingMacroStep,
+                      step: {...editingMacroStep.step, type: 'buttons'},
+                    });
+                  }}>
+                  {t('Button macro')}
+                </Button>
+                <Button
+                  mode={
+                    editingMacroStep?.step.type === 'stick'
+                      ? 'contained'
+                      : 'outlined'
+                  }
+                  style={styles.macroTypeButton}
+                  onPress={() => {
+                    if (!editingMacroStep) {
+                      return;
+                    }
+                    setEditingMacroStep({
+                      ...editingMacroStep,
+                      step: {
+                        ...editingMacroStep.step,
+                        type: 'stick',
+                        buttons: editingMacroStep.step.buttons?.length
+                          ? editingMacroStep.step.buttons
+                          : ['A'],
+                        stick: editingMacroStep.step.stick || 'left',
+                      },
+                    });
+                  }}>
+                  {t('Stick macro')}
+                </Button>
+              </View>
+
+              {editingMacroStep?.step.type === 'stick' ? (
+                <>
+                  <Text style={styles.title}>{t('Stick')}</Text>
+                  <View style={styles.macroTypeRow}>
+                    <Button
+                      mode={
+                        editingMacroStep?.step.stick === 'right'
+                          ? 'outlined'
+                          : 'contained'
+                      }
+                      style={styles.macroTypeButton}
+                      onPress={() =>
+                        editingMacroStep &&
+                        setEditingMacroStep({
+                          ...editingMacroStep,
+                          step: {...editingMacroStep.step, stick: 'left'},
+                        })
+                      }>
+                      {t('Left stick')}
+                    </Button>
+                    <Button
+                      mode={
+                        editingMacroStep?.step.stick === 'right'
+                          ? 'contained'
+                          : 'outlined'
+                      }
+                      style={styles.macroTypeButton}
+                      onPress={() =>
+                        editingMacroStep &&
+                        setEditingMacroStep({
+                          ...editingMacroStep,
+                          step: {...editingMacroStep.step, stick: 'right'},
+                        })
+                      }>
+                      {t('Right stick')}
+                    </Button>
+                  </View>
+
+                  <Text style={styles.title}>
+                    X: {(editingMacroStep?.step.x ?? 0).toFixed(2)}
+                  </Text>
+                  <Slider
+                    value={editingMacroStep?.step.x ?? 0}
+                    minimumValue={-1}
+                    maximumValue={1}
+                    step={0.01}
+                    onValueChange={val =>
+                      editingMacroStep &&
+                      setEditingMacroStep({
+                        ...editingMacroStep,
+                        step: {
+                          ...editingMacroStep.step,
+                          x: Number(val.toFixed(2)),
+                        },
+                      })
+                    }
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor="grey"
+                  />
+
+                  <Text style={styles.title}>
+                    Y: {(editingMacroStep?.step.y ?? 0).toFixed(2)}
+                  </Text>
+                  <Slider
+                    value={editingMacroStep?.step.y ?? 0}
+                    minimumValue={-1}
+                    maximumValue={1}
+                    step={0.01}
+                    onValueChange={val =>
+                      editingMacroStep &&
+                      setEditingMacroStep({
+                        ...editingMacroStep,
+                        step: {
+                          ...editingMacroStep.step,
+                          y: Number(val.toFixed(2)),
+                        },
+                      })
+                    }
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor="grey"
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.title}>{t('Buttons')}</Text>
+                  <Divider />
+                  <View style={styles.macroStepsScroll}>
+                    {VIRTUAL_MACRO_ALLOWED_BUTTONS.map(button => {
+                      const selected =
+                        editingMacroStep?.step.buttons?.includes(button);
+                      return (
+                        <Checkbox.Item
+                          key={button}
+                          label={button}
+                          status={selected ? 'checked' : 'unchecked'}
+                          onPress={() => {
+                            if (!editingMacroStep) {
+                              return;
+                            }
+                            const current = Array.isArray(
+                              editingMacroStep.step.buttons,
+                            )
+                              ? editingMacroStep.step.buttons
+                              : [];
+                            const next = selected
+                              ? current.filter(item => item !== button)
+                              : [...current, button];
+                            setEditingMacroStep({
+                              ...editingMacroStep,
+                              step: {...editingMacroStep.step, buttons: next},
+                            });
+                          }}
+                        />
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              <Text style={styles.title}>
+                {editingMacroStep?.step.type === 'stick'
+                  ? t('Move duration')
+                  : t('Hold duration')}
+                : {editingMacroStep?.step.durationMs ?? 0}ms
+              </Text>
+              <Slider
+                value={editingMacroStep?.step.durationMs ?? 80}
+                minimumValue={30}
+                maximumValue={5000}
+                step={10}
+                onValueChange={val =>
+                  editingMacroStep &&
+                  setEditingMacroStep({
+                    ...editingMacroStep,
+                    step: {
+                      ...editingMacroStep.step,
+                      durationMs: Math.round(val),
+                    },
+                  })
+                }
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor="grey"
+              />
+
+              <Text style={styles.title}>
+                {t('Wait after action')}:{' '}
+                {editingMacroStep?.step.waitAfterMs ?? 0}
+                ms
+              </Text>
+              <Slider
+                value={editingMacroStep?.step.waitAfterMs ?? 0}
+                minimumValue={0}
+                maximumValue={3000}
+                step={10}
+                onValueChange={val =>
+                  editingMacroStep &&
+                  setEditingMacroStep({
+                    ...editingMacroStep,
+                    step: {
+                      ...editingMacroStep.step,
+                      waitAfterMs: Math.round(val),
+                    },
+                  })
+                }
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor="grey"
+              />
+
+              <View style={styles.macroModalActions}>
+                {editingMacroStep?.index !== -1 && (
+                  <Button
+                    mode="text"
+                    textColor="#D32F2F"
+                    onPress={deleteMacroStep}>
+                    {t('Delete')}
+                  </Button>
+                )}
+                <Button
+                  mode="outlined"
+                  onPress={() => setEditingMacroStep(null)}>
+                  {t('Cancel')}
+                </Button>
+                <Button mode="contained" onPress={saveMacroStep}>
+                  {t('Confirm')}
+                </Button>
+              </View>
             </Card.Content>
           </Card>
         </Modal>
@@ -487,6 +933,15 @@ function CustomGamepadScreen({navigation, route}) {
                   setCurrentScale(button.scale || 1);
                   setCurrentShow(button.show ?? true);
                   setCurrentTurbo(button.turbo ?? false);
+                  if (isMacroButtonName(button.name)) {
+                    setMacroSteps(
+                      Array.isArray(button.macroSteps) ? button.macroSteps : [],
+                    );
+                    setMacroLoopEnabled(!!button.macroLoopEnabled);
+                    setMacroLoopIntervalMs(
+                      normalizeMacroLoopIntervalMs(button.macroLoopIntervalMs),
+                    );
+                  }
                   setShowModal(true);
                 }}
                 onDragRelease={(_, __, bounds) => {
@@ -542,6 +997,41 @@ const styles = StyleSheet.create({
     color: '#2FD24B',
     fontWeight: '700',
     fontSize: 13,
+  },
+  macroHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  macroSectionTitle: {
+    fontWeight: '700',
+  },
+  emptyText: {
+    opacity: 0.7,
+    paddingVertical: 10,
+  },
+  macroStepsScroll: {
+    maxHeight: 220,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  macroTypeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  macroTypeButton: {
+    flex: 1,
+  },
+  macroModalActions: {
+    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   padHandle: {
     width: 22,

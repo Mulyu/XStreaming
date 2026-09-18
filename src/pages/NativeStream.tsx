@@ -73,8 +73,7 @@ import {
   normalizeMacroLoopIntervalMs,
   normalizeMacroSteps,
   VIRTUAL_MACRO_ALLOWED_BUTTONS,
-  VIRTUAL_MACRO_BUTTON_NAME,
-  DEFAULT_VIRTUAL_MACRO_SHORT_STEPS,
+  isMacroButtonName,
 } from '../utils/virtualMacro';
 
 const log = debugFactory('NativeStreamScreen');
@@ -363,6 +362,14 @@ export function NativeStreamScreenBase({
   const activeMacroButtonsRef = React.useRef<Set<string>>(new Set());
   const activeMacroSticksRef = React.useRef<Set<string>>(new Set());
   const isMacroLoopRunningRef = React.useRef(false);
+  // Which of the (up to 3) macro buttons owns the currently-running loop, if
+  // any -- lets pressing that same button again toggle its own loop off
+  // while pressing a *different* macro button cleanly takes over instead.
+  const activeMacroNameRef = React.useRef<string | null>(null);
+  // Macro1/2/3's own {macroSteps, macroLoopEnabled, macroLoopIntervalMs}, from
+  // the active custom-gamepad profile's saved layout -- refreshed alongside
+  // the turbo set below, since both are per-profile per-button config.
+  const macroConfigsRef = React.useRef<Map<string, any>>(new Map());
   const manualLeftThumbPressedRef = React.useRef(false);
   const autoSprintLeftThumbPressedRef = React.useRef(false);
   const supportedSystemUis = React.useMemo(() => [10, 19], []);
@@ -2348,6 +2355,7 @@ export function NativeStreamScreenBase({
     );
     macroSequenceTimersRef.current = [];
     isMacroLoopRunningRef.current = false;
+    activeMacroNameRef.current = null;
     Array.from(activeMacroButtonsRef.current).forEach(button => {
       if (button === 'LeftThumb') {
         setManualLeftThumbPressed(false);
@@ -2371,10 +2379,7 @@ export function NativeStreamScreenBase({
 
   const runMacroSteps = (rawSteps: any) => {
     const allowedButtons = new Set<string>(VIRTUAL_MACRO_ALLOWED_BUTTONS);
-    const steps = normalizeMacroSteps(
-      rawSteps,
-      DEFAULT_VIRTUAL_MACRO_SHORT_STEPS,
-    );
+    const steps = normalizeMacroSteps(rawSteps);
     let accumulatedDelay = 0;
 
     const schedule = (delay: number, fn: () => void) => {
@@ -2456,24 +2461,31 @@ export function NativeStreamScreenBase({
     return accumulatedDelay;
   };
 
-  const handleMacroPressIn = () => {
-    const shortSteps = Array.isArray(settings.virtual_macro_short_press_steps)
-      ? settings.virtual_macro_short_press_steps
-      : [];
-    const longSteps = Array.isArray(settings.virtual_macro_long_press_steps)
-      ? settings.virtual_macro_long_press_steps
-      : [];
-    const rawSteps = shortSteps.length ? shortSteps : longSteps;
-    if (settings.virtual_macro_loop_enabled) {
-      if (isMacroLoopRunningRef.current) {
+  // `name` is which of Macro1/Macro2/Macro3 was pressed -- each fires its own
+  // sequence, configured per profile on its own ButtonConfig (see
+  // gamepadLayout.ts) rather than one sequence shared globally.
+  const handleMacroPressIn = (name: string) => {
+    const config = macroConfigsRef.current.get(name);
+    const rawSteps = Array.isArray(config?.macroSteps) ? config.macroSteps : [];
+    if (!rawSteps.length) {
+      return;
+    }
+
+    if (config?.macroLoopEnabled) {
+      if (
+        isMacroLoopRunningRef.current &&
+        activeMacroNameRef.current === name
+      ) {
+        // Pressing the same looping macro button again stops it.
         clearMacroTimers();
         return;
       }
 
       clearMacroTimers();
+      activeMacroNameRef.current = name;
       isMacroLoopRunningRef.current = true;
       const interval = normalizeMacroLoopIntervalMs(
-        settings.virtual_macro_loop_interval_ms,
+        config?.macroLoopIntervalMs,
       );
       const runLoop = () => {
         if (!isMacroLoopRunningRef.current) {
@@ -2504,7 +2516,7 @@ export function NativeStreamScreenBase({
     }
   };
 
-  const handleMacroPressOut = () => {};
+  const handleMacroPressOut = (_name: string) => {};
 
   // Virtual gamepad press start
   // Push the current virtual-gamepad state to the input channel immediately.
@@ -2545,8 +2557,8 @@ export function NativeStreamScreenBase({
   };
 
   const handleButtonPressIn = name => {
-    if (name === VIRTUAL_MACRO_BUTTON_NAME) {
-      handleMacroPressIn();
+    if (isMacroButtonName(name)) {
+      handleMacroPressIn(name);
       return;
     }
 
@@ -2585,8 +2597,8 @@ export function NativeStreamScreenBase({
 
   // Virtual gamepad press end
   const handleButtonPressOut = name => {
-    if (name === VIRTUAL_MACRO_BUTTON_NAME) {
-      handleMacroPressOut();
+    if (isMacroButtonName(name)) {
+      handleMacroPressOut(name);
       return;
     }
 
@@ -2730,19 +2742,25 @@ export function NativeStreamScreenBase({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.custom_virtual_gamepad, gamepadLayoutVersion]);
 
-  // Rebuild the set of turbo-enabled button names for the active profile.
+  // Rebuild the set of turbo-enabled button names, and the Macro1/2/3 button
+  // configs, for the active profile.
   React.useEffect(() => {
     const name = settings.custom_virtual_gamepad;
     const layout = name ? getGamepadLayouts()[name] : null;
     const set = new Set<string>();
+    const macroConfigs = new Map<string, any>();
     if (Array.isArray(layout)) {
       layout.forEach((b: any) => {
         if (b?.turbo) {
           set.add(b.name);
         }
+        if (isMacroButtonName(b?.name)) {
+          macroConfigs.set(b.name, b);
+        }
       });
     }
     turboSetRef.current = set;
+    macroConfigsRef.current = macroConfigs;
   }, [settings.custom_virtual_gamepad, gamepadLayoutVersion]);
 
   // Clear any running turbo timers when leaving the stream screen.

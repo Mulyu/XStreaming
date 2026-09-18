@@ -5,9 +5,8 @@ import AnalogStick from '../components/AnalogStick';
 import {getSettings as getLocalSettings} from '../store/settingStore';
 import {getSettings} from '../store/gamepadStore';
 import {
-  createDefaultMacroLayoutButton,
-  ensureMacroLayoutButton,
-  VIRTUAL_MACRO_BUTTON_NAME,
+  createDefaultMacroLayoutButtons,
+  ensureMacroLayoutButtons,
 } from '../utils/virtualMacro';
 import {buildDefaultLayout, SWIPE_AIM_NAME} from '../utils/gamepadLayout';
 
@@ -43,10 +42,10 @@ const CustomVirtualGamepad: React.FC<Props> = ({
   React.useEffect(() => {
     const _settings = getSettings();
     const {width, height} = Dimensions.get('window');
-    const macroDefaultButton = createDefaultMacroLayoutButton(width, height);
+    const macroDefaultButtons = createDefaultMacroLayoutButtons(width, height);
     if (_settings[title]) {
       const exitButtons = _settings[title];
-      setButtons(ensureMacroLayoutButton(exitButtons, macroDefaultButton));
+      setButtons(ensureMacroLayoutButtons(exitButtons, macroDefaultButtons));
     } else {
       setButtons(buildDefaultLayout(width, height));
     }
@@ -73,12 +72,6 @@ const CustomVirtualGamepad: React.FC<Props> = ({
         // The swipe-aim trackpad is captured by SwipeAimZone (rendered by the
         // stream screen), not drawn as a control here.
         if (button.name === SWIPE_AIM_NAME) {
-          return null;
-        }
-        if (
-          button.name === VIRTUAL_MACRO_BUTTON_NAME &&
-          !localSettings.virtual_macro_enabled
-        ) {
           return null;
         }
         if (button.name === 'LeftStick') {
