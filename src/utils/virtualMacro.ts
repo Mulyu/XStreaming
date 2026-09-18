@@ -21,9 +21,19 @@ export const macroButtonNumber = (name: any): number | null => {
   return idx === -1 ? null : idx + 1;
 };
 
-// All three slots share one icon shape (common/virtualgp.ts) distinguished
-// only by the number badge the renderer overlays -- see macroButtonNumber.
+// All three slots share one icon shape (common/virtualgp.ts) distinguished by
+// color rather than a printed number -- see macroSlotHueShift.
 export const MACRO_ICON_KEY = 'Macro';
+
+// Fixed hue step between macro slots. Rotating the profile's own theme
+// primary color by this amount per slot keeps all three visually related to
+// the theme while staying easy to tell apart at a glance during play.
+export const MACRO_COLOR_HUE_STEP_DEG = 120;
+
+export const macroSlotHueShift = (name: any): number => {
+  const num = macroButtonNumber(name);
+  return num === null ? 0 : (num - 1) * MACRO_COLOR_HUE_STEP_DEG;
+};
 
 export const VIRTUAL_MACRO_ALLOWED_BUTTONS = [
   'A',
