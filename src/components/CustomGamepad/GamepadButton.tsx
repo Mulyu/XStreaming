@@ -3,15 +3,8 @@ import ButtonView from '../ButtonView';
 import {TouchableOpacity} from 'react-native';
 import {GestureDetector, Gesture} from 'react-native-gesture-handler';
 import {SvgXml} from 'react-native-svg';
-import {useTheme} from 'react-native-paper';
 import icons from '../../common/virtualgp';
-import {
-  isMacroButtonName,
-  macroSlotHueShift,
-  MACRO_ICON_KEY,
-} from '../../utils/virtualMacro';
 import {getButtonBaseSize} from '../../utils/gamepadLayout';
-import {colorizeMacroIconXml, normalizeHexColor} from '../../utils/themeColor';
 
 type Props = {
   name: string;
@@ -50,8 +43,6 @@ const GamepadButton: React.FC<Props> = ({
   onPressOut,
   style,
 }) => {
-  const theme = useTheme();
-  const primaryColor = normalizeHexColor(theme.colors.primary);
   // Shared canonical base size — kept identical to the editor so a laid-out
   // button occupies the same rectangle when editing and when playing.
   const {width, height} = getButtonBaseSize(name);
@@ -78,15 +69,7 @@ const GamepadButton: React.FC<Props> = ({
             },
           ]}>
           <SvgXml
-            xml={
-              isMacroButtonName(name)
-                ? colorizeMacroIconXml(
-                    icons[MACRO_ICON_KEY] ?? icons.Menu,
-                    primaryColor,
-                    macroSlotHueShift(name),
-                  )
-                : icons[name] ?? icons.Menu
-            }
+            xml={icons[name] ?? icons.Menu}
             width={width * scale}
             height={height * scale}
           />

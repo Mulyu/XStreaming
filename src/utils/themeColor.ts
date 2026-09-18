@@ -124,46 +124,6 @@ export const shiftColor = (hexColor: string, amount: number) => {
   return mixColor(normalized, '#000000', -amount);
 };
 
-const hexToHsl = (hexColor: string) => {
-  const {r, g, b} = hexToRgb(hexColor);
-  const rn = r / 255;
-  const gn = g / 255;
-  const bn = b / 255;
-  const max = Math.max(rn, gn, bn);
-  const min = Math.min(rn, gn, bn);
-  const l = (max + min) / 2;
-  let h = 0;
-  let s = 0;
-  const d = max - min;
-  if (d !== 0) {
-    s = d / (1 - Math.abs(2 * l - 1));
-    if (max === rn) {
-      h = 60 * (((gn - bn) / d) % 6);
-    } else if (max === gn) {
-      h = 60 * ((bn - rn) / d + 2);
-    } else {
-      h = 60 * ((rn - gn) / d + 4);
-    }
-  }
-  if (h < 0) {
-    h += 360;
-  }
-  return {h, s, l};
-};
-
-const hslToHex = (h: number, s: number, l: number): string => {
-  const k = (n: number) => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) =>
-    l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  return rgbToHex({r: f(0) * 255, g: f(8) * 255, b: f(4) * 255});
-};
-
-export const rotateHue = (hexColor: string, degrees: number): string => {
-  const {h, s, l} = hexToHsl(normalizeHexColor(hexColor));
-  return hslToHex((((h + degrees) % 360) + 360) % 360, s, l);
-};
-
 export const getContrastTextColor = (
   hexColor: string,
   light = '#FFFFFF',
@@ -266,19 +226,4 @@ export const applyPrimaryColorToPaperTheme = (
       },
     },
   };
-};
-
-export const colorizeMacroIconXml = (
-  xml: string,
-  primaryColor: string,
-  hueShiftDeg = 0,
-) => {
-  const normalizedPrimary = normalizeHexColor(primaryColor);
-  const slotPrimary = hueShiftDeg
-    ? rotateHue(normalizedPrimary, hueShiftDeg)
-    : normalizedPrimary;
-  const innerPrimary = shiftColor(slotPrimary, -0.25);
-  return xml
-    .replace(/__PRIMARY__/g, slotPrimary)
-    .replace(/__PRIMARY_DARK__/g, innerPrimary);
 };
