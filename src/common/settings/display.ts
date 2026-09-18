@@ -67,16 +67,6 @@ const display = [
   //   description: t('fsr_sharpness_desc'),
   //   data: [],
   // },
-  {
-    name: 'performance_style',
-    type: 'radio',
-    title: t('Performance show style'),
-    description: t('Setting performance show style'),
-    data: [
-      {value: true, text: t('Horizon')},
-      {value: false, text: t('Vertical')},
-    ],
-  },
 ];
 
 export default display;

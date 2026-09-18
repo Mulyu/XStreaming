@@ -24,7 +24,6 @@ export type Settings = {
   signaling_home_name: string;
   signaling_cloud_name: string;
   codec: string;
-  performance_style: boolean;
   vibration: boolean;
   vibration_mode: string;
   bind_usb_device: boolean;
@@ -102,7 +101,6 @@ const defaultSettings: Settings = {
   signaling_home_name: '',
   signaling_cloud_name: '',
   codec: '',
-  performance_style: true,
   vibration: true,
   vibration_mode: 'Native',
   bind_usb_device: false,

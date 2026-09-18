@@ -18,7 +18,6 @@ const PerfPanel: React.FC<Props> = ({performance = {}, streamType}) => {
   const [battery, setBattery] = React.useState(100);
   const batteryInterval = React.useRef<any>(null);
 
-  const isHorizon = settings.performance_style;
   const xcloudRegionFlag =
     streamType === 'cloud' ? getXcloudRegionFlag(settings.force_region_ip) : '';
   const rttLabel = `${t('RTT')}${
@@ -80,54 +79,52 @@ const PerfPanel: React.FC<Props> = ({performance = {}, streamType}) => {
   }
 
   return (
-    <View style={isHorizon ? styles.containerH : styles.containerV}>
-      <View style={isHorizon ? styles.wrapperH : styles.wrapperV}>
+    <View style={styles.containerH}>
+      <View style={styles.wrapperH}>
+        <View>
+          <Text style={styles.text}>{resolutionText || '-1'} | </Text>
+        </View>
         <View>
           <Text style={styles.text}>
-            {resolutionText || '-1'} {isHorizon ? '| ' : ''}{' '}
+            {rttLabel}: {performance.rtt || '-1'} |{' '}
           </Text>
         </View>
         <View>
           <Text style={styles.text}>
-            {rttLabel}: {performance.rtt || '-1'} {isHorizon ? '| ' : ''}
+            {t('JIT')}: {performance.jit || '-1'} |{' '}
           </Text>
         </View>
         <View>
           <Text style={styles.text}>
-            {t('JIT')}: {performance.jit || '-1'} {isHorizon ? '| ' : ''}
+            {t('FPS')}: {performance.fps || '-1'} |{' '}
           </Text>
         </View>
         <View>
           <Text style={styles.text}>
-            {t('FPS')}: {performance.fps || '-1'} {isHorizon ? '| ' : ''}
+            {t('FD')}: {performance.fl || '-1'} |{' '}
           </Text>
         </View>
         <View>
           <Text style={styles.text}>
-            {t('FD')}: {performance.fl || '-1'} {isHorizon ? '| ' : ''}
+            {t('PL')}: {performance.pl || '-1'} |{' '}
           </Text>
         </View>
         <View>
           <Text style={styles.text}>
-            {t('PL')}: {performance.pl || '-1'} {isHorizon ? '| ' : ''}
-          </Text>
-        </View>
-        <View>
-          <Text style={styles.text}>
-            {t('Bitrate')}: {performance.br || '-1'} {isHorizon ? '| ' : ''}
+            {t('Bitrate')}: {performance.br || '-1'} |{' '}
           </Text>
         </View>
         <View>
           <Text style={styles.text}>
             {t('DT')}: {performance.decode || '-1'}
-            {isHorizon ? ' | ' : ''}
+            {' | '}
           </Text>
         </View>
         {!!performance.decoder && (
           <View>
             <Text style={styles.text}>
               {t('DEC')}: {performance.decoder}
-              {isHorizon ? ' | ' : ''}
+              {' | '}
             </Text>
           </View>
         )}
@@ -138,7 +135,7 @@ const PerfPanel: React.FC<Props> = ({performance = {}, streamType}) => {
               {typeof performance.wifi?.rssi === 'number'
                 ? ` ${performance.wifi.rssi}dBm`
                 : ''}
-              {isHorizon ? ' | ' : ''}
+              {' | '}
             </Text>
           </View>
         )}
@@ -167,19 +164,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 2,
     flexDirection: 'row',
-  },
-  containerV: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    zIndex: 5,
-    padding: 5,
-  },
-  wrapperV: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 2,
   },
   text: {
     fontSize: 10,
