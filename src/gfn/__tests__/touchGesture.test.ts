@@ -69,7 +69,7 @@ describe('GfnTouchGestureTracker', () => {
     expect(callbacks.buttonDown).not.toHaveBeenCalled();
   });
 
-  it('sends a right-click when two fingers tap together without moving', () => {
+  it('sends a right-click when two fingers tap together without moving, warped to the first finger', () => {
     const callbacks = makeCallbacks();
     const tracker = new GfnTouchGestureTracker(callbacks);
 
@@ -80,9 +80,12 @@ describe('GfnTouchGestureTracker', () => {
       {type: 'pointerup', pointerId: 2, x: 0.5, y: 0.6},
     ]);
 
+    // Warped to the first (primary) finger's position, not the second finger's
+    // or wherever the cursor happened to already be -- see the class doc on
+    // why the primary finger is the only non-arbitrary choice here.
+    expect(callbacks.moveCursor).toHaveBeenCalledWith(0.5, 0.5, true);
     expect(callbacks.buttonDown).toHaveBeenCalledWith(MOUSE_RIGHT);
     expect(callbacks.buttonUp).toHaveBeenCalledWith(MOUSE_RIGHT);
-    expect(callbacks.moveCursor).not.toHaveBeenCalled();
   });
 
   it('scrolls on a two-finger vertical drag instead of right-clicking on release', () => {
@@ -109,6 +112,49 @@ describe('GfnTouchGestureTracker', () => {
     expect(callbacks.buttonDown).not.toHaveBeenCalledWith(MOUSE_RIGHT);
   });
 
+  it('switches to the right button when a second finger joins well after the primary committed, without moving the cursor', () => {
+    const callbacks = makeCallbacks();
+    const tracker = new GfnTouchGestureTracker(callbacks);
+
+    tracker.handleEvents([{type: 'pointerdown', pointerId: 1, x: 0.2, y: 0.3}]);
+    jest.advanceTimersByTime(60);
+    expect(callbacks.buttonDown).toHaveBeenLastCalledWith(MOUSE_LEFT);
+
+    // A second finger landing anywhere, well after the primary committed, is
+    // a pure button modifier -- its own position (way off from the primary's)
+    // must never reach moveCursor.
+    callbacks.moveCursor.mockClear();
+    tracker.handleEvents([{type: 'pointerdown', pointerId: 2, x: 0.9, y: 0.1}]);
+    expect(callbacks.buttonUp).toHaveBeenCalledWith(MOUSE_LEFT);
+    expect(callbacks.buttonDown).toHaveBeenLastCalledWith(MOUSE_RIGHT);
+    expect(callbacks.moveCursor).not.toHaveBeenCalled();
+
+    // Dragging the primary finger while the modifier is held drags with the
+    // right button.
+    tracker.handleEvents([{type: 'pointermove', pointerId: 1, x: 0.4, y: 0.5}]);
+    expect(callbacks.moveCursor).toHaveBeenCalledWith(0.4, 0.5, false);
+
+    tracker.handleEvents([{type: 'pointerup', pointerId: 1, x: 0.4, y: 0.5}]);
+    expect(callbacks.buttonUp).toHaveBeenLastCalledWith(MOUSE_RIGHT);
+  });
+
+  it('reverts to the left button if the modifier finger lifts before the primary', () => {
+    const callbacks = makeCallbacks();
+    const tracker = new GfnTouchGestureTracker(callbacks);
+
+    tracker.handleEvents([{type: 'pointerdown', pointerId: 1, x: 0.2, y: 0.3}]);
+    jest.advanceTimersByTime(60);
+    tracker.handleEvents([{type: 'pointerdown', pointerId: 2, x: 0.9, y: 0.1}]);
+    expect(callbacks.buttonDown).toHaveBeenLastCalledWith(MOUSE_RIGHT);
+
+    tracker.handleEvents([{type: 'pointerup', pointerId: 2, x: 0.9, y: 0.1}]);
+    expect(callbacks.buttonUp).toHaveBeenLastCalledWith(MOUSE_RIGHT);
+    expect(callbacks.buttonDown).toHaveBeenLastCalledWith(MOUSE_LEFT);
+
+    tracker.handleEvents([{type: 'pointerup', pointerId: 1, x: 0.2, y: 0.3}]);
+    expect(callbacks.buttonUp).toHaveBeenLastCalledWith(MOUSE_LEFT);
+  });
+
   it('ignores a stray move from an untracked pointer', () => {
     const callbacks = makeCallbacks();
     const tracker = new GfnTouchGestureTracker(callbacks);
@@ -132,5 +178,17 @@ describe('GfnTouchGestureTracker', () => {
     const freshTracker = new GfnTouchGestureTracker(callbacks);
     freshTracker.dispose();
     expect(callbacks.buttonUp).not.toHaveBeenCalled();
+  });
+
+  it('dispose() releases the right button instead if a modifier had switched to it', () => {
+    const callbacks = makeCallbacks();
+    const tracker = new GfnTouchGestureTracker(callbacks);
+
+    tracker.handleEvents([{type: 'pointerdown', pointerId: 1, x: 0.5, y: 0.5}]);
+    jest.advanceTimersByTime(60);
+    tracker.handleEvents([{type: 'pointerdown', pointerId: 2, x: 0.9, y: 0.1}]);
+
+    tracker.dispose();
+    expect(callbacks.buttonUp).toHaveBeenLastCalledWith(MOUSE_RIGHT);
   });
 });
