@@ -411,6 +411,7 @@ export default {
     'Cover buttons': 'Cover buttons',
     'Enable cover controls': 'Enable on cover screen',
     'Turbo (auto-fire)': 'Turbo (auto-fire)',
+    'Toggle hold': 'Toggle hold',
     Ignored: 'Ignored',
     Ignore: 'Ignore',
     Unignore: 'Unignore',

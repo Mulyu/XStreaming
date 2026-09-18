@@ -46,7 +46,6 @@ export type Settings = {
   right_trigger_effects: [];
   display_options: DisplayOptions;
   fsr_display_options: DisplayOptions;
-  hold_buttons: [];
   ipv6: boolean;
   check_update: boolean;
   power_on: boolean;
@@ -124,7 +123,6 @@ const defaultSettings: Settings = {
     contrast: 5,
     brightness: 5,
   },
-  hold_buttons: [],
   fsr: false,
   coop: false,
   use_msal_login: false,

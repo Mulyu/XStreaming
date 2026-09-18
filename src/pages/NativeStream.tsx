@@ -289,6 +289,9 @@ export function NativeStreamScreenBase({
   // running repeat timers.
   const turboSetRef = React.useRef<Set<string>>(new Set());
   const turboTimersRef = React.useRef<Record<string, any>>({});
+  // Toggle-hold: button names with holdToggle in the active profile (was a
+  // single global Settings.hold_buttons list, now per-profile alongside turbo).
+  const holdToggleSetRef = React.useRef<Set<string>>(new Set());
   const [performance, setPerformance] = React.useState<any>({});
   const [showPerformance, setShowPerformance] = React.useState(false);
   const [messageSending, setMessageSending] = React.useState(false);
@@ -2517,10 +2520,11 @@ export function NativeStreamScreenBase({
       return;
     }
 
-    const hold_buttons = settings.hold_buttons || [];
     if (name === 'LeftThumb') {
       setManualLeftThumbPressed(
-        hold_buttons.includes(name) ? !manualLeftThumbPressedRef.current : true,
+        holdToggleSetRef.current.has(name)
+          ? !manualLeftThumbPressedRef.current
+          : true,
       );
       if (settings.vibration) {
         Vibration.vibrate(30);
@@ -2529,7 +2533,7 @@ export function NativeStreamScreenBase({
     }
 
     // Hold button
-    if (hold_buttons.includes(name)) {
+    if (holdToggleSetRef.current.has(name)) {
       gpState[name] = gpState[name] === 1 ? 0 : 1;
       flushVirtualGpState();
       return;
@@ -2554,9 +2558,8 @@ export function NativeStreamScreenBase({
       return;
     }
 
-    const hold_buttons = settings.hold_buttons || [];
     if (name === 'LeftThumb') {
-      if (hold_buttons.includes(name)) {
+      if (holdToggleSetRef.current.has(name)) {
         return;
       }
       setTimeout(() => {
@@ -2566,7 +2569,7 @@ export function NativeStreamScreenBase({
     }
 
     // Hold button
-    if (hold_buttons.includes(name)) {
+    if (holdToggleSetRef.current.has(name)) {
       return;
     }
     // Release immediately (and flush) instead of deferring 50ms. The old delay
@@ -2696,10 +2699,14 @@ export function NativeStreamScreenBase({
     const layout = name ? getGamepadLayouts()[name] : null;
     const set = new Set<string>();
     const macroConfigs = new Map<string, any>();
+    const holdSet = new Set<string>();
     if (Array.isArray(layout)) {
       layout.forEach((b: any) => {
         if (b?.turbo) {
           set.add(b.name);
+        }
+        if (b?.holdToggle) {
+          holdSet.add(b.name);
         }
         if (isMacroButtonName(b?.name)) {
           macroConfigs.set(b.name, b);
@@ -2707,6 +2714,7 @@ export function NativeStreamScreenBase({
       });
     }
     turboSetRef.current = set;
+    holdToggleSetRef.current = holdSet;
     macroConfigsRef.current = macroConfigs;
   }, [settings.custom_virtual_gamepad, gamepadLayoutVersion]);
 

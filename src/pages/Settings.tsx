@@ -544,11 +544,6 @@ function SettingsScreen({navigation}) {
             description={t('CustomizeButtonsWithMacroHint')}
             onPress={() => navigation.navigate('VirtualGamepadSettings')}
           />
-          <SettingItem
-            title={t('Auto toggle hold buttons')}
-            description={t('Select what buttons become toggle holdable')}
-            onPress={() => navigation.navigate('HoldButtons')}
-          />
 
           <SectionLabel title={t('AudioSettings')} />
           <SwitchRow

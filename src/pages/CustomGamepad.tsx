@@ -71,6 +71,7 @@ function CustomGamepadScreen({navigation, route}) {
   const [currentScale, setCurrentScale] = React.useState(1);
   const [currentShow, setCurrentShow] = React.useState(true);
   const [currentTurbo, setCurrentTurbo] = React.useState(false);
+  const [currentHold, setCurrentHold] = React.useState(false);
 
   // Macro1/Macro2/Macro3 only -- this button's own action sequence, edited
   // right here in the layout editor instead of a shared global screen (see
@@ -197,6 +198,16 @@ function CustomGamepadScreen({navigation, route}) {
     buttons.forEach(b => {
       if (b.name === currentButton) {
         b.turbo = value;
+      }
+    });
+    setButtons([...buttons]);
+  };
+
+  const handleChangeHold = value => {
+    setCurrentHold(value);
+    buttons.forEach(b => {
+      if (b.name === currentButton) {
+        b.holdToggle = value;
       }
     });
     setButtons([...buttons]);
@@ -518,6 +529,24 @@ function CustomGamepadScreen({navigation, route}) {
                     <RadioButton.Group
                       onValueChange={val => handleChangeTurbo(val)}
                       value={currentTurbo}>
+                      <RadioButton.Item label={t('Disable')} value={false} />
+                      <RadioButton.Item label={t('Enable')} value={true} />
+                    </RadioButton.Group>
+                  </>
+                )}
+
+              {currentButton !== 'LeftStick' &&
+                currentButton !== 'RightStick' &&
+                currentButton !== 'Nexus' &&
+                !isMacroButtonName(currentButton) && (
+                  <>
+                    <View style={styles.title}>
+                      <Text>{t('Toggle hold')}</Text>
+                      <Divider style={styles.divider} />
+                    </View>
+                    <RadioButton.Group
+                      onValueChange={val => handleChangeHold(val)}
+                      value={currentHold}>
                       <RadioButton.Item label={t('Disable')} value={false} />
                       <RadioButton.Item label={t('Enable')} value={true} />
                     </RadioButton.Group>
@@ -929,6 +958,7 @@ function CustomGamepadScreen({navigation, route}) {
                   setCurrentScale(button.scale || 1);
                   setCurrentShow(button.show ?? true);
                   setCurrentTurbo(button.turbo ?? false);
+                  setCurrentHold(button.holdToggle ?? false);
                   if (isMacroButtonName(button.name)) {
                     setMacroSteps(
                       Array.isArray(button.macroSteps) ? button.macroSteps : [],
