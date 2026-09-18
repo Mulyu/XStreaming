@@ -551,13 +551,6 @@ function SettingsScreen({navigation}) {
             value={settings.native_low_latency_decoder}
             onChange={handleLowLatencyDecoderChange}
           />
-          <SegmentedRow
-            title={M('performance_style').title}
-            desc={M('performance_style').description}
-            options={M('performance_style').data}
-            value={settings.performance_style}
-            onChange={v => updateSetting('performance_style', v)}
-          />
 
           <SectionLabel title={t('GamepadSettings')} />
           <SettingItem
