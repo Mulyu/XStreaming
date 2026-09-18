@@ -15,25 +15,17 @@ export type VirtualMacroButtonName =
 export const isMacroButtonName = (name: any): name is VirtualMacroButtonName =>
   VIRTUAL_MACRO_BUTTON_NAMES.includes(name);
 
-// 1-indexed slot number (for the on-icon badge), or null for a non-macro name.
+// 1-indexed slot number, or null for a non-macro name.
 export const macroButtonNumber = (name: any): number | null => {
   const idx = VIRTUAL_MACRO_BUTTON_NAMES.indexOf(name);
   return idx === -1 ? null : idx + 1;
 };
 
-// All three slots share one icon shape (common/virtualgp.ts) distinguished by
-// color rather than a printed number -- see macroSlotHueShift.
-export const MACRO_ICON_KEY = 'Macro';
-
-// Fixed hue step between macro slots. Rotating the profile's own theme
-// primary color by this amount per slot keeps all three visually related to
-// the theme while staying easy to tell apart at a glance during play.
-export const MACRO_COLOR_HUE_STEP_DEG = 120;
-
-export const macroSlotHueShift = (name: any): number => {
-  const num = macroButtonNumber(name);
-  return num === null ? 0 : (num - 1) * MACRO_COLOR_HUE_STEP_DEG;
-};
+// Each slot's icon is its own pre-colored static asset keyed directly by the
+// button's own name ('Macro1' / 'Macro2' / 'Macro3' -- see common/virtualgp.ts),
+// exactly like every other button. No number badge, no runtime color math:
+// the three colors are baked into the assets so they're easy to tell apart
+// at a glance during play.
 
 export const VIRTUAL_MACRO_ALLOWED_BUTTONS = [
   'A',
