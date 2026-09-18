@@ -13,13 +13,15 @@ on:
   workflow_dispatch:
     inputs:
       abi:
-        description: 'Target ABI (arm64-v8a covers virtually all modern phones)'
+        description: 'Target ABI (arm64-v8a covers virtually all modern phones; the push-triggered build always uses the universal set below regardless of this default, since that one is what real users sideload)'
         required: true
         default: 'arm64-v8a'
         type: choice
         options:
           - arm64-v8a
           - 'armeabi-v7a,arm64-v8a'
+          - x86_64
+          - 'armeabi-v7a,arm64-v8a,x86,x86_64'
 
 # A newer push to the same ref supersedes an in-progress build.
 concurrency:
@@ -76,9 +78,19 @@ jobs:
 
       - name: Build release APK (debug-signed)
         working-directory: android
+        env:
+          # Manual (workflow_dispatch) runs use whatever ABI the caller picked,
+          # for fast iteration. The push-triggered build -- the one that
+          # produces xstreaming-latest.apk, i.e. what a real user actually
+          # downloads and sideloads via the in-app updater -- always builds
+          # the full ABI set regardless: some Google TV / Android TV boxes are
+          # x86_64 (or 32-bit x86/armeabi-v7a), not arm64-v8a, and an
+          # arm64-v8a-only APK fails to install on those with a bare "this app
+          # isn't compatible with your device" and no further explanation.
+          TARGET_ABI: ${{ github.event_name == 'push' && 'armeabi-v7a,arm64-v8a,x86,x86_64' || (inputs.abi || 'arm64-v8a') }}
         run: |
           ./gradlew assembleProdRelease --no-daemon \
-            -PreactNativeArchitectures="${{ inputs.abi || 'arm64-v8a' }}" \
+            -PreactNativeArchitectures="${TARGET_ABI}" \
             -PXSTREAMING_RELEASE_STORE_FILE=debug.keystore \
             -PXSTREAMING_RELEASE_STORE_PASSWORD=android \
             -PXSTREAMING_RELEASE_KEY_ALIAS=androiddebugkey \
