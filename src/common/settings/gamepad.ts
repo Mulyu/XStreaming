@@ -11,19 +11,6 @@ const gamepad = [
     data: [],
   },
   {
-    name: 'gamepad_kernal',
-    type: 'radio',
-    title: t('Gamepad kernal'),
-    description: t(
-      'Select gamepad kernal, you can not use virtual gamepad in Web kernal',
-    ),
-    data: [
-      {value: 'Native', text: 'Native'},
-      {value: 'SDL', text: t('SDL')},
-      {value: 'Web', text: 'Web'},
-    ],
-  },
-  {
     name: 'polling_rate',
     type: 'radio',
     title: t('Polling rate'),
@@ -58,43 +45,6 @@ const gamepad = [
     ],
   },
   {
-    name: 'vibration_mode',
-    type: 'radio',
-    title: t('Vibration mode'),
-    description: `${t('Native: Use native gamepad kernal to vibrate')}
-${t("Device: Use Phone/Pad's vibrate")}
-${t('Webview: Use Chromium kernal to vibrate')}`,
-    data: [
-      {value: 'Native', text: t('Native')},
-      {value: 'Device', text: t('Device')},
-      {value: 'Webview', text: t('Webview')},
-    ],
-  },
-  {
-    name: 'bind_usb_device',
-    type: 'radio',
-    title: t('Override native Xbox gamepad support'),
-    description: t('bind_usb_device_description'),
-    tips: t('bind_usb_device_tips'),
-    data: [
-      {value: false, text: t('Disable')},
-      {value: true, text: t('Enable')},
-    ],
-  },
-  {
-    name: 'rumble_intensity',
-    type: 'radio',
-    title: t('Vibration intensity'),
-    description: t('Config vibration intensity of controller'),
-    data: [
-      {value: 1, text: t('VeryWeak')},
-      {value: 2, text: t('Weak')},
-      {value: 3, text: t('Normal')},
-      {value: 4, text: t('Strong')},
-      {value: 5, text: t('VeryStrong')},
-    ],
-  },
-  {
     name: 'dead_zone',
     type: 'slider',
     min: 0,
@@ -103,38 +53,6 @@ ${t('Webview: Use Chromium kernal to vibrate')}`,
     title: t('Joystick dead zone'),
     description: t('Config joystick dead zone'),
     data: [],
-  },
-  {
-    name: 'edge_compensation',
-    type: 'slider',
-    min: 0,
-    max: 20,
-    step: 1,
-    title: t('Joystick edge compensation'),
-    description: t(
-      "If your joystick's maximum value doesn't reach the expected level, you can set maximum value compensation",
-    ),
-    data: [],
-  },
-  {
-    name: 'short_trigger',
-    type: 'radio',
-    title: t('Short Trigger'),
-    description: t('ShortTriggerDesc'),
-    data: [
-      {value: false, text: t('Disable')},
-      {value: true, text: t('Enable')},
-    ],
-  },
-  {
-    name: 'auto_sprint',
-    type: 'radio',
-    title: t('Auto Sprint'),
-    description: t('AutoSprintDesc'),
-    data: [
-      {value: false, text: t('Disable')},
-      {value: true, text: t('Enable')},
-    ],
   },
 ];
 

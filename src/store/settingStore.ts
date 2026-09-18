@@ -25,15 +25,8 @@ export type Settings = {
   signaling_cloud_name: string;
   codec: string;
   vibration: boolean;
-  vibration_mode: string;
-  bind_usb_device: boolean;
   show_harmony_modal: boolean;
-  rumble_intensity: number;
-  gamepad_kernal: string;
   dead_zone: number;
-  edge_compensation: number;
-  short_trigger: boolean;
-  auto_sprint: boolean;
   video_format: string;
   screen_position: string;
   anti_idle_max_minutes: number;
@@ -102,15 +95,8 @@ const defaultSettings: Settings = {
   signaling_cloud_name: '',
   codec: '',
   vibration: true,
-  vibration_mode: 'Native',
-  bind_usb_device: false,
   show_harmony_modal: true,
-  rumble_intensity: 3,
-  gamepad_kernal: 'Native',
   dead_zone: 0.1,
-  edge_compensation: 0,
-  short_trigger: false,
-  auto_sprint: false,
   video_format: '',
   screen_position: 'center',
   anti_idle_max_minutes: 30,
