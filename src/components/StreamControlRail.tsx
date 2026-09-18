@@ -23,6 +23,8 @@ export interface StreamControlRailProps {
   showMouseSensitivity: boolean;
   mouseSensitivity: number;
   onMouseSensitivityChange: (value: number) => void;
+  vibrationEnabled: boolean;
+  onToggleVibration: () => void;
   showMicrophone: boolean;
   microphoneOpen: boolean;
   onToggleMicrophone: () => void;
@@ -117,6 +119,8 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   showMouseSensitivity,
   mouseSensitivity,
   onMouseSensitivityChange,
+  vibrationEnabled,
+  onToggleVibration,
   showMicrophone,
   microphoneOpen,
   onToggleMicrophone,
@@ -265,6 +269,13 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                 />
               </View>
             )}
+            <RailButton
+              icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
+              label={t('Vibration')}
+              active={vibrationEnabled}
+              accent={accent}
+              onPress={onToggleVibration}
+            />
           </View>
 
           <View style={styles.group}>

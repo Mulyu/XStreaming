@@ -3037,6 +3037,12 @@ export function NativeStreamScreenBase({
     setSettings(nextSettings);
   }, [settings.fsr]);
 
+  const handleToggleVibration = React.useCallback(() => {
+    const nextSettings = {...getSettings(), vibration: !settings.vibration};
+    saveSettings(nextSettings);
+    setSettings(nextSettings);
+  }, [settings.vibration]);
+
   const handleToggleCoverControls = React.useCallback(async () => {
     if (coverPresented) {
       // Manual hide: remember it so the auto-present doesn't turn it back
@@ -3284,6 +3290,8 @@ export function NativeStreamScreenBase({
         }
         mouseSensitivity={mouseSensitivity}
         onMouseSensitivityChange={handleMouseSensitivityChange}
+        vibrationEnabled={!!settings.vibration}
+        onToggleVibration={handleToggleVibration}
         performanceVisible={showPerformance}
         onTogglePerformance={() => setShowPerformance(!showPerformance)}
         showCoverControls={coverAvailable}
