@@ -16,7 +16,6 @@ import {
   SegmentedRow,
   DropdownRow,
   SliderRow,
-  SwatchRow,
   InfoRow,
   XBOX_ACCENT,
   NVIDIA_ACCENT,
@@ -55,11 +54,6 @@ import {
   getGfnFullCatalogStatus,
   GfnFullCatalogStatus,
 } from '../gfn/catalog';
-import {
-  DEFAULT_THEME_PRIMARY_COLOR,
-  normalizeHexColor,
-} from '../utils/themeColor';
-
 import bases from '../common/settings/bases';
 import display from '../common/settings/display';
 import gamepad from '../common/settings/gamepad';
@@ -246,13 +240,6 @@ function SettingsScreen({navigation}) {
   const handleBindUsbDeviceChange = (value: boolean) => {
     UsbRumbleManager.setBindUsbDevice(value);
     updateSetting('bind_usb_device', value);
-  };
-
-  const handleThemeColorChange = (value: string) => {
-    updateSetting(
-      'theme_primary_color',
-      normalizeHexColor(value, DEFAULT_THEME_PRIMARY_COLOR),
-    );
   };
 
   // signaling_cloud is stored as {name, isDefault}[] pairs on the xCloud
@@ -557,24 +544,6 @@ function SettingsScreen({navigation}) {
             value={settings.locale}
             onChange={handleLocaleChange}
           />
-          <SegmentedRow
-            title={M('theme').title}
-            desc={M('theme').description}
-            options={M('theme').data}
-            value={settings.theme}
-            onChange={v => updateSetting('theme', v)}
-          />
-          <SwatchRow
-            title={M('theme_primary_color').title}
-            desc={M('theme_primary_color').description}
-            colors={M('theme_primary_color').data.map((d: any) => d.value)}
-            value={normalizeHexColor(
-              settings.theme_primary_color,
-              DEFAULT_THEME_PRIMARY_COLOR,
-            )}
-            onChange={handleThemeColorChange}
-          />
-
           <SectionLabel title={t('DisplaySettings')} />
           <SwitchRow
             title={M('native_low_latency_decoder').title}
