@@ -1,10 +1,11 @@
 import React from 'react';
 import ButtonView from '../ButtonView';
-import {TouchableOpacity} from 'react-native';
+import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import {GestureDetector, Gesture} from 'react-native-gesture-handler';
 import {SvgXml} from 'react-native-svg';
 import icons from '../../common/virtualgp';
 import {getButtonBaseSize} from '../../utils/gamepadLayout';
+import {isMacroButtonName, MACRO_SLOT_COLORS} from '../../utils/virtualMacro';
 
 type Props = {
   name: string;
@@ -12,6 +13,10 @@ type Props = {
   height?: number;
   scale?: number;
   style: any;
+  // True while this specific macro button is the one currently auto-firing
+  // (turbo-held or loop-toggled) -- draws a static ring in the button's own
+  // color so the still-running state is visible even after the finger lifts.
+  looping?: boolean;
   onPressIn: (name: string) => void;
   onPressOut: (name: string) => void;
 };
@@ -39,6 +44,7 @@ const mapping: any = {
 const GamepadButton: React.FC<Props> = ({
   name,
   scale = 1,
+  looping = false,
   onPressIn,
   onPressOut,
   style,
@@ -73,6 +79,12 @@ const GamepadButton: React.FC<Props> = ({
             width={width * scale}
             height={height * scale}
           />
+          {isMacroButtonName(name) && looping && (
+            <View
+              pointerEvents="none"
+              style={[styles.loopRing, {borderColor: MACRO_SLOT_COLORS[name]}]}
+            />
+          )}
         </TouchableOpacity>
       </GestureDetector>
     );
@@ -93,5 +105,17 @@ const GamepadButton: React.FC<Props> = ({
     />
   );
 };
+
+const styles = StyleSheet.create({
+  loopRing: {
+    position: 'absolute',
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
+    borderRadius: 999,
+    borderWidth: 3,
+  },
+});
 
 export default GamepadButton;

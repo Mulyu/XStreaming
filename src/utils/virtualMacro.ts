@@ -27,6 +27,15 @@ export const macroButtonNumber = (name: any): number | null => {
 // the three colors are baked into the assets so they're easy to tell apart
 // at a glance during play.
 
+// The exact baked-in icon colors from common/virtualgp.ts's Macro1/2/3 SVGs,
+// mirrored here so other UI (the active-loop ring below) can match a slot's
+// own color without parsing its SVG string.
+export const MACRO_SLOT_COLORS: Record<VirtualMacroButtonName, string> = {
+  Macro1: '#2E7D32',
+  Macro2: '#1565C0',
+  Macro3: '#EF6C00',
+};
+
 export const VIRTUAL_MACRO_ALLOWED_BUTTONS = [
   'A',
   'B',
