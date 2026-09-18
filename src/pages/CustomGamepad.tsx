@@ -99,11 +99,7 @@ function CustomGamepadScreen({navigation, route}) {
     setSwipeSens(swipe.sensitivity);
     setSwipeInvert(swipe.invertY);
     const storedStick = getJoystickMode(_title);
-    setStickMode(
-      storedStick === null
-        ? Number(getUserSettings().virtual_gamepad_joystick)
-        : storedStick,
-    );
+    setStickMode(storedStick === null ? 1 : storedStick);
 
     // console.log('_settings:', _settings);
     FullScreenManager.immersiveModeOn();

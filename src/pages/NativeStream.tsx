@@ -353,7 +353,6 @@ export function NativeStreamScreenBase({
   const menuLongPressTimer = React.useRef<any>(undefined);
   const menuLongPressTriggered = React.useRef(false);
   const frameTimer = React.useRef<any>(undefined);
-  const audioRumbleTimer = React.useRef<any>(undefined);
   const appStateSubscription = React.useRef<any>(undefined);
   const audioGainEventListener = React.useRef<any>(undefined);
   const antiIdleTimerRef = React.useRef<any>(null);
@@ -1593,8 +1592,7 @@ export function NativeStreamScreenBase({
               .catch(() => {});
           }
 
-          // Alway show virtual gamepad
-          if (portraitMode || _settings.show_virtual_gamead) {
+          if (portraitMode) {
             setShowVirtualGamepad(true);
           }
 
@@ -1636,16 +1634,6 @@ export function NativeStreamScreenBase({
                   );
                 });
             }, keepaliveIntervalMs);
-          }
-
-          if (!audioRumbleTimer.current && _settings.enable_audio_rumble) {
-            audioRumbleTimer.current = setInterval(() => {
-              webrtcClient.getAudioVolume().then(vol => {
-                if (vol >= _settings.audio_rumble_threshold) {
-                  GamepadManager.vibrate(30, 10, 0, 0, 0, 3);
-                }
-              });
-            }, 16);
           }
         } else if (state === CLOSED) {
           if (isRequestExit.current) {
@@ -2100,10 +2088,6 @@ export function NativeStreamScreenBase({
       if (performanceInterval.current) {
         clearInterval(performanceInterval.current);
         performanceInterval.current = null;
-      }
-      if (audioRumbleTimer.current) {
-        clearInterval(audioRumbleTimer.current);
-        audioRumbleTimer.current = null;
       }
       macroSequenceTimersRef.current.forEach(timeoutId =>
         clearTimeout(timeoutId),
@@ -2735,16 +2719,12 @@ export function NativeStreamScreenBase({
   }, []);
 
   // Virtual-stick mode (0 = fixed, 1 = free) for the active profile; the
-  // per-profile override wins, else the global setting.
+  // per-profile override wins, else Free by default.
   const activeJoystickMode = React.useMemo(() => {
     const stored = getJoystickMode(settings.custom_virtual_gamepad || '');
-    return stored === null ? Number(settings.virtual_gamepad_joystick) : stored;
+    return stored === null ? 1 : stored;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    settings.custom_virtual_gamepad,
-    settings.virtual_gamepad_joystick,
-    swipeConfigVersion,
-  ]);
+  }, [settings.custom_virtual_gamepad, swipeConfigVersion]);
 
   // Swipe-to-aim: translate a finger drag into right-stick (camera) velocity,
   // then recentre shortly after the finger stops moving so a still finger means
@@ -3127,7 +3107,7 @@ export function NativeStreamScreenBase({
       return (
         <CustomVirtualGamepad
           title={settings.custom_virtual_gamepad}
-          opacity={settings.virtual_gamepad_opacity}
+          opacity={0.7}
           joystickMode={activeJoystickMode}
           onPressIn={handleButtonPressIn}
           onPressOut={handleButtonPressOut}
@@ -3139,7 +3119,7 @@ export function NativeStreamScreenBase({
     } else {
       return (
         <VirtualGamepad
-          opacity={settings.virtual_gamepad_opacity}
+          opacity={0.7}
           joystickMode={activeJoystickMode}
           onPressIn={handleButtonPressIn}
           onPressOut={handleButtonPressOut}
@@ -3407,7 +3387,7 @@ export function NativeStreamScreenBase({
     return (
       <PortraitVirtualGamepad
         layout={settings.native_portrait_gamepad_layout}
-        opacity={settings.virtual_gamepad_opacity ?? 0.7}
+        opacity={0.7}
         editing={portraitGamepadEditing}
         onEditingChange={setPortraitGamepadEditing}
         onLayoutChange={savePortraitGamepadLayout}
@@ -3519,8 +3499,7 @@ export function NativeStreamScreenBase({
           getSwipeConfig(editorProfile || getActiveProfileName()).invertY
         }
         joystickMode={
-          getJoystickMode(editorProfile || getActiveProfileName()) ??
-          Number(settings.virtual_gamepad_joystick)
+          getJoystickMode(editorProfile || getActiveProfileName()) ?? 1
         }
         onSave={handleSaveGamepadLayout}
         onCancel={() => setShowGamepadEditor(false)}

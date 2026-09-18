@@ -2,7 +2,6 @@ import React from 'react';
 import {StyleSheet, View, Dimensions} from 'react-native';
 import AnalogStick from '../components/AnalogStick';
 import ButtonView from './ButtonView';
-import {getSettings} from '../store/settingStore';
 
 type Props = {
   opacity: number;
@@ -19,12 +18,8 @@ const VirtualGamepad: React.FC<Props> = ({
   onPressOut,
   onStickMove,
 }) => {
-  const settings = getSettings();
-  // Per-profile override wins; fall back to the global setting.
-  const joystick =
-    joystickMode === 0 || joystickMode === 1
-      ? joystickMode
-      : settings.virtual_gamepad_joystick;
+  // Per-profile override wins; fall back to Free.
+  const joystick = joystickMode === 0 || joystickMode === 1 ? joystickMode : 1;
 
   const handlePressIn = (name: string) => {
     onPressIn && onPressIn(name);

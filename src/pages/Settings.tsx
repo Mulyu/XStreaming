@@ -50,7 +50,6 @@ import {
 import bases from '../common/settings/bases';
 import display from '../common/settings/display';
 import gamepad from '../common/settings/gamepad';
-import vgamepad from '../common/settings/vgamepad';
 import audio from '../common/settings/audio';
 import xcloud from '../common/settings/xcloud';
 import gfn from '../common/settings/gfn';
@@ -67,7 +66,6 @@ const allMetas = [
   ...bases,
   ...display,
   ...gamepad,
-  ...vgamepad,
   ...audio,
   ...xcloud,
   ...gfn,
@@ -547,29 +545,6 @@ function SettingsScreen({navigation}) {
           />
 
           <SectionLabel title={t('vGamepadSettings')} />
-          <SwitchRow
-            title={M('show_virtual_gamead').title}
-            desc={M('show_virtual_gamead').description}
-            value={settings.show_virtual_gamead}
-            onChange={v => updateSetting('show_virtual_gamead', v)}
-          />
-          <SliderRow
-            title={M('virtual_gamepad_opacity').title}
-            desc={M('virtual_gamepad_opacity').description}
-            min={M('virtual_gamepad_opacity').min}
-            max={M('virtual_gamepad_opacity').max}
-            step={M('virtual_gamepad_opacity').step}
-            value={settings.virtual_gamepad_opacity}
-            onChange={v => updateSetting('virtual_gamepad_opacity', v)}
-            formatValue={v => `${Math.round(v * 100)}%`}
-          />
-          <SegmentedRow
-            title={M('virtual_gamepad_joystick').title}
-            desc={M('virtual_gamepad_joystick').description}
-            options={M('virtual_gamepad_joystick').data}
-            value={settings.virtual_gamepad_joystick}
-            onChange={v => updateSetting('virtual_gamepad_joystick', v)}
-          />
           <SettingItem
             title={t('Customize virtual buttons')}
             description={t('CustomizeButtonsWithMacroHint')}
@@ -582,22 +557,6 @@ function SettingsScreen({navigation}) {
           />
 
           <SectionLabel title={t('AudioSettings')} />
-          <SwitchRow
-            title={M('enable_audio_rumble').title}
-            desc={M('enable_audio_rumble').description}
-            value={settings.enable_audio_rumble}
-            onChange={v => updateSetting('enable_audio_rumble', v)}
-          />
-          <SliderRow
-            title={M('audio_rumble_threshold').title}
-            desc={M('audio_rumble_threshold').description}
-            min={M('audio_rumble_threshold').min}
-            max={M('audio_rumble_threshold').max}
-            step={M('audio_rumble_threshold').step}
-            value={settings.audio_rumble_threshold}
-            onChange={v => updateSetting('audio_rumble_threshold', v)}
-            formatValue={v => String(v)}
-          />
           <SwitchRow
             title={M('enable_microphone').title}
             desc={M('enable_microphone').description}

@@ -17,8 +17,6 @@ export type Settings = {
   locale: string;
   locale_follow_system: boolean;
   resolution: number;
-  enable_audio_rumble: boolean;
-  audio_rumble_threshold: number;
   preferred_game_language: string;
   force_region_ip: string;
   signaling_home_name: string;
@@ -33,9 +31,6 @@ export type Settings = {
   native_portrait_mode: boolean;
   native_portrait_gamepad_layout: any[];
   native_low_latency_decoder: boolean;
-  show_virtual_gamead: boolean;
-  virtual_gamepad_opacity: number;
-  virtual_gamepad_joystick: number;
   custom_virtual_gamepad: string;
   gamepad_maping: Record<string, number> | null;
   native_gamepad_maping: Record<string, number> | null;
@@ -87,8 +82,6 @@ const defaultSettings: Settings = {
   locale: 'en',
   locale_follow_system: true,
   resolution: 720,
-  enable_audio_rumble: false,
-  audio_rumble_threshold: 20,
   preferred_game_language: 'en-US',
   force_region_ip: '',
   signaling_home_name: '',
@@ -103,10 +96,7 @@ const defaultSettings: Settings = {
   native_portrait_mode: false,
   native_portrait_gamepad_layout: [],
   native_low_latency_decoder: false,
-  show_virtual_gamead: false,
-  virtual_gamepad_opacity: 0.7,
   custom_virtual_gamepad: '',
-  virtual_gamepad_joystick: 1,
   gamepad_maping: null,
   native_gamepad_maping: null,
   polling_rate: 62.5,

@@ -2,7 +2,6 @@ import React from 'react';
 import {StyleSheet, View, Dimensions} from 'react-native';
 import GamepadButton from './CustomGamepad/GamepadButton';
 import AnalogStick from '../components/AnalogStick';
-import {getSettings as getLocalSettings} from '../store/settingStore';
 import {getSettings} from '../store/gamepadStore';
 import {
   createDefaultMacroLayoutButtons,
@@ -34,12 +33,8 @@ const CustomVirtualGamepad: React.FC<Props> = ({
   loopingMacroName = null,
 }) => {
   const [buttons, setButtons] = React.useState<any>([]);
-  const localSettings = getLocalSettings();
-  // Per-profile override wins; fall back to the global setting.
-  const joystick =
-    joystickMode === 0 || joystickMode === 1
-      ? joystickMode
-      : localSettings.virtual_gamepad_joystick;
+  // Per-profile override wins; fall back to Free.
+  const joystick = joystickMode === 0 || joystickMode === 1 ? joystickMode : 1;
 
   const {width: clientW, height: clientH} = Dimensions.get('window');
 
