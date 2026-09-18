@@ -57,7 +57,6 @@ import GameMapDetailScreen from './pages/GameMapDetail';
 import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';
 import CustomGamepadScreen from './pages/CustomGamepad';
 import HoldButtonsScreen from './pages/HoldButtons';
-import VirtualMacroSettingsScreen from './pages/VirtualMacroSettings';
 import Ds5SettingsScreen from './pages/Ds5Settings';
 import GamepadTestScreen from './pages/GamepadTest';
 import HistoryScreen from './pages/History';
@@ -182,9 +181,6 @@ const VirtualGamepadSettingsBackgroundScreen = withPageBackground(
   VirtualGamepadSettingsScreen,
 );
 const HoldButtonsBackgroundScreen = withPageBackground(HoldButtonsScreen);
-const VirtualMacroSettingsBackgroundScreen = withPageBackground(
-  VirtualMacroSettingsScreen,
-);
 const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const GamepadTestBackgroundScreen = withPageBackground(GamepadTestScreen);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
@@ -521,11 +517,6 @@ function App() {
                   name="HoldButtons"
                   component={HoldButtonsBackgroundScreen}
                   options={{title: t('Hold Buttons')}}
-                />
-                <RootStack.Screen
-                  name="VirtualMacroSettings"
-                  component={VirtualMacroSettingsBackgroundScreen}
-                  options={{title: t('Virtual macro settings')}}
                 />
                 <RootStack.Screen
                   name="Search"

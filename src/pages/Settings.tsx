@@ -700,18 +700,13 @@ function SettingsScreen({navigation}) {
           />
           <SettingItem
             title={t('Customize virtual buttons')}
-            description={t('Customize buttons of virtual gamepad')}
+            description={t('CustomizeButtonsWithMacroHint')}
             onPress={() => navigation.navigate('VirtualGamepadSettings')}
           />
           <SettingItem
             title={t('Auto toggle hold buttons')}
             description={t('Select what buttons become toggle holdable')}
             onPress={() => navigation.navigate('HoldButtons')}
-          />
-          <SettingItem
-            title={t('Virtual macro settings')}
-            description={t('Enable macro button and edit its action sequence')}
-            onPress={() => navigation.navigate('VirtualMacroSettings')}
           />
 
           <SectionLabel title={t('AudioSettings')} />

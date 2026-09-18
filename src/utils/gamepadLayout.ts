@@ -1,6 +1,7 @@
 import {
-  createDefaultMacroLayoutButton,
-  VIRTUAL_MACRO_BUTTON_NAME,
+  createDefaultMacroLayoutButtons,
+  isMacroButtonName,
+  VirtualMacroStep,
 } from './virtualMacro';
 
 export type ButtonConfig = {
@@ -14,6 +15,12 @@ export type ButtonConfig = {
   // Auto-fire: while held, the button rapidly presses/releases. Stored per
   // button in the profile's layout.
   turbo?: boolean;
+  // Macro buttons only (name is one of VIRTUAL_MACRO_BUTTON_NAMES): this
+  // slot's own action sequence, configured per profile from this same layout
+  // editor rather than shared globally across profiles.
+  macroSteps?: VirtualMacroStep[];
+  macroLoopEnabled?: boolean;
+  macroLoopIntervalMs?: number;
 };
 
 // The swipe-aim trackpad is a first-class layout element (a rectangle you place
@@ -64,7 +71,7 @@ export const getButtonBaseSize = (
   if (name.indexOf('DPad') > -1) {
     return {width: 70, height: 70};
   }
-  if (name === VIRTUAL_MACRO_BUTTON_NAME) {
+  if (isMacroButtonName(name)) {
     return {width: 60, height: 60};
   }
   return {width: 50, height: 50};
@@ -109,7 +116,7 @@ export const buildDefaultLayout = (
     {name: 'DPadRight', x: 135, y: height - 95, show: true},
     {name: 'LeftStick', x: 175, y: height - 205, show: true},
     {name: 'RightStick', x: width - 265, y: height - 195, show: true},
-    createDefaultMacroLayoutButton(width, height),
+    ...createDefaultMacroLayoutButtons(width, height),
     createDefaultSwipePad(width, height),
   ];
 };

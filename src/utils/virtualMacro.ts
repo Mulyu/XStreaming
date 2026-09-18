@@ -1,4 +1,29 @@
-export const VIRTUAL_MACRO_BUTTON_NAME = 'Macro';
+// Three independent macro button slots. Each one's action sequence lives on
+// its own ButtonConfig entry (see gamepadLayout.ts) inside the active custom
+// gamepad profile's saved layout -- there is no shared/global macro sequence
+// anymore, so two profiles (or two of these three buttons) can each fire a
+// completely different combo. A profile that doesn't want a given slot can
+// just hide it (the same `show` toggle every other button already has).
+export const VIRTUAL_MACRO_BUTTON_NAMES = [
+  'Macro1',
+  'Macro2',
+  'Macro3',
+] as const;
+export type VirtualMacroButtonName =
+  (typeof VIRTUAL_MACRO_BUTTON_NAMES)[number];
+
+export const isMacroButtonName = (name: any): name is VirtualMacroButtonName =>
+  VIRTUAL_MACRO_BUTTON_NAMES.includes(name);
+
+// 1-indexed slot number (for the on-icon badge), or null for a non-macro name.
+export const macroButtonNumber = (name: any): number | null => {
+  const idx = VIRTUAL_MACRO_BUTTON_NAMES.indexOf(name);
+  return idx === -1 ? null : idx + 1;
+};
+
+// All three slots share one icon shape (common/virtualgp.ts) distinguished
+// only by the number badge the renderer overlays -- see macroButtonNumber.
+export const MACRO_ICON_KEY = 'Macro';
 
 export const VIRTUAL_MACRO_ALLOWED_BUTTONS = [
   'A',
@@ -30,55 +55,48 @@ export type VirtualMacroStep = {
   waitAfterMs: number;
 };
 
-export const DEFAULT_VIRTUAL_MACRO_LONG_PRESS_MS = 500;
 export const DEFAULT_VIRTUAL_MACRO_LOOP_INTERVAL_MS = 500;
-export const DEFAULT_VIRTUAL_MACRO_SHORT_STEPS: VirtualMacroStep[] = [
-  {
-    type: 'buttons',
-    buttons: ['A'],
-    stick: 'left',
-    x: 0,
-    y: 0,
-    durationMs: 80,
-    waitAfterMs: 0,
-  },
-];
-export const DEFAULT_VIRTUAL_MACRO_LONG_STEPS: VirtualMacroStep[] = [
-  {
-    type: 'buttons',
-    buttons: ['B'],
-    stick: 'left',
-    x: 0,
-    y: 0,
-    durationMs: 250,
-    waitAfterMs: 0,
-  },
-];
+export const DEFAULT_VIRTUAL_MACRO_STEPS: VirtualMacroStep[] = [];
 
-export const createDefaultMacroLayoutButton = (
+// One default-positioned button per slot, stacked so they don't overlap.
+// Placed away from the default layout's other controls (mid-left, above the
+// swipe-aim pad) since, unlike A/B/X/Y, there's no natural "home" for them.
+export const createDefaultMacroLayoutButtons = (
   width: number,
   height: number,
-) => {
-  return {
-    name: VIRTUAL_MACRO_BUTTON_NAME,
+): any[] =>
+  VIRTUAL_MACRO_BUTTON_NAMES.map((name, index) => ({
+    name,
     x: Math.round(width * 0.5 - 30),
-    y: Math.round(height - 130),
+    y: Math.round(height - 130 - index * 70),
     scale: 1,
     show: true,
-  };
-};
+  }));
 
-export const ensureMacroLayoutButton = (
+// Ensures a saved layout carries all three macro slots (older saved layouts
+// predate this or only ever had the single 'Macro' button). A legacy 'Macro'
+// entry is migrated in place to the 'Macro1' slot, keeping its position but
+// -- since its action sequence used to live in global settings, not on the
+// button itself -- starting with an empty sequence; the user re-adds it once
+// under Macro1's own editor.
+export const ensureMacroLayoutButtons = (
   buttons: any[],
-  fallbackButton: any,
+  fallbackButtons: any[],
 ): any[] => {
   if (!Array.isArray(buttons)) {
-    return [fallbackButton];
+    return [...fallbackButtons];
   }
-  if (buttons.some(button => button?.name === VIRTUAL_MACRO_BUTTON_NAME)) {
-    return buttons;
+  let next = buttons;
+  const legacyIndex = next.findIndex(button => button?.name === 'Macro');
+  if (legacyIndex !== -1 && !next.some(button => button?.name === 'Macro1')) {
+    next = next.map((button, idx) =>
+      idx === legacyIndex ? {...button, name: 'Macro1'} : button,
+    );
   }
-  return [...buttons, fallbackButton];
+  const missing = fallbackButtons.filter(
+    fallback => !next.some(button => button?.name === fallback.name),
+  );
+  return missing.length ? [...next, ...missing] : next;
 };
 
 export const normalizeMacroLoopIntervalMs = (value: any): number => {
@@ -133,22 +151,11 @@ export const normalizeMacroStep = (
 
 export const normalizeMacroSteps = (
   steps: any,
-  fallbackSteps: VirtualMacroStep[],
+  fallbackSteps: VirtualMacroStep[] = DEFAULT_VIRTUAL_MACRO_STEPS,
 ): VirtualMacroStep[] => {
   const fallbackButton = fallbackSteps[0]?.buttons?.[0] || 'A';
   if (!Array.isArray(steps)) {
     return fallbackSteps.map(step => ({...step}));
   }
-  if (!steps.length) {
-    return [];
-  }
   return steps.map(step => normalizeMacroStep(step, fallbackButton));
-};
-
-export const normalizeMacroLongPressMs = (value: any) => {
-  const num = Number(value);
-  if (!Number.isFinite(num)) {
-    return DEFAULT_VIRTUAL_MACRO_LONG_PRESS_MS;
-  }
-  return Math.max(150, Math.min(1500, Math.round(num)));
 };
