@@ -366,6 +366,11 @@ export function NativeStreamScreenBase({
   // any -- lets pressing that same button again toggle its own loop off
   // while pressing a *different* macro button cleanly takes over instead.
   const activeMacroNameRef = React.useRef<string | null>(null);
+  // True while the running repeat was started by turbo (hold-to-repeat)
+  // rather than macroLoopEnabled (tap-to-toggle) -- only a turbo-driven
+  // repeat should stop on release; a toggled loop keeps going until tapped
+  // again.
+  const isMacroTurboActiveRef = React.useRef(false);
   // Macro1/2/3's own {macroSteps, macroLoopEnabled, macroLoopIntervalMs}, from
   // the active custom-gamepad profile's saved layout -- refreshed alongside
   // the turbo set below, since both are per-profile per-button config.
@@ -2355,6 +2360,7 @@ export function NativeStreamScreenBase({
     );
     macroSequenceTimersRef.current = [];
     isMacroLoopRunningRef.current = false;
+    isMacroTurboActiveRef.current = false;
     activeMacroNameRef.current = null;
     Array.from(activeMacroButtonsRef.current).forEach(button => {
       if (button === 'LeftThumb') {
@@ -2471,6 +2477,41 @@ export function NativeStreamScreenBase({
       return;
     }
 
+    if (config?.turbo) {
+      // Auto-fire: keep re-running the sequence back-to-back for as long as
+      // the button is held, exactly like turbo does for a normal button --
+      // handleMacroPressOut below stops it on release. Takes priority over
+      // macroLoopEnabled if both happen to be set on the same button.
+      clearMacroTimers();
+      activeMacroNameRef.current = name;
+      isMacroLoopRunningRef.current = true;
+      isMacroTurboActiveRef.current = true;
+      const runTurbo = () => {
+        if (
+          !isMacroLoopRunningRef.current ||
+          activeMacroNameRef.current !== name
+        ) {
+          return;
+        }
+        const totalDuration = runMacroSteps(rawSteps);
+        if (!totalDuration) {
+          clearMacroTimers();
+          return;
+        }
+        const timeoutId = setTimeout(() => {
+          macroSequenceTimersRef.current =
+            macroSequenceTimersRef.current.filter(item => item !== timeoutId);
+          runTurbo();
+        }, totalDuration);
+        macroSequenceTimersRef.current.push(timeoutId);
+      };
+      runTurbo();
+      if (settings.vibration) {
+        Vibration.vibrate(20);
+      }
+      return;
+    }
+
     if (config?.macroLoopEnabled) {
       if (
         isMacroLoopRunningRef.current &&
@@ -2516,7 +2557,13 @@ export function NativeStreamScreenBase({
     }
   };
 
-  const handleMacroPressOut = (_name: string) => {};
+  const handleMacroPressOut = (name: string) => {
+    // Only a turbo-driven repeat stops on release; a macroLoopEnabled toggle
+    // (or a plain one-shot sequence) is unaffected by press-out.
+    if (isMacroTurboActiveRef.current && activeMacroNameRef.current === name) {
+      clearMacroTimers();
+    }
+  };
 
   // Virtual gamepad press start
   // Push the current virtual-gamepad state to the input channel immediately.
