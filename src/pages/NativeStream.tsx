@@ -298,6 +298,12 @@ export function NativeStreamScreenBase({
   const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
   const [gamepadLayoutVersion, setGamepadLayoutVersion] = React.useState(0);
   const [swipeConfigVersion, setSwipeConfigVersion] = React.useState(0);
+  // Mirrors activeMacroNameRef, but as state so the currently auto-firing
+  // macro button (if any) can be drawn with a ring -- refs alone don't
+  // trigger a re-render.
+  const [loopingMacroName, setLoopingMacroName] = React.useState<string | null>(
+    null,
+  );
   const [audioGain, setAudioGain] = React.useState(() => {
     const g = Number(getSettings().audio_gain);
     return Number.isFinite(g) ? Math.max(0, Math.min(1, g)) : 1;
@@ -2362,6 +2368,7 @@ export function NativeStreamScreenBase({
     isMacroLoopRunningRef.current = false;
     isMacroTurboActiveRef.current = false;
     activeMacroNameRef.current = null;
+    setLoopingMacroName(null);
     Array.from(activeMacroButtonsRef.current).forEach(button => {
       if (button === 'LeftThumb') {
         setManualLeftThumbPressed(false);
@@ -2484,6 +2491,7 @@ export function NativeStreamScreenBase({
       // macroLoopEnabled if both happen to be set on the same button.
       clearMacroTimers();
       activeMacroNameRef.current = name;
+      setLoopingMacroName(name);
       isMacroLoopRunningRef.current = true;
       isMacroTurboActiveRef.current = true;
       const runTurbo = () => {
@@ -2524,6 +2532,7 @@ export function NativeStreamScreenBase({
 
       clearMacroTimers();
       activeMacroNameRef.current = name;
+      setLoopingMacroName(name);
       isMacroLoopRunningRef.current = true;
       const interval = normalizeMacroLoopIntervalMs(
         config?.macroLoopIntervalMs,
@@ -3217,6 +3226,7 @@ export function NativeStreamScreenBase({
           onPressOut={handleButtonPressOut}
           onStickMove={handleStickMove}
           refreshKey={gamepadLayoutVersion}
+          loopingMacroName={loopingMacroName}
         />
       );
     } else {
