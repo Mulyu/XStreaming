@@ -1,5 +1,4 @@
 import i18next from '../../i18n';
-import {THEME_PRIMARY_PRESET_COLORS} from '../../utils/themeColor';
 
 const {t} = i18next;
 
@@ -20,28 +19,6 @@ const bases = [
       {value: 'zh', text: '简体中文'},
       {value: 'zht', text: '繁體中文'},
     ],
-  },
-  {
-    name: 'theme',
-    type: 'radio',
-    title: t('Theme'),
-    description: t('Set the app theme to take effect on the next launch'),
-    data: [
-      {value: 'auto', text: t('Auto')},
-      {value: 'light', text: t('Light')},
-      {value: 'dark', text: t('Dark')},
-    ],
-  },
-  {
-    name: 'theme_primary_color',
-    type: 'color',
-    title: t('Theme primary color'),
-    description: t('Choose app primary color, takes effect on next launch'),
-    tips: t('Choose from preset palette for best readability'),
-    data: THEME_PRIMARY_PRESET_COLORS.map(color => ({
-      value: color,
-      text: color,
-    })),
   },
   {
     name: 'use_msal_login',

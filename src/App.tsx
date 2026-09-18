@@ -3,7 +3,6 @@ import {
   Alert,
   DeviceEventEmitter,
   Linking,
-  useColorScheme,
   NativeModules,
   StyleSheet,
   View,
@@ -13,7 +12,6 @@ import {
   Dialog,
   PaperProvider,
   MD3DarkTheme,
-  MD3LightTheme,
   Portal,
   ProgressBar,
   Text,
@@ -36,7 +34,6 @@ import store from './store';
 import {getSettings, saveSettings} from './store/settingStore';
 import {findTitleByProductId} from './store/shortcutStore';
 
-import customLightTheme from './theme/index';
 import customDarkTheme from './theme/index.dark';
 
 import HomeScreen from './pages/Home';
@@ -64,7 +61,6 @@ import updater from './utils/updater';
 import {
   applyPrimaryColorToPaperTheme,
   DEFAULT_THEME_PRIMARY_COLOR,
-  normalizeHexColor,
 } from './utils/themeColor';
 
 import {useTranslation} from 'react-i18next';
@@ -93,28 +89,17 @@ const formatUpdateBytes = (bytes?: number) => {
   return `${mb >= 10 ? mb.toFixed(1) : mb.toFixed(2)} MB`;
 };
 
-const {LightTheme, DarkTheme} = adaptNavigationTheme({
+const {DarkTheme} = adaptNavigationTheme({
   reactNavigationLight: NavigationDefaultTheme,
   reactNavigationDark: NavigationDarkTheme,
 });
 
-const PAGE_BACKGROUND_LIGHT = '#F5F6F7';
 const PAGE_BACKGROUND_DARK = '#0E0E10';
 
 const withPageBackground = (ScreenComponent: any) => {
   const WrappedScreen = (props: any) => {
-    const colorScheme = useColorScheme();
-    const settings = getSettings();
-    const isLight =
-      settings.theme === 'light' ||
-      (settings.theme === 'auto' && colorScheme === 'light');
-
     return (
-      <View
-        style={[
-          styles.backgroundScreen,
-          isLight ? styles.backgroundScreenLight : styles.backgroundScreenDark,
-        ]}>
+      <View style={[styles.backgroundScreen, styles.backgroundScreenDark]}>
         <View style={styles.backgroundContent}>
           <ScreenComponent {...props} />
         </View>
@@ -133,18 +118,13 @@ const withPageBackground = (ScreenComponent: any) => {
 // the top safe-area inset so content isn't drawn under the status bar.
 const withTabScreen = (ScreenComponent: any) => {
   const WrappedScreen = (props: any) => {
-    const colorScheme = useColorScheme();
     const insets = useSafeAreaInsets();
-    const settings = getSettings();
-    const isLight =
-      settings.theme === 'light' ||
-      (settings.theme === 'auto' && colorScheme === 'light');
 
     return (
       <View
         style={[
           styles.backgroundScreen,
-          isLight ? styles.backgroundScreenLight : styles.backgroundScreenDark,
+          styles.backgroundScreenDark,
           {paddingTop: insets.top},
         ]}>
         <View style={styles.backgroundContent}>
@@ -209,7 +189,6 @@ function MainTabs() {
 
 function App() {
   const {t} = useTranslation();
-  const colorScheme = useColorScheme();
   const settings = getSettings();
   const deviceInfos = FullScreenManager.getDeviceInfos();
   const updateCheckedRef = React.useRef(false);
@@ -388,44 +367,20 @@ function App() {
     }
   }, [settings.bind_usb_device]);
 
-  const primaryColor = normalizeHexColor(
-    settings.theme_primary_color,
-    DEFAULT_THEME_PRIMARY_COLOR,
-  );
-  const paperLightTheme = applyPrimaryColorToPaperTheme(
-    {
-      ...MD3LightTheme,
-      colors: customLightTheme.colors,
-    },
-    'light',
-    primaryColor,
-  );
   const paperDarkTheme = applyPrimaryColorToPaperTheme(
     {
       ...MD3DarkTheme,
       colors: customDarkTheme.colors,
     },
     'dark',
-    primaryColor,
+    DEFAULT_THEME_PRIMARY_COLOR,
   );
-  const CombinedDefaultTheme = merge(paperLightTheme, LightTheme);
   const CombinedDarkTheme = merge(paperDarkTheme, DarkTheme);
-  CombinedDefaultTheme.colors.background = PAGE_BACKGROUND_LIGHT;
-  CombinedDefaultTheme.colors.card = PAGE_BACKGROUND_LIGHT;
   CombinedDarkTheme.colors.background = PAGE_BACKGROUND_DARK;
   CombinedDarkTheme.colors.card = PAGE_BACKGROUND_DARK;
 
-  let paperTheme = paperDarkTheme;
-  let navigationTheme = CombinedDarkTheme;
-
-  if (settings.theme === 'auto') {
-    paperTheme = colorScheme === 'dark' ? paperDarkTheme : paperLightTheme;
-    navigationTheme =
-      colorScheme === 'dark' ? CombinedDarkTheme : CombinedDefaultTheme;
-  } else if (settings.theme === 'light') {
-    paperTheme = paperLightTheme;
-    navigationTheme = CombinedDefaultTheme;
-  }
+  const paperTheme = paperDarkTheme;
+  const navigationTheme = CombinedDarkTheme;
 
   if (
     deviceInfos.factor?.toLocaleUpperCase().indexOf('NINTENDO') > -1 &&
@@ -607,9 +562,6 @@ function App() {
 const styles = StyleSheet.create({
   backgroundScreen: {
     flex: 1,
-  },
-  backgroundScreenLight: {
-    backgroundColor: PAGE_BACKGROUND_LIGHT,
   },
   backgroundScreenDark: {
     backgroundColor: PAGE_BACKGROUND_DARK,

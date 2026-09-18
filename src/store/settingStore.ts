@@ -1,7 +1,6 @@
 import {storage} from './mmkv';
 import {debugFactory} from '../utils/debug';
 import {NativeModules} from 'react-native';
-import {DEFAULT_THEME_PRIMARY_COLOR} from '../utils/themeColor';
 import {getSystemLocale} from '../utils/locale';
 const log = debugFactory('settingStore');
 
@@ -64,8 +63,6 @@ export type Settings = {
   ipv6: boolean;
   check_update: boolean;
   power_on: boolean;
-  theme: string;
-  theme_primary_color: string;
   fsr: boolean;
   coop: boolean;
   use_msal_login: boolean;
@@ -154,8 +151,6 @@ const defaultSettings: Settings = {
     brightness: 5,
   },
   hold_buttons: [],
-  theme: 'dark',
-  theme_primary_color: DEFAULT_THEME_PRIMARY_COLOR,
   fsr: false,
   coop: false,
   use_msal_login: false,

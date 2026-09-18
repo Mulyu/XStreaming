@@ -1,44 +1,5 @@
 export const DEFAULT_THEME_PRIMARY_COLOR = '#107C10';
 
-export const THEME_PRIMARY_PRESET_COLORS = [
-  DEFAULT_THEME_PRIMARY_COLOR,
-  '#1B5E20',
-  '#2E7D32',
-  '#43A047',
-  '#689F38',
-  '#7CB342',
-  '#00695C',
-  '#1565C0',
-  '#1976D2',
-  '#283593',
-  '#3949AB',
-  '#0277BD',
-  '#0288D1',
-  '#0097A7',
-  '#00838F',
-  '#00796B',
-  '#00897B',
-  '#26A69A',
-  '#5E35B1',
-  '#6A1B9A',
-  '#8E24AA',
-  '#AD1457',
-  '#C2185B',
-  '#D81B60',
-  '#C62828',
-  '#E53935',
-  '#EF6C00',
-  '#FB8C00',
-  '#F9A825',
-  '#FF8F00',
-  '#6D4C41',
-  '#455A64',
-  '#546E7A',
-  '#37474F',
-  '#2F3E46',
-  '#5D4037',
-];
-
 type Rgb = {
   r: number;
   g: number;
