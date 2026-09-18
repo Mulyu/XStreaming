@@ -33,18 +33,6 @@ const gamepad = [
     ],
   },
   {
-    name: 'vibration',
-    type: 'radio',
-    title: t('Vibration'),
-    description: t(
-      'If your controller supports vibration, you can set whether it vibrates during the game',
-    ),
-    data: [
-      {value: true, text: t('Enable')},
-      {value: false, text: t('Disable')},
-    ],
-  },
-  {
     name: 'dead_zone',
     type: 'slider',
     min: 0,

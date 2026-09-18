@@ -527,12 +527,6 @@ function SettingsScreen({navigation}) {
             value={settings.polling_rate}
             onChange={v => updateSetting('polling_rate', v)}
           />
-          <SwitchRow
-            title={M('vibration').title}
-            desc={M('vibration').description}
-            value={settings.vibration}
-            onChange={v => updateSetting('vibration', v)}
-          />
           <SliderRow
             title={M('dead_zone').title}
             desc={M('dead_zone').description}
