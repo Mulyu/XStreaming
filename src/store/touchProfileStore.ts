@@ -9,7 +9,7 @@ const SWIPE_KEY = 'user.profileSwipe';
 // The profile last used for each game, keyed by the game's titleId.
 const GAME_KEY = 'user.gameLastProfile';
 // Per-profile virtual-stick mode override (0 = fixed, 1 = free). Absent = fall
-// back to the global virtual_gamepad_joystick setting.
+// back to Free.
 const JOYSTICK_KEY = 'user.profileJoystick';
 // Per-profile flag: whether the cover-screen controls are enabled (default off).
 const COVER_KEY = 'user.profileCover';
