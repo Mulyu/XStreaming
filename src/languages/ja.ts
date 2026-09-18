@@ -371,6 +371,7 @@ export default {
     'Cover buttons': 'カバーのボタン',
     'Enable cover controls': 'カバー画面で有効にする',
     'Turbo (auto-fire)': '連射（オートファイア）',
+    'Toggle hold': 'トグルホールド',
     Ignored: '無視',
     Ignore: '無視する',
     Unignore: '無視を解除',

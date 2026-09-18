@@ -107,6 +107,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [currentScale, setCurrentScale] = React.useState(1);
   const [currentShow, setCurrentShow] = React.useState(true);
   const [currentTurbo, setCurrentTurbo] = React.useState(false);
+  const [currentHold, setCurrentHold] = React.useState(false);
   // Macro1/2/3 only -- see CustomGamepad.tsx's own copy of this pattern.
   const [macroSteps, setMacroSteps] = React.useState<VirtualMacroStep[]>([]);
   const [macroLoopEnabled, setMacroLoopEnabled] = React.useState(false);
@@ -206,6 +207,14 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     setCurrentTurbo(value);
     const next = buttons.map(button =>
       button.name === currentButton ? {...button, turbo: value} : button,
+    );
+    setButtons(next);
+  };
+
+  const handleChangeHold = (value: boolean) => {
+    setCurrentHold(value);
+    const next = buttons.map(button =>
+      button.name === currentButton ? {...button, holdToggle: value} : button,
     );
     setButtons(next);
   };
@@ -426,6 +435,24 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     <RadioButton.Group
                       onValueChange={val => handleChangeTurbo(val === 'true')}
                       value={currentTurbo ? 'true' : 'false'}>
+                      <RadioButton.Item label={t('Disable')} value="false" />
+                      <RadioButton.Item label={t('Enable')} value="true" />
+                    </RadioButton.Group>
+                  </>
+                )}
+
+              {currentButton !== 'LeftStick' &&
+                currentButton !== 'RightStick' &&
+                currentButton !== 'Nexus' &&
+                !isMacroButtonName(currentButton) && (
+                  <>
+                    <View style={styles.title}>
+                      <Text>{t('Toggle hold')}</Text>
+                      <Divider style={styles.divider} />
+                    </View>
+                    <RadioButton.Group
+                      onValueChange={val => handleChangeHold(val === 'true')}
+                      value={currentHold ? 'true' : 'false'}>
                       <RadioButton.Item label={t('Disable')} value="false" />
                       <RadioButton.Item label={t('Enable')} value="true" />
                     </RadioButton.Group>
@@ -990,6 +1017,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               setCurrentScale(button.scale || 1);
               setCurrentShow(button.show ?? true);
               setCurrentTurbo(button.turbo ?? false);
+              setCurrentHold(button.holdToggle ?? false);
               if (isMacroButtonName(button.name)) {
                 setMacroSteps(
                   Array.isArray(button.macroSteps) ? button.macroSteps : [],

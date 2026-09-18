@@ -15,6 +15,10 @@ export type ButtonConfig = {
   // Auto-fire: while held, the button rapidly presses/releases. Stored per
   // button in the profile's layout.
   turbo?: boolean;
+  // Toggle-hold: a press latches the button on until pressed again, instead
+  // of releasing when the finger lifts. Stored per button in the profile's
+  // layout (previously a single global list in Settings).
+  holdToggle?: boolean;
   // Macro buttons only (name is one of VIRTUAL_MACRO_BUTTON_NAMES): this
   // slot's own action sequence, configured per profile from this same layout
   // editor rather than shared globally across profiles.

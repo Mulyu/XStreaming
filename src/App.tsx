@@ -53,7 +53,6 @@ import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
 import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';
 import CustomGamepadScreen from './pages/CustomGamepad';
-import HoldButtonsScreen from './pages/HoldButtons';
 import Ds5SettingsScreen from './pages/Ds5Settings';
 import HistoryScreen from './pages/History';
 import updater from './utils/updater';
@@ -158,7 +157,6 @@ const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
 const VirtualGamepadSettingsBackgroundScreen = withPageBackground(
   VirtualGamepadSettingsScreen,
 );
-const HoldButtonsBackgroundScreen = withPageBackground(HoldButtonsScreen);
 const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 const SearchBackgroundScreen = withPageBackground(SearchScreen);
@@ -447,11 +445,6 @@ function App() {
                   name="VirtualGamepadSettings"
                   component={VirtualGamepadSettingsBackgroundScreen}
                   options={{title: t('Custom')}}
-                />
-                <RootStack.Screen
-                  name="HoldButtons"
-                  component={HoldButtonsBackgroundScreen}
-                  options={{title: t('Hold Buttons')}}
                 />
                 <RootStack.Screen
                   name="Search"
