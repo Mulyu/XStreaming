@@ -89,8 +89,20 @@ function StoreScreen() {
   const [chartKind, setChartKind] = React.useState<ChartKind>('best');
   const [saleOnly, setSaleOnly] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
-  const [loadingMore, setLoadingMore] = React.useState(false);
+
+  // Loading state is tracked per provider, not as one shared flag -- a
+  // shared flag meant "is *a* chart loading", not "is the chart the screen
+  // is currently showing loading", so switching tabs while the other
+  // provider's fetch was still in flight could clear it (or leave it stuck)
+  // for a reason that had nothing to do with the chart actually on screen,
+  // showing StoreEmpty instead of a spinner (or vice versa).
+  const [xboxLoading, setXboxLoading] = React.useState(true);
+  const [xboxLoadingMore, setXboxLoadingMore] = React.useState(false);
+  const [steamLoading, setSteamLoading] = React.useState(true);
+  const [steamLoadingMore, setSteamLoadingMore] = React.useState(false);
+  const loading = provider === 'xcloud' ? xboxLoading : steamLoading;
+  const loadingMore =
+    provider === 'xcloud' ? xboxLoadingMore : steamLoadingMore;
 
   const [xboxProductIds, setXboxProductIds] = React.useState<string[]>([]);
   const [xboxNextCT, setXboxNextCT] = React.useState<string | undefined>();
@@ -98,9 +110,21 @@ function StoreScreen() {
   const [xboxPriceMap, setXboxPriceMap] = React.useState<
     Record<string, PriceInfo>
   >({});
+  // The chart kind ('best'/'new') each provider's currently-held entries
+  // were loaded for, so switching tabs back to a provider that already has
+  // *this* kind loaded reuses what's there instead of throwing away
+  // scroll-accumulated pages and re-fetching from page 0 (chartKind is one
+  // shared selector across both tabs, so a kind change still invalidates
+  // whichever provider's data doesn't match it -- lazily, the next time that
+  // provider's tab becomes active).
+  const [xboxLoadedKind, setXboxLoadedKind] = React.useState<ChartKind | null>(
+    null,
+  );
 
   const [steamEntries, setSteamEntries] = React.useState<SteamChartEntry[]>([]);
   const [steamHasMore, setSteamHasMore] = React.useState(true);
+  const [steamLoadedKind, setSteamLoadedKind] =
+    React.useState<ChartKind | null>(null);
 
   // The two catalogs a chart entry gets matched against -- the same raw
   // shapes buildUnifiedCatalog already knows how to turn into a launchable
@@ -115,12 +139,19 @@ function StoreScreen() {
     () => getCachedFullCatalog() || [],
   );
 
-  // Bumped every time the provider or chart kind changes, so an async
-  // fetch/loadMore chain started for a since-abandoned selection can tell it
-  // was superseded and stop committing state instead of leaking stale rows
-  // into whatever selection is now showing (pull-to-refresh re-fetches the
-  // *same* selection, so it doesn't bump this).
-  const selectionGenerationRef = React.useRef(0);
+  // Bumped every time *that provider's own* chart is (re)loaded, so an async
+  // fetch/loadMore chain started for a since-abandoned load of that same
+  // provider can tell it was superseded and stop committing state instead of
+  // leaking stale rows into whatever's now showing for it (pull-to-refresh
+  // re-fetches the *same* generation, so it doesn't bump this). Kept
+  // per-provider rather than as one shared counter: switching tabs no longer
+  // force-reloads a provider that's already loaded for the current chart
+  // kind (see xboxLoadedKind/steamLoadedKind above), so a provider's chart
+  // can legitimately keep loading in the background while the other tab is
+  // shown, and that must not get invalidated just because the *other*
+  // provider started its own load in the meantime.
+  const xboxGenerationRef = React.useRef(0);
+  const steamGenerationRef = React.useRef(0);
   // Synchronous re-entrancy guard for loadMore -- React state (loadingMore)
   // only updates on the next render, so two onEndReached calls fired back to
   // back before that render (a known FlatList quirk) would otherwise both
@@ -214,7 +245,11 @@ function StoreScreen() {
       force: boolean,
       generation: number,
     ) => {
-      const stillCurrent = () => selectionGenerationRef.current === generation;
+      const genRef =
+        nextProvider === 'xcloud' ? xboxGenerationRef : steamGenerationRef;
+      const stillCurrent = () => genRef.current === generation;
+      const setProviderLoading =
+        nextProvider === 'xcloud' ? setXboxLoading : setSteamLoading;
       if (nextProvider === 'xcloud') {
         const sort: XboxBrowseSort =
           nextKind === 'best' ? 'MostPopular desc' : 'ReleaseDate desc';
@@ -232,11 +267,11 @@ function StoreScreen() {
                 fresh.totalCount,
               ),
             );
-            setLoading(false);
+            setProviderLoading(false);
             return;
           }
         }
-        setLoading(true);
+        setProviderLoading(true);
         fetchXboxBrowsePage(sort, xboxLocale)
           .then(page => {
             if (!stillCurrent()) {
@@ -256,7 +291,7 @@ function StoreScreen() {
           })
           .finally(() => {
             if (stillCurrent()) {
-              setLoading(false);
+              setProviderLoading(false);
             }
           });
       } else {
@@ -266,11 +301,11 @@ function StoreScreen() {
           const fresh = getFreshSteamChart(kind, steamCc);
           if (fresh) {
             setSteamEntries(dedupeByKey(fresh, e => e.appId));
-            setLoading(false);
+            setProviderLoading(false);
             return;
           }
         }
-        setLoading(true);
+        setProviderLoading(true);
         fetchSteamChart(kind, steamCc, steamLanguage, 0)
           .then(page => {
             if (!stillCurrent()) {
@@ -287,7 +322,7 @@ function StoreScreen() {
           })
           .finally(() => {
             if (stillCurrent()) {
-              setLoading(false);
+              setProviderLoading(false);
             }
           });
       }
@@ -296,29 +331,46 @@ function StoreScreen() {
   );
 
   React.useEffect(() => {
-    // A selection change supersedes whatever the previous one was doing --
-    // bump the generation so a still-in-flight fetch or loadMore chain from
-    // it notices and stops committing state, then drop its rows immediately
-    // so they don't linger under the new selection's ranks/prices while the
-    // fresh chart loads. Pull-to-refresh calls loadChart directly for the
-    // *same* selection and intentionally does neither, so the old list stays
-    // visible under the native refresh spinner instead of flashing empty.
-    selectionGenerationRef.current += 1;
-    const generation = selectionGenerationRef.current;
+    // Switching tabs alone is not a reason to throw away and re-fetch a
+    // provider's chart -- if it's already loaded for the chart kind
+    // currently selected (whether that load finished or is still going in
+    // the background), just leave it be so scroll-accumulated pages survive
+    // flipping between tabs. Only a genuinely new (provider, chartKind)
+    // combination triggers a reset + fetch, which bumps that provider's own
+    // generation so a still-in-flight fetch/loadMore chain from its previous
+    // load notices it was superseded and stops committing state. Pull-to-
+    // refresh calls loadChart directly without bumping the generation, so
+    // the old list stays visible under the native refresh spinner instead of
+    // flashing empty.
+    const alreadyLoaded =
+      provider === 'xcloud'
+        ? xboxLoadedKind === chartKind
+        : steamLoadedKind === chartKind;
+    if (alreadyLoaded) {
+      return;
+    }
+    const genRef =
+      provider === 'xcloud' ? xboxGenerationRef : steamGenerationRef;
+    genRef.current += 1;
+    const generation = genRef.current;
     if (provider === 'xcloud') {
       setXboxProductIds([]);
       setXboxNextCT(undefined);
       setXboxHasMore(true);
+      setXboxLoadedKind(chartKind);
     } else {
       setSteamEntries([]);
       setSteamHasMore(true);
+      setSteamLoadedKind(chartKind);
     }
     loadChart(provider, chartKind, false, generation);
-  }, [provider, chartKind, loadChart]);
+  }, [provider, chartKind, loadChart, xboxLoadedKind, steamLoadedKind]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    loadChart(provider, chartKind, true, selectionGenerationRef.current);
+    const genRef =
+      provider === 'xcloud' ? xboxGenerationRef : steamGenerationRef;
+    loadChart(provider, chartKind, true, genRef.current);
     setRefreshing(false);
   }, [provider, chartKind, loadChart]);
 
@@ -347,10 +399,10 @@ function StoreScreen() {
     if (loading || loadMoreInFlightRef.current) {
       return;
     }
-    const generation = selectionGenerationRef.current;
-    const stale = () => selectionGenerationRef.current !== generation;
 
     if (provider === 'xcloud') {
+      const generation = xboxGenerationRef.current;
+      const stale = () => xboxGenerationRef.current !== generation;
       if (!xboxHasMore || xboxProductIds.length >= MAX_CHART_ENTRIES) {
         return;
       }
@@ -369,7 +421,7 @@ function StoreScreen() {
       };
 
       loadMoreInFlightRef.current = true;
-      setLoadingMore(true);
+      setXboxLoadingMore(true);
       try {
         // Tracks ids already committed to xboxProductIds (plus any seen
         // earlier in this same loop) so a title the live ranking reshuffles
@@ -409,10 +461,12 @@ function StoreScreen() {
       } finally {
         loadMoreInFlightRef.current = false;
         if (!stale()) {
-          setLoadingMore(false);
+          setXboxLoadingMore(false);
         }
       }
     } else {
+      const generation = steamGenerationRef.current;
+      const stale = () => steamGenerationRef.current !== generation;
       if (!steamHasMore || steamEntries.length >= MAX_CHART_ENTRIES) {
         return;
       }
@@ -425,7 +479,7 @@ function StoreScreen() {
       };
 
       loadMoreInFlightRef.current = true;
-      setLoadingMore(true);
+      setSteamLoadingMore(true);
       try {
         // Same reasoning as the Xbox branch above -- Steam's own ranking can
         // reshuffle between the several sequential requests one loadMore
@@ -462,7 +516,7 @@ function StoreScreen() {
       } finally {
         loadMoreInFlightRef.current = false;
         if (!stale()) {
-          setLoadingMore(false);
+          setSteamLoadingMore(false);
         }
       }
     }
