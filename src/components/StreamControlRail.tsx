@@ -25,6 +25,9 @@ export interface StreamControlRailProps {
   onMouseSensitivityChange: (value: number) => void;
   vibrationEnabled: boolean;
   onToggleVibration: () => void;
+  showKeyboardOption: boolean;
+  keyboardVisible: boolean;
+  onToggleKeyboard: () => void;
   showMicrophone: boolean;
   microphoneOpen: boolean;
   onToggleMicrophone: () => void;
@@ -121,6 +124,9 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   onMouseSensitivityChange,
   vibrationEnabled,
   onToggleVibration,
+  showKeyboardOption,
+  keyboardVisible,
+  onToggleKeyboard,
   showMicrophone,
   microphoneOpen,
   onToggleMicrophone,
@@ -276,6 +282,15 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
               accent={accent}
               onPress={onToggleVibration}
             />
+            {showKeyboardOption && (
+              <RailButton
+                icon="keyboard-outline"
+                label={t('Keyboard')}
+                active={keyboardVisible}
+                accent={accent}
+                onPress={onToggleKeyboard}
+              />
+            )}
           </View>
 
           <View style={styles.group}>

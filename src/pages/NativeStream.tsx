@@ -63,6 +63,7 @@ import RTCFsrView from '../components/RTCFsrView';
 import NativeTouchOverlay from '../components/NativeTouchOverlay';
 import SwipeAimZone from '../components/SwipeAimZone';
 import MouseTrackpadZone from '../components/MouseTrackpadZone';
+import VirtualKeyboard from '../components/VirtualKeyboard';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {getCoverLayout} from '../store/coverLayoutStore';
 import PortraitVirtualGamepad, {
@@ -277,6 +278,9 @@ export function NativeStreamScreenBase({
   // single-finger tap/drag with the absolute-mouse message instead -- see
   // GfnStreamAdapter's queuePointerInput.
   const [showNativeTouch, setShowNativeTouch] = React.useState(false);
+  // GFN-only virtual keyboard overlay, toggled from StreamControlRail --
+  // only ever shown alongside Native touch (see handleSetInputMode).
+  const [showKeyboard, setShowKeyboard] = React.useState(false);
   const [connectState, setConnectState] = React.useState('');
   const [coverAvailable, setCoverAvailable] = React.useState(false);
   const [coverPresented, setCoverPresented] = React.useState(false);
@@ -3000,6 +3004,9 @@ export function NativeStreamScreenBase({
       if (mode !== 'touch' && showNativeTouch) {
         setShowNativeTouch(false);
       }
+      if (mode !== 'touch' && showKeyboard) {
+        setShowKeyboard(false);
+      }
       if (mode === 'gamepad') {
         setShowVirtualGamepad(true);
       } else if (mode === 'mouse') {
@@ -3008,7 +3015,13 @@ export function NativeStreamScreenBase({
         setShowNativeTouch(true);
       }
     },
-    [clearMacroTimers, showMouseTrackpad, showNativeTouch, showVirtualGamepad],
+    [
+      clearMacroTimers,
+      showKeyboard,
+      showMouseTrackpad,
+      showNativeTouch,
+      showVirtualGamepad,
+    ],
   );
 
   // Screen position, video format and FSR used to be pre-game Settings
@@ -3209,6 +3222,34 @@ export function NativeStreamScreenBase({
     [webrtcClient],
   );
 
+  // GFN-only virtual keyboard. See gfn/inputEncoding.ts (INPUT_KEY_DOWN/UP)
+  // and components/VirtualKeyboard.tsx.
+  const handleKeyDown = React.useCallback(
+    (virtualKey: number, modifiers: number) => {
+      webrtcClient
+        ?.getChannelProcessor('input')
+        ?.sendKeyDown(virtualKey, modifiers);
+    },
+    [webrtcClient],
+  );
+
+  const handleKeyUp = React.useCallback(
+    (virtualKey: number, modifiers: number) => {
+      webrtcClient
+        ?.getChannelProcessor('input')
+        ?.sendKeyUp(virtualKey, modifiers);
+    },
+    [webrtcClient],
+  );
+
+  const handleToggleKeyboard = React.useCallback(() => {
+    setShowKeyboard(v => !v);
+  }, []);
+
+  const handleCloseKeyboard = React.useCallback(() => {
+    setShowKeyboard(false);
+  }, []);
+
   const renderMouseTrackpad = () => {
     if (
       portraitMode ||
@@ -3228,6 +3269,26 @@ export function NativeStreamScreenBase({
         onButtonDown={handleMouseButtonDown}
         onButtonUp={handleMouseButtonUp}
         onWheel={handleMouseWheel}
+      />
+    );
+  };
+
+  const renderVirtualKeyboard = () => {
+    if (
+      portraitMode ||
+      isInPictureInPicture ||
+      route.params?.streamType !== 'gfn' ||
+      connectState !== CONNECTED ||
+      !showNativeTouch
+    ) {
+      return null;
+    }
+    return (
+      <VirtualKeyboard
+        visible={showKeyboard}
+        onClose={handleCloseKeyboard}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
       />
     );
   };
@@ -3300,6 +3361,11 @@ export function NativeStreamScreenBase({
         onMouseSensitivityChange={handleMouseSensitivityChange}
         vibrationEnabled={!!settings.vibration}
         onToggleVibration={handleToggleVibration}
+        showKeyboardOption={
+          route.params?.streamType === 'gfn' && inputMode === 'touch'
+        }
+        keyboardVisible={showKeyboard}
+        onToggleKeyboard={handleToggleKeyboard}
         performanceVisible={showPerformance}
         onTogglePerformance={() => setShowPerformance(!showPerformance)}
         showCoverControls={coverAvailable}
@@ -3500,6 +3566,8 @@ export function NativeStreamScreenBase({
       {renderSwipeAimZone()}
 
       {renderMouseTrackpad()}
+
+      {renderVirtualKeyboard()}
 
       {renderVirtualGamepad()}
 
