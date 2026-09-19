@@ -19,6 +19,9 @@ import {useTranslation} from 'react-i18next';
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
 import GamepadButton from '../components/CustomGamepad/Button';
+import KeyChip from '../components/CustomGamepad/KeyChip';
+import KeyPicker from '../components/KeyPicker';
+import {PickableKey} from '../utils/virtualKeys';
 import GridBackground from '../components/GridBackground';
 import {getSettings, saveSettings, deleteSetting} from '../store/gamepadStore';
 import {
@@ -72,6 +75,16 @@ function CustomGamepadScreen({navigation, route}) {
   const [currentShow, setCurrentShow] = React.useState(true);
   const [currentTurbo, setCurrentTurbo] = React.useState(false);
   const [currentHold, setCurrentHold] = React.useState(false);
+
+  // GFN keyboard-key buttons -- placed and configured in this same editor,
+  // alongside gamepad buttons (see utils/gamepadLayout.ts's ButtonConfig.kind).
+  const [showKeyPicker, setShowKeyPicker] = React.useState(false);
+  // 'new': the picker is adding a fresh key button (from the action modal).
+  // 'existing': it's changing currentButton's own key (from its own panel).
+  const [keyPickerTarget, setKeyPickerTarget] = React.useState<
+    'new' | 'existing'
+  >('new');
+  const currentButtonObj = buttons.find(b => b.name === currentButton);
 
   // Macro1/Macro2/Macro3 only -- this button's own action sequence, edited
   // right here in the layout editor instead of a shared global screen (see
@@ -211,6 +224,40 @@ function CustomGamepadScreen({navigation, route}) {
       }
     });
     setButtons([...buttons]);
+  };
+
+  const handleKeyPicked = (picked: PickableKey) => {
+    if (keyPickerTarget === 'new') {
+      const {width, height} = Dimensions.get('window');
+      const name = `KeyBtn_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      setButtons([
+        ...buttons,
+        {
+          name,
+          kind: 'key',
+          keyVk: picked.vk,
+          keyLabel: picked.label,
+          x: snapToGrid(width / 2 - 25),
+          y: snapToGrid(height / 2 - 25),
+          show: true,
+          scale: 1,
+        },
+      ]);
+    } else {
+      buttons.forEach(b => {
+        if (b.name === currentButton) {
+          b.keyVk = picked.vk;
+          b.keyLabel = picked.label;
+        }
+      });
+      setButtons([...buttons]);
+    }
+    setShowKeyPicker(false);
+  };
+
+  const handleRemoveKey = () => {
+    setButtons(buttons.filter(b => b.name !== currentButton));
+    setShowModal(false);
   };
 
   // Writes the given macro fields onto currentButton's own entry in
@@ -407,6 +454,15 @@ function CustomGamepadScreen({navigation, route}) {
                     setShowSwipeModal(true);
                   }}
                 />
+                <List.Item
+                  title={t('Add a key')}
+                  background={background}
+                  onPress={() => {
+                    setKeyPickerTarget('new');
+                    setActionShowModal(false);
+                    setShowKeyPicker(true);
+                  }}
+                />
                 {settings[title] && (
                   <List.Item
                     title={t('Delete')}
@@ -520,7 +576,8 @@ function CustomGamepadScreen({navigation, route}) {
               </RadioButton.Group>
 
               {currentButton !== 'LeftStick' &&
-                currentButton !== 'RightStick' && (
+                currentButton !== 'RightStick' &&
+                currentButtonObj?.kind !== 'key' && (
                   <>
                     <View style={styles.title}>
                       <Text>{t('Turbo (auto-fire)')}</Text>
@@ -534,6 +591,26 @@ function CustomGamepadScreen({navigation, route}) {
                     </RadioButton.Group>
                   </>
                 )}
+
+              {currentButtonObj?.kind === 'key' && (
+                <>
+                  <List.Item
+                    title={t('Change key')}
+                    description={currentButtonObj.keyLabel}
+                    background={background}
+                    onPress={() => {
+                      setKeyPickerTarget('existing');
+                      setShowKeyPicker(true);
+                    }}
+                  />
+                  <Button
+                    mode="text"
+                    textColor="#D32F2F"
+                    onPress={handleRemoveKey}>
+                    {t('Remove key')}
+                  </Button>
+                </>
+              )}
 
               {currentButton !== 'LeftStick' &&
                 currentButton !== 'RightStick' &&
@@ -975,18 +1052,33 @@ function CustomGamepadScreen({navigation, route}) {
                   setReloader(Date.now());
                 }}>
                 <View style={hidden ? styles.hiddenButton : undefined}>
-                  <GamepadButton
-                    name={button.name}
-                    width={button.width}
-                    height={button.height}
-                    scale={button.scale}
-                  />
+                  {button.kind === 'key' ? (
+                    <KeyChip
+                      label={button.keyLabel || '?'}
+                      width={button.width}
+                      height={button.height}
+                      scale={button.scale}
+                    />
+                  ) : (
+                    <GamepadButton
+                      name={button.name}
+                      width={button.width}
+                      height={button.height}
+                      scale={button.scale}
+                    />
+                  )}
                 </View>
               </Draggable>
             );
           }
         })}
       </>
+
+      <KeyPicker
+        visible={showKeyPicker}
+        onDismiss={() => setShowKeyPicker(false)}
+        onSelect={handleKeyPicked}
+      />
     </View>
   );
 }

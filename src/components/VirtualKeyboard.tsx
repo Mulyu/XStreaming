@@ -9,6 +9,7 @@ import {
   KEY_MOD_SHIFT,
   VK,
 } from '../gfn/inputEncoding';
+import {KeyboardModifiers} from '../hooks/useKeyboardModifiers';
 
 const ACCENT = '#76B900'; // GFN-only feature -- always the NVIDIA accent.
 const FOCUS_COLOR = '#FFD54A';
@@ -156,6 +157,9 @@ export type VirtualKeyboardProps = {
   onClose: () => void;
   onKeyDown: (virtualKey: number, modifiers: number) => void;
   onKeyUp: (virtualKey: number, modifiers: number) => void;
+  // Shift/Ctrl/Alt/Win latch state, shared with any custom key buttons
+  // configured as one of those keys -- see hooks/useKeyboardModifiers.ts.
+  modifiers: KeyboardModifiers;
 };
 
 const KeyButton: React.FC<{
@@ -195,88 +199,54 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
   onClose,
   onKeyDown,
   onKeyUp,
+  modifiers,
 }) => {
   const {t} = useTranslation();
-  // Which modifier bits are currently latched on (Shift/Ctrl/Alt/Win).
-  const [latched, setLatched] = React.useState<Set<number>>(new Set());
-  const latchedRef = React.useRef(latched);
-  latchedRef.current = latched;
-  // Non-modifier keys currently physically held, tracked only so a hide/
-  // unmount mid-press can release them instead of leaving a key stuck down on
-  // the remote OS.
+  // Non-modifier keys currently physically held on THIS panel, tracked only
+  // so a hide/unmount mid-press can release them instead of leaving a key
+  // stuck down on the remote OS. Modifier latch state itself lives in the
+  // shared `modifiers` controller (see the prop's doc).
   const heldRef = React.useRef<Set<number>>(new Set());
 
-  const releaseEverything = React.useCallback(() => {
+  const releaseHeld = React.useCallback(() => {
     heldRef.current.forEach(vk => onKeyUp(vk, 0));
     heldRef.current.clear();
-    latchedRef.current.forEach(bit => {
-      const vk = MOD_BIT_TO_VK[bit];
-      if (vk !== undefined) {
-        onKeyUp(vk, 0);
-      }
-    });
-    if (latchedRef.current.size > 0) {
-      setLatched(new Set());
-    }
   }, [onKeyUp]);
 
   React.useEffect(() => {
     if (!visible) {
-      releaseEverything();
+      releaseHeld();
     }
-  }, [visible, releaseEverything]);
+  }, [visible, releaseHeld]);
 
-  // Releases held/latched keys on unmount too (e.g. leaving the stream while
-  // the keyboard is up), same as GfnTouchGestureTracker.dispose().
-  React.useEffect(() => releaseEverything, [releaseEverything]);
+  // Releases held keys on unmount too (e.g. leaving the stream while the
+  // keyboard is up), same as GfnTouchGestureTracker.dispose().
+  React.useEffect(() => releaseHeld, [releaseHeld]);
 
   if (!visible) {
     return null;
   }
 
-  const modifierMask = (excludeBit?: number): number => {
-    let mask = 0;
-    latched.forEach(bit => {
-      if (bit !== excludeBit) {
-        mask |= bit;
-      }
-    });
-    return mask;
-  };
-
-  const handleModifierPress = (def: KeyDef) => {
-    const bit = def.modBit!;
-    const next = new Set(latched);
-    if (next.has(bit)) {
-      next.delete(bit);
-      onKeyUp(def.vk, modifierMask(bit));
-    } else {
-      next.add(bit);
-      onKeyDown(def.vk, modifierMask(bit));
-    }
-    setLatched(next);
-  };
-
   const handleKeyPressIn = (def: KeyDef) => {
     heldRef.current.add(def.vk);
-    onKeyDown(def.vk, modifierMask());
+    onKeyDown(def.vk, modifiers.modifierMask());
   };
 
   const handleKeyPressOut = (def: KeyDef) => {
     heldRef.current.delete(def.vk);
-    onKeyUp(def.vk, modifierMask());
+    onKeyUp(def.vk, modifiers.modifierMask());
   };
 
   const renderKey = (def: KeyDef, index: number) => {
     if (def.modBit) {
-      const active = latched.has(def.modBit);
+      const active = modifiers.latched.has(def.modBit);
       return (
         <KeyButton
           key={`${def.label}-${index}`}
           def={def}
           active={active}
           onPressIn={() => {}}
-          onPressOut={() => handleModifierPress(def)}
+          onPressOut={() => modifiers.toggleModifier(def.vk, def.modBit!)}
         />
       );
     }
@@ -360,14 +330,6 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
       </View>
     </View>
   );
-};
-
-// Reverse lookup used only to release a latched modifier's key on cleanup.
-const MOD_BIT_TO_VK: Record<number, number> = {
-  [KEY_MOD_SHIFT]: VK.LeftShift,
-  [KEY_MOD_CTRL]: VK.LeftCtrl,
-  [KEY_MOD_ALT]: VK.LeftAlt,
-  [KEY_MOD_META]: VK.Meta,
 };
 
 const styles = StyleSheet.create({

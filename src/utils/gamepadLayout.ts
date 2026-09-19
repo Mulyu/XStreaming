@@ -23,6 +23,16 @@ export type ButtonConfig = {
   // slot's own action sequence, configured per profile from this same layout
   // editor rather than shared globally across profiles.
   macroSteps?: VirtualMacroStep[];
+  // GFN keyboard-key buttons only (kind === 'key'; name is a generated unique
+  // id, not a gamepad button name): the Windows VK_* code and display label
+  // this slot sends, placed and sized in the same layout editor as everything
+  // else. `holdToggle` above doubles as this key's own latch (see
+  // components/CustomKeyButtons.tsx) except for the four standard modifier
+  // keys, which always share the VirtualKeyboard overlay's own latch state
+  // instead (see utils/virtualKeys.ts's VK_TO_MOD_BIT).
+  kind?: 'button' | 'key';
+  keyVk?: number;
+  keyLabel?: string;
   macroLoopEnabled?: boolean;
   macroLoopIntervalMs?: number;
 };
