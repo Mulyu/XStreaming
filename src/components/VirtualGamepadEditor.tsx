@@ -27,6 +27,9 @@ import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
 import GridBackground from './GridBackground';
 import GamepadButton from './CustomGamepad/Button';
+import KeyChip from './CustomGamepad/KeyChip';
+import KeyPicker from './KeyPicker';
+import {PickableKey} from '../utils/virtualKeys';
 import CoverLayoutOverlay from './CoverLayoutOverlay';
 import {getSettings as getGamepadLayouts} from '../store/gamepadStore';
 import {
@@ -127,6 +130,14 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [stickMode, setStickMode] = React.useState(1);
   const [reloadKey, setReloadKey] = React.useState(Date.now());
 
+  // GFN keyboard-key buttons -- see CustomGamepad.tsx's own copy of this
+  // pattern.
+  const [showKeyPicker, setShowKeyPicker] = React.useState(false);
+  const [keyPickerTarget, setKeyPickerTarget] = React.useState<
+    'new' | 'existing'
+  >('new');
+  const currentButtonObj = buttons.find(b => b.name === currentButton);
+
   React.useEffect(() => {
     if (!visible) {
       return;
@@ -217,6 +228,40 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
       button.name === currentButton ? {...button, holdToggle: value} : button,
     );
     setButtons(next);
+  };
+
+  const handleKeyPicked = (picked: PickableKey) => {
+    if (keyPickerTarget === 'new') {
+      const {width, height} = Dimensions.get('window');
+      const name = `KeyBtn_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      setButtons([
+        ...buttons,
+        {
+          name,
+          kind: 'key',
+          keyVk: picked.vk,
+          keyLabel: picked.label,
+          x: snapToGrid(width / 2 - 25),
+          y: snapToGrid(height / 2 - 25),
+          show: true,
+          scale: 1,
+        },
+      ]);
+    } else {
+      setButtons(
+        buttons.map(button =>
+          button.name === currentButton
+            ? {...button, keyVk: picked.vk, keyLabel: picked.label}
+            : button,
+        ),
+      );
+    }
+    setShowKeyPicker(false);
+  };
+
+  const handleRemoveKey = () => {
+    setButtons(buttons.filter(button => button.name !== currentButton));
+    setShowButtonModal(false);
   };
 
   // Same write-through-immediately pattern as show/turbo above, for
@@ -426,7 +471,8 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               </RadioButton.Group>
 
               {currentButton !== 'LeftStick' &&
-                currentButton !== 'RightStick' && (
+                currentButton !== 'RightStick' &&
+                currentButtonObj?.kind !== 'key' && (
                   <>
                     <View style={styles.title}>
                       <Text>{t('Turbo (auto-fire)')}</Text>
@@ -440,6 +486,25 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     </RadioButton.Group>
                   </>
                 )}
+
+              {currentButtonObj?.kind === 'key' && (
+                <>
+                  <List.Item
+                    title={t('Change key')}
+                    description={currentButtonObj.keyLabel}
+                    onPress={() => {
+                      setKeyPickerTarget('existing');
+                      setShowKeyPicker(true);
+                    }}
+                  />
+                  <Button
+                    mode="text"
+                    textColor="#D32F2F"
+                    onPress={handleRemoveKey}>
+                    {t('Remove key')}
+                  </Button>
+                </>
+              )}
 
               {currentButton !== 'LeftStick' &&
                 currentButton !== 'RightStick' &&
@@ -1034,12 +1099,21 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               setReloadKey(Date.now());
             }}>
             <View style={hidden ? styles.hiddenButton : undefined}>
-              <GamepadButton
-                name={button.name}
-                width={button.width ?? 50}
-                height={button.height ?? 50}
-                scale={button.scale ?? 1}
-              />
+              {button.kind === 'key' ? (
+                <KeyChip
+                  label={button.keyLabel || '?'}
+                  width={button.width ?? 50}
+                  height={button.height ?? 50}
+                  scale={button.scale ?? 1}
+                />
+              ) : (
+                <GamepadButton
+                  name={button.name}
+                  width={button.width ?? 50}
+                  height={button.height ?? 50}
+                  scale={button.scale ?? 1}
+                />
+              )}
             </View>
           </Draggable>
         );
@@ -1064,6 +1138,11 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
         {renderMacroStepModal()}
         {canManageProfiles && renderProfileModal()}
         {renderSwipeModal()}
+        <KeyPicker
+          visible={showKeyPicker}
+          onDismiss={() => setShowKeyPicker(false)}
+          onSelect={handleKeyPicked}
+        />
 
         {showGrid && <GridBackground gridSize={20} />}
 
@@ -1112,6 +1191,15 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               icon="monitor-cellphone"
               size={20}
               onPress={() => setCoverMode(true)}
+              style={styles.toolbarIcon}
+            />
+            <IconButton
+              icon="keyboard-outline"
+              size={20}
+              onPress={() => {
+                setKeyPickerTarget('new');
+                setShowKeyPicker(true);
+              }}
               style={styles.toolbarIcon}
             />
             <Button

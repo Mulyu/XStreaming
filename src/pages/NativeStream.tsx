@@ -64,6 +64,8 @@ import NativeTouchOverlay from '../components/NativeTouchOverlay';
 import SwipeAimZone from '../components/SwipeAimZone';
 import MouseTrackpadZone from '../components/MouseTrackpadZone';
 import VirtualKeyboard from '../components/VirtualKeyboard';
+import CustomKeyButtons from '../components/CustomKeyButtons';
+import {useKeyboardModifiers} from '../hooks/useKeyboardModifiers';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {getCoverLayout} from '../store/coverLayoutStore';
 import PortraitVirtualGamepad, {
@@ -3250,6 +3252,21 @@ export function NativeStreamScreenBase({
     setShowKeyboard(false);
   }, []);
 
+  // Shared Shift/Ctrl/Alt/Win latch, used by both the full keyboard overlay
+  // and any custom key buttons on the active profile -- see
+  // hooks/useKeyboardModifiers.ts.
+  const keyboardModifiers = useKeyboardModifiers(handleKeyDown, handleKeyUp);
+
+  // Releases any latched modifier when leaving Native touch (mirrors
+  // showNativeTouch/showKeyboard being reset in handleSetInputMode above) so
+  // a latched Shift never survives into a different input mode.
+  React.useEffect(() => {
+    if (!showNativeTouch) {
+      keyboardModifiers.releaseAll();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNativeTouch]);
+
   const renderMouseTrackpad = () => {
     if (
       portraitMode ||
@@ -3287,6 +3304,37 @@ export function NativeStreamScreenBase({
       <VirtualKeyboard
         visible={showKeyboard}
         onClose={handleCloseKeyboard}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        modifiers={keyboardModifiers}
+      />
+    );
+  };
+
+  // GFN-only custom key buttons: any kind:'key' entries on the active custom
+  // profile, placed the same way as turbo/hold-toggle gamepad buttons (see
+  // CustomGamepad.tsx / VirtualGamepadEditor.tsx). Shown alongside the full
+  // keyboard overlay above, not instead of it -- independent visibility.
+  // Like turbo/macro/hold-toggle, this only works for a named custom profile:
+  // the built-in Default (settings.custom_virtual_gamepad === '') renders via
+  // the fully static VirtualGamepad, which has no layout data to read.
+  const renderCustomKeyButtons = () => {
+    if (
+      portraitMode ||
+      isInPictureInPicture ||
+      route.params?.streamType !== 'gfn' ||
+      connectState !== CONNECTED ||
+      !showNativeTouch ||
+      !settings.custom_virtual_gamepad
+    ) {
+      return null;
+    }
+    const layout = getGamepadLayouts()[settings.custom_virtual_gamepad] || [];
+    return (
+      <CustomKeyButtons
+        layout={layout}
+        opacity={0.7}
+        modifiers={keyboardModifiers}
         onKeyDown={handleKeyDown}
         onKeyUp={handleKeyUp}
       />
@@ -3566,6 +3614,8 @@ export function NativeStreamScreenBase({
       {renderSwipeAimZone()}
 
       {renderMouseTrackpad()}
+
+      {renderCustomKeyButtons()}
 
       {renderVirtualKeyboard()}
 
