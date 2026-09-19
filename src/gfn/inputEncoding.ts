@@ -1,8 +1,7 @@
 // GeForce NOW input packet encoding. Ported from OpenNOW (MIT) / the official
-// GFN web client's wire format. Implements the gamepad, heartbeat and mouse
-// paths (keyboard is not implemented -- not needed for a controller/mouse
-// client). Byte layouts are matched exactly to the reference so the server
-// accepts the packets.
+// GFN web client's wire format. Implements the gamepad, heartbeat, mouse and
+// keyboard paths. Byte layouts are matched exactly to the reference so the
+// server accepts the packets.
 
 // XInput button flags.
 export const GAMEPAD_DPAD_UP = 0x0001;
@@ -25,12 +24,132 @@ export const GAMEPAD_MAX_CONTROLLERS = 4;
 export const GAMEPAD_PACKET_SIZE = 38;
 
 const INPUT_HEARTBEAT = 2;
+const INPUT_KEY_DOWN = 3;
+const INPUT_KEY_UP = 4;
 const INPUT_MOUSE_ABS = 5;
 const INPUT_MOUSE_REL = 7;
 const INPUT_MOUSE_BUTTON_DOWN = 8;
 const INPUT_MOUSE_BUTTON_UP = 9;
 const INPUT_MOUSE_WHEEL = 10;
 const INPUT_GAMEPAD = 12;
+
+// Live modifier bitmask sent alongside every key event (offset 6-7 of the
+// packet below) -- a snapshot of which modifiers are currently held, not just
+// for the modifier's own keydown/keyup. A modifier key's own event excludes
+// its own bit (matches OpenNOW's sdl_modifiers()).
+export const KEY_MOD_SHIFT = 0x01;
+export const KEY_MOD_CTRL = 0x02;
+export const KEY_MOD_ALT = 0x04;
+export const KEY_MOD_META = 0x08;
+
+// Windows Virtual-Key (VK_*) codes, US layout -- the key-code space GFN's
+// NVST protocol expects (ported from OpenNOW's sdl_virtual_key() table).
+// Covers everything a virtual keyboard needs: letters, digits, function keys,
+// modifiers, navigation/editing, and standard US punctuation.
+export const VK = {
+  Backspace: 0x08,
+  Tab: 0x09,
+  Enter: 0x0d,
+  Pause: 0x13,
+  CapsLock: 0x14,
+  Escape: 0x1b,
+  Space: 0x20,
+  PageUp: 0x21,
+  PageDown: 0x22,
+  End: 0x23,
+  Home: 0x24,
+  Left: 0x25,
+  Up: 0x26,
+  Right: 0x27,
+  Down: 0x28,
+  PrintScreen: 0x2a,
+  Insert: 0x2d,
+  Delete: 0x2e,
+  Digit0: 0x30,
+  Digit1: 0x31,
+  Digit2: 0x32,
+  Digit3: 0x33,
+  Digit4: 0x34,
+  Digit5: 0x35,
+  Digit6: 0x36,
+  Digit7: 0x37,
+  Digit8: 0x38,
+  Digit9: 0x39,
+  A: 0x41,
+  B: 0x42,
+  C: 0x43,
+  D: 0x44,
+  E: 0x45,
+  F: 0x46,
+  G: 0x47,
+  H: 0x48,
+  I: 0x49,
+  J: 0x4a,
+  K: 0x4b,
+  L: 0x4c,
+  M: 0x4d,
+  N: 0x4e,
+  O: 0x4f,
+  P: 0x50,
+  Q: 0x51,
+  R: 0x52,
+  S: 0x53,
+  T: 0x54,
+  U: 0x55,
+  V: 0x56,
+  W: 0x57,
+  X: 0x58,
+  Y: 0x59,
+  Z: 0x5a,
+  Meta: 0x5b, // LWin -- the app never needs to distinguish left/right for this one
+  ContextMenu: 0x5d,
+  Numpad0: 0x60,
+  Numpad1: 0x61,
+  Numpad2: 0x62,
+  Numpad3: 0x63,
+  Numpad4: 0x64,
+  Numpad5: 0x65,
+  Numpad6: 0x66,
+  Numpad7: 0x67,
+  Numpad8: 0x68,
+  Numpad9: 0x69,
+  NumpadMultiply: 0x6a,
+  NumpadAdd: 0x6b,
+  NumpadSubtract: 0x6d,
+  NumpadDecimal: 0x6e,
+  NumpadDivide: 0x6f,
+  F1: 0x70,
+  F2: 0x71,
+  F3: 0x72,
+  F4: 0x73,
+  F5: 0x74,
+  F6: 0x75,
+  F7: 0x76,
+  F8: 0x77,
+  F9: 0x78,
+  F10: 0x79,
+  F11: 0x7a,
+  F12: 0x7b,
+  NumLock: 0x90,
+  ScrollLock: 0x91,
+  LeftShift: 0xa0,
+  RightShift: 0xa1,
+  LeftCtrl: 0xa2,
+  RightCtrl: 0xa3,
+  LeftAlt: 0xa4,
+  RightAlt: 0xa5,
+  Semicolon: 0xba, // ;:
+  Equal: 0xbb, // =+
+  Comma: 0xbc, // ,<
+  Minus: 0xbd, // -_
+  Period: 0xbe, // .>
+  Slash: 0xbf, // /?
+  Backquote: 0xc0, // `~
+  BracketLeft: 0xdb, // [{
+  Backslash: 0xdc, // \|
+  BracketRight: 0xdd, // ]}
+  Quote: 0xde, // '"
+} as const;
 
 // All-controllers mask (bits 0..3).
 export const PARTIALLY_RELIABLE_GAMEPAD_MASK_ALL =
@@ -316,6 +435,30 @@ export class GfnInputEncoder {
     view.setUint8(4, button);
     view.setUint8(5, 0);
     view.setUint32(6, 0, false);
+    view.setBigUint64(10, sendTimestampUs(), false);
+    return wrapSingleEvent(bytes, this.protocolVersion);
+  }
+
+  encodeKeyDown(virtualKey: number, modifiers: number): Uint8Array {
+    return this.encodeKey(INPUT_KEY_DOWN, virtualKey, modifiers);
+  }
+
+  encodeKeyUp(virtualKey: number, modifiers: number): Uint8Array {
+    return this.encodeKey(INPUT_KEY_UP, virtualKey, modifiers);
+  }
+
+  private encodeKey(
+    type: number,
+    virtualKey: number,
+    modifiers: number,
+  ): Uint8Array {
+    const bytes = new Uint8Array(18);
+    const view = new DataView(bytes.buffer);
+    // [type 4B LE][key 2B BE][modifiers 2B BE][reserved 2B BE][timestamp 8B BE]
+    view.setUint32(0, type, true);
+    view.setUint16(4, virtualKey, false);
+    view.setUint16(6, modifiers, false);
+    view.setUint16(8, 0, false);
     view.setBigUint64(10, sendTimestampUs(), false);
     return wrapSingleEvent(bytes, this.protocolVersion);
   }

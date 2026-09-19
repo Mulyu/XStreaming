@@ -383,6 +383,29 @@ export class GfnWebRtcClient {
     } catch {}
   }
 
+  // Keyboard, like mouse buttons, always goes over the reliable channel --
+  // dropping one of these leaves a key stuck down or a press that never
+  // registers.
+  sendKeyDown(virtualKey: number, modifiers: number): void {
+    if (!this.inputReady || this.reliableInput?.readyState !== 'open') {
+      return;
+    }
+    try {
+      this.reliableInput.send(
+        this.encoder.encodeKeyDown(virtualKey, modifiers),
+      );
+    } catch {}
+  }
+
+  sendKeyUp(virtualKey: number, modifiers: number): void {
+    if (!this.inputReady || this.reliableInput?.readyState !== 'open') {
+      return;
+    }
+    try {
+      this.reliableInput.send(this.encoder.encodeKeyUp(virtualKey, modifiers));
+    } catch {}
+  }
+
   private async addRemoteCandidate(candidate: GfnIceCandidate): Promise<void> {
     if (!this.pc || !(this.pc as any).remoteDescription) {
       this.queuedRemoteIce.push(candidate);
