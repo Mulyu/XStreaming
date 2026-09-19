@@ -1,39 +1,13 @@
 export default {
   translation: {
-    Consoles: 'Consoles',
-    Xcloud: 'Cloud gaming',
-    Host: 'Console',
     Settings: 'Settings',
     Login: 'Login',
     AuthLogin: 'Auth code login',
-    About: 'About',
-    Profile: 'Profile',
-    Feedback: 'Community and support',
     Version: 'Version',
     Close: 'Close',
-    More: 'More',
     Success: 'Success',
-    ConfigTransfer: 'Config transfer',
-    ConfigTransferDescription:
-      'Export or import account, settings, virtual gamepad, and macro configuration.',
-    ConfigTransferUnavailable: 'Config transfer is unavailable on this device.',
-    ExportDesc: 'Export configuration',
-    ExportTips:
-      'Exports account tokens, settings, custom virtual buttons, and macro settings as a plain JSON file.',
-    ExportSettings: 'Export settings',
-    ExportSuccess: 'Export successful',
-    ExportFail: 'Export failed',
-    ImportDesc: 'Import configuration',
-    ImportTips:
-      'Imports a previously exported XStreaming JSON file and restarts the app after recovery.',
-    ImportSettings: 'Import settings',
-    ImportSuccess: 'Import successful',
-    ImportFail: 'Import failed',
-    UserCancel: 'Canceled',
     GameMap: 'Gamepad mapping',
     NoLogin: 'Not logged in. Please log in.',
-    'Fetching user info...': 'Fetching user info...',
-    'Fetching consoles...': 'Fetching consoles...',
     'Login successful, refreshing login credentials...':
       'The login was successful, refreshing login credentials...',
     'Checking login status...': 'Checking login status...',
@@ -41,8 +15,6 @@ export default {
       'Scan the QR code or open the browser link, enter the authorization code below before it expires, then tap Done after authorization is complete.',
     MsalAuthTimeout: 'The authorization code has expired. Please refresh.',
     Copied: 'Copied',
-    NoConsoles:
-      'No consoles were found on this account. If you have an Xbox console, make sure Remote Play is enabled and that the console is visible in the official Xbox app.',
     Warning: 'Notice',
     WaitingForServerToRegister:
       'Unable to establish streaming on the console because the console is not connected to Xbox servers. This is usually caused by an abnormal console state, a console update, or an account that is not signed in. Hold the power button or unplug power for at least 10 seconds to restart the console.',
@@ -50,20 +22,10 @@ export default {
       'Console streaming is not working correctly. This is not an XStreaming error; the console streaming service has stopped working. Hold the power button or unplug power for at least 10 seconds to restart the console. Error: ',
     DisabledStreamingErr:
       'Streaming is disabled on the console. Possible causes:\n1. Xbox console Settings - Devices & connections - Remote features is not enabled;\n2. You may be using a mainland China Xbox console, which does not support streaming.',
-    'Login has expired or not logged in, please log in again':
-      'Login has expired or not logged in, please log in again',
     AuthFailDesc: 'Authentication failed. Please log in again. Error:',
     XalAuthFailDesc: 'XAL authentication failed. Please try MSAL login. Error:',
     'Loading...': 'Loading...',
-    'Start stream': 'Start stream',
-    'Power on and start stream': 'Power on and start streaming',
     'Start game': 'Start cloud game',
-    'Local connect': 'Local connection',
-    'Remote connect': 'Remote connection',
-    'Search game': 'Search games',
-    'Toggle Performance': 'Show/hide performance',
-    'Toggle Virtual Gamepad': 'Show/hide virtual gamepad',
-    'Toggle Mouse Trackpad': 'Show/hide mouse trackpad',
     'Press Nexus': 'Press Nexus',
     'Long press Nexus': 'Long press Nexus',
     Disconnect: 'Disconnect',
@@ -71,19 +33,12 @@ export default {
     Input: 'Input',
     Audio: 'Audio',
     Display: 'Display',
-    'Touch off': 'Touch off',
     'Mouse trackpad': 'Mouse trackpad',
     'Mouse sensitivity': 'Mouse sensitivity',
     'Perf stats': 'Perf stats',
     'Cover controls': 'Cover controls',
     Microphone: 'Microphone',
-    NoXGP:
-      'You do not have XGP or xCloud access is unavailable in your region. Check your account permissions or change the region in settings and try again.\nIf you have already changed the region, enable auth code login in settings.',
-    Recently: 'Recently played',
     Newest: 'Recently added',
-    Stars: 'Favorites',
-    Own: 'Owned',
-    Playable: 'Playable',
     All: 'All',
     Search: 'Search',
     Unlocked: 'Unlocked',
@@ -95,93 +50,31 @@ export default {
       'Set resolution, support 720P/1080P/1080P(HQ)',
     resolutionTips:
       '\n1. 1080P(HQ) supports bitrates >= 15 Mbps for higher clarity.\n2. Console streaming only supports 720P/1080P/1080P(HQ).\n3. 1440P is only supported by some xCloud games and is not supported for console streaming.\n4. Microsoft is adjusting xCloud resolution policy. Some Xbox Game Pass Ultimate games currently only support 720P/1440P.',
-    'Host stream bitrate': 'Host stream bitrate',
-    'Cloud stream bitrate': 'Cloud stream bitrate',
-    'Audio bitrate': 'Audio bitrate',
-    'Set the streaming audio bitrate': 'Set the streaming audio bitrate',
-    'Set the host streaming bitrate (Note: Higher bitrate is not always better; the final bitrate will be determined by streaming negotiation)':
-      'Set the console streaming bitrate (Note: higher bitrate is not always better; the final bitrate is determined by streaming negotiation)',
-    'Set the cloud streaming bitrate (Note: Higher bitrate is not always better; the final bitrate will be determined by streaming negotiation)':
-      'Set the cloud streaming bitrate (Note: higher bitrate is not always better; the final bitrate is determined by streaming negotiation)',
     Codec: 'Codec',
     'If your device supports newer codecs, it can reduce the video bandwidth requirements':
       'If your device supports newer codecs, it can reduce the video bandwidth requirements',
     Vibration: 'Vibration',
-    'Video stream format': 'Video aspect ratio',
-    'Select video stream format, if you want video fullscreen, please select Stretch or Zoom':
-      'Select the video aspect ratio. To fill the screen, choose Stretch or Zoom. If your physical display is not 16:9, the image may be distorted or cropped.',
-    'In Native mode, only scaling can be set for the rendering engine.':
-      'In native rendering mode, only scaling and 16:9 can be configured.',
     'Aspect ratio': 'Keep aspect ratio (16:9)',
-    'Native: Use native gamepad kernal to vibrate':
-      'Native: use Android native gamepad kernel for vibration',
-    "Device: Use Phone/Pad's vibrate":
-      'Device: use phone/tablet vibration. Use vibration redirection for controller vibration.',
-    'Webview: Use Chromium kernal to vibrate':
-      'WebView: use the Chromium kernel for vibration',
     Stretch: 'Stretch',
     Zoom: 'Zoom',
-    'Gamepad kernal': 'Gamepad kernel',
-    'If your controller supports vibration, you can set whether it vibrates during the game':
-      'If your controller supports vibration, you can set whether it vibrates during the game',
-    'Vibration mode': 'Vibration mode',
-    'By default, the WebView kernel is used for vibration. If the controller does not vibrate, try using the native vibration mode':
-      'By default, the WebView kernel is used for vibration. If the controller does not vibrate, try using the native vibration mode',
-    'Vibration intensity': 'Vibration intensity',
-    'Config vibration intensity of controller':
-      'Adjust controller vibration intensity',
     'Joystick dead zone': 'Joystick dead zone',
     'Config joystick dead zone':
       'If the controller drifts, configure the joystick center dead zone to reduce drift.',
-    'Joystick edge compensation': 'Joystick edge compensation',
-    "If your joystick's maximum value doesn't reach the expected level, you can set maximum value compensation":
-      "If your joystick's maximum value does not reach the expected level, configure maximum value compensation.",
     'Set region': 'Set region',
     'Changing the region allows you to use XGPU services without a proxy':
       'Changing the region allows you to use XGPU services without a proxy',
     'The signaling server is a server for stream negotiation. If the host cannot connect, please try modifying this option':
       'The signaling server is used during stream negotiation. If the console or cloud game cannot connect, try changing this option.',
-    'Prioritize using IPv6 connection': 'Prioritize IPv6 connection',
     'Preferred language of game': 'Preferred language of game',
     'Set language of cloud game': 'Set language of cloud game',
     'Key mapping': 'Key mapping',
     'Mapping key of gamepad': 'Mapping key of gamepad',
     'Currently no network connection, please connect and try again':
       'No network connection. Connect and try again.',
-    Logout: 'Log out',
     'Do you want to logout?': 'Do you want to log out?',
     'Current user': 'Current user',
-    'Powered on': 'Powered on',
-    'Powered off': 'Powered off',
-    PoweredOnSentText: 'Power-on command sent',
-    PoweredOffSentText: 'Power-off command sent',
-    Theme: 'Theme',
-    'Set the app theme to take effect on the next launch':
-      'Set the app theme to take effect on the next launch',
-    'Theme primary color': 'Theme primary color',
-    'Choose app primary color, takes effect on next launch':
-      'Choose app primary color, takes effect on next launch',
-    'Choose from preset palette for best readability':
-      'Choose from the preset palette for best readability',
     'Signal server': 'Signal server',
     'Virtual gamepad': 'Virtual gamepad',
-    'Always display the virtual gamepad': 'Always show the virtual gamepad',
-    'Select gamepad kernal, you can not use virtual gamepad in Web kernal':
-      'Select the gamepad kernel. The virtual gamepad is unavailable with the Web kernel.',
-    'Config opacity of virtual gamepad': 'Configure virtual gamepad opacity',
-    'Display settings': 'Display settings',
-    'Override native Xbox gamepad support':
-      'Override native Xbox gamepad support',
-    bind_usb_device_description:
-      'Force the XStreaming USB driver to take over all supported Xbox/DualSense controllers.',
-    bind_usb_device_tips:
-      'This setting only works for wired (OTG) controllers that support XInput or DualSense.',
-    'Power on when streaming': 'Power on when streaming',
-    power_on_description:
-      'Choose whether to power on the console when streaming starts. By default, the console may stream from sleep without turning on the power light. Enabling this may wake the display.',
-    'Low Latency Mode': 'Wi-Fi low latency mode',
-    low_latency_mode_description:
-      'Use Android Wi-Fi performance mode for the best streaming result. This may cause Bluetooth latency on some devices. Disable it if Bluetooth latency occurs.',
     'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
       'Custom virtual button positions may differ from actual rendering. Use the actual result as reference.',
     'Customize virtual buttons': 'Customize virtual buttons',
@@ -195,30 +88,10 @@ export default {
     'Drag elements to adjust their position':
       'Drag elements to adjust their position',
     'Name can not be empty': 'Name cannot be empty',
-    'Show performance': 'Show performance',
-    'Always display the performance panel':
-      'Always display the performance panel',
-    'Performance show style': 'Performance display style',
-    'Setting performance show style':
-      'Set the performance display style (horizontal/vertical)',
-    'It has been detected that you are using the wired connection mode with the Overwrite Android driver. If the USB connection is disconnected during the game, please exit the game and reconnect the controller; otherwise, the controller buttons will become unresponsive':
-      'Wired mode with Override Android driver is active. Keep USB connected before entering the game. If USB is disconnected during gameplay, exit the game and reconnect the controller; otherwise buttons may stop responding.',
-    'If you are using an Xbox One/S/X controller and encounter unresponsive buttons when entering the game, please press the home button on the controller first':
-      'If an Xbox One/S/X controller has unresponsive buttons after entering the game, press the Home button on the controller first.',
-    'After replacing the Android controller driver, controller button mapping is temporarily not supported':
-      'Controller button mapping is temporarily unavailable after replacing the Android controller driver.',
-    'Short Trigger': 'Short Trigger',
-    ShortTriggerDesc:
-      'Enable this if you want linear trigger input to behave as a short trigger, or if you use a controller with non-linear triggers such as Switch/NS Pro.',
-    'Auto Sprint': 'Auto Sprint',
-    AutoSprintDesc:
-      'Automatically press L3 while the left stick is moving, and release it when the left stick returns to center.',
     noAllow:
       'You do not have permission to start cloud gaming. Check whether login has expired and log in again. For cloud games, make sure you have XGPU. For non-XGPU games, make sure you own the game.',
     homeNoAllow:
       'Streaming permission check failed. Check whether login has expired and try logging in again.',
-    Horizon: 'Horizontal',
-    Vertical: 'Vertical',
     'Auto check update': 'Auto check for updates',
     'Whether check XStreaming updates automatically':
       'Whether to check XStreaming updates automatically',
@@ -241,8 +114,6 @@ export default {
     CatalogStatusPartial:
       '{{count}} titles loaded (incomplete) — tap to reload',
     GfnSettings: 'GeForce NOW',
-    XchomeSettings: 'Console streaming',
-    SensorSettings: 'Sensor',
     CommonSettings: 'Common',
     SectionAccount: 'Account',
     SectionVideo: 'Video',
@@ -250,27 +121,15 @@ export default {
     SectionSignInLanguage: 'Sign-in & Language',
     SectionControllers: 'Controllers',
     FlagGfnNoOp: '⚠️ Has no effect during a GeForce NOW stream',
-    TurnServerSettings: 'TURN server',
     Custom: 'Custom',
     Size: 'Size',
     ShowTitle: 'Display',
     Show: 'Show',
     Hide: 'Hide',
     Select: 'Select',
-    Sharpness: 'Sharpness',
-    Saturation: 'Saturation',
     Contrast: 'Contrast',
-    Brightness: 'Brightness',
-    'About XStreaming': 'About XStreaming',
-    Light: 'Light',
-    Dark: 'Dark',
-    Standby: 'Standby',
-    Friends: 'Friends',
     Achivements: 'Achievements',
     Auto: 'Auto',
-    bitrate: 'bitrate',
-    Language: 'Language',
-    Gamepad: 'Gamepad',
     Others: 'Others',
     RTT: 'RTT',
     JIT: 'JIT',
@@ -281,33 +140,15 @@ export default {
     DT: 'DT',
     DEC: 'DEC',
     WiFi: 'WiFi',
-    Download: 'Download',
-    'Serve & Connection': 'Service and connection',
-    'Virtual Opacity': 'Virtual button opacity',
     virtual_joystick_title: 'Virtual joystick layout',
-    virtual_joystick_desc:
-      'Set the virtual joystick layout to fixed or free mode',
-    virtual_joystick_tips:
-      'In free mode, blank areas on the left/right side of the screen can operate the left/right sticks respectively.',
     Fixed: 'Fixed',
     Free: 'Free',
-    On: 'On',
     Off: 'Off',
     Enable: 'Enable',
     Disable: 'Disable',
-    Current: 'Current',
     NoData: 'Nothing here yet',
     score: 'Score',
     Default: 'Default',
-    SDL: 'SDL',
-    GamepadTestTitle: 'Gamepad test',
-    GamepadTestDescription:
-      'Test the current gamepad buttons, sticks, triggers, and rumble',
-    GamepadKernelTitle: 'Current kernel',
-    GamepadTestRumble: 'Test rumble',
-    GamepadTestButtons: 'Buttons',
-    GamepadTestSticks: 'Sticks',
-    GamepadTestTriggers: 'Triggers',
     Edit: 'Edit',
     Australia: 'Australia',
     Brazil1: 'Brazil 1',
@@ -322,11 +163,6 @@ export default {
     'United States2': 'United States 2',
     'South India': 'South India',
     'Central India': 'Central India',
-    VeryWeak: 'Very weak',
-    Weak: 'Weak',
-    Normal: 'Normal',
-    Strong: 'Strong',
-    VeryStrong: 'Very strong',
     Confirm: 'Confirm',
     Cancel: 'Cancel',
     Back: 'Back',
@@ -336,7 +172,6 @@ export default {
     Reset: 'Reset',
     Delete: 'Delete',
     Exit: 'Exit',
-    Thanks: 'Thanks',
     Connected: 'Connected',
     'Update Warning': 'Update available',
     'Update download': 'Downloading update',
@@ -348,36 +183,14 @@ export default {
       'XStreaming needs permission to install unknown apps. Grant it in system settings, then tap auto install again.',
     AutoInstallFailed:
       'Automatic download and installation failed. Try manual download.',
-    gyroTitle: 'Enable gyroscope',
-    gyroDesc:
-      'Force using the device/controller gyroscope to simulate the right stick.',
-    gyroTips: 'Controller gyroscope only supports Android 12+',
-    gyroTypeTitle: 'Gyroscope trigger type',
-    gyroTypeDesc: 'Set gyroscope trigger to LT/LB press or global.',
-    'LT press': 'LT Press',
-    'LB press': 'LB Press',
-    'LT/LB press': 'LT or LB press',
-    Global: 'Global',
-    gyroSenTitleX: 'Gyroscope X-axis sensitivity',
-    gyroSenDescX: 'Adjust gyroscope X-axis sensitivity',
-    gyroSenTitleY: 'Gyroscope Y-axis sensitivity',
-    gyroSenDescY: 'Adjust gyroscope Y-axis sensitivity',
     byorg:
       'This is an owned game, not an XGPU library game. To play it, make sure you have purchased it.',
     compatibleWarn:
       'This game has compatibility issues in third-party streaming apps. Playing through official channels is recommended.',
     'Game screen position': 'Game screen position',
-    GameScreenPositionDesc:
-      'Align the game video to the top, center, or bottom of the screen.',
     Top: 'Top',
     Center: 'Center',
     Bottom: 'Bottom',
-    'Picture in picture': 'Picture in picture',
-    PictureInPictureDesc:
-      'After enabling this, switching streaming to the background enters Android picture-in-picture and keeps the video visible.',
-    'Keep alive in background': 'Keep alive in background',
-    BackgroundKeepAliveDesc:
-      'Without picture-in-picture, keep the session alive in the background via a notification. Audio keeps playing and the video resumes when you return; tap the notification to jump back in.',
     'Streaming in background': 'Streaming in background',
     BackgroundKeepAliveNotification: 'Tap to return to the game',
     BackgroundKeepAliveAntiIdle:
@@ -392,23 +205,9 @@ export default {
     SwipeAimDesc:
       'A trackpad area you place in the layout: drag inside it to move the camera by how fast you swipe, like mobile shooters. Higher = faster. Set to 0 to turn it off. Tip: place the pad where your right thumb rests and hide the on-screen right stick.',
     'Invert swipe aim Y': 'Invert swipe aim (vertical)',
-    InvertSwipeAimYDesc: 'Flip the up/down direction of swipe aim.',
     'Hidden controls appear dimmed here; tap one to show it again':
       'Hidden controls appear dimmed here; tap one to show it again',
-    CoverDisplayTitle: 'Cover display (PoC)',
-    CoverDisplayDesc:
-      'Experimental: on a foldable (e.g. Galaxy Z Fold), show separate content on the cover screen while the main screen stays on, via Android Dual Screen Mode.',
-    Status: 'Status',
     Session: 'Session',
-    'Refresh status': 'Refresh status',
-    'Present on cover': 'Present on cover screen',
-    Dismiss: 'Dismiss',
-    CoverDisplayUnavailableNote:
-      'Cover-display present mode is not available on this device/state. It requires a supported foldable (One UI 6.0+ / Android 14+) that is unfolded.',
-    'Show cover controls': 'Show controls on cover screen',
-    'Hide cover controls': 'Hide cover-screen controls',
-    'Edit cover buttons': 'Edit cover buttons',
-    'Cover buttons': 'Cover buttons',
     'Enable cover controls': 'Enable on cover screen',
     'Turbo (auto-fire)': 'Turbo (auto-fire)',
     'Toggle hold': 'Toggle hold',
@@ -422,16 +221,8 @@ export default {
     Editing: 'Editing',
     'Change key': 'Change key',
     'Remove key': 'Remove key',
-    Ignored: 'Ignored',
-    Ignore: 'Ignore',
-    Unignore: 'Unignore',
-    Favorite: 'Favorite',
     Library: 'Library',
-    GfnTab: 'GeForce',
-    GfnLoadFailed: 'Failed to load the GeForce NOW catalog.',
     Retry: 'Retry',
-    GfnSignIn: 'Sign in',
-    GfnSignOut: 'Sign out',
     GfnSignedIn: 'Signed in',
     GfnLoginTitle: 'Sign in to GeForce NOW',
     GfnLoginInstruction:
@@ -439,8 +230,6 @@ export default {
     GfnLoginOpen: 'Open sign-in page',
     GfnLoginWaiting: 'Waiting for approval…',
     GfnLoginFailed: 'Sign-in failed. Please try again.',
-    GfnLoginStartFailed: 'Could not start sign-in. Please try again.',
-    GfnLoginSuccess: 'Signed in to GeForce NOW.',
     GfnLaunchInvalidApp: 'This title cannot be launched (invalid app id).',
     GfnLaunchSignInRequired: 'Please sign in to GeForce NOW first.',
     GfnLaunchRequesting: 'Requesting a game session…',
@@ -450,7 +239,6 @@ export default {
     GfnConnectingRegion: 'Connecting via {{region}}…',
     GfnLaunchFailed: 'Could not start the stream.',
     GfnLaunchDisconnected: 'The stream disconnected.',
-    GfnSignInToPlay: 'Sign in to play',
     GfnQueueKeepAlive: 'Waiting in the GeForce NOW queue…',
     GfnQueueNotifyPosition: 'Queue position {{n}} · tap to return',
     GfnReadyNotifyBody: 'Your session is ready — tap to start.',
@@ -464,7 +252,6 @@ export default {
     LoadingPhaseStarting: 'Starting Stream',
     LoadingPhaseStartingSub: 'priming video decoder',
     LoadingPhaseLive: 'Live',
-    GfnAllGames: 'All',
     GfnOwned: 'Owned',
     GfnAccountTitle: 'GeForce NOW account',
     GfnAccountSignedOutDesc: 'Not signed in — tap to sign in',
@@ -492,14 +279,8 @@ export default {
     GfnPlaytimeUnlimited: 'Unlimited',
     GfnPlaytimeUnavailable: "Couldn't check remaining playtime — tap to retry",
     GfnPlaytimeRemaining: '{{hours}}h {{minutes}}m left this month',
-    CoverLayoutEditTitle: 'Cover buttons layout',
-    CoverLayoutEditHint:
-      'Drag to move, tap to size/hide. The inner screen stands in for the cover; changes preview on the cover live.',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
-    'Anti-idle': 'Anti-idle (prevent AFK disconnect)',
-    AntiIdleDesc:
-      'While backgrounded, send a tiny camera nudge so the session is not disconnected for inactivity. Note: the nudge moves the camera, so it can affect the game.',
     'Anti-idle max duration (minutes)':
       'Anti-idle: keep awake for (minutes, 0 = off)',
     AntiIdleMaxDesc:
@@ -511,18 +292,6 @@ export default {
     UltraLowLatencyDecoderDesc:
       'Enable ultra low latency decoding. Note that this feature does not work on all Android devices. Disable this option if black screen or other issues occur.',
     'Exit stream?': 'Exit streaming?',
-    Device: 'Device',
-    Controller: 'Controller',
-    show_menu_title: 'Show quick menu',
-    show_menu_desc:
-      'Always show the quick menu at the bottom right of the streaming page.',
-    sensorInvertTitle: 'Invert gyroscope simulated stick',
-    sensorInvertDesc:
-      'On some devices, gyroscope direction is opposite to actual movement. Invert it here.',
-    x_axies: 'X axis',
-    y_axies: 'Y axis',
-    all_axies: 'All axes',
-    xy_axies: 'Swap X/Y',
     DualSense_adaptive_trigger_left: 'Set DualSense left trigger',
     DualSense_adaptive_trigger_left_desc:
       'Set the DualSense left trigger to resistance/trigger/automatic rifle trigger. To enable this, turn on Android override driver in Settings and connect the DualSense controller by cable.',
@@ -537,17 +306,6 @@ export default {
     Text: 'Text',
     'Send text': 'Send text',
     Volume: 'Volume',
-    Audio_volume_title: 'Volume control',
-    Audio_volume_desc:
-      'If the default maximum volume is not enough, amplify the audio source here. Excessive volume may damage hearing.',
-    Audio_stereo_title: 'Stereo output',
-    Audio_stereo_desc: 'If your device has audio latency, turn this off.',
-    Audio_rumble_title: 'Audio rumble (experimental)',
-    Audio_rumble_desc:
-      'When enabled, the controller vibrates when audio exceeds a threshold.',
-    Audio_rumble_threshold_title: 'Audio rumble threshold',
-    Audio_rumble_threshold_desc:
-      'Used with audio rumble. The controller vibrates when audio exceeds this threshold.',
     'Polling rate': 'Polling rate',
     'Modify controller response rate': 'Modify controller response rate',
     'Connecting...': 'Connecting...',
@@ -558,106 +316,37 @@ export default {
       'Remote offer retrieved successfully...',
     'Ready to send ICE...': 'Ready to send ICE...',
     'Exchange ICE successfully...': 'Exchange ICE successfully...',
-    'Configuring ICE, waiting for response...':
-      'Configuring ICE, waiting for response...',
     'Streaming is closed': 'Streaming was terminated by the console',
     'NAT failed':
       'NAT failed. If you are trying remote streaming, make sure the router is configured correctly and port forwarding is set. If remote streaming still cannot be resolved, use the official Xbox app.',
     'Reconnected failed':
       'Network changed and reconnection failed. Please reconnect.',
-    'Open Microphone': 'Open Microphone',
-    'Close Microphone': 'Close Microphone',
-    'Device testing': 'Device testing',
-    'Testing current device and controller':
-      'Test the current device and controller',
-    Rumble1s: 'Rumble for 1 second',
-    'Stop rumble': 'Stop rumble',
-    ControllerRumble: 'Controller rumble',
     Refresh: 'Refresh',
-    Model: 'Model',
-    'Android Version': 'Android Version',
-    'API Version': 'API Version',
-    'Kernel Version': 'Kernel Version',
-    'Webview Version': 'Webview Version',
-    'Device rumble': 'Device rumble',
-    supported: 'supported',
-    unsupported: 'unsupported',
-    lowThanAndroid12: 'Android version below 12 is not supported',
-    Controllers: 'Controllers',
-    Name: 'Name',
-    Rumble: 'Rumble',
-    Sensor: 'Sensor',
-    Details: 'Details',
     'Clear Cache': 'Clear Cache',
     'Clear XStreaming Cache Data(Keep login data)':
       'Clear XStreaming cache data (keep login data)',
     History: 'History',
     HistoryTitle: 'Update log',
     HistoryDesc: 'View XStreaming update history',
-    Server: 'Server',
-    'TURN server': 'TURN server',
-    'Custom TURN server': 'Custom TURN server',
-    UrlIncorrect: 'Server URL format is incorrect',
-    Username: 'Username',
-    Password: 'Password',
-    'Save server': 'Save server',
-    inner_server_title: 'Built-in TURN server',
-    inner_server_desc:
-      'Use the official built-in XStreaming server. Stability is not guaranteed and it is disabled by default. Enable as needed.',
-    'Auto toggle hold buttons': 'Auto toggle hold buttons',
-    'Select what buttons become toggle holdable':
-      'Select what buttons become toggle holdable',
-    HoldButtonsSettingsDesc:
-      'Auto hold keeps a button pressed after you hold it down until you tap it again. Useful for game scenarios that require holding buttons, such as acceleration in racing games or firing in shooters.',
-    'Hold Buttons': 'Hold Buttons',
-    FSR_desc:
-      'Enable FSR (FidelityFX Super Resolution) to improve image clarity without increasing bandwidth. It increases CPU/GPU load and may cause overheating on some devices. Use with care.',
     fsr_sharpness_title: 'FSR sharpness',
     fsr_sharpness_desc: 'Adjust FSR sharpness',
-    'FSR started': 'FSR started',
     useMsalLoginTitle: 'Auth code login',
     useMsalLoginDesc:
       'Force auth code login. Try enabling this if login or cloud gaming does not work properly.',
     Completed: 'Completed',
-    coop_title: 'Local co-op (experimental)',
-    coop_desc:
-      'Enable local two-player mode. Make sure no controller is connected on the console side and two controllers are connected locally. Not all games work; use as needed.',
     CoopTips: 'Entered co-op mode',
     Microphone_title: 'Enable microphone (experimental)',
     Microphone_desc: 'The quick menu can toggle microphone on/off.',
     'Native touch': 'Native touch (experimental)',
-    'Enable native touch input':
-      'Enable native touch input (screen ratio cannot be customized after enabling).',
-    'Virtual macro button': 'Virtual macro button',
-    'Enable virtual macro button': 'Enable virtual macro button',
-    'Virtual macro settings': 'Virtual macro settings',
-    'Configure short/long press macro actions':
-      'Configure short/long press macro actions',
-    'Enable macro button and edit its action sequence':
-      'Enable macro button and edit its action sequence',
-    'Configure one macro button with separate short/long press action chains for accessibility play styles.':
-      'Configure one macro button with separate short/long press action chains for accessibility play styles.',
-    'Macro button': 'Macro button',
-    'Enable or disable': 'Enable or disable',
-    'Long press threshold': 'Long press threshold',
-    'Short press actions': 'Short press actions',
-    'Long press actions': 'Long press actions',
-    'Actions executed when macro button is tapped':
-      'Actions executed when macro button is tapped',
-    'Actions executed when macro button is held':
-      'Actions executed when macro button is held',
     'No action steps, tap + to add': 'No action steps, tap + to add',
     Hold: 'Hold',
     Wait: 'Wait',
     'Edit action': 'Edit action',
     'Add action': 'Add action',
-    Button: 'Button',
     Buttons: 'Buttons',
     'Hold duration': 'Hold duration',
     'Wait after action': 'Wait after action',
     'Loop macro': 'Loop macro',
-    'Press macro once to loop, press again to stop':
-      'Press macro once to loop, press again to stop',
     'Loop interval': 'Loop interval',
     'Action type': 'Action type',
     'Button macro': 'Button macro',
@@ -668,18 +357,8 @@ export default {
     Move: 'Move',
     'Move duration': 'Move duration',
     'Macro action sequence': 'Macro action sequence',
-    'Tap + to add sequence step': 'Tap + to add sequence step',
-    'Configure one continuous macro chain. Steps execute from top to bottom when pressing macro button.':
-      'Configure one continuous macro chain. Steps execute from top to bottom when pressing macro button.',
-    'Macro switch is in Settings -> Virtual macro button. This page only edits the action sequence.':
-      'Macro switch is in Settings -> Virtual macro button. This page only edits the action sequence.',
-    'Enable macro button and edit its action sequence in one place.':
-      'Enable macro button and edit its action sequence in one place.',
     'Add to desktop': 'Add to home screen',
-    'Game Pass': 'Game Pass',
     'View in store': 'View in Store',
-    'Add to favorites': 'Add to favorites',
-    'Remove from favorites': 'Remove from favorites',
     'Sale ends': 'Sale ends',
     TitleShortcutRequested: 'Shortcut add request sent',
     TitleShortcutUnavailable:
@@ -689,16 +368,10 @@ export default {
     TitleShortcutFailed: 'Failed to add shortcut',
     TitleShortcutExpired:
       'Shortcut data is unavailable. Please refresh the cloud game list and try again.',
-    'On sale': 'On sale',
     Filters: 'Filters',
-    Clear: 'Clear',
-    Genre: 'Genre',
     Sort: 'Sort',
-    Recommended: 'Recommended',
     SortByName: 'Name',
     Popular: 'Popular',
-    Rating: 'Rating',
-    SortReleaseDate: 'Release date',
     SortNewest: 'Newest',
     SortRecent: 'Recently played',
     LibraryFilterXcloud: 'Xbox Cloud',
@@ -714,12 +387,9 @@ export default {
     StoreFilteredNote: 'Showing only titles playable on this service',
     StoreEmpty: 'No matching titles found',
     View: 'View',
-    Refine: 'Refine',
-    Done: 'Done',
     Developer: 'Developer',
     Publisher: 'Publisher',
     'Release date': 'Release date',
-    Screenshots: 'Screenshots',
     Trailer: 'Trailer',
     Media: 'Media',
     Description: 'Description',
