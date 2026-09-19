@@ -2829,9 +2829,9 @@ export function NativeStreamScreenBase({
 
   // The stable per-title id the last-used-profile memory is keyed on. xCloud
   // titles carry it as `sessionId`; GFN launches never set that (only
-  // `appId`, see GfnLibrary.tsx/launchCatalogTitle.ts/App.tsx shortcut
-  // relaunch), so falling back to `sessionId` alone silently no-ops the
-  // feature for every GFN game.
+  // `appId`, see catalog/launchCatalogTitle.ts/App.tsx shortcut relaunch), so
+  // falling back to `sessionId` alone silently no-ops the feature for every
+  // GFN game.
   const getProfileGameId = React.useCallback(() => {
     return route.params?.streamType === 'gfn'
       ? String(route.params?.appId || '')
