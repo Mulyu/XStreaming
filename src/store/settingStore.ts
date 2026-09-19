@@ -44,7 +44,6 @@ export type Settings = {
   left_trigger_effects: [];
   right_trigger_type: number;
   right_trigger_effects: [];
-  display_options: DisplayOptions;
   fsr_display_options: DisplayOptions;
   ipv6: boolean;
   check_update: boolean;
@@ -74,7 +73,6 @@ export type Settings = {
   /** Multiplier applied to MouseTrackpadZone's per-move finger delta before
    * it's sent -- see components/MouseTrackpadZone.tsx. */
   gfn_mouse_trackpad_sensitivity: number;
-  debug: boolean;
 };
 
 const defaultSettings: Settings = {
@@ -111,12 +109,6 @@ const defaultSettings: Settings = {
   ipv6: false,
   check_update: true,
   power_on: false,
-  display_options: {
-    sharpness: 5,
-    saturation: 100,
-    contrast: 100,
-    brightness: 100,
-  },
   fsr_display_options: {
     sharpness: 2,
     saturation: 5,
@@ -135,7 +127,6 @@ const defaultSettings: Settings = {
   gfn_bitrate: 20,
   gfn_region: '',
   gfn_mouse_trackpad_sensitivity: 1.4,
-  debug: false,
 };
 
 export const saveSettings = (settings: Settings) => {
