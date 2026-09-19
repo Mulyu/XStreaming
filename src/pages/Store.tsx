@@ -123,6 +123,18 @@ function StoreScreen() {
 
   const [steamEntries, setSteamEntries] = React.useState<SteamChartEntry[]>([]);
   const [steamHasMore, setSteamHasMore] = React.useState(true);
+  // The numeric `start` offset to resume Steam's search endpoint from --
+  // tracked explicitly instead of derived from steamEntries.length (the
+  // way Xbox's own xboxNextCT cursor is never derived from
+  // xboxProductIds.length either, for the same reason): entries filtered
+  // out as already-seen (a title the live ranking resurfaces at a later
+  // offset -- see dedupeByKey's own comment) make steamEntries.length
+  // permanently undercount how many raw rows the server has actually
+  // handed out, so deriving the next request's `start` from it silently
+  // re-requests rows already consumed instead of advancing -- and once
+  // that gap opens it never closes, since every later loadMore call
+  // inherits the same undercount.
+  const [steamNextStart, setSteamNextStart] = React.useState(0);
   const [steamLoadedKind, setSteamLoadedKind] =
     React.useState<ChartKind | null>(null);
 
@@ -301,6 +313,12 @@ function StoreScreen() {
           const fresh = getFreshSteamChart(kind, steamCc);
           if (fresh) {
             setSteamEntries(dedupeByKey(fresh, e => e.appId));
+            // The cache only stores the already-deduped page, but it's
+            // sourced from a single page-0 request, which live testing
+            // confirms never returns intra-page duplicate appIds -- so its
+            // length is the true offset the server considers already
+            // handed out.
+            setSteamNextStart(fresh.length);
             setProviderLoading(false);
             return;
           }
@@ -312,6 +330,10 @@ function StoreScreen() {
               return;
             }
             setSteamEntries(dedupeByKey(page.entries, e => e.appId));
+            // The *raw* count, not the deduped one -- this is the true
+            // server-side offset to resume from next, regardless of
+            // whether any of page 0's own rows got deduped away.
+            setSteamNextStart(page.entries.length);
             setSteamHasMore(
               hasMorePages(
                 page.entries.length,
@@ -361,6 +383,7 @@ function StoreScreen() {
     } else {
       setSteamEntries([]);
       setSteamHasMore(true);
+      setSteamNextStart(0);
       setSteamLoadedKind(chartKind);
     }
     loadChart(provider, chartKind, false, generation);
@@ -467,7 +490,7 @@ function StoreScreen() {
     } else {
       const generation = steamGenerationRef.current;
       const stale = () => steamGenerationRef.current !== generation;
-      if (!steamHasMore || steamEntries.length >= MAX_CHART_ENTRIES) {
+      if (!steamHasMore || steamNextStart >= MAX_CHART_ENTRIES) {
         return;
       }
       const kind = chartKind === 'best' ? 'topsellers' : 'new';
@@ -486,7 +509,7 @@ function StoreScreen() {
         // call can make, so a title already shown can resurface on a later
         // page.
         const seenAppIds = new Set(steamEntries.map(e => e.appId));
-        let start = steamEntries.length;
+        let start = steamNextStart;
         let more = true;
         let foundVisibleRow = false;
         while (!foundVisibleRow && more && start < MAX_CHART_ENTRIES) {
@@ -512,6 +535,7 @@ function StoreScreen() {
             setSteamEntries(prev => [...prev, ...newEntries]);
           }
         }
+        setSteamNextStart(start);
         setSteamHasMore(more && start < MAX_CHART_ENTRIES);
       } finally {
         loadMoreInFlightRef.current = false;
@@ -527,6 +551,7 @@ function StoreScreen() {
     steamLanguage,
     steamEntries,
     steamHasMore,
+    steamNextStart,
     xboxLocale,
     xboxProductIds,
     xboxNextCT,
