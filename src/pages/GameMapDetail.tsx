@@ -47,29 +47,9 @@ function GameMapDetail({navigation, route}) {
       },
     );
 
-    // const triggerEventListener = eventEmitter.addListener(
-    //   'onTrigger',
-    //   event => {
-    //     if (event.leftTrigger > 0) {
-    //       Alert.alert(
-    //         t('Warning'),
-    //         `leftTrigger: ${event.leftTrigger}`,
-    //       );
-    //     }
-
-    //     if (event.rightTrigger > 0) {
-    //       Alert.alert(
-    //         t('Warning'),
-    //         `rightTrigger: ${event.rightTrigger}`,
-    //       );
-    //     }
-    //   },
-    // );
-
     return () => {
       gpDownEventListener && gpDownEventListener.remove();
       dpDownEventListener && dpDownEventListener.remove();
-      // triggerEventListener && triggerEventListener.remove();
       GamepadManager.setCurrentScreen('');
     };
   }, [route.params?.button, navigation]);

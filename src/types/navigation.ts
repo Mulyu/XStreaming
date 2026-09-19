@@ -5,7 +5,3 @@ export type NavigationProp = {
   goBack?: () => void;
   setOptions?: (options: AnyObject) => void;
 };
-
-export type RouteProp = {
-  params?: AnyObject;
-};

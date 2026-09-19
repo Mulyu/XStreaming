@@ -157,10 +157,7 @@ export const PARTIALLY_RELIABLE_GAMEPAD_MASK_ALL =
 
 // Mouse button constants (1-based, matching the GFN protocol).
 export const MOUSE_LEFT = 1;
-export const MOUSE_MIDDLE = 2;
 export const MOUSE_RIGHT = 3;
-export const MOUSE_BACK = 4;
-export const MOUSE_FORWARD = 5;
 
 export type GamepadInput = {
   controllerId: number; // 0-3
@@ -178,22 +175,6 @@ export const normalizeAxisToInt16 = (value: number): number =>
 
 export const normalizeTriggerToUint8 = (value: number): number =>
   Math.max(0, Math.min(255, Math.round(value * 255)));
-
-// Circular deadzone; input/output are normalized (-1..1).
-export const applyDeadzone = (
-  x: number,
-  y: number,
-  deadzone = 0.15,
-): {x: number; y: number} => {
-  const magnitude = Math.sqrt(x * x + y * y);
-  if (magnitude < deadzone) {
-    return {x: 0, y: 0};
-  }
-  const nx = x / magnitude;
-  const ny = y / magnitude;
-  const scaled = Math.min(1, (magnitude - deadzone) / (1 - deadzone));
-  return {x: nx * scaled, y: ny * scaled};
-};
 
 // ---- session clock (microseconds since input handshake) ----
 

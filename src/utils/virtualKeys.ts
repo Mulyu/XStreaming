@@ -110,13 +110,3 @@ export const MOD_BIT_TO_VK: Record<number, number> = {
   [KEY_MOD_ALT]: VK.LeftAlt,
   [KEY_MOD_META]: VK.Meta,
 };
-
-export const findKeyLabel = (vk: number): string => {
-  for (const category of KEY_CATEGORIES) {
-    const found = category.keys.find(k => k.vk === vk);
-    if (found) {
-      return found.label;
-    }
-  }
-  return '?';
-};
