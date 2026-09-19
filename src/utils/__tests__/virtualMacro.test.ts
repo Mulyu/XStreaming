@@ -1,26 +1,23 @@
 import {
   VIRTUAL_MACRO_BUTTON_NAMES,
   isMacroButtonName,
-  macroButtonNumber,
   createDefaultMacroLayoutButtons,
   ensureMacroLayoutButtons,
   normalizeMacroStep,
   normalizeMacroSteps,
 } from '../virtualMacro';
 
-describe('isMacroButtonName / macroButtonNumber', () => {
+describe('isMacroButtonName', () => {
   it('recognizes exactly the three macro slots, in order', () => {
     expect(VIRTUAL_MACRO_BUTTON_NAMES).toEqual(['Macro1', 'Macro2', 'Macro3']);
     expect(isMacroButtonName('Macro1')).toBe(true);
     expect(isMacroButtonName('Macro3')).toBe(true);
-    expect(macroButtonNumber('Macro2')).toBe(2);
   });
 
   it('rejects any other name, including the old single-button name', () => {
     expect(isMacroButtonName('Macro')).toBe(false);
     expect(isMacroButtonName('A')).toBe(false);
     expect(isMacroButtonName(undefined)).toBe(false);
-    expect(macroButtonNumber('Macro')).toBeNull();
   });
 });
 

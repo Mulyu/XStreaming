@@ -641,12 +641,6 @@ export const getValidGfnJwt = async (): Promise<string | null> => {
   return tokens.idToken ?? tokens.accessToken;
 };
 
-// Return a usable access token (OAuth access_token), refreshing if needed.
-export const getValidAccessToken = async (): Promise<string | null> => {
-  const tokens = await getValidTokens();
-  return tokens ? tokens.accessToken : null;
-};
-
 // NVIDIA's own user id (the `sub` claim), needed by APIs like MES
 // (subscription/quota) that key data per-user. Already sitting in the id/
 // access token, same as refreshWithBestMethod() above -- no extra round trip.

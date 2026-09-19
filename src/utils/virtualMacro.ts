@@ -15,12 +15,6 @@ export type VirtualMacroButtonName =
 export const isMacroButtonName = (name: any): name is VirtualMacroButtonName =>
   VIRTUAL_MACRO_BUTTON_NAMES.includes(name);
 
-// 1-indexed slot number, or null for a non-macro name.
-export const macroButtonNumber = (name: any): number | null => {
-  const idx = VIRTUAL_MACRO_BUTTON_NAMES.indexOf(name);
-  return idx === -1 ? null : idx + 1;
-};
-
 // Each slot's icon is its own pre-colored static asset keyed directly by the
 // button's own name ('Macro1' / 'Macro2' / 'Macro3' -- see common/virtualgp.ts),
 // exactly like every other button. No number badge, no runtime color math:

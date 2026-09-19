@@ -54,12 +54,6 @@ export interface MouseFrame {
   Relative: number;
 }
 
-export interface KeyboardFrame {
-  pressed: boolean;
-  keyCode: number;
-  key: string;
-}
-
 export default class InputChannel extends BaseChannel {
   _inputSequenceNum = 0;
 
@@ -71,7 +65,6 @@ export default class InputChannel extends BaseChannel {
     ClientMetadata: 8,
     ServerMetadata: 16,
     Mouse: 32,
-    Keyboard: 64,
     Vibration: 128,
     Sendor: 256,
   };

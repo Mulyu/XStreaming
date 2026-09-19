@@ -8,7 +8,6 @@ enum ReportTypes {
   ClientMetadata = 8,
   ServerMetadata = 16,
   Mouse = 32,
-  Keyboard = 64,
   Vibration = 128,
   Sensor = 256,
 }

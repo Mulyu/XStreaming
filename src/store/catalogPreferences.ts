@@ -36,9 +36,3 @@ export const setCatalogPreference = (
     storage.set(KEY_PREFIX + titleKey, JSON.stringify(preference));
   } catch {}
 };
-
-export const clearCatalogPreference = (titleKey: string): void => {
-  try {
-    storage.delete(KEY_PREFIX + titleKey);
-  } catch {}
-};
