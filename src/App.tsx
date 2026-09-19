@@ -166,10 +166,9 @@ const SearchBackgroundScreen = withPageBackground(SearchScreen);
 // stream and settings sub-screens are pushed on the root stack, above the
 // tabs, so they open full-screen without a tab bar.
 // Library merges the xCloud and GeForce NOW catalogs into one grid (see
-// src/pages/Library.tsx); the previous separate Cloud/Gfn tabs are gone.
-// Cloud.tsx and GfnLibrary.tsx are kept in the repo, unregistered, as a
-// reference/rollback for the richer xCloud-only browsing (rating/popularity
-// sort) the merged screen doesn't carry yet.
+// src/pages/Library.tsx), which has since absorbed the previous separate
+// Cloud/Gfn tabs' rating/popularity sorting -- those two screens were
+// removed once Library.tsx carried the same functionality.
 function MainTabs() {
   return (
     <MainTab.Navigator
