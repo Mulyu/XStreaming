@@ -445,6 +445,12 @@ export class GfnStreamAdapter {
         queueMouseWheel: (delta: number) => {
           this.gfnClient?.sendMouseWheel(delta);
         },
+        sendKeyDown: (virtualKey: number, modifiers: number) => {
+          this.gfnClient?.sendKeyDown(virtualKey, modifiers);
+        },
+        sendKeyUp: (virtualKey: number, modifiers: number) => {
+          this.gfnClient?.sendKeyUp(virtualKey, modifiers);
+        },
         // xCloud anti-idle / resolution-stability frames have no GFN
         // equivalent — accept and drop them.
         addProcessedFrame: () => {},
