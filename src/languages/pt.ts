@@ -26,7 +26,6 @@ export default {
     XalAuthFailDesc:
       'Falha na autenticação XAL. Por favor, tente o login MSAL. Erro:',
     'Loading...': 'Carregando...',
-    'Start game': 'Iniciar jogo na nuvem',
     'Press Nexus': 'Pressionar Nexus',
     'Long press Nexus': 'Manter Nexus pressionado',
     Disconnect: 'Desconectar',
@@ -153,10 +152,6 @@ export default {
       'O XStreaming precisa de permissão para instalar apps desconhecidos. Conceda nas configurações do sistema e toque em instalação automática novamente.',
     AutoInstallFailed:
       'Falha no download e instalação automática. Tente o download manual.',
-    byorg:
-      'Este é um jogo próprio, não um jogo da biblioteca XGPU. Para jogá-lo, certifique-se de tê-lo comprado.',
-    compatibleWarn:
-      'Este jogo possui problemas de compatibilidade em apps de streaming de terceiros. Recomenda-se jogar pelos canais oficiais.',
     'Game screen position': 'Posição da tela do jogo',
     Top: 'Cima',
     Center: 'Centro',
@@ -236,22 +231,16 @@ export default {
     Move: 'Mover',
     'Move duration': 'Duração do movimento',
     'Macro action sequence': 'Sequência de ações macro',
-    'View in store': 'Ver na loja',
-    'Sale ends': 'A promoção termina',
     Filters: 'Filtros',
     Sort: 'Ordenar',
     Popular: 'Popular',
     View: 'Visualização',
     Developer: 'Desenvolvedor',
     Publisher: 'Editora',
-    'Release date': 'Data de lançamento',
-    Trailer: 'Trailer',
     Media: 'Mídia',
     Description: 'Descrição',
     Features: 'Recursos',
     'Show all': 'Ver tudo',
-    'Show more': 'Ver mais',
-    'Show less': 'Ver menos',
     Gamerscore: 'Gamerscore',
     'Single player': 'Um jogador',
     Multiplayer: 'Multijogador',
@@ -261,6 +250,5 @@ export default {
     'Spatial sound': 'Som espacial',
     'Cloud saves': 'Saves na nuvem',
     'Leaving soon': 'Saindo em breve',
-    'Leaving Game Pass soon': 'Sai do Game Pass em breve',
   },
 };
