@@ -2,6 +2,7 @@ export default {
   translation: {
     Settings: 'Settings',
     Login: 'Login',
+    PsPlusLogin: 'Sign in to PlayStation',
     AuthLogin: 'Auth code login',
     Version: 'Version',
     Close: 'Close',

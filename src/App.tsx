@@ -40,6 +40,7 @@ import HomeScreen from './pages/Home';
 import AchivementScreen from './pages/Achivements';
 import AchivementDetailScreen from './pages/ArchivementDetail';
 import LoginScreen from './pages/Login';
+import PsPlusLoginScreen from './pages/PsPlusLogin';
 import NativeStreamScreen from './pages/NativeStream';
 import NativePortraitStreamScreen from './pages/NativePortraitStream';
 import GfnStreamScreen from './pages/GfnStream';
@@ -142,6 +143,7 @@ const StoreTabScreen = withTabScreen(StoreScreen);
 const SettingsTabScreen = withTabScreen(SettingsScreen);
 
 const HomeBackgroundScreen = withPageBackground(HomeScreen);
+const PsPlusLoginBackgroundScreen = withPageBackground(PsPlusLoginScreen);
 const AchivementBackgroundScreen = withPageBackground(AchivementScreen);
 const AchivementDetailBackgroundScreen = withPageBackground(
   AchivementDetailScreen,
@@ -419,6 +421,11 @@ function App() {
                   name="Login"
                   component={LoginBackgroundScreen}
                   options={{title: t('Login')}}
+                />
+                <RootStack.Screen
+                  name="PsPlusLogin"
+                  component={PsPlusLoginBackgroundScreen}
+                  options={{title: t('PsPlusLogin')}}
                 />
                 <RootStack.Screen
                   name="NativeStream"
