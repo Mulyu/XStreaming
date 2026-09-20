@@ -143,4 +143,9 @@ XStreaming's development can not be without these Hackers. They contributed a lo
 
 ### License
 
-XStreaming is [MIT licensed](./LICENSE).
+XStreaming is licensed under the [GNU Affero General Public License v3.0](./COPYING), with an
+OpenSSL linking exception. This project moved off its original MIT license (still preserved in
+[LICENSE](./LICENSE) for the portions it covers, as MIT requires) to bring in AGPL-3.0-licensed
+PS Plus cloud streaming code adapted from [chiaki-ng](https://github.com/streetpea/chiaki-ng) /
+[Pylux](https://github.com/ForWard-Technologies-LLC/Pylux). See [LICENSE](./LICENSE) for how the
+two licenses apply to this project's code.
