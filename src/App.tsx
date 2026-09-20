@@ -32,7 +32,7 @@ import merge from 'deepmerge';
 import {Provider} from 'react-redux';
 import store from './store';
 import {getSettings} from './store/settingStore';
-import {findTitleByProductId} from './store/shortcutStore';
+import {findTitleByProductId, getTitleStreamingId} from './store/shortcutStore';
 
 import customDarkTheme from './theme/index.dark';
 
@@ -44,7 +44,6 @@ import NativeStreamScreen from './pages/NativeStream';
 import NativePortraitStreamScreen from './pages/NativePortraitStream';
 import GfnStreamScreen from './pages/GfnStream';
 import SettingsScreen from './pages/Settings';
-import TitleDetailScreen from './pages/TitleDetail';
 import LibraryScreen from './pages/Library';
 import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
 import StoreScreen from './pages/Store';
@@ -147,7 +146,6 @@ const AchivementDetailBackgroundScreen = withPageBackground(
   AchivementDetailScreen,
 );
 const LoginBackgroundScreen = withPageBackground(LoginScreen);
-const TitleDetailBackgroundScreen = withPageBackground(TitleDetailScreen);
 const LibraryTitleDetailBackgroundScreen = withPageBackground(
   LibraryTitleDetailScreen,
 );
@@ -246,7 +244,25 @@ function App() {
         return;
       }
 
-      navigationRef.navigate('TitleDetail', {titleItem, autoStart: true});
+      const sessionId = getTitleStreamingId(titleItem);
+      if (!sessionId) {
+        Alert.alert(t('Warning'), t('TitleShortcutExpired'));
+        return;
+      }
+      const postUrl = titleItem.Image_Poster?.URL
+        ? `https:${titleItem.Image_Poster.URL}`
+        : '';
+      navigationRef.navigate({
+        name: getSettings().native_portrait_mode
+          ? 'NativePortraitStream'
+          : 'NativeStream',
+        params: {
+          sessionId,
+          streamType: 'cloud',
+          postUrl,
+          title: titleItem.ProductTitle || '',
+        },
+      });
     },
     [t],
   );
@@ -478,10 +494,6 @@ function App() {
               </RootStack.Group>
 
               <RootStack.Group screenOptions={{presentation: 'modal'}}>
-                <RootStack.Screen
-                  name="TitleDetail"
-                  component={TitleDetailBackgroundScreen}
-                />
                 <RootStack.Screen
                   name="LibraryTitleDetail"
                   component={LibraryTitleDetailBackgroundScreen}

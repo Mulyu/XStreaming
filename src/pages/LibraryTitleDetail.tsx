@@ -304,7 +304,10 @@ function LibraryTitleDetailScreen() {
   const xcloudDiscount =
     price && isSaleForDisplay(price) ? discountPercent(price) : 0;
   const xcloudProductId = getTitleProductId(catalogTitle.xcloud?.raw);
-  const openStore = (url: string) => Linking.openURL(url).catch(() => {});
+  const openStore = (url: string) =>
+    Linking.openURL(url).catch(() => {
+      Alert.alert(t('Warning'), t('StoreLinkOpenFailed'));
+    });
 
   return (
     <ScrollView

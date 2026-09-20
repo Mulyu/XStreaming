@@ -16,6 +16,7 @@ export default {
     MsalAuthTimeout: 'The authorization code has expired. Please refresh.',
     Copied: 'Copied',
     Warning: 'Notice',
+    StoreLinkOpenFailed: 'Could not open the store page.',
     WaitingForServerToRegister:
       'Unable to establish streaming on the console because the console is not connected to Xbox servers. This is usually caused by an abnormal console state, a console update, or an account that is not signed in. Hold the power button or unplug power for at least 10 seconds to restart the console.',
     XboxstreaminghelperErr:
@@ -25,7 +26,6 @@ export default {
     AuthFailDesc: 'Authentication failed. Please log in again. Error:',
     XalAuthFailDesc: 'XAL authentication failed. Please try MSAL login. Error:',
     'Loading...': 'Loading...',
-    'Start game': 'Start cloud game',
     'Press Nexus': 'Press Nexus',
     'Long press Nexus': 'Long press Nexus',
     Disconnect: 'Disconnect',
@@ -183,10 +183,6 @@ export default {
       'XStreaming needs permission to install unknown apps. Grant it in system settings, then tap auto install again.',
     AutoInstallFailed:
       'Automatic download and installation failed. Try manual download.',
-    byorg:
-      'This is an owned game, not an XGPU library game. To play it, make sure you have purchased it.',
-    compatibleWarn:
-      'This game has compatibility issues in third-party streaming apps. Playing through official channels is recommended.',
     'Game screen position': 'Game screen position',
     Top: 'Top',
     Center: 'Center',
@@ -358,13 +354,9 @@ export default {
     'Move duration': 'Move duration',
     'Macro action sequence': 'Macro action sequence',
     'Add to desktop': 'Add to home screen',
-    'View in store': 'View in Store',
-    'Sale ends': 'Sale ends',
     TitleShortcutRequested: 'Shortcut add request sent',
     TitleShortcutUnavailable:
       'The current device or launcher does not support adding this shortcut.',
-    TitleShortcutMissingProduct:
-      'This title is missing product data and cannot be added to the home screen.',
     TitleShortcutFailed: 'Failed to add shortcut',
     TitleShortcutExpired:
       'Shortcut data is unavailable. Please refresh the cloud game list and try again.',
@@ -389,14 +381,10 @@ export default {
     View: 'View',
     Developer: 'Developer',
     Publisher: 'Publisher',
-    'Release date': 'Release date',
-    Trailer: 'Trailer',
     Media: 'Media',
     Description: 'Description',
     Features: 'Features',
     'Show all': 'Show all',
-    'Show more': 'Show more',
-    'Show less': 'Show less',
     Gamerscore: 'Gamerscore',
     'Single player': 'Single player',
     Multiplayer: 'Multiplayer',
@@ -406,6 +394,5 @@ export default {
     'Spatial sound': 'Spatial sound',
     'Cloud saves': 'Cloud saves',
     'Leaving soon': 'Leaving soon',
-    'Leaving Game Pass soon': 'Leaving Game Pass soon',
   },
 };

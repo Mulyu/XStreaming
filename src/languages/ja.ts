@@ -16,6 +16,7 @@ export default {
     MsalAuthTimeout: '認証コードの期限が切れました。更新してください।',
     Copied: 'コピーしました',
     Warning: '警告',
+    StoreLinkOpenFailed: 'ストアページを開けませんでした。',
     WaitingForServerToRegister:
       'コンソールが接続されていません。電源ボタンを10秒間長押ししてみてください।',
     XboxstreaminghelperErr:
@@ -26,7 +27,6 @@ export default {
     XalAuthFailDesc:
       'XAL認証に失敗しました。MSALログインを試してください。エラー:',
     'Loading...': '読み込み中...',
-    'Start game': 'ゲーム開始',
     'Press Nexus': 'Nexusを押す',
     'Long press Nexus': 'Nexusを長押し',
     Disconnect: '切断',
@@ -178,8 +178,6 @@ export default {
     'Manual download': '手動ダウンロード',
     InstallPermissionRequired: 'インストール権限が必要です।',
     AutoInstallFailed: '自動インストール失敗।手動で行ってください।',
-    byorg: '所有済みゲームです।',
-    compatibleWarn: '互換性の問題がある可能性があります।',
     'Game screen position': 'ゲーム画面の表示位置',
     Top: '上寄せ',
     Center: '中央',
@@ -346,13 +344,9 @@ export default {
     'Move duration': '移動時間',
     'Macro action sequence': 'シーケンス',
     'Add to desktop': 'ホーム画面に追加',
-    'View in store': 'ストアで見る',
-    'Sale ends': 'セール終了',
     TitleShortcutRequested: 'ショートカットの追加をリクエストしました',
     TitleShortcutUnavailable:
       'この端末またはランチャーはショートカットの追加に対応していません。',
-    TitleShortcutMissingProduct:
-      'この作品には商品データがないため、ホーム画面に追加できません。',
     TitleShortcutFailed: 'ショートカットの追加に失敗しました',
     TitleShortcutExpired:
       'ショートカットのデータが見つかりません。クラウドゲームの一覧を更新してから再度お試しください。',
@@ -377,14 +371,10 @@ export default {
     View: '表示',
     Developer: '開発',
     Publisher: '発行',
-    'Release date': '発売日',
-    Trailer: 'トレーラー',
     Media: 'メディア',
     Description: '説明',
     Features: '対応機能',
     'Show all': 'すべて表示',
-    'Show more': 'もっと見る',
-    'Show less': '閉じる',
     Gamerscore: 'ゲーマースコア',
     'Single player': 'シングルプレイ',
     Multiplayer: 'マルチプレイ',
@@ -394,6 +384,5 @@ export default {
     'Spatial sound': '立体音響',
     'Cloud saves': 'クラウドセーブ',
     'Leaving soon': 'もうすぐ削除',
-    'Leaving Game Pass soon': 'まもなく Game Pass から削除されます',
   },
 };
