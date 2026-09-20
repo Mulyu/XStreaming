@@ -1,5 +1,6 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "org.jetbrains.kotlin.plugin.parcelize"
 apply plugin: "com.facebook.react"
 
 /**
@@ -80,6 +81,18 @@ android {
     compileSdkVersion rootProject.ext.compileSdkVersion
 
     namespace "com.xstreaming"
+    // Builds android/chiaki/ (chiaki-lib + its Android JNI bridge, vendored
+    // from Pylux/chiaki-ng for PS Plus cloud streaming -- see android/chiaki/
+    // CMakeLists.txt's own header comment). A separate CMake version from
+    // react-native-mmkv's own externalNativeBuild block below is expected
+    // and fine -- each Gradle module resolves its own cmake.version
+    // independently.
+    externalNativeBuild {
+        cmake {
+            path "../chiaki/CMakeLists.txt"
+            version "3.30.5"
+        }
+    }
     sourceSets {
         main {
             jniLibs.srcDirs += ["$buildDir/generated/sdlJniLibs"]
@@ -94,6 +107,16 @@ android {
         versionName "2.9.1"
         ndk {
             abiFilters(*xstreamingTargetAbis)
+        }
+        externalNativeBuild {
+            cmake {
+                // chiaki-lib's own FetchContent-based deps (mbedTLS, opus,
+                // json-c, miniupnpc) need Android_ABI/Android_platform wired
+                // up the normal AGP way; nothing beyond the ABI filter is
+                // required here since android/chiaki/CMakeLists.txt hardcodes
+                // its own feature toggles instead of taking them as -D args.
+                abiFilters(*xstreamingTargetAbis)
+            }
         }
     }
     flavorDimensions "environment"
