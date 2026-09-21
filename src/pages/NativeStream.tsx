@@ -306,11 +306,12 @@ export function NativeStreamScreenBase({
   const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
   const [gamepadLayoutVersion, setGamepadLayoutVersion] = React.useState(0);
   const [swipeConfigVersion, setSwipeConfigVersion] = React.useState(0);
-  // Mirrors activeMacroNameRef, but as state so the currently auto-firing
-  // macro button (if any) can be drawn with a ring -- refs alone don't
-  // trigger a re-render.
-  const [loopingMacroName, setLoopingMacroName] = React.useState<string | null>(
-    null,
+  // Mirrors which macro name(s) currently own a running loop/turbo, but as
+  // state so those macro buttons can be drawn with a ring -- refs alone
+  // don't trigger a re-render. A Set (not a single name) since multiple
+  // macro buttons can loop/turbo concurrently.
+  const [loopingMacroNames, setLoopingMacroNames] = React.useState<Set<string>>(
+    new Set(),
   );
   const [audioGain, setAudioGain] = React.useState(() => {
     const g = Number(getSettings().audio_gain);
@@ -371,19 +372,24 @@ export function NativeStreamScreenBase({
   const batteryOptPromptRef = React.useRef(false);
   const isRequestExit = React.useRef(false);
   const isConnected = React.useRef(false);
-  const macroSequenceTimersRef = React.useRef<any[]>([]);
-  const activeMacroButtonsRef = React.useRef<Set<string>>(new Set());
-  const activeMacroSticksRef = React.useRef<Set<string>>(new Set());
-  const isMacroLoopRunningRef = React.useRef(false);
-  // Which of the (up to 3) macro buttons owns the currently-running loop, if
-  // any -- lets pressing that same button again toggle its own loop off
-  // while pressing a *different* macro button cleanly takes over instead.
-  const activeMacroNameRef = React.useRef<string | null>(null);
-  // True while the running repeat was started by turbo (hold-to-repeat)
+  // All of the following macro execution/runtime state is keyed by macro
+  // name (Macro1/Macro2/Macro3) so that starting or stopping one macro never
+  // touches another macro's in-flight sequence -- each macro button runs
+  // fully independently and concurrently.
+  const macroSequenceTimersRef = React.useRef<Map<string, any[]>>(new Map());
+  const activeMacroButtonsRef = React.useRef<Map<string, Set<string>>>(
+    new Map(),
+  );
+  const activeMacroSticksRef = React.useRef<Map<string, Set<string>>>(
+    new Map(),
+  );
+  // Names of macros that currently have a running loop (turbo or toggled).
+  const isMacroLoopRunningRef = React.useRef<Set<string>>(new Set());
+  // Names of macros whose running repeat was started by turbo (hold-to-repeat)
   // rather than macroLoopEnabled (tap-to-toggle) -- only a turbo-driven
   // repeat should stop on release; a toggled loop keeps going until tapped
   // again.
-  const isMacroTurboActiveRef = React.useRef(false);
+  const isMacroTurboActiveRef = React.useRef<Set<string>>(new Set());
   // Macro1/2/3's own {macroSteps, macroLoopEnabled, macroLoopIntervalMs}, from
   // the active custom-gamepad profile's saved layout -- refreshed alongside
   // the turbo set below, since both are per-profile per-button config.
@@ -2098,10 +2104,10 @@ export function NativeStreamScreenBase({
         clearInterval(performanceInterval.current);
         performanceInterval.current = null;
       }
-      macroSequenceTimersRef.current.forEach(timeoutId =>
-        clearTimeout(timeoutId),
+      macroSequenceTimersRef.current.forEach(timeoutIds =>
+        timeoutIds.forEach(timeoutId => clearTimeout(timeoutId)),
       );
-      macroSequenceTimersRef.current = [];
+      macroSequenceTimersRef.current = new Map();
       manualLeftThumbPressedRef.current = false;
       syncLeftThumbButton(gpState);
       GamepadManager.setCurrentScreen('');
@@ -2260,37 +2266,106 @@ export function NativeStreamScreenBase({
     }
   }, []);
 
-  const clearMacroTimers = React.useCallback(() => {
-    macroSequenceTimersRef.current.forEach(timeoutId =>
-      clearTimeout(timeoutId),
-    );
-    macroSequenceTimersRef.current = [];
-    isMacroLoopRunningRef.current = false;
-    isMacroTurboActiveRef.current = false;
-    activeMacroNameRef.current = null;
-    setLoopingMacroName(null);
-    Array.from(activeMacroButtonsRef.current).forEach(button => {
-      if (button === 'LeftThumb') {
-        setManualLeftThumbPressed(false);
-      } else {
-        gpState[button] = 0;
-      }
-    });
-    activeMacroButtonsRef.current.clear();
-    Array.from(activeMacroSticksRef.current).forEach(stick => {
-      if (stick === 'right') {
-        gpState.RightThumbXAxis = 0;
-        gpState.RightThumbYAxis = 0;
-      } else {
-        gpState.LeftThumbXAxis = 0;
-        gpState.LeftThumbYAxis = 0;
-        syncLeftThumbButton(gpState);
-      }
-    });
-    activeMacroSticksRef.current.clear();
-  }, [setManualLeftThumbPressed, syncLeftThumbButton]);
+  const pushMacroTimer = (name: string, timeoutId: any) => {
+    const list = macroSequenceTimersRef.current.get(name);
+    if (list) {
+      list.push(timeoutId);
+    } else {
+      macroSequenceTimersRef.current.set(name, [timeoutId]);
+    }
+  };
 
-  const runMacroSteps = (rawSteps: any) => {
+  const removeMacroTimer = (name: string, timeoutId: any) => {
+    const list = macroSequenceTimersRef.current.get(name);
+    if (list) {
+      macroSequenceTimersRef.current.set(
+        name,
+        list.filter(item => item !== timeoutId),
+      );
+    }
+  };
+
+  const getMacroButtonSet = (name: string) => {
+    let set = activeMacroButtonsRef.current.get(name);
+    if (!set) {
+      set = new Set<string>();
+      activeMacroButtonsRef.current.set(name, set);
+    }
+    return set;
+  };
+
+  const getMacroStickSet = (name: string) => {
+    let set = activeMacroSticksRef.current.get(name);
+    if (!set) {
+      set = new Set<string>();
+      activeMacroSticksRef.current.set(name, set);
+    }
+    return set;
+  };
+
+  // Stops and fully resets only `name`'s own macro run -- pending timers,
+  // held buttons/sticks and loop/turbo flags -- without touching any other
+  // macro button's independently in-flight sequence.
+  const clearMacroTimersForName = React.useCallback(
+    (name: string) => {
+      const timers = macroSequenceTimersRef.current.get(name);
+      if (timers) {
+        timers.forEach(timeoutId => clearTimeout(timeoutId));
+      }
+      macroSequenceTimersRef.current.delete(name);
+      isMacroLoopRunningRef.current.delete(name);
+      isMacroTurboActiveRef.current.delete(name);
+      setLoopingMacroNames(prev => {
+        if (!prev.has(name)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+      const buttons = activeMacroButtonsRef.current.get(name);
+      if (buttons) {
+        Array.from(buttons).forEach(button => {
+          if (button === 'LeftThumb') {
+            setManualLeftThumbPressed(false);
+          } else {
+            gpState[button] = 0;
+          }
+        });
+      }
+      activeMacroButtonsRef.current.delete(name);
+      const sticks = activeMacroSticksRef.current.get(name);
+      if (sticks) {
+        Array.from(sticks).forEach(stick => {
+          if (stick === 'right') {
+            gpState.RightThumbXAxis = 0;
+            gpState.RightThumbYAxis = 0;
+          } else {
+            gpState.LeftThumbXAxis = 0;
+            gpState.LeftThumbYAxis = 0;
+            syncLeftThumbButton(gpState);
+          }
+        });
+      }
+      activeMacroSticksRef.current.delete(name);
+    },
+    [setManualLeftThumbPressed, syncLeftThumbButton],
+  );
+
+  // Stops every macro button's run -- used for full teardown (leaving the
+  // stream, hiding the virtual gamepad), not for handling a single press.
+  const clearAllMacroTimers = React.useCallback(() => {
+    const names = new Set<string>([
+      ...macroSequenceTimersRef.current.keys(),
+      ...activeMacroButtonsRef.current.keys(),
+      ...activeMacroSticksRef.current.keys(),
+      ...isMacroLoopRunningRef.current,
+      ...isMacroTurboActiveRef.current,
+    ]);
+    names.forEach(name => clearMacroTimersForName(name));
+  }, [clearMacroTimersForName]);
+
+  const runMacroSteps = (name: string, rawSteps: any) => {
     const allowedButtons = new Set<string>(VIRTUAL_MACRO_ALLOWED_BUTTONS);
     const steps = normalizeMacroSteps(rawSteps);
     let accumulatedDelay = 0;
@@ -2298,11 +2373,9 @@ export function NativeStreamScreenBase({
     const schedule = (delay: number, fn: () => void) => {
       const timeoutId = setTimeout(() => {
         fn();
-        macroSequenceTimersRef.current = macroSequenceTimersRef.current.filter(
-          item => item !== timeoutId,
-        );
+        removeMacroTimer(name, timeoutId);
       }, delay);
-      macroSequenceTimersRef.current.push(timeoutId);
+      pushMacroTimer(name, timeoutId);
     };
 
     steps.forEach((step: any) => {
@@ -2315,7 +2388,7 @@ export function NativeStreamScreenBase({
         const y = Math.max(-1, Math.min(1, Number(step.y) || 0));
 
         schedule(accumulatedDelay, () => {
-          activeMacroSticksRef.current.add(stick);
+          getMacroStickSet(name).add(stick);
           if (stick === 'right') {
             gpState.RightThumbXAxis = x;
             gpState.RightThumbYAxis = y;
@@ -2326,7 +2399,7 @@ export function NativeStreamScreenBase({
           }
         });
         schedule(accumulatedDelay + duration, () => {
-          activeMacroSticksRef.current.delete(stick);
+          getMacroStickSet(name).delete(stick);
           if (stick === 'right') {
             gpState.RightThumbXAxis = 0;
             gpState.RightThumbYAxis = 0;
@@ -2350,7 +2423,7 @@ export function NativeStreamScreenBase({
 
       schedule(accumulatedDelay, () => {
         stepButtons.forEach((button: string) => {
-          activeMacroButtonsRef.current.add(button);
+          getMacroButtonSet(name).add(button);
           if (button === 'LeftThumb') {
             setManualLeftThumbPressed(true);
           } else {
@@ -2360,7 +2433,7 @@ export function NativeStreamScreenBase({
       });
       schedule(accumulatedDelay + duration, () => {
         stepButtons.forEach((button: string) => {
-          activeMacroButtonsRef.current.delete(button);
+          getMacroButtonSet(name).delete(button);
           if (button === 'LeftThumb') {
             setManualLeftThumbPressed(false);
           } else {
@@ -2376,7 +2449,9 @@ export function NativeStreamScreenBase({
 
   // `name` is which of Macro1/Macro2/Macro3 was pressed -- each fires its own
   // sequence, configured per profile on its own ButtonConfig (see
-  // gamepadLayout.ts) rather than one sequence shared globally.
+  // gamepadLayout.ts), and its own independent runtime state, so multiple
+  // macro buttons can be triggered concurrently without one interrupting
+  // another.
   const handleMacroPressIn = (name: string) => {
     const config = macroConfigsRef.current.get(name);
     const rawSteps = Array.isArray(config?.macroSteps) ? config.macroSteps : [];
@@ -2389,29 +2464,24 @@ export function NativeStreamScreenBase({
       // the button is held, exactly like turbo does for a normal button --
       // handleMacroPressOut below stops it on release. Takes priority over
       // macroLoopEnabled if both happen to be set on the same button.
-      clearMacroTimers();
-      activeMacroNameRef.current = name;
-      setLoopingMacroName(name);
-      isMacroLoopRunningRef.current = true;
-      isMacroTurboActiveRef.current = true;
+      clearMacroTimersForName(name);
+      isMacroLoopRunningRef.current.add(name);
+      isMacroTurboActiveRef.current.add(name);
+      setLoopingMacroNames(prev => new Set(prev).add(name));
       const runTurbo = () => {
-        if (
-          !isMacroLoopRunningRef.current ||
-          activeMacroNameRef.current !== name
-        ) {
+        if (!isMacroLoopRunningRef.current.has(name)) {
           return;
         }
-        const totalDuration = runMacroSteps(rawSteps);
+        const totalDuration = runMacroSteps(name, rawSteps);
         if (!totalDuration) {
-          clearMacroTimers();
+          clearMacroTimersForName(name);
           return;
         }
         const timeoutId = setTimeout(() => {
-          macroSequenceTimersRef.current =
-            macroSequenceTimersRef.current.filter(item => item !== timeoutId);
+          removeMacroTimer(name, timeoutId);
           runTurbo();
         }, totalDuration);
-        macroSequenceTimersRef.current.push(timeoutId);
+        pushMacroTimer(name, timeoutId);
       };
       runTurbo();
       if (settings.vibration) {
@@ -2421,45 +2491,40 @@ export function NativeStreamScreenBase({
     }
 
     if (config?.macroLoopEnabled) {
-      if (
-        isMacroLoopRunningRef.current &&
-        activeMacroNameRef.current === name
-      ) {
+      if (isMacroLoopRunningRef.current.has(name)) {
         // Pressing the same looping macro button again stops it.
-        clearMacroTimers();
+        clearMacroTimersForName(name);
         return;
       }
 
-      clearMacroTimers();
-      activeMacroNameRef.current = name;
-      setLoopingMacroName(name);
-      isMacroLoopRunningRef.current = true;
+      clearMacroTimersForName(name);
+      isMacroLoopRunningRef.current.add(name);
+      setLoopingMacroNames(prev => new Set(prev).add(name));
       const interval = normalizeMacroLoopIntervalMs(
         config?.macroLoopIntervalMs,
       );
       const runLoop = () => {
-        if (!isMacroLoopRunningRef.current) {
+        if (!isMacroLoopRunningRef.current.has(name)) {
           return;
         }
-        const totalDuration = runMacroSteps(rawSteps);
+        const totalDuration = runMacroSteps(name, rawSteps);
         if (!totalDuration) {
-          clearMacroTimers();
+          clearMacroTimersForName(name);
           return;
         }
         const delay = Math.max(30, totalDuration + interval);
         const timeoutId = setTimeout(() => {
-          macroSequenceTimersRef.current =
-            macroSequenceTimersRef.current.filter(item => item !== timeoutId);
+          removeMacroTimer(name, timeoutId);
           runLoop();
         }, delay);
-        macroSequenceTimersRef.current.push(timeoutId);
+        pushMacroTimer(name, timeoutId);
       };
       runLoop();
       return;
     }
 
-    clearMacroTimers();
-    runMacroSteps(rawSteps);
+    clearMacroTimersForName(name);
+    runMacroSteps(name, rawSteps);
 
     if (settings.vibration) {
       Vibration.vibrate(20);
@@ -2469,8 +2534,8 @@ export function NativeStreamScreenBase({
   const handleMacroPressOut = (name: string) => {
     // Only a turbo-driven repeat stops on release; a macroLoopEnabled toggle
     // (or a plain one-shot sequence) is unaffected by press-out.
-    if (isMacroTurboActiveRef.current && activeMacroNameRef.current === name) {
-      clearMacroTimers();
+    if (isMacroTurboActiveRef.current.has(name)) {
+      clearMacroTimersForName(name);
     }
   };
 
@@ -2773,7 +2838,7 @@ export function NativeStreamScreenBase({
 
   const requestExit = React.useCallback(
     (off = false) => {
-      clearMacroTimers();
+      clearAllMacroTimers();
       isRequestExit.current = true;
       setShowPerformance(false);
       setShowVirtualGamepad(false);
@@ -2785,7 +2850,7 @@ export function NativeStreamScreenBase({
       }
       handleExit(off);
     },
-    [clearMacroTimers, handleExit, settings.sensor, webrtcClient],
+    [clearAllMacroTimers, handleExit, settings.sensor, webrtcClient],
   );
 
   const handleToggleMic = React.useCallback(async () => {
@@ -2997,7 +3062,7 @@ export function NativeStreamScreenBase({
   const handleSetInputMode = React.useCallback(
     (mode: StreamInputMode) => {
       if (mode !== 'gamepad' && showVirtualGamepad) {
-        clearMacroTimers();
+        clearAllMacroTimers();
         setShowVirtualGamepad(false);
       }
       if (mode !== 'mouse' && showMouseTrackpad) {
@@ -3018,7 +3083,7 @@ export function NativeStreamScreenBase({
       }
     },
     [
-      clearMacroTimers,
+      clearAllMacroTimers,
       showKeyboard,
       showMouseTrackpad,
       showNativeTouch,
@@ -3142,7 +3207,7 @@ export function NativeStreamScreenBase({
           onPressOut={handleButtonPressOut}
           onStickMove={handleStickMove}
           refreshKey={gamepadLayoutVersion}
-          loopingMacroName={loopingMacroName}
+          loopingMacroNames={loopingMacroNames}
         />
       );
     } else {

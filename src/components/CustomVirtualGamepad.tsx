@@ -17,9 +17,11 @@ type Props = {
   onPressOut: (name: string) => any;
   onStickMove: (id: string, position: any) => any;
   refreshKey?: number;
-  // Name of the macro button (if any) currently auto-firing on repeat --
-  // drawn with a static ring so it stays visible after the finger lifts.
-  loopingMacroName?: string | null;
+  // Names of the macro button(s), if any, currently auto-firing on repeat --
+  // each is drawn with a static ring so it stays visible after the finger
+  // lifts. More than one can be active at once, since macro buttons run
+  // independently of each other.
+  loopingMacroNames?: Set<string>;
 };
 
 const CustomVirtualGamepad: React.FC<Props> = ({
@@ -30,7 +32,7 @@ const CustomVirtualGamepad: React.FC<Props> = ({
   onPressOut,
   onStickMove,
   refreshKey = 0,
-  loopingMacroName = null,
+  loopingMacroNames,
 }) => {
   const [buttons, setButtons] = React.useState<any>([]);
   // Per-profile override wins; fall back to Free.
@@ -174,7 +176,7 @@ const CustomVirtualGamepad: React.FC<Props> = ({
                 {opacity},
                 {top: button.y, left: button.x},
               ]}
-              looping={button.name === loopingMacroName}
+              looping={loopingMacroNames?.has(button.name) ?? false}
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
             />
