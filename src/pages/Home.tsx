@@ -121,6 +121,13 @@ function HomeScreen({navigation, route}) {
         getValidGfnTokens().catch(() => {});
       }
 
+      // Set right before the silent branch below navigates to Main ahead of
+      // its own result -- lets the two callbacks know Home is already gone,
+      // so they only need to update Redux (which Library/Store/Settings pick
+      // up reactively) instead of also touching Home's own UI state or
+      // navigating a second time.
+      let navigatedSilently = false;
+
       // Auth completed callback: store tokens and forward to Cloud.
       const authenticationCompleted = async (_streamingTokens, _webToken) => {
         log.info('Authentication completed');
@@ -138,6 +145,11 @@ function HomeScreen({navigation, route}) {
           payload: true,
         });
         _isLogined.current = true;
+
+        if (navigatedSilently) {
+          return;
+        }
+
         setShowLogin(false);
         setShowMsalLogin(false);
         setShowMsal(false);
@@ -161,7 +173,7 @@ function HomeScreen({navigation, route}) {
           // xCloud is optional, that's just "not signed in" now, not an
           // error worth interrupting the user with or restarting over.
           log.info('Silent xCloud auth check failed (non-blocking):', msg);
-          if (!_isLogined.current) {
+          if (!navigatedSilently && !_isLogined.current) {
             navigation.replace('Main');
           }
           return;
@@ -242,21 +254,19 @@ function HomeScreen({navigation, route}) {
             );
           }
         } else if (!_isLogined.current && !wantsLogin) {
-          // Silent, non-blocking check: no login UI, no loading spinner --
-          // an already-signed-in user's token gets refreshed via
-          // authenticationCompleted() (called internally by
-          // checkAuthentication()'s silent flow) if it can be, and either
-          // way this never stops the user from reaching Main.
-          _authentication.current
-            .checkAuthentication()
-            .then(isAuth => {
-              if (!isAuth) {
-                navigation.replace('Main');
-              }
-            })
-            .catch(() => {
-              navigation.replace('Main');
-            });
+          // Silent, non-blocking check, same treatment as GFN's own
+          // opportunistic refresh above: don't wait for -- or gate
+          // navigation on -- the result. checkAuthentication() itself
+          // already only needs a synchronous token-store read to decide
+          // whether to kick off startSilentFlow()'s token refresh; that
+          // refresh keeps running in the background and updates Redux via
+          // authenticationCompleted()/authenticationFailed() above whenever
+          // it eventually settles. Library, Store and Settings already
+          // treat the streaming token as optional and pick it up reactively
+          // once it's set, so there's nothing to gain by waiting here.
+          navigatedSilently = true;
+          navigation.replace('Main');
+          _authentication.current.checkAuthentication().catch(() => {});
         } else if (!_isLogined.current) {
           setLoading(true);
           setLoadingText(t('Checking login status...'));
