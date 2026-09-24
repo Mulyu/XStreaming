@@ -34,7 +34,7 @@ import store from './store';
 import {getSettings} from './store/settingStore';
 import {findTitleByProductId, getTitleStreamingId} from './store/shortcutStore';
 
-import customDarkTheme from './theme/index.dark';
+import customDarkTheme from './shared/config/theme';
 
 import HomeScreen from './pages/Home';
 import LoginScreen from './pages/Login';
