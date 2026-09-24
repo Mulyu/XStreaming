@@ -13,7 +13,7 @@ import {
   isSaleForDisplay,
   PriceInfo,
 } from '../utils/storePrice';
-import {SteamChartEntry} from '../storeCharts/steamCharts';
+import {SteamChartEntry} from '../features/store-charts';
 
 // One row's worth of display data. `catalogTitle` is null when the row isn't
 // launchable -- today that's only possible on the GFN/Steam side, where the

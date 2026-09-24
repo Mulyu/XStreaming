@@ -32,12 +32,10 @@ import {
   fetchXboxBrowsePage,
   getFreshXboxBrowsePage,
   XboxBrowseSort,
-} from '../storeCharts/xboxBrowse';
-import {
   fetchSteamChart,
   getFreshSteamChart,
   SteamChartEntry,
-} from '../storeCharts/steamCharts';
+} from '../features/store-charts';
 import {
   buildGfnStoreRows,
   buildXboxStoreRows,
