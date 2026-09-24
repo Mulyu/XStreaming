@@ -4,7 +4,7 @@ import {GestureDetector, Gesture} from 'react-native-gesture-handler';
 import KeyChip from './CustomGamepad/KeyChip';
 import {ButtonConfig} from '../utils/gamepadLayout';
 import {VK_TO_MOD_BIT} from '../utils/virtualKeys';
-import {KeyboardModifiers} from '../hooks/useKeyboardModifiers';
+import {KeyboardModifiers} from '../features/virtual-keyboard';
 
 export type CustomKeyButtonsProps = {
   layout: ButtonConfig[];
