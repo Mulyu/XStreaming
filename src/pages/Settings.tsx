@@ -47,13 +47,15 @@ import {
   getGfnFullCatalogStatus,
   GfnFullCatalogStatus,
 } from '../gfn/catalog';
-import bases from '../common/settings/bases';
-import display from '../common/settings/display';
-import gamepad from '../common/settings/gamepad';
-import audio from '../common/settings/audio';
-import xcloud from '../common/settings/xcloud';
-import gfn from '../common/settings/gfn';
-import others from '../common/settings/others';
+import {
+  basesSettings as bases,
+  displaySettings as display,
+  gamepadSettings as gamepad,
+  audioSettings as audio,
+  xcloudSettings as xcloud,
+  gfnSettings as gfn,
+  othersSettings as others,
+} from '../features/app-settings';
 
 import pkg from '../../package.json';
 

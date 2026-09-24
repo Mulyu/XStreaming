@@ -3,7 +3,7 @@ import ButtonView from '../ButtonView';
 import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import {GestureDetector, Gesture} from 'react-native-gesture-handler';
 import {SvgXml} from 'react-native-svg';
-import icons from '../../common/virtualgp';
+import {virtualButtonIcons as icons} from '../../entities/gamepad';
 import {getButtonBaseSize} from '../../utils/gamepadLayout';
 import {isMacroButtonName, MACRO_SLOT_COLORS} from '../../utils/virtualMacro';
 

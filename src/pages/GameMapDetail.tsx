@@ -10,7 +10,7 @@ import {Text} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../utils/debug';
 import {SvgXml} from 'react-native-svg';
-import maping from '../common/svg';
+import {legendIcons as maping} from '../entities/gamepad';
 
 const log = debugFactory('GameMapDetailScreen');
 

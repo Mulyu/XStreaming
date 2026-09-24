@@ -1,3 +1,23 @@
+export const GAMEPAD_MAPING = {
+  A: 96,
+  B: 97,
+  X: 99,
+  Y: 100,
+  DPadUp: 19,
+  DPadDown: 20,
+  DPadLeft: 21,
+  DPadRight: 22,
+  LeftShoulder: 102,
+  RightShoulder: 103,
+  LeftThumb: 106,
+  RightThumb: 107,
+  LeftTrigger: 104,
+  RightTrigger: 105,
+  Menu: 108,
+  View: 109,
+  Nexus: 110,
+};
+
 export const XBOX_360_GAMEPAD_MAPING = {
   A: 4096,
   B: 8192,
