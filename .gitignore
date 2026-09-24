@@ -35,6 +35,7 @@ local.properties
 !debug.keystore
 
 skills/
+!.claude/skills/
 
 # node.js
 #
