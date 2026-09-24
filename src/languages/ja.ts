@@ -366,6 +366,7 @@ export default {
     StoreTabSteam: 'Steam',
     StoreBestSellers: '売り上げ順',
     StoreNewReleases: '新着順',
+    StoreFilterGfnAvailableOnly: 'GFN配信可能のみ',
     StoreFilteredNote: 'このサービスでプレイできるタイトルのみ表示しています',
     StoreEmpty: '該当するタイトルが見つかりません',
     View: '表示',

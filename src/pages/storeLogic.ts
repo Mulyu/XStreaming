@@ -15,15 +15,21 @@ import {
 } from '../utils/storePrice';
 import {SteamChartEntry} from '../storeCharts/steamCharts';
 
-// One row's worth of display data, already matched back to a launchable
-// catalog title -- rows that don't match anything cloud-playable never reach
-// this shape, they're filtered out before render. `id` is the underlying
-// store id (Xbox productId / Steam appId) -- the list key must be this, not
-// catalogTitle.key (a normalized title): two distinct store listings (a
-// different edition/SKU of the same game, or two unrelated titles that
-// happen to share a display name) can share a normalized title while being
-// genuinely different rows, and keying by title would collide React's list
-// reconciliation between them.
+// One row's worth of display data. `catalogTitle` is null when the row isn't
+// launchable -- today that's only possible on the GFN/Steam side, where the
+// chart entry itself already carries full display data (title/image/price)
+// straight from Steam, independent of whether the title is also on GFN, so
+// there's no reason to drop it from the list just because it isn't (the
+// Xbox/xCloud side has no such split: its browse endpoint returns bare
+// product ids with no display data of its own, so a row only exists there
+// once matched against the entitled catalog, and its `catalogTitle` is
+// therefore always non-null -- see buildXboxStoreRows below). `id` is the
+// underlying store id (Xbox productId / Steam appId) -- the list key must be
+// this, not catalogTitle.key (a normalized title): two distinct store
+// listings (a different edition/SKU of the same game, or two unrelated
+// titles that happen to share a display name) can share a normalized title
+// while being genuinely different rows, and keying by title would collide
+// React's list reconciliation between them.
 export type StoreRow = {
   id: string;
   rank: number;
@@ -31,7 +37,7 @@ export type StoreRow = {
   imageUrl?: string;
   price?: string;
   originalPrice?: string;
-  catalogTitle: CatalogTitle;
+  catalogTitle: CatalogTitle | null;
 };
 
 // Whether another page is worth requesting after one that left the cursor at
@@ -113,10 +119,14 @@ export const buildXboxStoreRows = (
   return result;
 };
 
-// Match Steam chart entries against GFN's catalog (the public list and, for
-// signed-in users, the full authenticated catalog merged in by the caller --
-// see Store.tsx's gfnBaseGames for why that's a merge, not a fallback), same
-// rank-preserving behavior as buildXboxStoreRows.
+// Every Steam chart entry becomes a row -- unlike the Xbox side, Steam's own
+// chart already carries full display data, so a title not on GFN is still
+// shown, just with a null catalogTitle (nothing to launch). Matched against
+// GFN's catalog (the public list and, for signed-in users, the full
+// authenticated catalog merged in by the caller -- see Store.tsx's
+// gfnBaseGames for why that's a merge, not a fallback) only to attach that
+// launchable catalogTitle where available, same rank-preserving behavior as
+// buildXboxStoreRows.
 export const buildGfnStoreRows = (
   entries: SteamChartEntry[],
   gfnBaseGames: GfnGame[],
@@ -127,17 +137,10 @@ export const buildGfnStoreRows = (
       byAppId.set(game.steamAppId, game);
     }
   });
-  const result: StoreRow[] = [];
-  entries.forEach((entry, index) => {
+  return entries.map((entry, index) => {
     const game = byAppId.get(entry.appId);
-    if (!game) {
-      return;
-    }
-    const catalogTitle = buildGfnCatalogTitle(game);
-    if (!catalogTitle) {
-      return;
-    }
-    result.push({
+    const catalogTitle = game ? buildGfnCatalogTitle(game) : null;
+    return {
       id: entry.appId,
       rank: index + 1,
       title: entry.title,
@@ -145,7 +148,6 @@ export const buildGfnStoreRows = (
       price: entry.price,
       originalPrice: entry.originalPrice,
       catalogTitle,
-    });
+    };
   });
-  return result;
 };
