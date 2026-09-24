@@ -37,17 +37,13 @@ import {findTitleByProductId, getTitleStreamingId} from './store/shortcutStore';
 import customDarkTheme from './theme/index.dark';
 
 import HomeScreen from './pages/Home';
-import AchivementScreen from './pages/Achivements';
-import AchivementDetailScreen from './pages/ArchivementDetail';
 import LoginScreen from './pages/Login';
 import NativeStreamScreen from './pages/NativeStream';
 import NativePortraitStreamScreen from './pages/NativePortraitStream';
-import GfnStreamScreen from './pages/GfnStream';
 import SettingsScreen from './pages/Settings';
 import LibraryScreen from './pages/Library';
 import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
 import StoreScreen from './pages/Store';
-import GameMapScreen from './pages/GameMap';
 import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
 import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';
@@ -65,7 +61,6 @@ import {useTranslation} from 'react-i18next';
 import {SystemBars} from 'react-native-edge-to-edge';
 
 import './i18n';
-import SearchScreen from './pages/Search';
 import HubTabBar from './components/HubTabBar';
 
 const RootStack = createStackNavigator();
@@ -141,15 +136,10 @@ const StoreTabScreen = withTabScreen(StoreScreen);
 const SettingsTabScreen = withTabScreen(SettingsScreen);
 
 const HomeBackgroundScreen = withPageBackground(HomeScreen);
-const AchivementBackgroundScreen = withPageBackground(AchivementScreen);
-const AchivementDetailBackgroundScreen = withPageBackground(
-  AchivementDetailScreen,
-);
 const LoginBackgroundScreen = withPageBackground(LoginScreen);
 const LibraryTitleDetailBackgroundScreen = withPageBackground(
   LibraryTitleDetailScreen,
 );
-const GameMapBackgroundScreen = withPageBackground(GameMapScreen);
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
 const VirtualGamepadSettingsBackgroundScreen = withPageBackground(
@@ -157,7 +147,6 @@ const VirtualGamepadSettingsBackgroundScreen = withPageBackground(
 );
 const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
-const SearchBackgroundScreen = withPageBackground(SearchScreen);
 
 // The two hub screens live in a bottom-tab navigator so the tab bar persists
 // and only the content swaps between them (Library / Settings). Detail,
@@ -447,11 +436,6 @@ function App() {
                   options={{headerShown: false}}
                 />
                 <RootStack.Screen
-                  name="GfnStream"
-                  component={GfnStreamScreen}
-                  options={{headerShown: false}}
-                />
-                <RootStack.Screen
                   name="CustomGamepad"
                   component={CustomGamepadScreen}
                   options={{headerShown: false}}
@@ -462,24 +446,9 @@ function App() {
                   options={{title: t('Custom')}}
                 />
                 <RootStack.Screen
-                  name="Search"
-                  component={SearchBackgroundScreen}
-                  options={{title: t('Search'), headerShown: false}}
-                />
-                <RootStack.Screen
-                  name="Achivements"
-                  component={AchivementBackgroundScreen}
-                  options={{title: t('Achivements')}}
-                />
-                <RootStack.Screen
                   name="History"
                   component={HistoryBackgroundScreen}
                   options={{title: t('HistoryTitle')}}
-                />
-                <RootStack.Screen
-                  name="GameMap"
-                  component={GameMapBackgroundScreen}
-                  options={{title: t('GameMap')}}
                 />
                 <RootStack.Screen
                   name="NativeGameMap"
@@ -497,10 +466,6 @@ function App() {
                 <RootStack.Screen
                   name="LibraryTitleDetail"
                   component={LibraryTitleDetailBackgroundScreen}
-                />
-                <RootStack.Screen
-                  name="AchivementDetail"
-                  component={AchivementDetailBackgroundScreen}
                 />
                 <RootStack.Screen
                   name="GameMapDetail"
