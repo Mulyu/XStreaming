@@ -1,7 +1,7 @@
 import Xal from './xal';
 import TokenStore from './xal/tokenstore';
 import {debugFactory} from './utils/debug';
-import StreamingToken from './tokens/streamingtoken';
+import {StreamingToken} from './entities/xbox-token';
 import {
   getStreamToken,
   saveStreamToken,
