@@ -1,8 +1,10 @@
 import axios from 'axios';
-import UserToken from '../tokens/usertoken';
-import MsalToken from '../tokens/msaltoken';
-import XstsToken from '../tokens/xststoken';
-import StreamingToken from '../tokens/streamingtoken';
+import {
+  UserToken,
+  MsalToken,
+  XstsToken,
+  StreamingToken,
+} from '../entities/xbox-token';
 import {getSettings} from '../store/settingStore';
 import TokenStore from './tokenstore';
 

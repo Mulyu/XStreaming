@@ -1,11 +1,13 @@
 import {NativeModules} from 'react-native';
 import axios from 'axios';
-import UserToken from '../tokens/usertoken';
-import SisuToken from '../tokens/sisutoken';
-import DeviceToken from '../tokens/devicetoken';
-import XstsToken from '../tokens/xststoken';
-import MsalToken from '../tokens/msaltoken';
-import StreamingToken from '../tokens/streamingtoken';
+import {
+  UserToken,
+  SisuToken,
+  DeviceToken,
+  XstsToken,
+  MsalToken,
+  StreamingToken,
+} from '../entities/xbox-token';
 import {getSettings} from '../store/settingStore';
 import {debugFactory} from '../utils/debug';
 import 'react-native-url-polyfill/auto';

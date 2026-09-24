@@ -5,7 +5,7 @@ import {Address6} from 'ip-address';
 import TokenStore from '../xal/tokenstore';
 import Msal from '../xal/msal';
 import Xal from '../xal';
-import MsalToken from '../tokens/msaltoken';
+import {MsalToken} from '../entities/xbox-token';
 
 const log = debugFactory('xCloud/index.js');
 
