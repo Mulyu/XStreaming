@@ -22,7 +22,6 @@ import StreamHandshakeOverlay from '../components/StreamHandshakeOverlay';
 import type {LoadingPhase} from '../utils/loadingPhase';
 import {useSelector} from 'react-redux';
 import XcloudApi from '../xCloud';
-import WebApi from '../web';
 import {getSettings, saveSettings} from '../store/settingStore';
 import {
   saveSettings as saveGamepadLayout,
@@ -248,7 +247,6 @@ export function NativeStreamScreenBase({
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const authentication = useSelector((state: any) => state.authentication);
   const streamingTokens = useSelector((state: any) => state.streamingTokens);
-  const webToken = useSelector((state: any) => state.webToken);
 
   const [loading, setLoading] = React.useState(false);
   const [loadingText, setLoadingText] = React.useState('');
@@ -300,7 +298,6 @@ export function NativeStreamScreenBase({
   const holdToggleSetRef = React.useRef<Set<string>>(new Set());
   const [performance, setPerformance] = React.useState<any>({});
   const [showPerformance, setShowPerformance] = React.useState(false);
-  const [messageSending, setMessageSending] = React.useState(false);
   const [showGamepadEditor, setShowGamepadEditor] = React.useState(false);
   const [editorProfile, setEditorProfile] = React.useState('');
   const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
@@ -331,9 +328,7 @@ export function NativeStreamScreenBase({
   const xCloudApiRef = React.useRef<any>(undefined);
   const isRumbling = React.useRef(false);
   const systemKeyboardTransactionRef = React.useRef<any>(null);
-  const handleExitRef = React.useRef<(off?: boolean) => void | Promise<void>>(
-    () => {},
-  );
+  const handleExitRef = React.useRef<() => void | Promise<void>>(() => {});
 
   // webrtc
   const [webrtcClient, setWebrtcClient] = React.useState<any>(undefined);
@@ -609,7 +604,7 @@ export function NativeStreamScreenBase({
               completeWithResult(result);
               setTimeout(() => {
                 if (buttonText.toUpperCase().indexOf('QUIT') !== -1) {
-                  handleExitRef.current(false);
+                  handleExitRef.current();
                 }
               }, 500);
             },
@@ -2188,73 +2183,17 @@ export function NativeStreamScreenBase({
     };
   }, [connectState, showPerformance, webrtcClient]);
 
-  const handlePowerOff = React.useCallback(async () => {
-    const webApi = new WebApi(webToken);
-    const powerOffRes = await webApi.powerOff(route.params?.sessionId);
-    console.log('powerOff:', powerOffRes);
-  }, [route.params?.sessionId, webToken]);
-
-  const handleSendMessage = React.useCallback(
-    async (rawMessage: string) => {
-      const webApi = new WebApi(webToken);
-      setMessageSending(true);
-      let text = rawMessage.trim();
-      if (text.length > 100) {
-        text = text.substring(0, 100);
-      }
-      try {
-        await webApi.sendText(route.params?.sessionId, text);
-        ToastAndroid.show(t('Sended'), ToastAndroid.SHORT);
-      } catch (e) {}
-      setMessageSending(false);
-    },
-    [route.params?.sessionId, t, webToken],
-  );
-
-  const openSendTextDialog = React.useCallback(async () => {
-    if (messageSending) {
+  const handleExit = React.useCallback(async () => {
+    setLoading(true);
+    setLoadingText(t('Disconnecting...'));
+    if (isExiting) {
       return;
     }
-
-    const result = await showNativeInputDialog({
-      title: t('Send text'),
-      hint: t('Text'),
-      text: '',
-      maxLength: 100,
-      confirmText: t('Send'),
-      cancelText: t('Cancel'),
-    });
-
-    if (result?.action === 'confirm') {
-      await handleSendMessage(result.text || '');
-    }
-  }, [handleSendMessage, messageSending, showNativeInputDialog, t]);
-
-  const handleExit = React.useCallback(
-    async (off = false) => {
-      setLoading(true);
-      setLoadingText(t('Disconnecting...'));
-      if (isExiting) {
-        return;
-      }
-      setIsExiting(true);
-      webrtcClient && webrtcClient.close();
-      await waitStopStream(streamApi);
-      if (off) {
-        handlePowerOff();
-      }
-      finishStreamExit();
-    },
-    [
-      finishStreamExit,
-      handlePowerOff,
-      isExiting,
-      streamApi,
-      t,
-      waitStopStream,
-      webrtcClient,
-    ],
-  );
+    setIsExiting(true);
+    webrtcClient && webrtcClient.close();
+    await waitStopStream(streamApi);
+    finishStreamExit();
+  }, [finishStreamExit, isExiting, streamApi, t, waitStopStream, webrtcClient]);
   handleExitRef.current = handleExit;
 
   const handleCloseControlRail = React.useCallback(() => {
@@ -2836,22 +2775,19 @@ export function NativeStreamScreenBase({
     swipeAimResetTimer.current = setTimeout(clearSwipeAim, 60);
   };
 
-  const requestExit = React.useCallback(
-    (off = false) => {
-      clearAllMacroTimers();
-      isRequestExit.current = true;
-      setShowPerformance(false);
-      setShowVirtualGamepad(false);
-      webrtcClient && webrtcClient.close();
-      setShowControlRail(false);
-      if (settings.sensor) {
-        SensorModule.stopSensor();
-        GamepadSensorModule.stopSensor();
-      }
-      handleExit(off);
-    },
-    [clearAllMacroTimers, handleExit, settings.sensor, webrtcClient],
-  );
+  const requestExit = React.useCallback(() => {
+    clearAllMacroTimers();
+    isRequestExit.current = true;
+    setShowPerformance(false);
+    setShowVirtualGamepad(false);
+    webrtcClient && webrtcClient.close();
+    setShowControlRail(false);
+    if (settings.sensor) {
+      SensorModule.stopSensor();
+      GamepadSensorModule.stopSensor();
+    }
+    handleExit();
+  }, [clearAllMacroTimers, handleExit, settings.sensor, webrtcClient]);
 
   const handleToggleMic = React.useCallback(async () => {
     if (!webrtcClient) {
@@ -3156,31 +3092,14 @@ export function NativeStreamScreenBase({
     }, 120);
   }, []);
 
-  const handleRailLongPressNexus = React.useCallback(() => {
-    gpState.Nexus = 1;
-    setTimeout(() => {
-      gpState.Nexus = 0;
-    }, 1000);
-  }, []);
-
-  const handleRailSendText = React.useCallback(() => {
-    handleCloseControlRail();
-    openSendTextDialog();
-  }, [handleCloseControlRail, openSendTextDialog]);
-
   const handleRailEditGamepad = React.useCallback(() => {
     handleCloseControlRail();
     handleOpenGamepadEditor();
   }, [handleCloseControlRail, handleOpenGamepadEditor]);
 
-  const handleRailDisconnectPowerOff = React.useCallback(() => {
-    handleCloseControlRail();
-    requestExit(true);
-  }, [handleCloseControlRail, requestExit]);
-
   const handleRailDisconnect = React.useCallback(() => {
     handleCloseControlRail();
-    requestExit(false);
+    requestExit();
   }, [handleCloseControlRail, requestExit]);
 
   React.useEffect(() => {
@@ -3448,9 +3367,6 @@ export function NativeStreamScreenBase({
       : showMouseTrackpad
       ? 'mouse'
       : 'off';
-    const isConsoleStream =
-      route.params?.streamType !== 'cloud' &&
-      route.params?.streamType !== 'gfn';
     return (
       <StreamControlRail
         visible={showControlRail}
@@ -3490,12 +3406,7 @@ export function NativeStreamScreenBase({
         onCycleVideoFormat={handleCycleVideoFormat}
         fsrEnabled={!!settings.fsr}
         onToggleFsr={handleToggleFsr}
-        showConsoleActions={isConsoleStream}
         onPressNexus={handleRailPressNexus}
-        onLongPressNexus={handleRailLongPressNexus}
-        onSendText={handleRailSendText}
-        showPowerOff={!!settings.power_on && isConsoleStream}
-        onDisconnectPowerOff={handleRailDisconnectPowerOff}
         onDisconnect={handleRailDisconnect}
       />
     );
@@ -3603,7 +3514,7 @@ export function NativeStreamScreenBase({
       {
         text: t('Confirm'),
         style: 'destructive',
-        onPress: () => requestExit(false),
+        onPress: () => requestExit(),
       },
     ]);
   };
