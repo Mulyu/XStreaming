@@ -733,6 +733,20 @@ function LibraryScreen() {
   const activeSortLabel =
     sortOptions.find(o => o.value === sortMode)?.label || t('SortRecent');
 
+  // True only during the brief window right after launch where this device
+  // has a known xCloud account (a cached catalog from a previous load) but
+  // this session's token hasn't come back from the background sign-in check
+  // yet (see Home.tsx: reaching Library no longer waits on it) -- once it
+  // does, the "recent" effect above refetches and this screen's own sort
+  // re-applies on its own. Only surfaced while sortMode is actually 'recent',
+  // since that's the only sort this affects, and only when xcloudTitles is
+  // already non-empty, since an empty cache means either no xCloud account at
+  // all or genuinely zero entitlements -- nothing is still "on its way" then.
+  const xcloudRecentPending =
+    sortMode === 'recent' &&
+    !streamingTokens?.xCloudToken &&
+    xcloudTitles.length > 0;
+
   // Square-tile grid. A denser 110/150 target read as too small for
   // browsing comfortably (was 260/300 before that pass) -- back up to a
   // size that lands around 2 columns on a phone in portrait.
@@ -939,6 +953,12 @@ function LibraryScreen() {
                 ]}>
                 {`${t('Sort')}: ${activeSortLabel}`}
               </Text>
+              {xcloudRecentPending && (
+                <ActivityIndicator
+                  size={10}
+                  color={sortMode !== 'recent' ? '#0B0F0C' : '#8A9A92'}
+                />
+              )}
               <Icon
                 source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
                 size={14}
