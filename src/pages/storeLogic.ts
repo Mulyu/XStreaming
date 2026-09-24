@@ -6,7 +6,7 @@ import {
   buildGfnCatalogTitle,
   buildXcloudCatalogTitle,
   CatalogTitle,
-} from '../catalog/unifiedCatalog';
+} from '../entities/catalog-title';
 import {
   formatPrice,
   getPrice,

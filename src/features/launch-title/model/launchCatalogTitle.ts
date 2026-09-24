@@ -1,10 +1,10 @@
 import {
   CatalogPreference,
   setCatalogPreference,
-} from '../store/catalogPreferences';
-import {CatalogTitle} from './unifiedCatalog';
-import {getTitleStreamingId} from '../store/shortcutStore';
-import {getSettings} from '../store/settingStore';
+} from '../../../store/catalogPreferences';
+import {CatalogTitle} from '../../../entities/catalog-title';
+import {getTitleStreamingId} from '../../../store/shortcutStore';
+import {getSettings} from '../../../store/settingStore';
 
 // Launches a merged catalog title via a specific provider (and, for GFN, a
 // specific store), remembering the choice so the next tap on this title from

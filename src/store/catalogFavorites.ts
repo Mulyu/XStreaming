@@ -1,7 +1,7 @@
 import {storage} from './mmkv';
 
 // Favorited titles in the unified Library, keyed by normalized title (the
-// same key catalog/unifiedCatalog.ts groups xCloud/GFN entries under) so a
+// same key entities/catalog-title groups xCloud/GFN entries under) so a
 // title can be favorited regardless of which provider(s) it's on. Stored as
 // one array (not one MMKV key per title) so the Library grid's filter can
 // load the whole set in a single read.

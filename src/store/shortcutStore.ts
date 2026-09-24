@@ -84,10 +84,10 @@ export const findTitleByProductId = (productId: any) => {
 
 // ---- Provider-agnostic "add to home screen" request ----
 //
-// xCloud and GFN launch through entirely different screens (TitleDetail vs.
-// NativeStream, see catalog/launchCatalogTitle.ts), so a shortcut has to
-// carry enough of its own provider's identifiers to relaunch directly into
-// the right one -- it can't reuse a single generic id/lookup the way the
+// xCloud and GFN launch NativeStream with different params (see
+// features/launch-title), so a shortcut has to carry enough of its own
+// provider's identifiers to relaunch directly into the right one -- it
+// can't reuse a single generic id/lookup the way the
 // xCloud-only shortcut this replaces did. xCloud still resolves through
 // findTitleByProductId at open time (see App.tsx) since TitleDetail needs
 // the full raw title object; GFN doesn't need a lookup at all, since
