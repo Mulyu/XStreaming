@@ -6,7 +6,7 @@ import {
 } from '../storeLogic';
 import {GfnGame} from '../../gfn/publicGames';
 import {PriceInfo} from '../../utils/storePrice';
-import {SteamChartEntry} from '../../storeCharts/steamCharts';
+import {SteamChartEntry} from '../../features/store-charts';
 
 describe('hasMorePages', () => {
   it('returns false once a page comes back empty', () => {
