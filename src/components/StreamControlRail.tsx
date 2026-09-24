@@ -44,12 +44,7 @@ export interface StreamControlRailProps {
   onCycleVideoFormat: () => void;
   fsrEnabled: boolean;
   onToggleFsr: () => void;
-  showConsoleActions: boolean;
   onPressNexus: () => void;
-  onLongPressNexus: () => void;
-  onSendText: () => void;
-  showPowerOff: boolean;
-  onDisconnectPowerOff: () => void;
   onDisconnect: () => void;
 }
 
@@ -143,12 +138,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   onCycleVideoFormat,
   fsrEnabled,
   onToggleFsr,
-  showConsoleActions,
   onPressNexus,
-  onLongPressNexus,
-  onSendText,
-  showPowerOff,
-  onDisconnectPowerOff,
   onDisconnect,
 }) => {
   const {t} = useTranslation();
@@ -394,31 +384,6 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
               accent={accent}
               onPress={onPressNexus}
             />
-            {showConsoleActions && (
-              <RailButton
-                icon="gesture-tap-hold"
-                label={t('Long press Nexus')}
-                accent={accent}
-                onPress={onLongPressNexus}
-              />
-            )}
-            {showConsoleActions && (
-              <RailButton
-                icon="keyboard-outline"
-                label={t('Send text')}
-                accent={accent}
-                onPress={onSendText}
-              />
-            )}
-            {showPowerOff && (
-              <RailButton
-                icon="power-plug-off-outline"
-                label={t('Disconnect and power off')}
-                accent={accent}
-                danger
-                onPress={onDisconnectPowerOff}
-              />
-            )}
             <RailButton
               icon="power"
               label={t('Disconnect')}

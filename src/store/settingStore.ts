@@ -47,7 +47,6 @@ export type Settings = {
   fsr_display_options: DisplayOptions;
   ipv6: boolean;
   check_update: boolean;
-  power_on: boolean;
   fsr: boolean;
   coop: boolean;
   use_msal_login: boolean;
@@ -108,7 +107,6 @@ const defaultSettings: Settings = {
   right_trigger_effects: [],
   ipv6: false,
   check_update: true,
-  power_on: false,
   fsr_display_options: {
     sharpness: 2,
     saturation: 5,
