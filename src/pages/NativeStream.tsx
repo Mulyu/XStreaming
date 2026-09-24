@@ -65,7 +65,7 @@ import SwipeAimZone from '../components/SwipeAimZone';
 import MouseTrackpadZone from '../components/MouseTrackpadZone';
 import VirtualKeyboard from '../components/VirtualKeyboard';
 import CustomKeyButtons from '../components/CustomKeyButtons';
-import {useKeyboardModifiers} from '../hooks/useKeyboardModifiers';
+import {useKeyboardModifiers} from '../features/virtual-keyboard';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {getCoverLayout} from '../store/coverLayoutStore';
 import PortraitVirtualGamepad, {
@@ -3319,7 +3319,7 @@ export function NativeStreamScreenBase({
 
   // Shared Shift/Ctrl/Alt/Win latch, used by both the full keyboard overlay
   // and any custom key buttons on the active profile -- see
-  // hooks/useKeyboardModifiers.ts.
+  // features/virtual-keyboard.
   const keyboardModifiers = useKeyboardModifiers(handleKeyDown, handleKeyUp);
 
   // Releases any latched modifier when leaving Native touch (mirrors

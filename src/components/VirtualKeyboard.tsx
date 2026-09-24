@@ -9,7 +9,7 @@ import {
   KEY_MOD_SHIFT,
   VK,
 } from '../gfn/inputEncoding';
-import {KeyboardModifiers} from '../hooks/useKeyboardModifiers';
+import {KeyboardModifiers} from '../features/virtual-keyboard';
 
 const ACCENT = '#76B900'; // GFN-only feature -- always the NVIDIA accent.
 const FOCUS_COLOR = '#FFD54A';
@@ -158,7 +158,7 @@ export type VirtualKeyboardProps = {
   onKeyDown: (virtualKey: number, modifiers: number) => void;
   onKeyUp: (virtualKey: number, modifiers: number) => void;
   // Shift/Ctrl/Alt/Win latch state, shared with any custom key buttons
-  // configured as one of those keys -- see hooks/useKeyboardModifiers.ts.
+  // configured as one of those keys -- see features/virtual-keyboard.
   modifiers: KeyboardModifiers;
 };
 
