@@ -3,7 +3,7 @@ import {StyleSheet, View, NativeModules} from 'react-native';
 import {Text} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {getSettings} from '../store/settingStore';
-import {getXcloudRegionFlag} from '../common/settings/xcloud';
+import {getXcloudRegionFlag} from '../features/app-settings';
 
 const {BatteryModule} = NativeModules;
 

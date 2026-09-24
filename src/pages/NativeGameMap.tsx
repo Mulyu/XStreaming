@@ -5,7 +5,7 @@ import {useTranslation} from 'react-i18next';
 import {getSettings, saveSettings} from '../store/settingStore';
 import {debugFactory} from '../utils/debug';
 import MapItem from '../components/MapItem';
-import {GAMEPAD_MAPING} from '../common';
+import {GAMEPAD_MAPING} from '../entities/gamepad';
 
 const log = debugFactory('NativeGameMapScreen');
 

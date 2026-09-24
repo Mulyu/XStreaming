@@ -1,7 +1,7 @@
 import React from 'react';
 import {View} from 'react-native';
 import {SvgXml} from 'react-native-svg';
-import icons from '../../common/virtualgp';
+import {virtualButtonIcons as icons} from '../../entities/gamepad';
 import {getButtonBaseSize} from '../../utils/gamepadLayout';
 
 type Props = {

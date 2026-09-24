@@ -47,8 +47,7 @@ import webRTCClient from '../webrtc';
 import {GfnStreamAdapter} from '../gfn/streamAdapter';
 import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../utils/debug';
-import {GAMEPAD_MAPING} from '../common';
-import {XBOX_360_GAMEPAD_MAPING} from '../common/usbGamepadMaping';
+import {GAMEPAD_MAPING, XBOX_360_GAMEPAD_MAPING} from '../entities/gamepad';
 import VirtualGamepad from '../components/VirtualGamepad';
 import CustomVirtualGamepad from '../components/CustomVirtualGamepad';
 import VirtualGamepadEditor, {
