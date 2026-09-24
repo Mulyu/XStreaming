@@ -376,6 +376,7 @@ export default {
     StoreTabSteam: 'Steam',
     StoreBestSellers: 'Best Sellers',
     StoreNewReleases: 'New Releases',
+    StoreFilterGfnAvailableOnly: 'GFN Only',
     StoreFilteredNote: 'Showing only titles playable on this service',
     StoreEmpty: 'No matching titles found',
     View: 'View',

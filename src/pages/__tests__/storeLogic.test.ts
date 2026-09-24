@@ -120,7 +120,7 @@ describe('buildXboxStoreRows', () => {
     ]);
     const rows = buildXboxStoreRows(['AAA', 'BBB'], xcloudByProductId, {});
     expect(rows).toHaveLength(2);
-    expect(rows[0].catalogTitle.key).toBe(rows[1].catalogTitle.key);
+    expect(rows[0].catalogTitle?.key).toBe(rows[1].catalogTitle?.key);
     expect(rows[0].id).not.toBe(rows[1].id);
   });
 
@@ -147,13 +147,14 @@ describe('buildGfnStoreRows', () => {
     title,
   });
 
-  it('ranks rows by their position in the chart entries, skipping unmatched appIds', () => {
+  it('keeps every chart entry, including ones with no GFN match', () => {
     const rows = buildGfnStoreRows(
       [entry('1', 'Game A'), entry('2', 'Game B'), entry('3', 'Game C')],
       [game('1', 'Game A'), game('3', 'Game C')],
     );
-    expect(rows.map(r => r.id)).toEqual(['1', '3']);
-    expect(rows.map(r => r.rank)).toEqual([1, 3]);
+    expect(rows.map(r => r.id)).toEqual(['1', '2', '3']);
+    expect(rows.map(r => r.rank)).toEqual([1, 2, 3]);
+    expect(rows.map(r => !!r.catalogTitle)).toEqual([true, false, true]);
   });
 
   // Regression for the PR #145 union fix: gfnBaseGames is now [...public,
@@ -164,14 +165,16 @@ describe('buildGfnStoreRows', () => {
     const second = game('1', 'Game A (full catalog)');
     const rows = buildGfnStoreRows([entry('1', 'Game A')], [first, second]);
     expect(rows).toHaveLength(1);
-    expect(rows[0].catalogTitle.gfn?.variants[0]).toBe(second);
+    expect(rows[0].catalogTitle?.gfn?.variants[0]).toBe(second);
   });
 
-  it('skips entries with no steamAppId match at all', () => {
+  it('still shows an entry with no steamAppId match at all, with a null catalogTitle', () => {
     const rows = buildGfnStoreRows(
       [entry('999', 'Unmatched')],
       [game('1', 'Game A')],
     );
-    expect(rows).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe('Unmatched');
+    expect(rows[0].catalogTitle).toBeNull();
   });
 });

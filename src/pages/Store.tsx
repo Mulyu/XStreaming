@@ -88,6 +88,13 @@ function StoreScreen() {
   const [provider, setProvider] = React.useState<Provider>('xcloud');
   const [chartKind, setChartKind] = React.useState<ChartKind>('best');
   const [saleOnly, setSaleOnly] = React.useState(false);
+  // GFN/Steam-only: off by default, showing Steam's full chart (including
+  // titles not on GFN, with a null catalogTitle -- see buildGfnStoreRows).
+  // The Xbox/xCloud tab has no equivalent toggle: its browse endpoint only
+  // returns bare product ids with no display data of their own, so a row
+  // there only exists once matched against the entitled catalog in the first
+  // place (see storeLogic.ts's StoreRow comment).
+  const [gfnAvailableOnly, setGfnAvailableOnly] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
   // Loading state is tracked per provider, not as one shared flag -- a
@@ -495,7 +502,7 @@ function StoreScreen() {
       }
       const kind = chartKind === 'best' ? 'topsellers' : 'new';
       const isVisibleMatch = (entry: SteamChartEntry): boolean => {
-        if (!gfnSteamAppIds.has(entry.appId)) {
+        if (gfnAvailableOnly && !gfnSteamAppIds.has(entry.appId)) {
           return false;
         }
         return saleOnly ? !!entry.originalPrice : true;
@@ -559,6 +566,7 @@ function StoreScreen() {
     xcloudByProductId,
     xboxPriceMap,
     saleOnly,
+    gfnAvailableOnly,
     gfnSteamAppIds,
     loading,
   ]);
@@ -581,10 +589,16 @@ function StoreScreen() {
     ],
   );
 
-  const visibleRows = React.useMemo(
-    () => (saleOnly ? rows.filter(row => !!row.originalPrice) : rows),
-    [rows, saleOnly],
-  );
+  const visibleRows = React.useMemo(() => {
+    let list = rows;
+    if (saleOnly) {
+      list = list.filter(row => !!row.originalPrice);
+    }
+    if (provider === 'gfn' && gfnAvailableOnly) {
+      list = list.filter(row => !!row.catalogTitle);
+    }
+    return list;
+  }, [rows, saleOnly, provider, gfnAvailableOnly]);
 
   // The initial page-0 fetch above only ever tries one page, and it's common
   // for that single page to match few or zero cloud-playable titles --
@@ -601,8 +615,14 @@ function StoreScreen() {
   // having loaded at least once, so this doesn't burn through pages while
   // xcloudTitles/gfnFullCatalog are still empty because *they* haven't
   // arrived yet (every row would look "no match" for that unrelated reason).
+  // For GFN, only block auto-continuation on the catalog having loaded when
+  // the "available only" filter is actually active -- with it off, rows are
+  // already visible straight from Steam's own chart data regardless of
+  // whether the (much smaller, sign-in-gated) GFN catalog has loaded yet.
   const catalogReady =
-    provider === 'xcloud' ? xcloudTitles.length > 0 : gfnFullCatalog.length > 0;
+    provider === 'xcloud'
+      ? xcloudTitles.length > 0
+      : !gfnAvailableOnly || gfnFullCatalog.length > 0;
   React.useEffect(() => {
     if (
       loading ||
@@ -629,6 +649,9 @@ function StoreScreen() {
 
   const openRow = React.useCallback(
     (row: StoreRow) => {
+      if (!row.catalogTitle) {
+        return;
+      }
       navigation.navigate('LibraryTitleDetail', {
         catalogTitle: row.catalogTitle,
       });
@@ -636,34 +659,42 @@ function StoreScreen() {
     [navigation],
   );
 
-  const renderRow = ({item}: {item: StoreRow}) => (
-    <Pressable
-      style={styles.row}
-      onPress={() => openRow(item)}
-      android_ripple={{color: 'rgba(150,150,150,0.12)'}}>
-      <Text style={styles.rank}>#{item.rank}</Text>
-      {item.imageUrl ? (
-        <Image source={{uri: item.imageUrl}} style={styles.cover} />
-      ) : (
-        <View style={[styles.cover, styles.coverPlaceholder]} />
-      )}
-      <View style={styles.rowBody}>
-        <Text style={styles.rowTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        {!!item.price && (
-          <View style={styles.priceRow}>
-            {!!item.originalPrice && (
-              <Text style={styles.originalPrice}>{item.originalPrice}</Text>
-            )}
-            <Text style={[styles.price, !!item.originalPrice && styles.onSale]}>
-              {item.price}
-            </Text>
-          </View>
+  const renderRow = ({item}: {item: StoreRow}) => {
+    // Only possible on the GFN/Steam tab (see StoreRow's own comment) --
+    // still shown so the chart reads as the real, complete Steam ranking,
+    // just dimmed and inert since there's nothing to launch.
+    const unavailable = !item.catalogTitle;
+    return (
+      <Pressable
+        style={[styles.row, unavailable && styles.rowUnavailable]}
+        disabled={unavailable}
+        onPress={() => openRow(item)}
+        android_ripple={{color: 'rgba(150,150,150,0.12)'}}>
+        <Text style={styles.rank}>#{item.rank}</Text>
+        {item.imageUrl ? (
+          <Image source={{uri: item.imageUrl}} style={styles.cover} />
+        ) : (
+          <View style={[styles.cover, styles.coverPlaceholder]} />
         )}
-      </View>
-    </Pressable>
-  );
+        <View style={styles.rowBody}>
+          <Text style={styles.rowTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+          {!!item.price && (
+            <View style={styles.priceRow}>
+              {!!item.originalPrice && (
+                <Text style={styles.originalPrice}>{item.originalPrice}</Text>
+              )}
+              <Text
+                style={[styles.price, !!item.originalPrice && styles.onSale]}>
+                {item.price}
+              </Text>
+            </View>
+          )}
+        </View>
+      </Pressable>
+    );
+  };
 
   const renderFooter = () =>
     loadingMore ? (
@@ -739,8 +770,26 @@ function StoreScreen() {
               {t('LibraryFilterOnSale')}
             </Text>
           </Pressable>
+          {provider === 'gfn' && (
+            <Pressable
+              style={[
+                styles.kindChip,
+                gfnAvailableOnly && styles.kindOnGfnAvailable,
+              ]}
+              onPress={() => setGfnAvailableOnly(prev => !prev)}>
+              <Text
+                style={[
+                  styles.kindText,
+                  gfnAvailableOnly && styles.kindTextOnGfnAvailable,
+                ]}>
+                {t('StoreFilterGfnAvailableOnly')}
+              </Text>
+            </Pressable>
+          )}
         </View>
-        <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
+        {(provider === 'xcloud' || gfnAvailableOnly) && (
+          <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
+        )}
       </View>
 
       {visibleRows.length === 0 && (loading || loadingMore) ? (
@@ -799,9 +848,11 @@ const styles = StyleSheet.create({
   },
   kindOn: {backgroundColor: 'rgba(232,179,74,0.9)'},
   kindOnSale: {backgroundColor: SALE_ACCENT},
+  kindOnGfnAvailable: {backgroundColor: NVIDIA_ACCENT},
   kindText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
   kindTextOn: {color: '#2B1D02'},
   kindTextOnSale: {color: '#2B1200'},
+  kindTextOnGfnAvailable: {color: '#0B2B00'},
   subnote: {fontSize: 11, color: '#5C6963'},
   list: {paddingHorizontal: 14, paddingBottom: 24},
   row: {
@@ -810,6 +861,10 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
   },
+  // Dims a Steam-only row (no GFN match, nothing to launch) so the chart
+  // still reads as Steam's real, complete ranking instead of silently
+  // dropping titles the way the Xbox tab's API constraints force it to.
+  rowUnavailable: {opacity: 0.45},
   rank: {
     width: 28,
     fontSize: 14,
