@@ -37,13 +37,13 @@ import {
   buildUnifiedCatalog,
   isCatalogTitleOwned,
   CatalogTitle,
-} from '../catalog/unifiedCatalog';
+} from '../entities/catalog-title';
 import {getCatalogPreference} from '../store/catalogPreferences';
 import {getFavoriteKeys} from '../store/catalogFavorites';
 import {
   launchWithProvider,
   isPreferenceAvailable,
-} from '../catalog/launchCatalogTitle';
+} from '../features/launch-title';
 import {getSettings} from '../store/settingStore';
 import {getSystemRegion} from '../utils/locale';
 import {getXcloudData, saveXcloudData} from '../store/xcloudStore';
