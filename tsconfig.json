@@ -4,5 +4,5 @@
     "useUnknownInCatchVariables": false,
     "noImplicitAny": false
   },
-  "exclude": ["node_modules", "src/mock/data.js"]
+  "exclude": ["node_modules"]
 }
