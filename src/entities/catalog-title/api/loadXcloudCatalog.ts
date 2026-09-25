@@ -1,9 +1,9 @@
-import XcloudApi from './index';
-import {storage} from '../shared/lib/mmkv';
+import XcloudCatalogApi from './xcloudCatalogApi';
+import {storage} from '../../../shared/lib/mmkv';
 
 // Tracks whether the signed-in user's xCloud catalog last loaded
-// successfully. getTitles()/getGamePassProducts() (see index.ts) both
-// swallow their own network failures into an empty result, which on its own
+// successfully. getTitles()/getGamePassProducts() (see xcloudCatalogApi.ts)
+// both swallow their own network failures into an empty result, which on its own
 // is indistinguishable from "this account genuinely has 0 entitlements" --
 // this wrapper tells the two apart so the Settings screen can show a real
 // status instead of always reading as empty.
@@ -53,10 +53,9 @@ export const clearXcloudCatalogStatus = (): void => {
 export const loadXcloudCatalog = async (
   xCloudToken: any,
 ): Promise<{titles: any[]; status: XcloudCatalogStatus}> => {
-  const api = new XcloudApi(
+  const api = new XcloudCatalogApi(
     xCloudToken.getDefaultRegion().baseUri,
     xCloudToken.data.gsToken,
-    'cloud',
   );
   const res: any = await api.getTitles();
   // getTitles() resolves the raw {results: [...]} response on success, but

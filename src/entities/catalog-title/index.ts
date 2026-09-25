@@ -49,3 +49,12 @@ export {
 } from './model/steamPriceCache';
 
 export {getFreshGfnRankOrder, saveGfnRankOrder} from './model/gfnRankCache';
+
+export {default as XcloudCatalogApi} from './api/xcloudCatalogApi';
+
+export type {XcloudCatalogStatus} from './api/loadXcloudCatalog';
+export {
+  loadXcloudCatalog,
+  getXcloudCatalogStatus,
+  clearXcloudCatalogStatus,
+} from './api/loadXcloudCatalog';

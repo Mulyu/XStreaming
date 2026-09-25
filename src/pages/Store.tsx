@@ -11,7 +11,7 @@ import {Text, Icon, ActivityIndicator} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
-import {loadXcloudCatalog} from '../xCloud/loadCatalog';
+import {loadXcloudCatalog} from '../entities/catalog-title';
 import {GfnGame} from '../gfn/publicGames';
 import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
 import {

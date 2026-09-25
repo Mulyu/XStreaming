@@ -21,7 +21,7 @@ import Orientation from 'react-native-orientation-locker';
 import StreamHandshakeOverlay from '../components/StreamHandshakeOverlay';
 import type {LoadingPhase} from '../utils/loadingPhase';
 import {useSelector} from 'react-redux';
-import XcloudApi from '../xCloud';
+import {XcloudSessionClient} from '../features/xcloud-session';
 import {getSettings, saveSettings} from '../shared/lib/settings';
 import {
   saveVirtualGamepadLayout as saveGamepadLayout,
@@ -1416,7 +1416,7 @@ export function NativeStreamScreenBase({
         } as any);
       } else if (route.params?.streamType === 'cloud') {
         if (streamingTokens.xCloudToken) {
-          const _xCloudApi = new XcloudApi(
+          const _xCloudApi = new XcloudSessionClient(
             streamingTokens.xCloudToken.getDefaultRegion().baseUri,
             streamingTokens.xCloudToken.data.gsToken,
             'cloud',
@@ -1427,7 +1427,7 @@ export function NativeStreamScreenBase({
         }
       } else {
         if (streamingTokens.xHomeToken) {
-          const _xHomeApi = new XcloudApi(
+          const _xHomeApi = new XcloudSessionClient(
             streamingTokens.xHomeToken.getDefaultRegion().baseUri,
             streamingTokens.xHomeToken.data.gsToken,
             'home',
