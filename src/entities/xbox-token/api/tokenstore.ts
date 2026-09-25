@@ -1,10 +1,6 @@
-import {storage} from '../shared/lib/mmkv';
-import {
-  SisuToken,
-  SisuTokenData,
-  UserToken,
-  UserTokenData,
-} from '../entities/xbox-token';
+import {storage} from '../../../shared/lib/mmkv';
+import SisuToken, {SisuTokenData} from '../model/sisutoken';
+import UserToken, {UserTokenData} from '../model/usertoken';
 
 const STORE_KEY = 'user.tokenstore';
 

@@ -2,10 +2,7 @@ import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
 import {getSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../utils/debug';
 import {Address6} from 'ip-address';
-import TokenStore from '../../../xal/tokenstore';
-import Msal from '../../../xal/msal';
-import Xal from '../../../xal';
-import {MsalToken} from '../../../entities/xbox-token';
+import {TokenStore, Msal, Xal, MsalToken} from '../../../entities/xbox-token';
 
 const log = debugFactory('xcloud-session/xcloudSessionClient.js');
 
