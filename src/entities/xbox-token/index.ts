@@ -18,3 +18,17 @@ export type {UserTokenData} from './model/usertoken';
 
 export {default as XstsToken} from './model/xststoken';
 export type {XstsTokenData} from './model/xststoken';
+
+export {
+  saveWebToken,
+  getWebToken,
+  clearWebToken,
+  isWebTokenValid,
+} from './model/webTokenStore';
+
+export {
+  saveStreamToken,
+  getStreamToken,
+  clearStreamToken,
+  isStreamTokenValid,
+} from './model/streamTokenStore';

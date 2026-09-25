@@ -22,13 +22,14 @@ import Slider from '@react-native-community/slider';
 import GridBackground from './GridBackground';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {snapToGrid} from '../utils/gamepadLayout';
-import {getCoverEnabled, setCoverEnabled} from '../store/touchProfileStore';
 import {
+  getCoverEnabled,
+  setCoverEnabled,
   getCoverLayout,
   saveCoverLayout,
   defaultCoverLayout,
   CoverButton,
-} from '../store/coverLayoutStore';
+} from '../features/controller-customization';
 
 const {CoverDisplayManager} = NativeModules;
 

@@ -19,7 +19,7 @@
 // cross-references these ids against that catalog the same way the old
 // chart-scrape result was matched.
 import axios from 'axios';
-import {storage} from '../../../store/mmkv';
+import {storage} from '../../../shared/lib/mmkv';
 import {debugFactory} from '../../../utils/debug';
 
 const log = debugFactory('xboxBrowse');

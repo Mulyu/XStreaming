@@ -9,7 +9,7 @@
 // DOM parser. Same public-API family as appdetails, already used by
 // utils/steamPrice.ts.
 import axios from 'axios';
-import {storage} from '../../../store/mmkv';
+import {storage} from '../../../shared/lib/mmkv';
 import {debugFactory} from '../../../utils/debug';
 
 const log = debugFactory('steamCharts');

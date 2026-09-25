@@ -1,5 +1,5 @@
-import {storage} from './mmkv';
-import {PriceInfo, RatingInfo} from '../utils/storePrice';
+import {storage} from '../../../shared/lib/mmkv';
+import {PriceInfo, RatingInfo} from '../../../utils/storePrice';
 
 // Store prices are cached separately from the title catalog so refreshing
 // prices doesn't reset the catalog's own cache age.

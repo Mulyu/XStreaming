@@ -1,5 +1,5 @@
-import {storage} from './mmkv';
-import {debugFactory} from '../utils/debug';
+import {storage} from '../../../shared/lib/mmkv';
+import {debugFactory} from '../../../utils/debug';
 const log = debugFactory('gamepadStore');
 
 const STORE_KEY = 'user.vgamepad';

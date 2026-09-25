@@ -1,4 +1,4 @@
-import {storage} from '../store/mmkv';
+import {storage} from '../shared/lib/mmkv';
 import {getGfnLocaleSlug, getGfnGraphqlLocale} from './locale';
 
 // GeForce NOW CloudMatch session layer. This requests a game session from

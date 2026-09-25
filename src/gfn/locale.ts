@@ -1,4 +1,4 @@
-import {getSettings} from '../store/settingStore';
+import {getSettings} from '../shared/lib/settings';
 
 // GFN's public per-locale catalog JSON (static.nvidiagrid.net) and its
 // authenticated GraphQL API (games.geforce.com/graphql) use two different

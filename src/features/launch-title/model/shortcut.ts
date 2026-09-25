@@ -1,5 +1,5 @@
-import {storage} from './mmkv';
-import {getXcloudData} from './xcloudStore';
+import {storage} from '../../../shared/lib/mmkv';
+import {getXcloudData} from '../../../entities/catalog-title';
 
 const STORE_KEY = 'user.titleShortcuts';
 

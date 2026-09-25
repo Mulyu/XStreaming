@@ -1,8 +1,8 @@
-import {storage} from './mmkv';
-import {SteamPriceInfo} from '../utils/steamPrice';
+import {storage} from '../../../shared/lib/mmkv';
+import {SteamPriceInfo} from '../../../utils/steamPrice';
 
 // Cached separately from both the xCloud price cache and the catalog itself,
-// same reasoning as priceStore.ts -- refreshing one doesn't reset the others'
+// same reasoning as priceCache.ts -- refreshing one doesn't reset the others'
 // cache age.
 const STORE_KEY = 'user.steam.prices';
 
@@ -16,7 +16,7 @@ export type SteamPriceCache = {
 };
 
 // Steam sales change slowly enough that a day-old cache is still accurate
-// almost all the time; matches priceStore.ts's PRICE_TTL_MS.
+// almost all the time; matches priceCache.ts's PRICE_TTL_MS.
 export const STEAM_PRICE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const getFreshSteamPriceCache = (cc: string): SteamPriceCache | null => {

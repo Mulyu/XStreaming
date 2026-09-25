@@ -30,9 +30,12 @@ import {
 
 import merge from 'deepmerge';
 import {Provider} from 'react-redux';
-import store from './store';
-import {getSettings} from './store/settingStore';
-import {findTitleByProductId, getTitleStreamingId} from './store/shortcutStore';
+import store from './shared/lib/reduxStore';
+import {getSettings} from './shared/lib/settings';
+import {
+  findTitleByProductId,
+  getTitleStreamingId,
+} from './features/launch-title';
 
 import customDarkTheme from './shared/config/theme';
 
@@ -218,7 +221,7 @@ function App() {
       if (isGfn) {
         // GFN never needed a saved snapshot to relaunch -- the shortcut's own
         // Intent extras already carry everything NativeStream needs to start
-        // streaming (see shortcutStore.ts's TitleShortcutSnapshot).
+        // streaming (see features/launch-title's TitleShortcutSnapshot).
         navigationRef.navigate('NativeStream', {
           streamType: 'gfn',
           appId: shortcut.gfnAppId,

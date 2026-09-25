@@ -4,7 +4,7 @@ import {Button, Text, Portal, Modal, Card} from 'react-native-paper';
 import Spinner from '../components/Spinner';
 import {useIsFocused} from '@react-navigation/native';
 import RNRestart from 'react-native-restart';
-import {getSettings, saveSettings} from '../store/settingStore';
+import {getSettings, saveSettings} from '../shared/lib/settings';
 
 import Authentication from '../Authentication';
 import MsalAuthentication from '../MsalAuthentication';

@@ -1,4 +1,4 @@
-import {storage} from './mmkv';
+import {storage} from '../../../shared/lib/mmkv';
 
 // Layout of the buttons shown on the foldable cover (outer) screen. Positions
 // and sizes are stored as fractions (0..1) so they map across the editor canvas

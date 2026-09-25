@@ -23,17 +23,19 @@ import KeyChip from '../components/CustomGamepad/KeyChip';
 import KeyPicker from '../components/KeyPicker';
 import {PickableKey} from '../utils/virtualKeys';
 import GridBackground from '../components/GridBackground';
-import {getSettings, saveSettings, deleteSetting} from '../store/gamepadStore';
 import {
+  getVirtualGamepadLayouts as getSettings,
+  saveVirtualGamepadLayout as saveSettings,
+  deleteVirtualGamepadLayout as deleteSetting,
   getSwipeConfig,
   setSwipeConfig,
   getJoystickMode,
   setJoystickMode,
-} from '../store/touchProfileStore';
+} from '../features/controller-customization';
 import {
   getSettings as getUserSettings,
   saveSettings as saveUserSettings,
-} from '../store/settingStore';
+} from '../shared/lib/settings';
 import {
   createDefaultMacroLayoutButtons,
   ensureMacroLayoutButtons,

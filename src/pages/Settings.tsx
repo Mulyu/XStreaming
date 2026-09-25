@@ -2,7 +2,7 @@ import React from 'react';
 import {StyleSheet, ScrollView, Alert, View, ToastAndroid} from 'react-native';
 import {Text, SegmentedButtons} from 'react-native-paper';
 import Spinner from '../components/Spinner';
-import {getSettings, saveSettings, resetSettings} from '../store/settingStore';
+import {getSettings, saveSettings, resetSettings} from '../shared/lib/settings';
 import SettingItem from '../components/SettingItem';
 import {
   SwitchRow,
@@ -18,13 +18,12 @@ import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
 import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../utils/debug';
-import {clearStreamToken} from '../store/streamTokenStore';
-import {clearWebToken} from '../store/webTokenStore';
+import {clearStreamToken, clearWebToken} from '../entities/xbox-token';
 import {
   clearXcloudData,
   getXcloudData,
   saveXcloudData,
-} from '../store/xcloudStore';
+} from '../entities/catalog-title';
 import {
   loadXcloudCatalog,
   getXcloudCatalogStatus,

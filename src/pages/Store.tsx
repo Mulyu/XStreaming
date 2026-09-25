@@ -19,7 +19,7 @@ import {
   getFreshFullCatalog,
   getCachedFullCatalog,
 } from '../gfn/catalog';
-import {getSettings} from '../store/settingStore';
+import {getSettings} from '../shared/lib/settings';
 import {getSystemRegion} from '../utils/locale';
 import {
   deriveMarketLanguage,

@@ -19,17 +19,20 @@ import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
 import {useGfnSignIn} from '../gfn/useGfnSignIn';
 import GfnSignInModal from '../components/GfnSignInModal';
 import {fetchGfnAppDetails, GfnAppDetails} from '../gfn/catalog';
-import {CatalogTitle} from '../entities/catalog-title';
-import {getCatalogPreference} from '../store/catalogPreferences';
-import {launchWithProvider} from '../features/launch-title';
-import {getSettings} from '../store/settingStore';
-import {getSystemRegion} from '../utils/locale';
-import {getTitleProductId, requestTitleShortcut} from '../store/shortcutStore';
-import {getFreshPriceCache} from '../store/priceStore';
 import {
+  CatalogTitle,
+  getCatalogPreference,
+  getFreshPriceCache,
   isCatalogTitleFavorite,
   setCatalogTitleFavorite,
-} from '../store/catalogFavorites';
+} from '../entities/catalog-title';
+import {
+  launchWithProvider,
+  getTitleProductId,
+  requestTitleShortcut,
+} from '../features/launch-title';
+import {getSettings} from '../shared/lib/settings';
+import {getSystemRegion} from '../utils/locale';
 import {
   PriceInfo,
   RatingInfo,
@@ -101,7 +104,7 @@ function LibraryTitleDetailScreen() {
 
   // Favorites are keyed by the catalog's own normalized-title key, not tied
   // to one provider -- a GFN-only title can be favorited exactly like an
-  // xCloud one. See store/catalogFavorites.ts.
+  // xCloud one. See entities/catalog-title/model/favorites.ts.
   const [isFavorite, setIsFavorite] = React.useState(
     () => !!catalogTitle && isCatalogTitleFavorite(catalogTitle.key),
   );

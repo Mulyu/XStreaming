@@ -1,7 +1,10 @@
 import React from 'react';
 import {View, Text, StyleSheet, DeviceEventEmitter} from 'react-native';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
-import {getCoverLayout, CoverButton} from '../store/coverLayoutStore';
+import {
+  getCoverLayout,
+  CoverButton,
+} from '../features/controller-customization';
 
 // Rendered on the foldable cover (outer) display via the WindowAreaController
 // present-mode session. Runs on the app's single JS context, so touching a

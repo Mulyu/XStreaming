@@ -31,7 +31,7 @@ import KeyChip from './CustomGamepad/KeyChip';
 import KeyPicker from './KeyPicker';
 import {PickableKey} from '../utils/virtualKeys';
 import CoverLayoutOverlay from './CoverLayoutOverlay';
-import {getSettings as getGamepadLayouts} from '../store/gamepadStore';
+import {getVirtualGamepadLayouts as getGamepadLayouts} from '../features/controller-customization';
 import {
   createDefaultMacroLayoutButtons,
   ensureMacroLayoutButtons,

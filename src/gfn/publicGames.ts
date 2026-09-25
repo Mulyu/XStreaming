@@ -1,4 +1,4 @@
-import {storage} from '../store/mmkv';
+import {storage} from '../shared/lib/mmkv';
 import {getGfnLocaleSlug} from './locale';
 
 // GeForce NOW's supported-games list is served as a public, no-auth JSON, so we
