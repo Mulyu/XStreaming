@@ -16,8 +16,8 @@ import {useTranslation} from 'react-i18next';
 import {
   getSettings as getUserSettings,
   saveSettings as saveUserSettings,
-} from '../store/settingStore';
-import {getSettings} from '../store/gamepadStore';
+} from '../shared/lib/settings';
+import {getVirtualGamepadLayouts as getSettings} from '../features/controller-customization';
 import {shiftColor} from '../utils/themeColor';
 
 function VirtualGamepadSettingsScreen({navigation}) {

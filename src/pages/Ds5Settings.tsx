@@ -9,7 +9,7 @@ import {
 import {Button, RadioButton, Text, Divider, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import Slider from '@react-native-community/slider';
-import {getSettings, saveSettings} from '../store/settingStore';
+import {getSettings, saveSettings} from '../shared/lib/settings';
 
 const {UsbRumbleManager} = NativeModules;
 

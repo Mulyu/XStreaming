@@ -5,7 +5,7 @@ import {
   XstsToken,
   StreamingToken,
 } from '../entities/xbox-token';
-import {getSettings} from '../store/settingStore';
+import {getSettings} from '../shared/lib/settings';
 import TokenStore from './tokenstore';
 
 class TokenRefreshError extends Error {

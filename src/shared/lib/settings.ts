@@ -1,7 +1,7 @@
 import {storage} from './mmkv';
-import {debugFactory} from '../utils/debug';
+import {debugFactory} from '../../utils/debug';
 import {NativeModules} from 'react-native';
-import {getSystemLocale} from '../utils/locale';
+import {getSystemLocale} from '../../utils/locale';
 const log = debugFactory('settingStore');
 
 const STORE_KEY = 'user.settings';

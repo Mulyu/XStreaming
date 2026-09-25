@@ -37,23 +37,25 @@ import {
   buildUnifiedCatalog,
   isCatalogTitleOwned,
   CatalogTitle,
-} from '../entities/catalog-title';
-import {getCatalogPreference} from '../store/catalogPreferences';
-import {getFavoriteKeys} from '../store/catalogFavorites';
-import {
-  launchWithProvider,
-  isPreferenceAvailable,
-} from '../features/launch-title';
-import {getSettings} from '../store/settingStore';
-import {getSystemRegion} from '../utils/locale';
-import {getXcloudData, saveXcloudData} from '../store/xcloudStore';
-import {
+  getCatalogPreference,
+  getFavoriteKeys,
+  getXcloudData,
+  saveXcloudData,
   getFreshPriceCache,
   savePriceCache,
   getFreshPopularOrder,
   savePopularOrder,
-} from '../store/priceStore';
-import {getFreshGfnRankOrder, saveGfnRankOrder} from '../store/gfnRankStore';
+  getFreshGfnRankOrder,
+  saveGfnRankOrder,
+  getFreshSteamPriceCache,
+  saveSteamPriceCache,
+} from '../entities/catalog-title';
+import {
+  launchWithProvider,
+  isPreferenceAvailable,
+} from '../features/launch-title';
+import {getSettings} from '../shared/lib/settings';
+import {getSystemRegion} from '../utils/locale';
 import {fetchPopularOrder, buildPopularRank} from '../utils/popularOrder';
 import {
   PriceInfo,
@@ -68,10 +70,6 @@ import {
   fetchSteamPrices,
   isSteamSaleForDisplay,
 } from '../utils/steamPrice';
-import {
-  getFreshSteamPriceCache,
-  saveSteamPriceCache,
-} from '../store/steamPriceStore';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';

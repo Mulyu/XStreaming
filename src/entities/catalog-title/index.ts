@@ -8,3 +8,44 @@ export {
   buildXcloudCatalogTitle,
   buildGfnCatalogTitle,
 } from './model/unifiedCatalog';
+
+export {
+  getFavoriteKeys,
+  isCatalogTitleFavorite,
+  setCatalogTitleFavorite,
+} from './model/favorites';
+
+export type {CatalogPreference} from './model/preferences';
+export {getCatalogPreference, setCatalogPreference} from './model/preferences';
+
+export {
+  saveXcloudData,
+  getXcloudData,
+  clearXcloudData,
+  isxCloudDataValid,
+} from './model/xcloudCache';
+
+export type {
+  PriceCache,
+  PopularCache,
+  LeavingSoonCache,
+} from './model/priceCache';
+export {
+  PRICE_TTL_MS,
+  getPriceCache,
+  getFreshPriceCache,
+  savePriceCache,
+  getFreshPopularOrder,
+  savePopularOrder,
+  getFreshLeavingSoon,
+  saveLeavingSoon,
+} from './model/priceCache';
+
+export type {SteamPriceCache} from './model/steamPriceCache';
+export {
+  STEAM_PRICE_TTL_MS,
+  getFreshSteamPriceCache,
+  saveSteamPriceCache,
+} from './model/steamPriceCache';
+
+export {getFreshGfnRankOrder, saveGfnRankOrder} from './model/gfnRankCache';

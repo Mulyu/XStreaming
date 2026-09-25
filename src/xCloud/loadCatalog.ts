@@ -1,5 +1,5 @@
 import XcloudApi from './index';
-import {storage} from '../store/mmkv';
+import {storage} from '../shared/lib/mmkv';
 
 // Tracks whether the signed-in user's xCloud catalog last loaded
 // successfully. getTitles()/getGamePassProducts() (see index.ts) both

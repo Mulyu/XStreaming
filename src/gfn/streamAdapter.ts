@@ -9,7 +9,7 @@ import {
 } from './session';
 import {GfnWebRtcClient, GfnConnectionState} from './webrtcClient';
 import {getValidGfnJwt} from './auth';
-import {getSettings} from '../store/settingStore';
+import {getSettings} from '../shared/lib/settings';
 import i18next from '../i18n';
 import type {LoadingPhase} from '../utils/loadingPhase';
 import {

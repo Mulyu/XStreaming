@@ -22,18 +22,11 @@ import StreamHandshakeOverlay from '../components/StreamHandshakeOverlay';
 import type {LoadingPhase} from '../utils/loadingPhase';
 import {useSelector} from 'react-redux';
 import XcloudApi from '../xCloud';
-import {getSettings, saveSettings} from '../store/settingStore';
+import {getSettings, saveSettings} from '../shared/lib/settings';
 import {
-  saveSettings as saveGamepadLayout,
-  getSettings as getGamepadLayouts,
-  deleteSetting as deleteGamepadProfile,
-} from '../store/gamepadStore';
-import {
-  buildDefaultLayout,
-  SWIPE_AIM_NAME,
-  createDefaultSwipePad,
-} from '../utils/gamepadLayout';
-import {
+  saveVirtualGamepadLayout as saveGamepadLayout,
+  getVirtualGamepadLayouts as getGamepadLayouts,
+  deleteVirtualGamepadLayout as deleteGamepadProfile,
   getSwipeConfig,
   setSwipeConfig,
   getJoystickMode,
@@ -41,7 +34,13 @@ import {
   getCoverEnabled,
   getLastProfileForGame,
   setLastProfileForGame,
-} from '../store/touchProfileStore';
+  getCoverLayout,
+} from '../features/controller-customization';
+import {
+  buildDefaultLayout,
+  SWIPE_AIM_NAME,
+  createDefaultSwipePad,
+} from '../utils/gamepadLayout';
 import {useTranslation} from 'react-i18next';
 import webRTCClient from '../webrtc';
 import {GfnStreamAdapter} from '../gfn/streamAdapter';
@@ -65,7 +64,6 @@ import VirtualKeyboard from '../components/VirtualKeyboard';
 import CustomKeyButtons from '../components/CustomKeyButtons';
 import {useKeyboardModifiers} from '../features/virtual-keyboard';
 import {coverGamepadBus} from '../utils/coverGamepadBus';
-import {getCoverLayout} from '../store/coverLayoutStore';
 import PortraitVirtualGamepad, {
   PortraitGamepadControl,
 } from '../components/PortraitVirtualGamepad';

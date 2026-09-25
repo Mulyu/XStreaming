@@ -1,4 +1,4 @@
-import {storage} from './mmkv';
+import {storage} from '../../../shared/lib/mmkv';
 
 // Favorited titles in the unified Library, keyed by normalized title (the
 // same key entities/catalog-title groups xCloud/GFN entries under) so a

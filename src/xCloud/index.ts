@@ -1,5 +1,5 @@
 import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
-import {getSettings} from '../store/settingStore';
+import {getSettings} from '../shared/lib/settings';
 import {debugFactory} from '../utils/debug';
 import {Address6} from 'ip-address';
 import TokenStore from '../xal/tokenstore';

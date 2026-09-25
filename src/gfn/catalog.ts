@@ -1,4 +1,4 @@
-import {storage} from '../store/mmkv';
+import {storage} from '../shared/lib/mmkv';
 import {GfnGame, steamAppIdFromUrl} from './publicGames';
 import {getGfnLocaleSlug, getGfnGraphqlLocale} from './locale';
 

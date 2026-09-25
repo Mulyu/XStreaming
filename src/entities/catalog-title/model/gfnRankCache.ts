@@ -1,4 +1,4 @@
-import {storage} from './mmkv';
+import {storage} from '../../../shared/lib/mmkv';
 
 // Caches GFN catalog-wide rank orders (Most Popular / Newest), fetched from
 // the authenticated apps() browse query -- see gfn/catalog.ts. Keyed by sort

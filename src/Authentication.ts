@@ -1,19 +1,17 @@
 import Xal from './xal';
 import TokenStore from './xal/tokenstore';
 import {debugFactory} from './utils/debug';
-import {StreamingToken} from './entities/xbox-token';
 import {
+  StreamingToken,
   getStreamToken,
   saveStreamToken,
   clearStreamToken,
   isStreamTokenValid,
-} from './store/streamTokenStore';
-import {
   getWebToken,
   saveWebToken,
   clearWebToken,
   isWebTokenValid,
-} from './store/webTokenStore';
+} from './entities/xbox-token';
 
 const log = debugFactory('Authentication.ts');
 

@@ -2,7 +2,7 @@ import React from 'react';
 import {View, StyleSheet, FlatList} from 'react-native';
 import {Button} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
-import {getSettings, saveSettings} from '../store/settingStore';
+import {getSettings, saveSettings} from '../shared/lib/settings';
 import {debugFactory} from '../utils/debug';
 import MapItem from '../components/MapItem';
 import {GAMEPAD_MAPING} from '../entities/gamepad';

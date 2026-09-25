@@ -1,4 +1,4 @@
-import {storage} from './mmkv';
+import {storage} from '../../../shared/lib/mmkv';
 
 // Remembers, per game (keyed by its normalized title -- the same key the
 // unified Library catalog groups xCloud/GFN entries under), which provider

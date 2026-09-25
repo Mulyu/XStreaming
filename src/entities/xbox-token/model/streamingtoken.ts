@@ -1,5 +1,5 @@
 import Token, {TokenData} from './base';
-import {getSettings} from '../../../store/settingStore';
+import {getSettings} from '../../../shared/lib/settings';
 
 export interface StreamingRegion {
   baseUri: string;

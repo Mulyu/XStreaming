@@ -1,4 +1,4 @@
-import {storage} from '../store/mmkv';
+import {storage} from '../shared/lib/mmkv';
 
 // GeForce NOW device-code (QR) login. NVIDIA's Steam Deck client uses the OAuth
 // 2.0 device-authorization grant, which is a great fit for a TV/handheld app:

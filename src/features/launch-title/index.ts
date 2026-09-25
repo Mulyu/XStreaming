@@ -5,3 +5,13 @@ export {
   launchWithProvider,
   isPreferenceAvailable,
 } from './model/launchCatalogTitle';
+
+export type {TitleShortcutSnapshot} from './model/shortcut';
+export {
+  getTitleProductId,
+  getTitleStreamingId,
+  saveTitleShortcutSnapshot,
+  findTitleByProductId,
+  buildShortcutRequest,
+  requestTitleShortcut,
+} from './model/shortcut';

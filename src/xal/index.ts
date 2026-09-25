@@ -8,7 +8,7 @@ import {
   MsalToken,
   StreamingToken,
 } from '../entities/xbox-token';
-import {getSettings} from '../store/settingStore';
+import {getSettings} from '../shared/lib/settings';
 import {debugFactory} from '../utils/debug';
 import 'react-native-url-polyfill/auto';
 import TokenStore from './tokenstore';

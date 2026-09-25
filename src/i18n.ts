@@ -9,7 +9,7 @@ import pt from './languages/pt';
 import ko from './languages/ko';
 import ja from './languages/ja';
 import hi from './languages/hi';
-import {getSettings} from './store/settingStore';
+import {getSettings} from './shared/lib/settings';
 import {normalizeAppLocale} from './utils/locale';
 
 const settings = getSettings();
