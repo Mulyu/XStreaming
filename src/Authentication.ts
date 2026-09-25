@@ -1,7 +1,7 @@
-import Xal from './xal';
-import TokenStore from './xal/tokenstore';
 import {debugFactory} from './utils/debug';
 import {
+  Xal,
+  TokenStore,
   StreamingToken,
   getStreamToken,
   saveStreamToken,

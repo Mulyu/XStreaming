@@ -1,7 +1,10 @@
-import Msal from './xal/msal';
-import TokenStore from './xal/tokenstore';
 import {debugFactory} from './utils/debug';
-import {clearStreamToken, clearWebToken} from './entities/xbox-token';
+import {
+  Msal,
+  TokenStore,
+  clearStreamToken,
+  clearWebToken,
+} from './entities/xbox-token';
 
 const log = debugFactory('MsalAuthentication.ts');
 

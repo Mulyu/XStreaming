@@ -1,11 +1,9 @@
 import axios from 'axios';
-import {
-  UserToken,
-  MsalToken,
-  XstsToken,
-  StreamingToken,
-} from '../entities/xbox-token';
-import {getSettings} from '../shared/lib/settings';
+import UserToken from '../model/usertoken';
+import MsalToken from '../model/msaltoken';
+import XstsToken from '../model/xststoken';
+import StreamingToken from '../model/streamingtoken';
+import {getSettings} from '../../../shared/lib/settings';
 import TokenStore from './tokenstore';
 
 class TokenRefreshError extends Error {
