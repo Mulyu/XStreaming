@@ -18,8 +18,6 @@ import {
   useFocusEffect,
 } from '@react-navigation/native';
 import {useSelector} from 'react-redux';
-import XcloudApi from '../xCloud';
-import {loadXcloudCatalog} from '../xCloud/loadCatalog';
 import {GfnGame} from '../gfn/publicGames';
 import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
 import {
@@ -49,6 +47,8 @@ import {
   saveGfnRankOrder,
   getFreshSteamPriceCache,
   saveSteamPriceCache,
+  XcloudCatalogApi,
+  loadXcloudCatalog,
 } from '../entities/catalog-title';
 import {
   launchWithProvider,
@@ -280,7 +280,7 @@ function LibraryScreen() {
     if (missingIds.length === 0) {
       return;
     }
-    const api = new XcloudApi('', '', 'cloud');
+    const api = new XcloudCatalogApi('', '');
     api.getReleaseDates(missingIds).then(fetched => {
       if (Object.keys(fetched).length === 0) {
         return;
@@ -303,10 +303,9 @@ function LibraryScreen() {
     if (!streamingTokens?.xCloudToken) {
       return;
     }
-    const api = new XcloudApi(
+    const api = new XcloudCatalogApi(
       streamingTokens.xCloudToken.getDefaultRegion().baseUri,
       streamingTokens.xCloudToken.data.gsToken,
-      'cloud',
     );
     api.getRecentTitles().then((res: any) => {
       const ids = (res?.results ?? [])
@@ -430,10 +429,9 @@ function LibraryScreen() {
             }
           }),
         );
-        const api = new XcloudApi(
+        const api = new XcloudCatalogApi(
           streamingTokens.xCloudToken.getDefaultRegion().baseUri,
           streamingTokens.xCloudToken.data.gsToken,
-          'cloud',
         );
         tasks.push(
           api.getRecentTitles().then((res: any) => {

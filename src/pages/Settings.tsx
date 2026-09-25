@@ -23,13 +23,11 @@ import {
   clearXcloudData,
   getXcloudData,
   saveXcloudData,
-} from '../entities/catalog-title';
-import {
   loadXcloudCatalog,
   getXcloudCatalogStatus,
   clearXcloudCatalogStatus,
   XcloudCatalogStatus,
-} from '../xCloud/loadCatalog';
+} from '../entities/catalog-title';
 import {useGfnSignIn} from '../gfn/useGfnSignIn';
 import GfnSignInModal from '../components/GfnSignInModal';
 import {getValidGfnJwt, getValidGfnUserId} from '../gfn/auth';
