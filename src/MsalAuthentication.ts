@@ -1,4 +1,4 @@
-import {debugFactory} from './utils/debug';
+import {debugFactory} from './shared/lib/debug';
 import {
   Msal,
   TokenStore,

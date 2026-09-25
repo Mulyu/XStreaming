@@ -1,6 +1,6 @@
 import axios from 'axios';
-import {debugFactory} from './debug';
-import {parseRegion} from './locale';
+import {debugFactory} from '../../../shared/lib/debug';
+import {parseRegion} from '../../../shared/lib/locale';
 
 const log = debugFactory('storePrice');
 

@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
-import type {LoadingPhase} from '../utils/loadingPhase';
+import type {LoadingPhase} from '../shared/lib/loadingPhase';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';

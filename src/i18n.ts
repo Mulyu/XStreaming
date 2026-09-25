@@ -10,7 +10,7 @@ import ko from './languages/ko';
 import ja from './languages/ja';
 import hi from './languages/hi';
 import {getSettings} from './shared/lib/settings';
-import {normalizeAppLocale} from './utils/locale';
+import {normalizeAppLocale} from './shared/lib/locale';
 
 const settings = getSettings();
 

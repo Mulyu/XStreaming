@@ -9,7 +9,11 @@ import {
 import {Text, useTheme} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useTranslation} from 'react-i18next';
-import {PriceInfo, formatPrice, discountPercent} from '../utils/storePrice';
+import {
+  PriceInfo,
+  formatPrice,
+  discountPercent,
+} from '../entities/catalog-title';
 
 type Props = {
   titleItem: any;

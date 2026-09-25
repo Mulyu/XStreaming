@@ -1,6 +1,6 @@
 import axios from 'axios';
 import {getSettings} from '../../../shared/lib/settings';
-import {debugFactory} from '../../../utils/debug';
+import {debugFactory} from '../../../shared/lib/debug';
 
 const log = debugFactory('catalog-title/xcloudCatalogApi.js');
 

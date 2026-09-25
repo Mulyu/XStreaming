@@ -1,6 +1,6 @@
 import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
 import {getSettings} from '../../../shared/lib/settings';
-import {debugFactory} from '../../../utils/debug';
+import {debugFactory} from '../../../shared/lib/debug';
 import {Address6} from 'ip-address';
 import {TokenStore, Msal, Xal, MsalToken} from '../../../entities/xbox-token';
 

@@ -19,7 +19,7 @@ import {IconButton} from 'react-native-paper';
 import {RTCView, MediaStream, RTCRtpReceiver} from 'react-native-webrtc';
 import Orientation from 'react-native-orientation-locker';
 import StreamHandshakeOverlay from '../components/StreamHandshakeOverlay';
-import type {LoadingPhase} from '../utils/loadingPhase';
+import type {LoadingPhase} from '../shared/lib/loadingPhase';
 import {useSelector} from 'react-redux';
 import {XcloudSessionClient} from '../features/xcloud-session';
 import {getSettings, saveSettings} from '../shared/lib/settings';
@@ -35,17 +35,15 @@ import {
   getLastProfileForGame,
   setLastProfileForGame,
   getCoverLayout,
-} from '../features/controller-customization';
-import {
   buildDefaultLayout,
   SWIPE_AIM_NAME,
   createDefaultSwipePad,
-} from '../utils/gamepadLayout';
+} from '../features/controller-customization';
 import {useTranslation} from 'react-i18next';
 import webRTCClient from '../webrtc';
 import {GfnStreamAdapter} from '../gfn/streamAdapter';
 import BackgroundTimer from 'react-native-background-timer';
-import {debugFactory} from '../utils/debug';
+import {debugFactory} from '../shared/lib/debug';
 import {GAMEPAD_MAPING, XBOX_360_GAMEPAD_MAPING} from '../entities/gamepad';
 import VirtualGamepad from '../components/VirtualGamepad';
 import CustomVirtualGamepad from '../components/CustomVirtualGamepad';
@@ -63,17 +61,17 @@ import MouseTrackpadZone from '../components/MouseTrackpadZone';
 import VirtualKeyboard from '../components/VirtualKeyboard';
 import CustomKeyButtons from '../components/CustomKeyButtons';
 import {useKeyboardModifiers} from '../features/virtual-keyboard';
-import {coverGamepadBus} from '../utils/coverGamepadBus';
 import PortraitVirtualGamepad, {
   PortraitGamepadControl,
 } from '../components/PortraitVirtualGamepad';
 import type {PointerWireData} from '../webrtc/Channel/Input';
 import {
+  coverGamepadBus,
   normalizeMacroLoopIntervalMs,
   normalizeMacroSteps,
   VIRTUAL_MACRO_ALLOWED_BUTTONS,
   isMacroButtonName,
-} from '../utils/virtualMacro';
+} from '../features/controller-customization';
 
 const log = debugFactory('NativeStreamScreen');
 

@@ -1,5 +1,5 @@
 import {storage} from '../../../shared/lib/mmkv';
-import {debugFactory} from '../../../utils/debug';
+import {debugFactory} from '../../../shared/lib/debug';
 const log = debugFactory('webTokenStore');
 
 const STORE_KEY = 'user.webToken';

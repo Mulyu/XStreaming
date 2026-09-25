@@ -2,9 +2,8 @@ import React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Canonical capability id -> icon + label. Labels are either translated
-// (t(...)) or kept as brand literals (4K, HDR, Dolby Atmos, ...). Shared by
-// TitleDetail.tsx and LibraryTitleDetail.tsx so the two detail screens agree
-// on how a capability id renders.
+// (t(...)) or kept as brand literals (4K, HDR, Dolby Atmos, ...). Used by
+// LibraryTitleDetail.tsx to render a title's capability badges.
 export const CAP_META: Record<
   string,
   {icon: string; label: string; i18n?: boolean}

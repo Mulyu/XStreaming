@@ -1,5 +1,5 @@
 import React from 'react';
-import {MOD_BIT_TO_VK} from '../../../utils/virtualKeys';
+import {MOD_BIT_TO_VK} from './virtualKeys';
 
 // Shared Shift/Ctrl/Alt/Win latch state for GFN's virtual keyboard surfaces
 // (the full VirtualKeyboard overlay and any per-profile custom key buttons

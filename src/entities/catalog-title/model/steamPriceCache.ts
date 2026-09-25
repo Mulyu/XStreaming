@@ -1,5 +1,5 @@
 import {storage} from '../../../shared/lib/mmkv';
-import {SteamPriceInfo} from '../../../utils/steamPrice';
+import {SteamPriceInfo} from '../api/steamPrice';
 
 // Cached separately from both the xCloud price cache and the catalog itself,
 // same reasoning as priceCache.ts -- refreshing one doesn't reset the others'

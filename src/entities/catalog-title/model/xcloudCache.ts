@@ -1,5 +1,5 @@
 import {storage} from '../../../shared/lib/mmkv';
-import {debugFactory} from '../../../utils/debug';
+import {debugFactory} from '../../../shared/lib/debug';
 const log = debugFactory('xcloudStore');
 
 const STORE_KEY = 'user.xcloud';

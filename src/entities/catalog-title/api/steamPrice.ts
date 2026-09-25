@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {debugFactory} from './debug';
+import {debugFactory} from '../../../shared/lib/debug';
 
 const log = debugFactory('steamPrice');
 
