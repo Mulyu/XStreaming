@@ -18,7 +18,7 @@ import {
   saveSettings as saveUserSettings,
 } from '../shared/lib/settings';
 import {getVirtualGamepadLayouts as getSettings} from '../features/controller-customization';
-import {shiftColor} from '../utils/themeColor';
+import {shiftColor} from '../shared/lib/themeColor';
 
 function VirtualGamepadSettingsScreen({navigation}) {
   const {t} = useTranslation();

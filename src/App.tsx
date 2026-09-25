@@ -53,11 +53,11 @@ import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';
 import CustomGamepadScreen from './pages/CustomGamepad';
 import Ds5SettingsScreen from './pages/Ds5Settings';
 import HistoryScreen from './pages/History';
-import updater from './utils/updater';
+import updater from './shared/lib/updater';
 import {
   applyPrimaryColorToPaperTheme,
   DEFAULT_THEME_PRIMARY_COLOR,
-} from './utils/themeColor';
+} from './shared/lib/themeColor';
 
 import {useTranslation} from 'react-i18next';
 

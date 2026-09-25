@@ -2,7 +2,7 @@ import React from 'react';
 import {View, StyleSheet, Pressable, Text, ScrollView} from 'react-native';
 import {Portal, Modal, Card, Icon} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
-import {KEY_CATEGORIES, PickableKey} from '../utils/virtualKeys';
+import {KEY_CATEGORIES, PickableKey} from '../features/virtual-keyboard';
 
 const ACCENT = '#76B900';
 

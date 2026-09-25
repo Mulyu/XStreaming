@@ -17,7 +17,7 @@ import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
 import {useTranslation} from 'react-i18next';
-import {debugFactory} from '../utils/debug';
+import {debugFactory} from '../shared/lib/debug';
 import {clearStreamToken, clearWebToken} from '../entities/xbox-token';
 import {
   clearXcloudData,

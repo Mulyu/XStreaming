@@ -13,7 +13,7 @@ import {useSelector, useDispatch} from 'react-redux';
 import SplashScreen from 'react-native-splash-screen';
 import {useTranslation} from 'react-i18next';
 import NetInfo from '@react-native-community/netinfo';
-import {debugFactory} from '../utils/debug';
+import {debugFactory} from '../shared/lib/debug';
 import MsalAuth from '../components/MsalAuth';
 import {
   isSignedIn as isGfnSignedIn,

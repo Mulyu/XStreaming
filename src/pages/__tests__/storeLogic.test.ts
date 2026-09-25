@@ -5,7 +5,7 @@ import {
   hasMorePages,
 } from '../storeLogic';
 import {GfnGame} from '../../gfn/publicGames';
-import {PriceInfo} from '../../utils/storePrice';
+import {PriceInfo} from '../../entities/catalog-title';
 import {SteamChartEntry} from '../../features/store-charts';
 
 describe('hasMorePages', () => {

@@ -3,7 +3,7 @@ import {TouchableOpacity} from 'react-native';
 import {GestureDetector, Gesture} from 'react-native-gesture-handler';
 import {SvgXml} from 'react-native-svg';
 import {virtualButtonIcons as icons} from '../entities/gamepad';
-import {isMacroButtonName} from '../utils/virtualMacro';
+import {isMacroButtonName} from '../features/controller-customization';
 
 type Props = {
   name: string;

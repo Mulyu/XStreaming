@@ -49,27 +49,24 @@ import {
   saveSteamPriceCache,
   XcloudCatalogApi,
   loadXcloudCatalog,
-} from '../entities/catalog-title';
-import {
-  launchWithProvider,
-  isPreferenceAvailable,
-} from '../features/launch-title';
-import {getSettings} from '../shared/lib/settings';
-import {getSystemRegion} from '../utils/locale';
-import {fetchPopularOrder, buildPopularRank} from '../utils/popularOrder';
-import {
+  fetchPopularOrder,
+  buildPopularRank,
   PriceInfo,
   deriveMarketLanguage,
   fetchPricesWithRetry,
   getPrice,
   isSaleForDisplay,
   discountPercent,
-} from '../utils/storePrice';
-import {
   SteamPriceInfo,
   fetchSteamPrices,
   isSteamSaleForDisplay,
-} from '../utils/steamPrice';
+} from '../entities/catalog-title';
+import {
+  launchWithProvider,
+  isPreferenceAvailable,
+} from '../features/launch-title';
+import {getSettings} from '../shared/lib/settings';
+import {getSystemRegion} from '../shared/lib/locale';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';

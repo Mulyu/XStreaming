@@ -2,12 +2,13 @@ import React from 'react';
 import {StyleSheet, View, Dimensions} from 'react-native';
 import GamepadButton from './CustomGamepad/GamepadButton';
 import AnalogStick from '../components/AnalogStick';
-import {getVirtualGamepadLayouts as getSettings} from '../features/controller-customization';
 import {
+  getVirtualGamepadLayouts as getSettings,
   createDefaultMacroLayoutButtons,
   ensureMacroLayoutButtons,
-} from '../utils/virtualMacro';
-import {buildDefaultLayout, SWIPE_AIM_NAME} from '../utils/gamepadLayout';
+  buildDefaultLayout,
+  SWIPE_AIM_NAME,
+} from '../features/controller-customization';
 
 type Props = {
   title: string;

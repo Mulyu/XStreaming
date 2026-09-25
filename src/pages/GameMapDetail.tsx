@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import {Text} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
-import {debugFactory} from '../utils/debug';
+import {debugFactory} from '../shared/lib/debug';
 import {SvgXml} from 'react-native-svg';
 import {legendIcons as maping} from '../entities/gamepad';
 

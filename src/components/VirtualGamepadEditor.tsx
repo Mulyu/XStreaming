@@ -29,10 +29,10 @@ import GridBackground from './GridBackground';
 import GamepadButton from './CustomGamepad/Button';
 import KeyChip from './CustomGamepad/KeyChip';
 import KeyPicker from './KeyPicker';
-import {PickableKey} from '../utils/virtualKeys';
+import {PickableKey} from '../features/virtual-keyboard';
 import CoverLayoutOverlay from './CoverLayoutOverlay';
-import {getVirtualGamepadLayouts as getGamepadLayouts} from '../features/controller-customization';
 import {
+  getVirtualGamepadLayouts as getGamepadLayouts,
   createDefaultMacroLayoutButtons,
   ensureMacroLayoutButtons,
   isMacroButtonName,
@@ -40,8 +40,6 @@ import {
   normalizeMacroStep,
   VIRTUAL_MACRO_ALLOWED_BUTTONS,
   VirtualMacroStep,
-} from '../utils/virtualMacro';
-import {
   buildDefaultLayout,
   snapToGrid,
   ButtonConfig,
@@ -49,7 +47,7 @@ import {
   SWIPE_AIM_MIN,
   createDefaultSwipePad,
   ensureSwipePad,
-} from '../utils/gamepadLayout';
+} from '../features/controller-customization';
 
 export type {ButtonConfig};
 

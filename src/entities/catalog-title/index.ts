@@ -25,11 +25,7 @@ export {
   isxCloudDataValid,
 } from './model/xcloudCache';
 
-export type {
-  PriceCache,
-  PopularCache,
-  LeavingSoonCache,
-} from './model/priceCache';
+export type {PriceCache, PopularCache} from './model/priceCache';
 export {
   PRICE_TTL_MS,
   getPriceCache,
@@ -37,8 +33,6 @@ export {
   savePriceCache,
   getFreshPopularOrder,
   savePopularOrder,
-  getFreshLeavingSoon,
-  saveLeavingSoon,
 } from './model/priceCache';
 
 export type {SteamPriceCache} from './model/steamPriceCache';
@@ -58,3 +52,39 @@ export {
   getXcloudCatalogStatus,
   clearXcloudCatalogStatus,
 } from './api/loadXcloudCatalog';
+
+export type {
+  PriceInfo,
+  RatingInfo,
+  TrailerInfo,
+  TitleDetails,
+  FetchPricesResult,
+  FetchTitleDetailsResult,
+} from './api/storePrice';
+export {
+  getStoreUrl,
+  deriveMarketLanguage,
+  extractPrice,
+  extractRating,
+  extractDetails,
+  fetchPrices,
+  delay,
+  fetchPricesWithRetry,
+  fetchTitleDetails,
+  getPrice,
+  formatPrice,
+  discountPercent,
+  isSaleForDisplay,
+  formatSaleEnd,
+} from './api/storePrice';
+
+export type {SteamPriceInfo} from './api/steamPrice';
+export {fetchSteamPrices, isSteamSaleForDisplay} from './api/steamPrice';
+
+export {fetchPopularOrder, buildPopularRank} from './api/popularOrder';
+
+// ui/titleCapabilities is deliberately NOT re-exported here: it pulls in
+// react-native-vector-icons, which would drag a native-UI dependency into
+// every consumer of this barrel -- including pages/storeLogic.ts, split out
+// of Store.tsx specifically to stay light enough for Jest to load directly
+// (see its own comment). Import it from './ui/titleCapabilities' instead.

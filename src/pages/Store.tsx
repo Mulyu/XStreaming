@@ -11,7 +11,14 @@ import {Text, Icon, ActivityIndicator} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
-import {loadXcloudCatalog} from '../entities/catalog-title';
+import {
+  loadXcloudCatalog,
+  deriveMarketLanguage,
+  fetchPricesWithRetry,
+  getPrice,
+  isSaleForDisplay,
+  PriceInfo,
+} from '../entities/catalog-title';
 import {GfnGame} from '../gfn/publicGames';
 import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
 import {
@@ -20,14 +27,7 @@ import {
   getCachedFullCatalog,
 } from '../gfn/catalog';
 import {getSettings} from '../shared/lib/settings';
-import {getSystemRegion} from '../utils/locale';
-import {
-  deriveMarketLanguage,
-  fetchPricesWithRetry,
-  getPrice,
-  isSaleForDisplay,
-  PriceInfo,
-} from '../utils/storePrice';
+import {getSystemRegion} from '../shared/lib/locale';
 import {
   fetchXboxBrowsePage,
   getFreshXboxBrowsePage,

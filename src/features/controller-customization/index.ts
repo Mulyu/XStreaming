@@ -23,3 +23,35 @@ export {
   getCoverLayout,
   saveCoverLayout,
 } from './model/coverLayout';
+
+export type {ButtonConfig} from './lib/gamepadLayout';
+export {
+  SWIPE_AIM_NAME,
+  SWIPE_AIM_MIN,
+  createDefaultSwipePad,
+  ensureSwipePad,
+  getButtonBaseSize,
+  LAYOUT_SNAP_GRID,
+  snapToGrid,
+  buildDefaultLayout,
+} from './lib/gamepadLayout';
+
+export type {
+  VirtualMacroButtonName,
+  VirtualMacroStep,
+} from './lib/virtualMacro';
+export {
+  VIRTUAL_MACRO_BUTTON_NAMES,
+  isMacroButtonName,
+  MACRO_SLOT_COLORS,
+  VIRTUAL_MACRO_ALLOWED_BUTTONS,
+  DEFAULT_VIRTUAL_MACRO_LOOP_INTERVAL_MS,
+  DEFAULT_VIRTUAL_MACRO_STEPS,
+  createDefaultMacroLayoutButtons,
+  ensureMacroLayoutButtons,
+  normalizeMacroLoopIntervalMs,
+  normalizeMacroStep,
+  normalizeMacroSteps,
+} from './lib/virtualMacro';
+
+export {coverGamepadBus} from './lib/coverGamepadBus';

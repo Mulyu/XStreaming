@@ -1,5 +1,5 @@
 import axios from 'axios';
-import pkg from '../../package.json';
+import pkg from '../../../package.json';
 import {BUILD_NUMBER} from './buildInfo';
 
 const CHECK_URL = 'https://api.github.com/repos/Mulyu/XStreaming/releases';

@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, StyleSheet, DeviceEventEmitter} from 'react-native';
-import {coverGamepadBus} from '../utils/coverGamepadBus';
 import {
+  coverGamepadBus,
   getCoverLayout,
   CoverButton,
 } from '../features/controller-customization';

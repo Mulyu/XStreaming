@@ -25,15 +25,6 @@ import {
   getFreshPriceCache,
   isCatalogTitleFavorite,
   setCatalogTitleFavorite,
-} from '../entities/catalog-title';
-import {
-  launchWithProvider,
-  getTitleProductId,
-  requestTitleShortcut,
-} from '../features/launch-title';
-import {getSettings} from '../shared/lib/settings';
-import {getSystemRegion} from '../utils/locale';
-import {
   PriceInfo,
   RatingInfo,
   TitleDetails,
@@ -44,13 +35,22 @@ import {
   discountPercent,
   isSaleForDisplay,
   getStoreUrl,
-} from '../utils/storePrice';
-import {
   fetchSteamPrices,
   SteamPriceInfo,
   isSteamSaleForDisplay,
-} from '../utils/steamPrice';
-import {CAP_META, capLabel, renderStars} from '../utils/titleCapabilities';
+} from '../entities/catalog-title';
+import {
+  CAP_META,
+  capLabel,
+  renderStars,
+} from '../entities/catalog-title/ui/titleCapabilities';
+import {
+  launchWithProvider,
+  getTitleProductId,
+  requestTitleShortcut,
+} from '../features/launch-title';
+import {getSettings} from '../shared/lib/settings';
+import {getSystemRegion} from '../shared/lib/locale';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';

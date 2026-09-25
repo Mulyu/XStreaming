@@ -21,7 +21,7 @@ import Slider from '@react-native-community/slider';
 import GamepadButton from '../components/CustomGamepad/Button';
 import KeyChip from '../components/CustomGamepad/KeyChip';
 import KeyPicker from '../components/KeyPicker';
-import {PickableKey} from '../utils/virtualKeys';
+import {PickableKey} from '../features/virtual-keyboard';
 import GridBackground from '../components/GridBackground';
 import {
   getVirtualGamepadLayouts as getSettings,
@@ -31,12 +31,6 @@ import {
   setSwipeConfig,
   getJoystickMode,
   setJoystickMode,
-} from '../features/controller-customization';
-import {
-  getSettings as getUserSettings,
-  saveSettings as saveUserSettings,
-} from '../shared/lib/settings';
-import {
   createDefaultMacroLayoutButtons,
   ensureMacroLayoutButtons,
   isMacroButtonName,
@@ -44,15 +38,17 @@ import {
   normalizeMacroStep,
   VIRTUAL_MACRO_ALLOWED_BUTTONS,
   VirtualMacroStep,
-} from '../utils/virtualMacro';
-import {
   buildDefaultLayout,
   snapToGrid,
   SWIPE_AIM_NAME,
   SWIPE_AIM_MIN,
   createDefaultSwipePad,
   ensureSwipePad,
-} from '../utils/gamepadLayout';
+} from '../features/controller-customization';
+import {
+  getSettings as getUserSettings,
+  saveSettings as saveUserSettings,
+} from '../shared/lib/settings';
 
 const {FullScreenManager} = NativeModules;
 

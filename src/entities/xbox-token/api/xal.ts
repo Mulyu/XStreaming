@@ -7,7 +7,7 @@ import XstsToken from '../model/xststoken';
 import MsalToken from '../model/msaltoken';
 import StreamingToken from '../model/streamingtoken';
 import {getSettings} from '../../../shared/lib/settings';
-import {debugFactory} from '../../../utils/debug';
+import {debugFactory} from '../../../shared/lib/debug';
 import 'react-native-url-polyfill/auto';
 import TokenStore from './tokenstore';
 

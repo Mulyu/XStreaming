@@ -6,13 +6,11 @@ import {
   buildGfnCatalogTitle,
   buildXcloudCatalogTitle,
   CatalogTitle,
-} from '../entities/catalog-title';
-import {
   formatPrice,
   getPrice,
   isSaleForDisplay,
   PriceInfo,
-} from '../utils/storePrice';
+} from '../entities/catalog-title';
 import {SteamChartEntry} from '../features/store-charts';
 
 // One row's worth of display data. `catalogTitle` is null when the row isn't

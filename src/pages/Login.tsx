@@ -1,7 +1,7 @@
 import React from 'react';
 import {WebView} from 'react-native-webview';
 import Spinner from '../components/Spinner';
-import {debugFactory} from '../utils/debug';
+import {debugFactory} from '../shared/lib/debug';
 
 const log = debugFactory('LoginScreen');
 
