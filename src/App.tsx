@@ -50,7 +50,7 @@ import StoreScreen from './pages/store';
 import NativeGameMapScreen from './pages/native-game-map';
 import GameMapDetailScreen from './pages/game-map-detail';
 import VirtualGamepadSettingsScreen from './pages/virtual-gamepad-settings';
-import CustomGamepadScreen from './pages/CustomGamepad';
+import CustomGamepadScreen from './pages/custom-gamepad';
 import Ds5SettingsScreen from './pages/ds5-settings';
 import HistoryScreen from './pages/history';
 import updater from './shared/lib/updater';
