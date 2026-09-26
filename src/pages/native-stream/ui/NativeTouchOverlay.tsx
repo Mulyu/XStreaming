@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import type {PointerWireData} from '../features/xcloud-session';
+import type {PointerWireData} from '../../../features/xcloud-session';
 
 const STREAM_ASPECT_RATIO = 16 / 9;
 

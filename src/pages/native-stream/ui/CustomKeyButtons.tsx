@@ -1,8 +1,14 @@
 import React from 'react';
 import {View, StyleSheet} from 'react-native';
 import {GestureDetector, Gesture} from 'react-native-gesture-handler';
-import {KeyChip, ButtonConfig} from '../features/controller-customization';
-import {VK_TO_MOD_BIT, KeyboardModifiers} from '../features/virtual-keyboard';
+import {
+  KeyChip,
+  ButtonConfig,
+} from '../../../features/controller-customization';
+import {
+  VK_TO_MOD_BIT,
+  KeyboardModifiers,
+} from '../../../features/virtual-keyboard';
 
 export type CustomKeyButtonsProps = {
   layout: ButtonConfig[];
