@@ -1,7 +1,7 @@
 // Pure matching/pagination logic for the Store screen, pulled out of
 // Store.tsx so it can be unit tested directly (Store.tsx itself pulls in
 // react-navigation, which the project's current Jest config can't load).
-import {GfnGame} from '../gfn/publicGames';
+import {GfnGame} from '../../gfn/publicGames';
 import {
   buildGfnCatalogTitle,
   buildXcloudCatalogTitle,
@@ -10,8 +10,8 @@ import {
   getPrice,
   isSaleForDisplay,
   PriceInfo,
-} from '../entities/catalog-title';
-import {SteamChartEntry} from '../features/store-charts';
+} from '../../entities/catalog-title';
+import {SteamChartEntry} from '../../features/store-charts';
 
 // One row's worth of display data. `catalogTitle` is null when the row isn't
 // launchable -- today that's only possible on the GFN/Steam side, where the

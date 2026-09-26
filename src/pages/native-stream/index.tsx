@@ -18,15 +18,15 @@ import {
 import {IconButton} from 'react-native-paper';
 import {RTCView, MediaStream, RTCRtpReceiver} from 'react-native-webrtc';
 import Orientation from 'react-native-orientation-locker';
-import StreamHandshakeOverlay from '../components/StreamHandshakeOverlay';
-import type {LoadingPhase} from '../shared/lib/loadingPhase';
+import StreamHandshakeOverlay from '../../components/StreamHandshakeOverlay';
+import type {LoadingPhase} from '../../shared/lib/loadingPhase';
 import {useSelector} from 'react-redux';
 import {
   XcloudSessionClient,
   webRTCClient,
   PointerWireData,
-} from '../features/xcloud-session';
-import {getSettings, saveSettings} from '../shared/lib/settings';
+} from '../../features/xcloud-session';
+import {getSettings, saveSettings} from '../../shared/lib/settings';
 import {
   saveVirtualGamepadLayout as saveGamepadLayout,
   getVirtualGamepadLayouts as getGamepadLayouts,
@@ -42,38 +42,38 @@ import {
   buildDefaultLayout,
   SWIPE_AIM_NAME,
   createDefaultSwipePad,
-} from '../features/controller-customization';
+} from '../../features/controller-customization';
 import {useTranslation} from 'react-i18next';
-import {GfnStreamAdapter} from '../gfn/streamAdapter';
+import {GfnStreamAdapter} from '../../gfn/streamAdapter';
 import BackgroundTimer from 'react-native-background-timer';
-import {debugFactory} from '../shared/lib/debug';
-import {GAMEPAD_MAPING, XBOX_360_GAMEPAD_MAPING} from '../entities/gamepad';
-import VirtualGamepad from '../components/VirtualGamepad';
-import CustomVirtualGamepad from '../components/CustomVirtualGamepad';
+import {debugFactory} from '../../shared/lib/debug';
+import {GAMEPAD_MAPING, XBOX_360_GAMEPAD_MAPING} from '../../entities/gamepad';
+import VirtualGamepad from '../../components/VirtualGamepad';
+import CustomVirtualGamepad from '../../components/CustomVirtualGamepad';
 import VirtualGamepadEditor, {
   ButtonConfig,
-} from '../components/VirtualGamepadEditor';
-import PerfPanel from '../components/PerfPanel';
+} from '../../components/VirtualGamepadEditor';
+import PerfPanel from '../../components/PerfPanel';
 import StreamControlRail, {
   StreamInputMode,
-} from '../components/StreamControlRail';
-import RTCFsrView from '../components/RTCFsrView';
-import NativeTouchOverlay from '../components/NativeTouchOverlay';
-import SwipeAimZone from '../components/SwipeAimZone';
-import MouseTrackpadZone from '../components/MouseTrackpadZone';
-import VirtualKeyboard from '../components/VirtualKeyboard';
-import CustomKeyButtons from '../components/CustomKeyButtons';
-import {useKeyboardModifiers} from '../features/virtual-keyboard';
+} from '../../components/StreamControlRail';
+import RTCFsrView from '../../components/RTCFsrView';
+import NativeTouchOverlay from '../../components/NativeTouchOverlay';
+import SwipeAimZone from '../../components/SwipeAimZone';
+import MouseTrackpadZone from '../../components/MouseTrackpadZone';
+import VirtualKeyboard from '../../components/VirtualKeyboard';
+import CustomKeyButtons from '../../components/CustomKeyButtons';
+import {useKeyboardModifiers} from '../../features/virtual-keyboard';
 import PortraitVirtualGamepad, {
   PortraitGamepadControl,
-} from '../components/PortraitVirtualGamepad';
+} from '../../components/PortraitVirtualGamepad';
 import {
   coverGamepadBus,
   normalizeMacroLoopIntervalMs,
   normalizeMacroSteps,
   VIRTUAL_MACRO_ALLOWED_BUTTONS,
   isMacroButtonName,
-} from '../features/controller-customization';
+} from '../../features/controller-customization';
 
 const log = debugFactory('NativeStreamScreen');
 
