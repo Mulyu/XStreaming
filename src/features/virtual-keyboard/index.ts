@@ -7,3 +7,6 @@ export type {KeyboardModifiers} from './lib/useKeyboardModifiers';
 
 export type {PickableKey, KeyCategory} from './lib/virtualKeys';
 export {KEY_CATEGORIES, VK_TO_MOD_BIT, MOD_BIT_TO_VK} from './lib/virtualKeys';
+
+export {default as VirtualKeyboard} from './ui/VirtualKeyboard';
+export {default as KeyPicker} from './ui/KeyPicker';
