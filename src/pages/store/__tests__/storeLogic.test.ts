@@ -4,8 +4,7 @@ import {
   dedupeByKey,
   hasMorePages,
 } from '../storeLogic';
-import {GfnGame} from '../../../gfn/publicGames';
-import {PriceInfo} from '../../../entities/catalog-title';
+import {GfnGame, PriceInfo} from '../../../entities/catalog-title';
 import {SteamChartEntry} from '../../../features/store-charts';
 
 describe('hasMorePages', () => {

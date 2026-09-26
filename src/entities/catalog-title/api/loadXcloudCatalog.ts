@@ -8,7 +8,7 @@ import {storage} from '../../../shared/lib/mmkv';
 // this wrapper tells the two apart so the Settings screen can show a real
 // status instead of always reading as empty.
 //
-// Unlike GFN's full catalog (fetchGfnFullCatalog in gfn/catalog.ts), xCloud's
+// Unlike GFN's full catalog (fetchGfnFullCatalog in entities/catalog-title/api/gfnCatalog.ts), xCloud's
 // own catalog is fetched in one shot per stage (no page-by-page cursor that
 // can get cut off partway), so there's no partial/complete distinction to
 // make here -- only "failed", "no entitlements", or "loaded".

@@ -27,6 +27,10 @@ import {
   getXcloudCatalogStatus,
   clearXcloudCatalogStatus,
   XcloudCatalogStatus,
+  fetchGfnFullCatalog,
+  clearGfnFullCatalog,
+  getGfnFullCatalogStatus,
+  GfnFullCatalogStatus,
 } from '../entities/catalog-title';
 import {useGfnSignIn} from '../gfn/useGfnSignIn';
 import GfnSignInModal from '../components/GfnSignInModal';
@@ -38,12 +42,6 @@ import {
   GfnSubscriptionInfo,
   GfnRegionOption,
 } from '../gfn/session';
-import {
-  fetchGfnFullCatalog,
-  clearGfnFullCatalog,
-  getGfnFullCatalogStatus,
-  GfnFullCatalogStatus,
-} from '../gfn/catalog';
 import {
   basesSettings as bases,
   displaySettings as display,
@@ -336,7 +334,7 @@ function SettingsScreen({navigation}) {
 
   // Same idea for GFN's full browse catalog -- unlike xCloud's one-shot
   // fetch, this one is a many-page crawl that can now report a genuine
-  // "complete" vs "partial" outcome (see fetchGfnFullCatalog in gfn/catalog.ts).
+  // "complete" vs "partial" outcome (see fetchGfnFullCatalog in entities/catalog-title/api/gfnCatalog.ts).
   const handleGfnCatalogReload = () => {
     if (!gfnSignedIn || gfnCatalogLoading) {
       return;

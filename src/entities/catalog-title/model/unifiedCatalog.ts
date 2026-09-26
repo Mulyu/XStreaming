@@ -1,5 +1,5 @@
-import {GfnGame} from '../../../gfn/publicGames';
-import {normalizeTitle} from '../../../gfn/catalog';
+import {GfnGame} from '../api/gfnPublicGames';
+import {normalizeTitle} from '../api/gfnCatalog';
 
 // Merges xCloud's title list and GFN's (public + owned) game list into one
 // grid's worth of titles, grouped by normalized name. A title with entries on

@@ -82,3 +82,35 @@ export type {SteamPriceInfo} from './api/steamPrice';
 export {fetchSteamPrices, isSteamSaleForDisplay} from './api/steamPrice';
 
 export {fetchPopularOrder, buildPopularRank} from './api/popularOrder';
+
+export type {GfnGame} from './api/gfnPublicGames';
+export {
+  steamAppIdFromUrl,
+  getFreshGfnGames,
+  getCachedGfnGames,
+  fetchGfnGames,
+} from './api/gfnPublicGames';
+
+export type {
+  GfnFullCatalogResult,
+  GfnFullCatalogStatus,
+  GfnAppDetails,
+} from './api/gfnCatalog';
+export {
+  fetchGfnOwnedGames,
+  getFreshOwnedGames,
+  clearOwnedGames,
+  getGfnFullCatalogStatus,
+  clearGfnFullCatalog,
+  fetchGfnFullCatalog,
+  getFreshFullCatalog,
+  getCachedFullCatalog,
+  GFN_SORT_MOST_POPULAR,
+  GFN_SORT_LAST_ADDED,
+  fetchGfnCatalogOrder,
+  fetchGfnAppDetails,
+  normalizeTitle,
+  mergeOwnedGames,
+} from './api/gfnCatalog';
+
+export {getGfnLocaleSlug, getGfnGraphqlLocale} from './api/gfnLocale';

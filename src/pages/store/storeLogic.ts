@@ -1,8 +1,8 @@
 // Pure matching/pagination logic for the Store screen, pulled out of
 // Store.tsx so it can be unit tested directly (Store.tsx itself pulls in
 // react-navigation, which the project's current Jest config can't load).
-import {GfnGame} from '../../gfn/publicGames';
 import {
+  GfnGame,
   buildGfnCatalogTitle,
   buildXcloudCatalogTitle,
   CatalogTitle,

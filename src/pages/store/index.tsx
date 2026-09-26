@@ -18,14 +18,12 @@ import {
   getPrice,
   isSaleForDisplay,
   PriceInfo,
-} from '../../entities/catalog-title';
-import {GfnGame} from '../../gfn/publicGames';
-import {isSignedIn, getValidGfnJwt} from '../../gfn/auth';
-import {
+  GfnGame,
   fetchGfnFullCatalog,
   getFreshFullCatalog,
   getCachedFullCatalog,
-} from '../../gfn/catalog';
+} from '../../entities/catalog-title';
+import {isSignedIn, getValidGfnJwt} from '../../gfn/auth';
 import {getSettings} from '../../shared/lib/settings';
 import {getSystemRegion} from '../../shared/lib/locale';
 import {

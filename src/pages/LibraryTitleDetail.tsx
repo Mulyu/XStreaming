@@ -18,8 +18,9 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
 import {useGfnSignIn} from '../gfn/useGfnSignIn';
 import GfnSignInModal from '../components/GfnSignInModal';
-import {fetchGfnAppDetails, GfnAppDetails} from '../gfn/catalog';
 import {
+  fetchGfnAppDetails,
+  GfnAppDetails,
   CatalogTitle,
   getCatalogPreference,
   getFreshPriceCache,
