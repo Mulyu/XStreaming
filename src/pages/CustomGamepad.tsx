@@ -22,8 +22,7 @@ import {
   GamepadButtonPreview as GamepadButton,
   KeyChip,
 } from '../features/controller-customization';
-import KeyPicker from '../components/KeyPicker';
-import {PickableKey} from '../features/virtual-keyboard';
+import {KeyPicker, PickableKey} from '../features/virtual-keyboard';
 import GridBackground from '../shared/ui/GridBackground';
 import {
   getVirtualGamepadLayouts as getSettings,

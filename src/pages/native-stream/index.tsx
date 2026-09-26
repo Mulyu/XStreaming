@@ -63,9 +63,11 @@ import RTCFsrView from '../../shared/ui/RTCFsrView';
 import NativeTouchOverlay from '../../components/NativeTouchOverlay';
 import SwipeAimZone from '../../shared/ui/SwipeAimZone';
 import {MouseTrackpadZone} from '../../entities/gfn-input';
-import VirtualKeyboard from '../../components/VirtualKeyboard';
 import CustomKeyButtons from '../../components/CustomKeyButtons';
-import {useKeyboardModifiers} from '../../features/virtual-keyboard';
+import {
+  useKeyboardModifiers,
+  VirtualKeyboard,
+} from '../../features/virtual-keyboard';
 import {
   CustomVirtualGamepad,
   PortraitVirtualGamepad,
@@ -3210,7 +3212,7 @@ export function NativeStreamScreenBase({
   );
 
   // GFN-only virtual keyboard. See entities/gfn-input (INPUT_KEY_DOWN/UP)
-  // and components/VirtualKeyboard.tsx.
+  // and features/virtual-keyboard's VirtualKeyboard.tsx.
   const handleKeyDown = React.useCallback(
     (virtualKey: number, modifiers: number) => {
       webrtcClient
