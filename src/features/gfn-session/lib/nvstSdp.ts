@@ -1,4 +1,4 @@
-import {PARTIALLY_RELIABLE_GAMEPAD_MASK_ALL} from '../entities/gfn-input';
+import {PARTIALLY_RELIABLE_GAMEPAD_MASK_ALL} from '../../../entities/gfn-input';
 
 // Builds the "nvstSdp" blob GFN expects alongside the WebRTC answer. It carries
 // the stream configuration (resolution, fps, bitrate, codec) plus the local ICE
