@@ -10,14 +10,15 @@ app → pages → widgets → features → entities → shared
 - entities: business domain data + its own display (e.g. title, gfn-game).
 - shared: generic, domain-agnostic code (ui kit, api client, utils, config). No slices.
 
-Slices: one per domain/feature within a layer. Same-layer slices never import each other directly.
+Slices: one per domain/feature within a layer, and always a folder --
+`<layer>/<slice>/...`, never a loose file directly under a sliced layer
+(pages/widgets/features/entities; app and shared have no slices, so this
+doesn't apply to them). Same-layer slices never import each other directly.
 
 Segments: inside a slice, split by purpose — ui / model / api / lib / config.
 
-Page slices specifically: every page is its own folder under `pages/`
-(`pages/<name>/index.tsx`), never a loose file directly under `pages/` --
-even before it's split into `ui/`/`model/`, the folder is non-negotiable.
-`ui/` holds pure components only -- they render
+Page slices specifically: `pages/<name>/index.tsx` is the slice's entry
+point. `ui/` holds pure components only -- they render
 whatever they're given as props and call no hooks (including presentational
 ones like a theme/translation hook), full stop. `model/` holds the custom
 hook(s) that own all of that page's state, data-fetching, and handlers, and
