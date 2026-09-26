@@ -1,10 +1,10 @@
 import React from 'react';
-import {View, Text, StyleSheet, DeviceEventEmitter} from 'react-native';
+import {DeviceEventEmitter} from 'react-native';
 import {
   coverGamepadBus,
   getCoverLayout,
   CoverButton,
-} from '../features/controller-customization';
+} from '../../../features/controller-customization';
 
 // Rendered on the foldable cover (outer) display via the WindowAreaController
 // present-mode session. Runs on the app's single JS context, so touching a
@@ -20,8 +20,7 @@ import {
 // cover's responder, dropping any held cover button while the inner display is
 // touched. Hit-testing the raw touch list also lets several buttons register at
 // once and ignores edge touches that don't land on a button.
-
-export default function CoverScreen() {
+export function useCoverScreen() {
   const [active, setActive] = React.useState(coverGamepadBus.isActive());
   const [layout, setLayout] = React.useState<CoverButton[]>(
     () => coverGamepadBus.getLayout() ?? getCoverLayout(''),
@@ -101,76 +100,17 @@ export default function CoverScreen() {
     return () => sub.remove();
   }, []);
 
-  if (!active) {
-    return (
-      <View style={styles.idleWrap}>
-        <Text style={styles.brand}>XStreaming</Text>
-        <Text style={styles.idleText}>Start a game to use cover controls</Text>
-      </View>
-    );
-  }
+  const onSurfaceLayout = (width: number, height: number) => {
+    setSurface({width, height});
+  };
 
-  return (
-    <View
-      style={styles.wrap}
-      onLayout={e => {
-        const {width, height} = e.nativeEvent.layout;
-        setSurface({width, height});
-      }}>
-      {layout.map(b => {
-        if (!b.show || surface.width === 0) {
-          return null;
-        }
-        const side = b.size * surface.width;
-        const down = pressed.includes(b.name);
-        return (
-          <View
-            key={b.name}
-            pointerEvents="none"
-            style={[
-              styles.button,
-              {
-                left: b.x * surface.width,
-                top: b.y * surface.height,
-                width: side,
-                height: side,
-              },
-              down && styles.buttonDown,
-            ]}>
-            <Text style={[styles.buttonLabel, down && styles.buttonLabelDown]}>
-              {b.label}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
+  return {
+    active,
+    layout,
+    surface,
+    pressed,
+    onSurfaceLayout,
+  };
 }
 
-const styles = StyleSheet.create({
-  idleWrap: {
-    flex: 1,
-    backgroundColor: '#0E1512',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  brand: {color: '#2FD24B', fontSize: 22, fontWeight: '700', letterSpacing: 1},
-  idleText: {color: '#8A9A92', fontSize: 13, marginTop: 8, textAlign: 'center'},
-  wrap: {flex: 1, backgroundColor: '#0E1512'},
-  button: {
-    position: 'absolute',
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonDown: {
-    backgroundColor: 'rgba(47,210,75,0.28)',
-    borderColor: '#2FD24B',
-  },
-  buttonLabel: {color: '#E6ECE8', fontSize: 22, fontWeight: '800'},
-  buttonLabelDown: {color: '#FFFFFF'},
-});
+export type CoverScreenViewModel = ReturnType<typeof useCoverScreen>;
