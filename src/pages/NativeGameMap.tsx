@@ -4,8 +4,7 @@ import {Button} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {getSettings, saveSettings} from '../shared/lib/settings';
 import {debugFactory} from '../shared/lib/debug';
-import MapItem from '../components/MapItem';
-import {GAMEPAD_MAPING} from '../entities/gamepad';
+import {MapItem, GAMEPAD_MAPING} from '../entities/gamepad';
 
 const log = debugFactory('NativeGameMapScreen');
 
