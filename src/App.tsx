@@ -41,12 +41,12 @@ import customDarkTheme from './shared/config/theme';
 
 import HomeScreen from './pages/Home';
 import LoginScreen from './pages/Login';
-import NativeStreamScreen from './pages/NativeStream';
-import NativePortraitStreamScreen from './pages/NativePortraitStream';
+import NativeStreamScreen from './pages/native-stream';
+import NativePortraitStreamScreen from './pages/native-stream/portrait';
 import SettingsScreen from './pages/Settings';
 import LibraryScreen from './pages/Library';
 import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
-import StoreScreen from './pages/Store';
+import StoreScreen from './pages/store';
 import NativeGameMapScreen from './pages/NativeGameMap';
 import GameMapDetailScreen from './pages/GameMapDetail';
 import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';

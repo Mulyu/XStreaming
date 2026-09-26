@@ -4,9 +4,9 @@ import {
   dedupeByKey,
   hasMorePages,
 } from '../storeLogic';
-import {GfnGame} from '../../gfn/publicGames';
-import {PriceInfo} from '../../entities/catalog-title';
-import {SteamChartEntry} from '../../features/store-charts';
+import {GfnGame} from '../../../gfn/publicGames';
+import {PriceInfo} from '../../../entities/catalog-title';
+import {SteamChartEntry} from '../../../features/store-charts';
 
 describe('hasMorePages', () => {
   it('returns false once a page comes back empty', () => {

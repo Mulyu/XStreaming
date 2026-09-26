@@ -18,16 +18,16 @@ import {
   getPrice,
   isSaleForDisplay,
   PriceInfo,
-} from '../entities/catalog-title';
-import {GfnGame} from '../gfn/publicGames';
-import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
+} from '../../entities/catalog-title';
+import {GfnGame} from '../../gfn/publicGames';
+import {isSignedIn, getValidGfnJwt} from '../../gfn/auth';
 import {
   fetchGfnFullCatalog,
   getFreshFullCatalog,
   getCachedFullCatalog,
-} from '../gfn/catalog';
-import {getSettings} from '../shared/lib/settings';
-import {getSystemRegion} from '../shared/lib/locale';
+} from '../../gfn/catalog';
+import {getSettings} from '../../shared/lib/settings';
+import {getSystemRegion} from '../../shared/lib/locale';
 import {
   fetchXboxBrowsePage,
   getFreshXboxBrowsePage,
@@ -35,7 +35,7 @@ import {
   fetchSteamChart,
   getFreshSteamChart,
   SteamChartEntry,
-} from '../features/store-charts';
+} from '../../features/store-charts';
 import {
   buildGfnStoreRows,
   buildXboxStoreRows,
