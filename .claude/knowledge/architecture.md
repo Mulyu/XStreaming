@@ -14,7 +14,10 @@ Slices: one per domain/feature within a layer. Same-layer slices never import ea
 
 Segments: inside a slice, split by purpose — ui / model / api / lib / config.
 
-Page slices specifically: `ui/` holds pure components only -- they render
+Page slices specifically: every page is its own folder under `pages/`
+(`pages/<name>/index.tsx`), never a loose file directly under `pages/` --
+even before it's split into `ui/`/`model/`, the folder is non-negotiable.
+`ui/` holds pure components only -- they render
 whatever they're given as props and call no hooks (including presentational
 ones like a theme/translation hook), full stop. `model/` holds the custom
 hook(s) that own all of that page's state, data-fetching, and handlers, and
