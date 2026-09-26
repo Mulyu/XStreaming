@@ -70,7 +70,7 @@ export type Settings = {
    */
   gfn_region: string;
   /** Multiplier applied to MouseTrackpadZone's per-move finger delta before
-   * it's sent -- see components/MouseTrackpadZone.tsx. */
+   * it's sent -- see entities/gfn-input's MouseTrackpadZone.tsx. */
   gfn_mouse_trackpad_sensitivity: number;
 };
 

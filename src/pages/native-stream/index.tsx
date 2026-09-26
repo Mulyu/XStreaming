@@ -63,7 +63,7 @@ import StreamControlRail, {
 import RTCFsrView from '../../shared/ui/RTCFsrView';
 import NativeTouchOverlay from '../../components/NativeTouchOverlay';
 import SwipeAimZone from '../../shared/ui/SwipeAimZone';
-import MouseTrackpadZone from '../../components/MouseTrackpadZone';
+import {MouseTrackpadZone} from '../../entities/gfn-input';
 import VirtualKeyboard from '../../components/VirtualKeyboard';
 import CustomKeyButtons from '../../components/CustomKeyButtons';
 import {useKeyboardModifiers} from '../../features/virtual-keyboard';
@@ -3172,7 +3172,7 @@ export function NativeStreamScreenBase({
   };
 
   // GFN-only mouse trackpad: relative move + click/right-click/scroll for
-  // Steam/PC titles. See entities/gfn-input and components/MouseTrackpadZone.
+  // Steam/PC titles. See entities/gfn-input's MouseTrackpadZone.
   // Sensitivity is user-adjustable (StreamControlRail's Mouse group) and
   // persisted via handleMouseSensitivityChange above.
   const mouseTrackpadRect = React.useMemo(

@@ -4,7 +4,7 @@ import {Text, Button, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import QRCode from 'react-native-qrcode-svg';
 import RNRestart from 'react-native-restart';
-import LinkText from '../shared/ui/LinkText';
+import LinkText from '../../../shared/ui/LinkText';
 import Clipboard from '@react-native-clipboard/clipboard';
 
 type Props = {
