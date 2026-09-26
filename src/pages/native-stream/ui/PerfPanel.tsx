@@ -2,8 +2,8 @@ import React from 'react';
 import {StyleSheet, View, NativeModules} from 'react-native';
 import {Text} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
-import {getSettings} from '../shared/lib/settings';
-import {getXcloudRegionFlag} from '../features/app-settings';
+import {getSettings} from '../../../shared/lib/settings';
+import {getXcloudRegionFlag} from '../../../features/app-settings';
 
 const {BatteryModule} = NativeModules;
 

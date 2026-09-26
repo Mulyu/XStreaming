@@ -18,7 +18,7 @@ import {
 import {IconButton} from 'react-native-paper';
 import {RTCView, MediaStream, RTCRtpReceiver} from 'react-native-webrtc';
 import Orientation from 'react-native-orientation-locker';
-import StreamHandshakeOverlay from '../../components/StreamHandshakeOverlay';
+import StreamHandshakeOverlay from './ui/StreamHandshakeOverlay';
 import type {LoadingPhase} from '../../shared/lib/loadingPhase';
 import {useSelector} from 'react-redux';
 import {
@@ -52,18 +52,14 @@ import {
   XBOX_360_GAMEPAD_MAPING,
   VirtualGamepad,
 } from '../../entities/gamepad';
-import VirtualGamepadEditor, {
-  ButtonConfig,
-} from '../../components/VirtualGamepadEditor';
-import PerfPanel from '../../components/PerfPanel';
-import StreamControlRail, {
-  StreamInputMode,
-} from '../../components/StreamControlRail';
+import VirtualGamepadEditor, {ButtonConfig} from './ui/VirtualGamepadEditor';
+import PerfPanel from './ui/PerfPanel';
+import StreamControlRail, {StreamInputMode} from './ui/StreamControlRail';
 import RTCFsrView from '../../shared/ui/RTCFsrView';
-import NativeTouchOverlay from '../../components/NativeTouchOverlay';
+import NativeTouchOverlay from './ui/NativeTouchOverlay';
 import SwipeAimZone from '../../shared/ui/SwipeAimZone';
 import {MouseTrackpadZone} from '../../entities/gfn-input';
-import CustomKeyButtons from '../../components/CustomKeyButtons';
+import CustomKeyButtons from './ui/CustomKeyButtons';
 import {
   useKeyboardModifiers,
   VirtualKeyboard,

@@ -25,13 +25,13 @@ import {
 } from 'react-native-paper';
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
-import GridBackground from '../shared/ui/GridBackground';
+import GridBackground from '../../../shared/ui/GridBackground';
 import {
   GamepadButtonPreview as GamepadButton,
   KeyChip,
   CoverLayoutOverlay,
-} from '../features/controller-customization';
-import {KeyPicker, PickableKey} from '../features/virtual-keyboard';
+} from '../../../features/controller-customization';
+import {KeyPicker, PickableKey} from '../../../features/virtual-keyboard';
 import {
   getVirtualGamepadLayouts as getGamepadLayouts,
   createDefaultMacroLayoutButtons,
@@ -48,7 +48,7 @@ import {
   SWIPE_AIM_MIN,
   createDefaultSwipePad,
   ensureSwipePad,
-} from '../features/controller-customization';
+} from '../../../features/controller-customization';
 
 export type {ButtonConfig};
 

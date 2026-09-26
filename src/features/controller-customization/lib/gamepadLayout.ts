@@ -27,8 +27,9 @@ export type ButtonConfig = {
   // id, not a gamepad button name): the Windows VK_* code and display label
   // this slot sends, placed and sized in the same layout editor as everything
   // else. `holdToggle` above doubles as this key's own latch (see
-  // components/CustomKeyButtons.tsx) except for the four standard modifier
-  // keys, which always share the VirtualKeyboard overlay's own latch state
+  // pages/native-stream/ui/CustomKeyButtons.tsx) except for the four
+  // standard modifier keys, which always share the VirtualKeyboard overlay's
+  // own latch state
   // instead (see utils/virtualKeys.ts's VK_TO_MOD_BIT).
   kind?: 'button' | 'key';
   keyVk?: number;

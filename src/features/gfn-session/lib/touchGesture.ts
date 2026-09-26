@@ -17,8 +17,9 @@ export type GfnTouchGestureCallbacks = {
 };
 
 // NativeTouchOverlay hands us x/y already normalized to 0..1 of the video
-// viewport (see components/NativeTouchOverlay.tsx), not raw pixels, and
-// there's no pixel height available down here to convert with -- so a
+// viewport (see pages/native-stream/ui/NativeTouchOverlay.tsx), not raw
+// pixels, and there's no pixel height available down here to convert with --
+// so a
 // two-finger vertical drag's normalized delta is scaled by this constant (as
 // if the viewport were this many px tall) to land in roughly the same range
 // as MouseTrackpadZone's own pixel-delta wheel values. A tuning constant, not
