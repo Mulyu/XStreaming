@@ -4,7 +4,7 @@
 //
 // Run from the repo root: node .claude/skills/refactoring/detect-divergence.js
 //
-// Five checks:
+// Six checks:
 //   1. Non-FSD top-level directories under src/ (not yet migrated to a
 //      layer), ranked by line count smallest-first -- matches the
 //      refactoring skill's own "order by size, smallest first" step.
@@ -30,6 +30,11 @@
 //      adopted the pattern yet (a flat screen file, or a folder like
 //      pages/native-stream/ whose ui/ predates this convention) aren't
 //      flagged.
+//   6. Flat page files: a .ts/.tsx file placed directly under pages/
+//      instead of its own pages/<name>/ folder (architecture.md: "every
+//      page is its own folder ... never a loose file directly under
+//      pages/"), ranked by line count smallest-first -- same "tackle the
+//      smallest first" convention as check 1.
 'use strict';
 
 const fs = require('fs');
@@ -304,6 +309,19 @@ for (const file of allFiles) {
   }
 }
 
+// ---- Check 6: flat page files (should be their own folder slice) ----
+const flatPageFiles = fs.existsSync(pagesDir)
+  ? fs
+      .readdirSync(pagesDir, {withFileTypes: true})
+      .filter(e => e.isFile() && /\.(ts|tsx)$/.test(e.name))
+      .map(e => {
+        const full = path.join(pagesDir, e.name);
+        const lines = fs.readFileSync(full, 'utf8').split('\n').length;
+        return {file: path.relative(SRC_DIR, full), lines};
+      })
+      .sort((a, b) => a.lines - b.lines)
+  : [];
+
 // ---- Report ----
 console.log('=== 1. Non-FSD top-level directories (smallest first) ===');
 if (dirStats.length === 0) {
@@ -356,11 +374,23 @@ if (pageCompositionViolations.length === 0) {
   }
 }
 
+console.log(
+  '\n=== 6. Flat page files (should be their own folder slice) ===',
+);
+if (flatPageFiles.length === 0) {
+  console.log('  none -- every page under pages/ is its own folder.');
+} else {
+  for (const f of flatPageFiles) {
+    console.log(`  ${f.file}  lines=${f.lines}`);
+  }
+}
+
 const total =
   dirStats.length +
   publicApiViolations.length +
   sliceIsolationViolations.length +
   reverseLayerViolations.length +
-  pageCompositionViolations.length;
+  pageCompositionViolations.length +
+  flatPageFiles.length;
 console.log(`\nTotal divergence items: ${total}`);
 process.exitCode = total > 0 ? 1 : 0;
