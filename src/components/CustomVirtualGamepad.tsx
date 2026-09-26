@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleSheet, View, Dimensions} from 'react-native';
 import GamepadButton from './CustomGamepad/GamepadButton';
-import AnalogStick from '../components/AnalogStick';
+import {AnalogStick} from '../entities/gamepad';
 import {
   getVirtualGamepadLayouts as getSettings,
   createDefaultMacroLayoutButtons,

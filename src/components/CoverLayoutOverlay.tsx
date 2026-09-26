@@ -19,7 +19,7 @@ import {
 import {useTranslation} from 'react-i18next';
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
-import GridBackground from './GridBackground';
+import GridBackground from '../shared/ui/GridBackground';
 import {
   coverGamepadBus,
   snapToGrid,

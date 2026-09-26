@@ -25,7 +25,7 @@ import {
 } from 'react-native-paper';
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
-import GridBackground from './GridBackground';
+import GridBackground from '../shared/ui/GridBackground';
 import GamepadButton from './CustomGamepad/Button';
 import KeyChip from './CustomGamepad/KeyChip';
 import KeyPicker from './KeyPicker';

@@ -2,7 +2,7 @@ import React from 'react';
 import {StyleSheet, View, ScrollView} from 'react-native';
 import {Text, Card} from 'react-native-paper';
 import axios from 'axios';
-import Spinner from '../components/Spinner';
+import Spinner from '../shared/ui/Spinner';
 
 const formatMdString = md => {
   if (!md) {

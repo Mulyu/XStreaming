@@ -22,7 +22,7 @@ import GamepadButton from '../components/CustomGamepad/Button';
 import KeyChip from '../components/CustomGamepad/KeyChip';
 import KeyPicker from '../components/KeyPicker';
 import {PickableKey} from '../features/virtual-keyboard';
-import GridBackground from '../components/GridBackground';
+import GridBackground from '../shared/ui/GridBackground';
 import {
   getVirtualGamepadLayouts as getSettings,
   saveVirtualGamepadLayout as saveSettings,

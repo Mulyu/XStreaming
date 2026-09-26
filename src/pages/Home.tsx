@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleSheet, View, Alert, NativeModules, Linking} from 'react-native';
 import {Button, Text, Portal, Modal, Card} from 'react-native-paper';
-import Spinner from '../components/Spinner';
+import Spinner from '../shared/ui/Spinner';
 import {useIsFocused} from '@react-navigation/native';
 import RNRestart from 'react-native-restart';
 import {getSettings, saveSettings} from '../shared/lib/settings';

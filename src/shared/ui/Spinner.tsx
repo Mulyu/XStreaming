@@ -2,7 +2,7 @@ import React from 'react';
 import {StyleProp, StyleSheet, TextStyle} from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import {Wander} from 'react-native-animated-spinkit';
-import {DEFAULT_THEME_PRIMARY_COLOR} from '../shared/lib/themeColor';
+import {DEFAULT_THEME_PRIMARY_COLOR} from '../lib/themeColor';
 
 type Props = {
   loading: boolean;

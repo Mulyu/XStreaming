@@ -1,9 +1,9 @@
 import React from 'react';
 import {StyleSheet, ScrollView, Alert, View, ToastAndroid} from 'react-native';
 import {Text, SegmentedButtons} from 'react-native-paper';
-import Spinner from '../components/Spinner';
+import Spinner from '../shared/ui/Spinner';
 import {getSettings, saveSettings, resetSettings} from '../shared/lib/settings';
-import SettingItem from '../components/SettingItem';
+import SettingItem from '../shared/ui/SettingItem';
 import {
   SwitchRow,
   SegmentedRow,
@@ -12,7 +12,7 @@ import {
   InfoRow,
   XBOX_ACCENT,
   NVIDIA_ACCENT,
-} from '../components/InlineSettingRows';
+} from '../shared/ui/InlineSettingRows';
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
