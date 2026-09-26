@@ -49,7 +49,7 @@ import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
 import StoreScreen from './pages/store';
 import NativeGameMapScreen from './pages/native-game-map';
 import GameMapDetailScreen from './pages/game-map-detail';
-import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';
+import VirtualGamepadSettingsScreen from './pages/virtual-gamepad-settings';
 import CustomGamepadScreen from './pages/CustomGamepad';
 import Ds5SettingsScreen from './pages/Ds5Settings';
 import HistoryScreen from './pages/history';
