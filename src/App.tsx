@@ -39,7 +39,7 @@ import {
 
 import customDarkTheme from './shared/config/theme';
 
-import HomeScreen from './pages/Home';
+import HomeScreen from './pages/home';
 import LoginScreen from './pages/Login';
 import NativeStreamScreen from './pages/native-stream';
 import NativePortraitStreamScreen from './pages/native-stream/portrait';

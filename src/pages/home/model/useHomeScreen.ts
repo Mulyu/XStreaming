@@ -1,24 +1,21 @@
 import React from 'react';
-import {StyleSheet, View, Alert, NativeModules, Linking} from 'react-native';
-import {Button, Text, Portal, Modal, Card} from 'react-native-paper';
-import Spinner from '../shared/ui/Spinner';
+import {Alert, NativeModules, Linking} from 'react-native';
 import {useIsFocused} from '@react-navigation/native';
 import RNRestart from 'react-native-restart';
-import {getSettings, saveSettings} from '../shared/lib/settings';
+import {getSettings, saveSettings} from '../../../shared/lib/settings';
 
-import Authentication from '../Authentication';
-import MsalAuthentication from '../MsalAuthentication';
+import Authentication from '../../../Authentication';
+import MsalAuthentication from '../../../MsalAuthentication';
 
 import {useSelector, useDispatch} from 'react-redux';
 import SplashScreen from 'react-native-splash-screen';
 import {useTranslation} from 'react-i18next';
 import NetInfo from '@react-native-community/netinfo';
-import {debugFactory} from '../shared/lib/debug';
-import {MsalAuth} from '../entities/xbox-token';
+import {debugFactory} from '../../../shared/lib/debug';
 import {
   isSignedIn as isGfnSignedIn,
   getValidTokens as getValidGfnTokens,
-} from '../entities/gfn-account';
+} from '../../../entities/gfn-account';
 
 const log = debugFactory('HomeScreen');
 
@@ -35,11 +32,11 @@ const MSAL = 'msal';
 // to Main either way. It shows the actual interactive login UI only when
 // navigated to with {intent: 'login'} (from the Settings account row).
 // The Xbox console remote-play ("xhome") flow has been removed.
-function HomeScreen({navigation, route}) {
+export function useHomeScreen(navigation: any, route: any) {
   const {t} = useTranslation();
   const [loading, setLoading] = React.useState(false);
   const [loadingText, setLoadingText] = React.useState('');
-  const [_, setXalUrl] = React.useState('');
+  const [, setXalUrl] = React.useState('');
   const [isConnected, setIsConnected] = React.useState(true);
   const [showHarmonyModal, setShowHarmonyModal] = React.useState(false);
   const [showLogin, setShowLogin] = React.useState(false);
@@ -342,51 +339,23 @@ function HomeScreen({navigation, route}) {
     isConnected,
   ]);
 
-  const renderHarmonyModal = () => {
-    if (!showHarmonyModal) {
-      return null;
-    }
-    return (
-      <Portal>
-        <Modal
-          visible={true}
-          onDismiss={() => {
-            setShowHarmonyModal(false);
-          }}
-          contentContainerStyle={{marginLeft: '4%', marginRight: '4%'}}>
-          <Card>
-            <Card.Content>
-              <Text>
-                XStreaming鸿蒙版已正式发布App Gallery，如您的设备系统为HarmonyOS
-                5以上，您可以安装原生版本以获得更好的串流体验(点击立即下载或应用商店搜索"XStreaming"进行安装)。
-              </Text>
-
-              <Button
-                mode="text"
-                onPress={() => {
-                  let _settings = getSettings();
-                  _settings.show_harmony_modal = false;
-                  saveSettings(_settings);
-                  setShowHarmonyModal(false);
-                }}>
-                不再提示
-              </Button>
-              <Button
-                mode="elevated"
-                onPress={() => {
-                  Linking.openURL(HARMOBY_URL);
-                  setShowHarmonyModal(false);
-                }}>
-                去安装
-              </Button>
-            </Card.Content>
-          </Card>
-        </Modal>
-      </Portal>
-    );
+  const onDismissHarmonyModal = () => {
+    setShowHarmonyModal(false);
   };
 
-  const handleLogin = () => {
+  const onDisableHarmonyModal = () => {
+    const _settings = getSettings();
+    _settings.show_harmony_modal = false;
+    saveSettings(_settings);
+    setShowHarmonyModal(false);
+  };
+
+  const onInstallHarmony = () => {
+    Linking.openURL(HARMOBY_URL);
+    setShowHarmonyModal(false);
+  };
+
+  const onLogin = () => {
     if (_redirect.current && _redirect.current.sisuAuth) {
       navigation.navigate('Login', {
         authUrl: _redirect.current.sisuAuth.MsaOauthRedirect,
@@ -394,7 +363,7 @@ function HomeScreen({navigation, route}) {
     }
   };
 
-  const handleMsalLogin = () => {
+  const onMsalLogin = () => {
     setMsalBtnLoading(true);
     _authentication.current
       .getMsalDeviceCode()
@@ -420,92 +389,27 @@ function HomeScreen({navigation, route}) {
       });
   };
 
-  const renderLogin = () => {
-    return (
-      <View>
-        <Text style={styles.title}>{t('NoLogin')}</Text>
-        <Button mode="outlined" onPress={handleLogin}>
-          &nbsp;{t('Login')}&nbsp;
-        </Button>
-
-        <Button
-          style={styles.mt10}
-          mode="text"
-          onPress={() => navigation.navigate('Main', {screen: 'Settings'})}>
-          &nbsp;{t('Settings')}&nbsp;
-        </Button>
-      </View>
-    );
+  const onNavigateSettings = () => {
+    navigation.navigate('Main', {screen: 'Settings'});
   };
 
-  const renderMsalLogin = () => {
-    return (
-      <View>
-        <Button
-          mode="outlined"
-          loading={msalBtnLoading}
-          onPress={handleMsalLogin}>
-          &nbsp;{t('AuthLogin')}&nbsp;
-        </Button>
-
-        <Button
-          style={styles.mt10}
-          mode="text"
-          onPress={() => navigation.navigate('Main', {screen: 'Settings'})}>
-          &nbsp;{t('Settings')}&nbsp;
-        </Button>
-      </View>
-    );
+  return {
+    t,
+    loading,
+    loadingText,
+    showHarmonyModal,
+    showLogin,
+    showMsalLogin,
+    showMsal,
+    msalBtnLoading,
+    msalData,
+    onDismissHarmonyModal,
+    onDisableHarmonyModal,
+    onInstallHarmony,
+    onLogin,
+    onMsalLogin,
+    onNavigateSettings,
   };
-
-  const renderContent = () => {
-    if (loading) {
-      return null;
-    }
-    if (showLogin) {
-      return <View style={styles.centerContainer}>{renderLogin()}</View>;
-    } else if (showMsalLogin) {
-      return <View style={styles.centerContainer}>{renderMsalLogin()}</View>;
-    } else if (showMsal) {
-      return (
-        <View style={styles.centerContainer}>
-          <MsalAuth data={msalData} />
-        </View>
-      );
-    }
-    return null;
-  };
-
-  return (
-    <View style={styles.root}>
-      <Spinner loading={loading} text={loadingText} />
-
-      {renderHarmonyModal()}
-
-      {renderContent()}
-    </View>
-  );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  mt10: {
-    marginTop: 10,
-  },
-});
-
-export default HomeScreen;
+export type HomeScreenViewModel = ReturnType<typeof useHomeScreen>;
