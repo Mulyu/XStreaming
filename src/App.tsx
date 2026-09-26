@@ -45,7 +45,7 @@ import NativeStreamScreen from './pages/native-stream';
 import NativePortraitStreamScreen from './pages/native-stream/portrait';
 import SettingsScreen from './pages/settings';
 import LibraryScreen from './pages/Library';
-import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
+import LibraryTitleDetailScreen from './pages/library-title-detail';
 import StoreScreen from './pages/store';
 import NativeGameMapScreen from './pages/native-game-map';
 import GameMapDetailScreen from './pages/game-map-detail';
