@@ -39,11 +39,7 @@ import {
   SteamPriceInfo,
   isSteamSaleForDisplay,
 } from '../entities/catalog-title';
-import {
-  CAP_META,
-  capLabel,
-  renderStars,
-} from '../entities/catalog-title/ui/titleCapabilities';
+import {CAP_META, capLabel, renderStars} from '../entities/title-capabilities';
 import {
   launchWithProvider,
   getTitleProductId,
