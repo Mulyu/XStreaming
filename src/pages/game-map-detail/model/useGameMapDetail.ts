@@ -1,22 +1,14 @@
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-  ScrollView,
-  NativeModules,
-  NativeEventEmitter,
-} from 'react-native';
-import {Text} from 'react-native-paper';
+import {NativeModules, NativeEventEmitter} from 'react-native';
 import {useTranslation} from 'react-i18next';
-import {debugFactory} from '../shared/lib/debug';
-import {SvgXml} from 'react-native-svg';
-import {legendIcons as maping} from '../entities/gamepad';
+import {debugFactory} from '../../../shared/lib/debug';
+import {legendIcons as maping} from '../../../entities/gamepad';
 
 const log = debugFactory('GameMapDetailScreen');
 
 const {GamepadManager} = NativeModules;
 
-function GameMapDetail({navigation, route}) {
+export function useGameMapDetail(navigation: any, route: any) {
   const {t} = useTranslation();
 
   React.useEffect(() => {
@@ -57,40 +49,10 @@ function GameMapDetail({navigation, route}) {
   const current = route.params?.button;
   console.log('current:', current);
 
-  return (
-    <View style={styles.container}>
-      <ScrollView>
-        <Text style={styles.text}>
-          {t(
-            'Please press the button on the controller, which will be mapped to:',
-          )}
-        </Text>
-        <View style={styles.flex}>
-          <SvgXml xml={maping[current]} width="50" height="50" />
-        </View>
-        <Text style={styles.text}>
-          {t('After successful mapping, this pop-up will automatically close')}
-        </Text>
-      </ScrollView>
-    </View>
-  );
+  return {
+    t,
+    buttonIconXml: maping[current],
+  };
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    flex: 1,
-    padding: 10,
-  },
-  text: {
-    color: '#333',
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  flex: {
-    flex: 1,
-    alignItems: 'center',
-  },
-});
-
-export default GameMapDetail;
+export type GameMapDetailViewModel = ReturnType<typeof useGameMapDetail>;

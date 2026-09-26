@@ -48,7 +48,7 @@ import LibraryScreen from './pages/Library';
 import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
 import StoreScreen from './pages/store';
 import NativeGameMapScreen from './pages/NativeGameMap';
-import GameMapDetailScreen from './pages/GameMapDetail';
+import GameMapDetailScreen from './pages/game-map-detail';
 import VirtualGamepadSettingsScreen from './pages/VirtualGamepadSettings';
 import CustomGamepadScreen from './pages/CustomGamepad';
 import Ds5SettingsScreen from './pages/Ds5Settings';
