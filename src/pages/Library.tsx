@@ -18,7 +18,7 @@ import {
   useFocusEffect,
 } from '@react-navigation/native';
 import {useSelector} from 'react-redux';
-import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
+import {isSignedIn, getValidGfnJwt} from '../entities/gfn-account';
 import {
   GfnGame,
   fetchGfnOwnedGames,

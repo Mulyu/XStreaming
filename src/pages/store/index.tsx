@@ -23,7 +23,7 @@ import {
   getFreshFullCatalog,
   getCachedFullCatalog,
 } from '../../entities/catalog-title';
-import {isSignedIn, getValidGfnJwt} from '../../gfn/auth';
+import {isSignedIn, getValidGfnJwt} from '../../entities/gfn-account';
 import {getSettings} from '../../shared/lib/settings';
 import {getSystemRegion} from '../../shared/lib/locale';
 import {

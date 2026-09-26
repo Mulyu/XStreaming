@@ -15,8 +15,8 @@ import {Text, Icon, useTheme} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useTranslation} from 'react-i18next';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
-import {useGfnSignIn} from '../gfn/useGfnSignIn';
+import {isSignedIn, getValidGfnJwt} from '../entities/gfn-account';
+import {useGfnSignIn} from '../features/gfn-auth';
 import GfnSignInModal from '../components/GfnSignInModal';
 import {
   fetchGfnAppDetails,

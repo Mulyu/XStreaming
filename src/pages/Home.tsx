@@ -18,7 +18,7 @@ import MsalAuth from '../components/MsalAuth';
 import {
   isSignedIn as isGfnSignedIn,
   getValidTokens as getValidGfnTokens,
-} from '../gfn/auth';
+} from '../entities/gfn-account';
 
 const log = debugFactory('HomeScreen');
 
