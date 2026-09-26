@@ -4,7 +4,7 @@
 //
 // Run from the repo root: node .claude/skills/refactoring/detect-divergence.js
 //
-// Four checks:
+// Five checks:
 //   1. Non-FSD top-level directories under src/ (not yet migrated to a
 //      layer), ranked by line count smallest-first -- matches the
 //      refactoring skill's own "order by size, smallest first" step.
@@ -22,6 +22,14 @@
 //      under a recognized FSD layer directory -- code under a non-FSD
 //      directory from check 1 has no declared layer to check direction
 //      against).
+//   5. Page composition violations: for a page slice that has opted into
+//      the ui/model/index pattern (signaled by having a model/
+//      subdirectory at all), a ui/ file that calls a hook, or a model/
+//      file that renders JSX (architecture.md: "Page slices specifically
+//      ..."). Scoped to slices with a model/ dir so pages that haven't
+//      adopted the pattern yet (a flat screen file, or a folder like
+//      pages/native-stream/ whose ui/ predates this convention) aren't
+//      flagged.
 'use strict';
 
 const fs = require('fs');
@@ -203,6 +211,99 @@ for (const [file, info] of classified) {
   }
 }
 
+// ---- Check 5: page composition violations (ui/model segment purity) ----
+// Deliberately strict per architecture.md: ANY hook call in ui/ (including
+// presentational ones like useTheme/useTranslation) counts, and ANY JSX in
+// model/ counts -- not just React's built-in hooks/state.
+const HOOK_CALL_RE = /^use[A-Z0-9]/;
+
+function containsHookCall(absFile) {
+  const source = fs.readFileSync(absFile, 'utf8');
+  const sf = ts.createSourceFile(
+    absFile,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let found = false;
+  ts.forEachChild(sf, function visit(node) {
+    if (found) return;
+    // Matches both `useFoo(...)` and the `React.useFoo(...)` member-access
+    // style this codebase commonly uses (no destructured hook imports).
+    const callee = ts.isCallExpression(node) ? node.expression : null;
+    const calleeName = callee
+      ? ts.isIdentifier(callee)
+        ? callee.text
+        : ts.isPropertyAccessExpression(callee)
+          ? callee.name.text
+          : null
+      : null;
+    if (calleeName && HOOK_CALL_RE.test(calleeName)) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  });
+  return found;
+}
+
+function containsJsx(absFile) {
+  const source = fs.readFileSync(absFile, 'utf8');
+  const sf = ts.createSourceFile(
+    absFile,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let found = false;
+  ts.forEachChild(sf, function visit(node) {
+    if (found) return;
+    if (
+      ts.isJsxElement(node) ||
+      ts.isJsxSelfClosingElement(node) ||
+      ts.isJsxFragment(node)
+    ) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  });
+  return found;
+}
+
+const pageSlicesWithModel = new Set();
+const pagesDir = path.join(SRC_DIR, 'pages');
+if (fs.existsSync(pagesDir)) {
+  for (const entry of fs.readdirSync(pagesDir, {withFileTypes: true})) {
+    if (entry.isDirectory() && fs.existsSync(path.join(pagesDir, entry.name, 'model'))) {
+      pageSlicesWithModel.add(entry.name);
+    }
+  }
+}
+
+const pageCompositionViolations = [];
+for (const file of allFiles) {
+  const parts = path.relative(SRC_DIR, file).split(path.sep);
+  if (parts[0] !== 'pages' || parts.length < 3) continue;
+  const [, slice, segment] = parts;
+  if (!pageSlicesWithModel.has(slice)) continue; // hasn't opted into the pattern
+  const rel = path.relative(SRC_DIR, file);
+  if (segment === 'ui' && containsHookCall(file)) {
+    pageCompositionViolations.push({
+      file: rel,
+      issue: 'ui/ file calls a hook -- hooks belong in model/',
+    });
+  }
+  if (segment === 'model' && containsJsx(file)) {
+    pageCompositionViolations.push({
+      file: rel,
+      issue: 'model/ file contains JSX -- rendering belongs in ui/',
+    });
+  }
+}
+
 // ---- Report ----
 console.log('=== 1. Non-FSD top-level directories (smallest first) ===');
 if (dirStats.length === 0) {
@@ -244,10 +345,22 @@ if (reverseLayerViolations.length === 0) {
   }
 }
 
+console.log(
+  '\n=== 5. Page composition violations (ui/model segment purity) ===',
+);
+if (pageCompositionViolations.length === 0) {
+  console.log('  none found.');
+} else {
+  for (const v of pageCompositionViolations) {
+    console.log(`  ${v.file}\n    ${v.issue}`);
+  }
+}
+
 const total =
   dirStats.length +
   publicApiViolations.length +
   sliceIsolationViolations.length +
-  reverseLayerViolations.length;
+  reverseLayerViolations.length +
+  pageCompositionViolations.length;
 console.log(`\nTotal divergence items: ${total}`);
 process.exitCode = total > 0 ? 1 : 0;
