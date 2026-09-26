@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, PanResponder, StyleSheet} from 'react-native';
-import {MOUSE_LEFT, MOUSE_RIGHT} from '../entities/gfn-input';
+import {MOUSE_LEFT, MOUSE_RIGHT} from '../model/inputEncoding';
 
 export interface MouseTrackpadRect {
   x: number;

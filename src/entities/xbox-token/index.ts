@@ -38,3 +38,5 @@ export {default as Msal} from './api/msal';
 
 export type {AuthenticationMethod, TokenStoreData} from './api/tokenstore';
 export {default as TokenStore} from './api/tokenstore';
+
+export {default as MsalAuth} from './ui/MsalAuth';

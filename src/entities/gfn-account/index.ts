@@ -6,3 +6,4 @@
 // features can't import each other directly. Consumers outside this slice
 // import from here, not from model/auth directly.
 export * from './model/auth';
+export {default as GfnSignInModal} from './ui/GfnSignInModal';

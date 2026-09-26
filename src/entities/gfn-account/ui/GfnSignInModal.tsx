@@ -2,7 +2,7 @@ import React from 'react';
 import {StyleSheet, View, Modal, Linking, Pressable} from 'react-native';
 import {Text, Icon, ActivityIndicator, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
-import {GfnDeviceChallenge} from '../entities/gfn-account';
+import {GfnDeviceChallenge} from '../model/auth';
 
 const NVIDIA_ACCENT = '#76B900';
 

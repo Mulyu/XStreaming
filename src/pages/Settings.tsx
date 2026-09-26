@@ -33,8 +33,11 @@ import {
   GfnFullCatalogStatus,
 } from '../entities/catalog-title';
 import {useGfnSignIn} from '../features/gfn-auth';
-import GfnSignInModal from '../components/GfnSignInModal';
-import {getValidGfnJwt, getValidGfnUserId} from '../entities/gfn-account';
+import {
+  getValidGfnJwt,
+  getValidGfnUserId,
+  GfnSignInModal,
+} from '../entities/gfn-account';
 import {
   fetchGfnSubscription,
   fetchGfnVpcId,
