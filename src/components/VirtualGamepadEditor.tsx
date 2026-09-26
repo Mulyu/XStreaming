@@ -26,11 +26,13 @@ import {
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
 import GridBackground from '../shared/ui/GridBackground';
-import GamepadButton from './CustomGamepad/Button';
-import KeyChip from './CustomGamepad/KeyChip';
+import {
+  GamepadButtonPreview as GamepadButton,
+  KeyChip,
+  CoverLayoutOverlay,
+} from '../features/controller-customization';
 import KeyPicker from './KeyPicker';
 import {PickableKey} from '../features/virtual-keyboard';
-import CoverLayoutOverlay from './CoverLayoutOverlay';
 import {
   getVirtualGamepadLayouts as getGamepadLayouts,
   createDefaultMacroLayoutButtons,

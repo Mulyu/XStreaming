@@ -1,8 +1,7 @@
 import React from 'react';
 import {View, StyleSheet} from 'react-native';
 import {GestureDetector, Gesture} from 'react-native-gesture-handler';
-import KeyChip from './CustomGamepad/KeyChip';
-import {ButtonConfig} from '../features/controller-customization';
+import {KeyChip, ButtonConfig} from '../features/controller-customization';
 import {VK_TO_MOD_BIT, KeyboardModifiers} from '../features/virtual-keyboard';
 
 export type CustomKeyButtonsProps = {
@@ -44,8 +43,8 @@ const KeyButtonInstance: React.FC<{
   );
 
   // Same low-latency press detection as the other virtual gamepad buttons
-  // (see CustomGamepad/GamepadButton.tsx) -- onPressIn/onPressOut alone
-  // aren't as immediate for game input timing.
+  // (see features/controller-customization's GamepadButton.tsx) --
+  // onPressIn/onPressOut alone aren't as immediate for game input timing.
   const gesture = Gesture.LongPress()
     .onStart(() => {
       if (modBit !== undefined) {

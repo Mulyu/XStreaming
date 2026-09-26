@@ -52,7 +52,6 @@ import {
   XBOX_360_GAMEPAD_MAPING,
   VirtualGamepad,
 } from '../../entities/gamepad';
-import CustomVirtualGamepad from '../../components/CustomVirtualGamepad';
 import VirtualGamepadEditor, {
   ButtonConfig,
 } from '../../components/VirtualGamepadEditor';
@@ -67,9 +66,11 @@ import {MouseTrackpadZone} from '../../entities/gfn-input';
 import VirtualKeyboard from '../../components/VirtualKeyboard';
 import CustomKeyButtons from '../../components/CustomKeyButtons';
 import {useKeyboardModifiers} from '../../features/virtual-keyboard';
-import PortraitVirtualGamepad, {
+import {
+  CustomVirtualGamepad,
+  PortraitVirtualGamepad,
   PortraitGamepadControl,
-} from '../../components/PortraitVirtualGamepad';
+} from '../../features/controller-customization';
 import {
   coverGamepadBus,
   normalizeMacroLoopIntervalMs,
