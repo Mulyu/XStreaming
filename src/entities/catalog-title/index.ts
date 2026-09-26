@@ -82,9 +82,3 @@ export type {SteamPriceInfo} from './api/steamPrice';
 export {fetchSteamPrices, isSteamSaleForDisplay} from './api/steamPrice';
 
 export {fetchPopularOrder, buildPopularRank} from './api/popularOrder';
-
-// ui/titleCapabilities is deliberately NOT re-exported here: it pulls in
-// react-native-vector-icons, which would drag a native-UI dependency into
-// every consumer of this barrel -- including pages/storeLogic.ts, split out
-// of Store.tsx specifically to stay light enough for Jest to load directly
-// (see its own comment). Import it from './ui/titleCapabilities' instead.
