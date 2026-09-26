@@ -44,7 +44,7 @@ import LoginScreen from './pages/login';
 import NativeStreamScreen from './pages/native-stream';
 import NativePortraitStreamScreen from './pages/native-stream/portrait';
 import SettingsScreen from './pages/settings';
-import LibraryScreen from './pages/Library';
+import LibraryScreen from './pages/library';
 import LibraryTitleDetailScreen from './pages/library-title-detail';
 import StoreScreen from './pages/store';
 import NativeGameMapScreen from './pages/native-game-map';
@@ -156,9 +156,9 @@ const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 // stream and settings sub-screens are pushed on the root stack, above the
 // tabs, so they open full-screen without a tab bar.
 // Library merges the xCloud and GeForce NOW catalogs into one grid (see
-// src/pages/Library.tsx), which has since absorbed the previous separate
+// src/pages/library/), which has since absorbed the previous separate
 // Cloud/Gfn tabs' rating/popularity sorting -- those two screens were
-// removed once Library.tsx carried the same functionality.
+// removed once Library carried the same functionality.
 function MainTabs() {
   return (
     <MainTab.Navigator
