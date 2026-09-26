@@ -21,7 +21,7 @@ import {
   GamepadInput,
   parseInputHandshake,
   startInputSessionClock,
-} from './inputEncoding';
+} from '../entities/gfn-input';
 
 // GeForce NOW WebRTC streaming client for React Native. Given a ready CloudMatch
 // session, it connects the nvst signaling socket, answers the server's WebRTC
