@@ -43,7 +43,7 @@ import HomeScreen from './pages/home';
 import LoginScreen from './pages/login';
 import NativeStreamScreen from './pages/native-stream';
 import NativePortraitStreamScreen from './pages/native-stream/portrait';
-import SettingsScreen from './pages/Settings';
+import SettingsScreen from './pages/settings';
 import LibraryScreen from './pages/Library';
 import LibraryTitleDetailScreen from './pages/LibraryTitleDetail';
 import StoreScreen from './pages/store';
