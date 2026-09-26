@@ -1,10 +1,8 @@
 import React from 'react';
-import {View, StyleSheet, FlatList} from 'react-native';
-import {Button} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
-import {getSettings, saveSettings} from '../shared/lib/settings';
-import {debugFactory} from '../shared/lib/debug';
-import {MapItem, GAMEPAD_MAPING} from '../entities/gamepad';
+import {getSettings, saveSettings} from '../../../shared/lib/settings';
+import {debugFactory} from '../../../shared/lib/debug';
+import {GAMEPAD_MAPING} from '../../../entities/gamepad';
 
 const log = debugFactory('NativeGameMapScreen');
 
@@ -30,7 +28,7 @@ const buttonLabels = [
   'Nexus',
 ];
 
-function NativeGameMap({navigation, route}) {
+export function useNativeGameMap(navigation: any, route: any) {
   const {t} = useTranslation();
 
   const [maping, setMaping] = React.useState(
@@ -76,13 +74,13 @@ function NativeGameMap({navigation, route}) {
     });
   });
 
-  const handleItemPress = item => {
+  const onItemPress = item => {
     navigation.navigate('GameMapDetail', {
       button: item.name,
     });
   };
 
-  const handleSave = () => {
+  const onSave = () => {
     console.log('maping:', maping);
     settings.native_gamepad_maping = maping;
     setSettings(settings);
@@ -90,61 +88,18 @@ function NativeGameMap({navigation, route}) {
     navigation.goBack();
   };
 
-  const handleReset = () => {
+  const onReset = () => {
     setMaping(JSON.parse(JSON.stringify(defaultMaping)));
     mapingRef.current = JSON.parse(JSON.stringify(defaultMaping));
   };
 
-  return (
-    <View style={styles.container}>
-      <FlatList
-        style={styles.scrollView}
-        data={renderDatas}
-        numColumns={2}
-        renderItem={({item}) => {
-          return (
-            <View style={styles.listItem}>
-              <MapItem mapItem={item} onPress={handleItemPress} />
-            </View>
-          );
-        }}
-      />
-
-      <View style={styles.buttonWrap}>
-        <Button mode="contained" style={styles.button} onPress={handleSave}>
-          {t('Save Maping')}
-        </Button>
-        <Button mode="outlined" style={styles.button} onPress={handleReset}>
-          {t('Reset')}
-        </Button>
-      </View>
-    </View>
-  );
+  return {
+    t,
+    renderDatas,
+    onItemPress,
+    onSave,
+    onReset,
+  };
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // backgroundColor: '#fff',
-  },
-  scrollView: {
-    marginBottom: 150,
-  },
-  listItem: {
-    width: '50%',
-    justifyContent: 'center',
-  },
-  buttonWrap: {
-    position: 'absolute',
-    left: 0,
-    width: '100%',
-    bottom: 20,
-    paddingLeft: 10,
-    paddingRight: 10,
-  },
-  button: {
-    marginTop: 10,
-  },
-});
-
-export default NativeGameMap;
+export type NativeGameMapViewModel = ReturnType<typeof useNativeGameMap>;
