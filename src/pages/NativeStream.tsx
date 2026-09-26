@@ -21,7 +21,11 @@ import Orientation from 'react-native-orientation-locker';
 import StreamHandshakeOverlay from '../components/StreamHandshakeOverlay';
 import type {LoadingPhase} from '../shared/lib/loadingPhase';
 import {useSelector} from 'react-redux';
-import {XcloudSessionClient} from '../features/xcloud-session';
+import {
+  XcloudSessionClient,
+  webRTCClient,
+  PointerWireData,
+} from '../features/xcloud-session';
 import {getSettings, saveSettings} from '../shared/lib/settings';
 import {
   saveVirtualGamepadLayout as saveGamepadLayout,
@@ -40,7 +44,6 @@ import {
   createDefaultSwipePad,
 } from '../features/controller-customization';
 import {useTranslation} from 'react-i18next';
-import webRTCClient from '../webrtc';
 import {GfnStreamAdapter} from '../gfn/streamAdapter';
 import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../shared/lib/debug';
@@ -64,7 +67,6 @@ import {useKeyboardModifiers} from '../features/virtual-keyboard';
 import PortraitVirtualGamepad, {
   PortraitGamepadControl,
 } from '../components/PortraitVirtualGamepad';
-import type {PointerWireData} from '../webrtc/Channel/Input';
 import {
   coverGamepadBus,
   normalizeMacroLoopIntervalMs,
