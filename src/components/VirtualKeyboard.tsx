@@ -8,7 +8,7 @@ import {
   KEY_MOD_META,
   KEY_MOD_SHIFT,
   VK,
-} from '../gfn/inputEncoding';
+} from '../entities/gfn-input';
 import {KeyboardModifiers} from '../features/virtual-keyboard';
 
 const ACCENT = '#76B900'; // GFN-only feature -- always the NVIDIA accent.

@@ -31,7 +31,7 @@ import {
   GAMEPAD_DPAD_DOWN,
   GAMEPAD_DPAD_LEFT,
   GAMEPAD_DPAD_RIGHT,
-} from './inputEncoding';
+} from '../entities/gfn-input';
 import {GfnTouchGestureTracker} from './touchGesture';
 
 // GfnStreamAdapter makes a GeForce NOW session look like the xCloud

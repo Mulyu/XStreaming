@@ -1,4 +1,4 @@
-import {MOUSE_LEFT, MOUSE_RIGHT} from './inputEncoding';
+import {MOUSE_LEFT, MOUSE_RIGHT} from '../entities/gfn-input';
 
 export type GfnPointerEventType = 'pointerdown' | 'pointermove' | 'pointerup';
 

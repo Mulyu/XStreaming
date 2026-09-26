@@ -1,5 +1,5 @@
 import {GfnTouchGestureTracker} from '../touchGesture';
-import {MOUSE_LEFT, MOUSE_RIGHT} from '../inputEncoding';
+import {MOUSE_LEFT, MOUSE_RIGHT} from '../../entities/gfn-input';
 
 const makeCallbacks = () => ({
   moveCursor: jest.fn(),

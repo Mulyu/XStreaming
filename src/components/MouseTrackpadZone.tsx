@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, PanResponder, StyleSheet} from 'react-native';
-import {MOUSE_LEFT, MOUSE_RIGHT} from '../gfn/inputEncoding';
+import {MOUSE_LEFT, MOUSE_RIGHT} from '../entities/gfn-input';
 
 export interface MouseTrackpadRect {
   x: number;
@@ -31,7 +31,7 @@ const HOLD_TO_DRAG_MS = 350;
 
 /**
  * A transparent overlay that turns touch gestures into trackpad-style mouse
- * input for GFN's mouse protocol (see gfn/inputEncoding.ts): one-finger drag
+ * input for GFN's mouse protocol (see entities/gfn-input): one-finger drag
  * moves the cursor, a tap clicks, a held-then-dragged finger click-drags, a
  * two-finger tap right-clicks, and a two-finger drag scrolls -- the same
  * conventions as a laptop trackpad, since there's no physical mouse here.

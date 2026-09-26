@@ -3169,7 +3169,7 @@ export function NativeStreamScreenBase({
   };
 
   // GFN-only mouse trackpad: relative move + click/right-click/scroll for
-  // Steam/PC titles. See gfn/inputEncoding.ts and components/MouseTrackpadZone.
+  // Steam/PC titles. See entities/gfn-input and components/MouseTrackpadZone.
   // Sensitivity is user-adjustable (StreamControlRail's Mouse group) and
   // persisted via handleMouseSensitivityChange above.
   const mouseTrackpadRect = React.useMemo(
@@ -3205,7 +3205,7 @@ export function NativeStreamScreenBase({
     [webrtcClient],
   );
 
-  // GFN-only virtual keyboard. See gfn/inputEncoding.ts (INPUT_KEY_DOWN/UP)
+  // GFN-only virtual keyboard. See entities/gfn-input (INPUT_KEY_DOWN/UP)
   // and components/VirtualKeyboard.tsx.
   const handleKeyDown = React.useCallback(
     (virtualKey: number, modifiers: number) => {
