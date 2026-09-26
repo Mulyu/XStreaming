@@ -19,17 +19,16 @@ import {
 import {useTranslation} from 'react-i18next';
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
-import GridBackground from '../shared/ui/GridBackground';
+import GridBackground from '../../../shared/ui/GridBackground';
+import {coverGamepadBus} from '../lib/coverGamepadBus';
+import {snapToGrid} from '../lib/gamepadLayout';
+import {getCoverEnabled, setCoverEnabled} from '../model/touchProfile';
 import {
-  coverGamepadBus,
-  snapToGrid,
-  getCoverEnabled,
-  setCoverEnabled,
   getCoverLayout,
   saveCoverLayout,
   defaultCoverLayout,
   CoverButton,
-} from '../features/controller-customization';
+} from '../model/coverLayout';
 
 const {CoverDisplayManager} = NativeModules;
 

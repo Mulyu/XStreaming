@@ -18,8 +18,10 @@ import {
 import {useTranslation} from 'react-i18next';
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
-import GamepadButton from '../components/CustomGamepad/Button';
-import KeyChip from '../components/CustomGamepad/KeyChip';
+import {
+  GamepadButtonPreview as GamepadButton,
+  KeyChip,
+} from '../features/controller-customization';
 import KeyPicker from '../components/KeyPicker';
 import {PickableKey} from '../features/virtual-keyboard';
 import GridBackground from '../shared/ui/GridBackground';

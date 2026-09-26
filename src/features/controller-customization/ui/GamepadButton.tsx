@@ -2,12 +2,12 @@ import React from 'react';
 import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import {GestureDetector, Gesture} from 'react-native-gesture-handler';
 import {SvgXml} from 'react-native-svg';
-import {virtualButtonIcons as icons, ButtonView} from '../../entities/gamepad';
 import {
-  getButtonBaseSize,
-  isMacroButtonName,
-  MACRO_SLOT_COLORS,
-} from '../../features/controller-customization';
+  virtualButtonIcons as icons,
+  ButtonView,
+} from '../../../entities/gamepad';
+import {getButtonBaseSize} from '../lib/gamepadLayout';
+import {isMacroButtonName, MACRO_SLOT_COLORS} from '../lib/virtualMacro';
 
 type Props = {
   name: string;

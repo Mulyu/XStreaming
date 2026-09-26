@@ -3,8 +3,8 @@ import {StyleSheet, View} from 'react-native';
 import {IconButton, useTheme} from 'react-native-paper';
 import Draggable from 'react-native-draggable';
 import {useTranslation} from 'react-i18next';
-import PreviewButton from './CustomGamepad/Button';
-import {getButtonBaseSize} from '../features/controller-customization';
+import PreviewButton from './GamepadButtonPreview';
+import {getButtonBaseSize} from '../lib/gamepadLayout';
 
 export type PortraitGamepadControl = {
   name: string;
