@@ -47,8 +47,11 @@ import {useTranslation} from 'react-i18next';
 import {GfnStreamAdapter} from '../../features/gfn-session';
 import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../../shared/lib/debug';
-import {GAMEPAD_MAPING, XBOX_360_GAMEPAD_MAPING} from '../../entities/gamepad';
-import VirtualGamepad from '../../components/VirtualGamepad';
+import {
+  GAMEPAD_MAPING,
+  XBOX_360_GAMEPAD_MAPING,
+  VirtualGamepad,
+} from '../../entities/gamepad';
 import CustomVirtualGamepad from '../../components/CustomVirtualGamepad';
 import VirtualGamepadEditor, {
   ButtonConfig,
@@ -57,9 +60,9 @@ import PerfPanel from '../../components/PerfPanel';
 import StreamControlRail, {
   StreamInputMode,
 } from '../../components/StreamControlRail';
-import RTCFsrView from '../../components/RTCFsrView';
+import RTCFsrView from '../../shared/ui/RTCFsrView';
 import NativeTouchOverlay from '../../components/NativeTouchOverlay';
-import SwipeAimZone from '../../components/SwipeAimZone';
+import SwipeAimZone from '../../shared/ui/SwipeAimZone';
 import MouseTrackpadZone from '../../components/MouseTrackpadZone';
 import VirtualKeyboard from '../../components/VirtualKeyboard';
 import CustomKeyButtons from '../../components/CustomKeyButtons';

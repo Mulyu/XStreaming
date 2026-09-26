@@ -1,6 +1,6 @@
 import React from 'react';
 import {StyleSheet, View, Dimensions} from 'react-native';
-import AnalogStick from '../components/AnalogStick';
+import AnalogStick from './AnalogStick';
 import ButtonView from './ButtonView';
 
 type Props = {
