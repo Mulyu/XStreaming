@@ -30,11 +30,12 @@
 //      adopted the pattern yet (a flat screen file, or a folder like
 //      pages/native-stream/ whose ui/ predates this convention) aren't
 //      flagged.
-//   6. Flat page files: a .ts/.tsx file placed directly under pages/
-//      instead of its own pages/<name>/ folder (architecture.md: "every
-//      page is its own folder ... never a loose file directly under
-//      pages/"), ranked by line count smallest-first -- same "tackle the
-//      smallest first" convention as check 1.
+//   6. Flat slice files: a .ts/.tsx file placed directly under a sliced
+//      layer (pages/widgets/features/entities) instead of its own
+//      <layer>/<slice>/ folder (architecture.md: "always a folder ...
+//      never a loose file directly under a sliced layer"), ranked by line
+//      count smallest-first -- same "tackle the smallest first" convention
+//      as check 1. app/shared are excluded -- they have no slices.
 'use strict';
 
 const fs = require('fs');
@@ -309,18 +310,19 @@ for (const file of allFiles) {
   }
 }
 
-// ---- Check 6: flat page files (should be their own folder slice) ----
-const flatPageFiles = fs.existsSync(pagesDir)
-  ? fs
-      .readdirSync(pagesDir, {withFileTypes: true})
-      .filter(e => e.isFile() && /\.(ts|tsx)$/.test(e.name))
-      .map(e => {
-        const full = path.join(pagesDir, e.name);
-        const lines = fs.readFileSync(full, 'utf8').split('\n').length;
-        return {file: path.relative(SRC_DIR, full), lines};
-      })
-      .sort((a, b) => a.lines - b.lines)
-  : [];
+// ---- Check 6: flat slice files (should be their own folder slice) ----
+const flatSliceFiles = [];
+for (const layer of SLICED_LAYERS) {
+  const layerDir = path.join(SRC_DIR, layer);
+  if (!fs.existsSync(layerDir)) continue;
+  for (const entry of fs.readdirSync(layerDir, {withFileTypes: true})) {
+    if (!entry.isFile() || !/\.(ts|tsx)$/.test(entry.name)) continue;
+    const full = path.join(layerDir, entry.name);
+    const lines = fs.readFileSync(full, 'utf8').split('\n').length;
+    flatSliceFiles.push({file: path.relative(SRC_DIR, full), lines});
+  }
+}
+flatSliceFiles.sort((a, b) => a.lines - b.lines);
 
 // ---- Report ----
 console.log('=== 1. Non-FSD top-level directories (smallest first) ===');
@@ -375,12 +377,14 @@ if (pageCompositionViolations.length === 0) {
 }
 
 console.log(
-  '\n=== 6. Flat page files (should be their own folder slice) ===',
+  '\n=== 6. Flat slice files (should be their own folder slice) ===',
 );
-if (flatPageFiles.length === 0) {
-  console.log('  none -- every page under pages/ is its own folder.');
+if (flatSliceFiles.length === 0) {
+  console.log(
+    '  none -- every pages/widgets/features/entities file sits inside a slice folder.',
+  );
 } else {
-  for (const f of flatPageFiles) {
+  for (const f of flatSliceFiles) {
     console.log(`  ${f.file}  lines=${f.lines}`);
   }
 }
@@ -391,6 +395,6 @@ const total =
   sliceIsolationViolations.length +
   reverseLayerViolations.length +
   pageCompositionViolations.length +
-  flatPageFiles.length;
+  flatSliceFiles.length;
 console.log(`\nTotal divergence items: ${total}`);
 process.exitCode = total > 0 ? 1 : 0;
