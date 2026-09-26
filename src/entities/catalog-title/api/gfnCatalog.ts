@@ -1,6 +1,6 @@
-import {storage} from '../shared/lib/mmkv';
-import {GfnGame, steamAppIdFromUrl} from './publicGames';
-import {getGfnLocaleSlug, getGfnGraphqlLocale} from './locale';
+import {storage} from '../../../shared/lib/mmkv';
+import {GfnGame, steamAppIdFromUrl} from './gfnPublicGames';
+import {getGfnLocaleSlug, getGfnGraphqlLocale} from './gfnLocale';
 
 // GeForce NOW authenticated catalog. The public supported-games list has no
 // ownership info and omits account-linked titles (e.g. Battle.net games like

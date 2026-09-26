@@ -1,4 +1,4 @@
-import {steamAppIdFromUrl} from '../publicGames';
+import {steamAppIdFromUrl} from '../gfnPublicGames';
 
 describe('steamAppIdFromUrl', () => {
   // Regression: GFN's authenticated browse query (fetchGfnFullCatalog)

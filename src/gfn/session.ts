@@ -1,5 +1,5 @@
 import {storage} from '../shared/lib/mmkv';
-import {getGfnLocaleSlug, getGfnGraphqlLocale} from './locale';
+import {getGfnLocaleSlug, getGfnGraphqlLocale} from '../entities/catalog-title';
 
 // GeForce NOW CloudMatch session layer. This requests a game session from
 // NVIDIA's CloudMatch service, polls it until a GPU seat is ready, and resolves

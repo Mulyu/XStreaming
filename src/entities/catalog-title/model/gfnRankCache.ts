@@ -1,7 +1,7 @@
 import {storage} from '../../../shared/lib/mmkv';
 
 // Caches GFN catalog-wide rank orders (Most Popular / Newest), fetched from
-// the authenticated apps() browse query -- see gfn/catalog.ts. Keyed by sort
+// the authenticated apps() browse query -- see entities/catalog-title/api/gfnCatalog.ts. Keyed by sort
 // kind rather than market: unlike xCloud Store prices, GFN's catalog rank
 // doesn't vary by region in a way this app needs to track.
 const KEY_PREFIX = 'gfn.rank.';

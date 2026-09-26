@@ -1,5 +1,5 @@
-import {normalizeTitle, mergeOwnedGames} from '../catalog';
-import {GfnGame} from '../publicGames';
+import {normalizeTitle, mergeOwnedGames} from '../gfnCatalog';
+import {GfnGame} from '../gfnPublicGames';
 
 describe('normalizeTitle', () => {
   it('lowercases and strips punctuation/symbols for ASCII titles', () => {

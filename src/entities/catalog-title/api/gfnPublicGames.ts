@@ -1,10 +1,10 @@
-import {storage} from '../shared/lib/mmkv';
-import {getGfnLocaleSlug} from './locale';
+import {storage} from '../../../shared/lib/mmkv';
+import {getGfnLocaleSlug} from './gfnLocale';
 
 // GeForce NOW's supported-games list is served as a public, no-auth JSON, so we
 // can show a browsable catalog before any NVIDIA login is wired up. Steam-backed
 // titles get cover art from Steam's CDN; other stores (Epic, etc.) have none.
-// One such JSON exists per locale (confirmed live -- see gfn/locale.ts), with
+// One such JSON exists per locale (confirmed live -- see entities/catalog-title/api/gfnLocale.ts), with
 // actually-translated titles, not just an English list under a different URL.
 const publicGamesUrl = (slug: string): string =>
   `https://static.nvidiagrid.net/supported-public-game-list/locales/gfnpc-${slug}.json`;
@@ -49,7 +49,7 @@ type RawPublicGame = {
 // Extracts the numeric app id straight after "/app/" in a Steam store URL.
 // Deliberately matches only a *leading* digit run rather than requiring the
 // whole remainder to be numeric -- confirmed live that GFN's authenticated
-// browse query (gfn/catalog.ts's fetchGfnFullCatalog) returns storeUrl with
+// browse query (entities/catalog-title/api/gfnCatalog.ts's fetchGfnFullCatalog) returns storeUrl with
 // no trailing slash before the query string at all, e.g.
 // ".../app/1059220?utm_source=nvidia&utm_campaign=geforce_now". The old
 // full-match check split on "/" first, so that entire query string (with no

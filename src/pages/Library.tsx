@@ -18,9 +18,9 @@ import {
   useFocusEffect,
 } from '@react-navigation/native';
 import {useSelector} from 'react-redux';
-import {GfnGame} from '../gfn/publicGames';
 import {isSignedIn, getValidGfnJwt} from '../gfn/auth';
 import {
+  GfnGame,
   fetchGfnOwnedGames,
   getFreshOwnedGames,
   mergeOwnedGames,
@@ -30,8 +30,6 @@ import {
   fetchGfnFullCatalog,
   getFreshFullCatalog,
   getCachedFullCatalog,
-} from '../gfn/catalog';
-import {
   buildUnifiedCatalog,
   isCatalogTitleOwned,
   CatalogTitle,
@@ -535,7 +533,7 @@ function LibraryScreen() {
   }, [gfnGames, deviceRegion]);
 
   // gfnOwnedGames arrives in the server's own lastPlayed/added order (see
-  // gfn/catalog.ts) -- turn that position into a rank map the same way
+  // entities/catalog-title/api/gfnCatalog.ts) -- turn that position into a rank map the same way
   // xCloud's own recent/popular orders already are.
   const gfnRecentRank = React.useMemo(
     () => buildPopularRank(gfnOwnedGames.map(g => g.id)),
