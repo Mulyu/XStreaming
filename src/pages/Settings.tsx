@@ -32,9 +32,9 @@ import {
   getGfnFullCatalogStatus,
   GfnFullCatalogStatus,
 } from '../entities/catalog-title';
-import {useGfnSignIn} from '../gfn/useGfnSignIn';
+import {useGfnSignIn} from '../features/gfn-auth';
 import GfnSignInModal from '../components/GfnSignInModal';
-import {getValidGfnJwt, getValidGfnUserId} from '../gfn/auth';
+import {getValidGfnJwt, getValidGfnUserId} from '../entities/gfn-account';
 import {
   fetchGfnSubscription,
   fetchGfnVpcId,

@@ -5,7 +5,7 @@ import {
   pollForTokens,
   isSignedIn,
   clearStoredTokens,
-} from './auth';
+} from '../../../entities/gfn-account';
 
 // Shared GFN device-code sign-in flow, extracted so the Library title detail
 // screen and the Settings account row don't each keep their own copy of the

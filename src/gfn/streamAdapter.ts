@@ -8,7 +8,7 @@ import {
   DEFAULT_GFN_SETTINGS,
 } from './session';
 import {GfnWebRtcClient, GfnConnectionState} from './webrtcClient';
-import {getValidGfnJwt} from './auth';
+import {getValidGfnJwt} from '../entities/gfn-account';
 import {getSettings} from '../shared/lib/settings';
 import i18next from '../i18n';
 import type {LoadingPhase} from '../shared/lib/loadingPhase';
