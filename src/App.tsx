@@ -64,7 +64,7 @@ import {useTranslation} from 'react-i18next';
 import {SystemBars} from 'react-native-edge-to-edge';
 
 import './i18n';
-import HubTabBar from './components/HubTabBar';
+import {HubTabBar} from './widgets/hub-tab-bar';
 
 const RootStack = createStackNavigator();
 const MainTab = createBottomTabNavigator();
