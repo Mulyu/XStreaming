@@ -8,7 +8,8 @@ export {default as XcloudSessionClient} from './api/xcloudSessionClient';
 
 // The WebRTC data-channel transport (input/control/chat/message channels,
 // gamepad driver, packet encoding) that carries an already-negotiated
-// xCloud/xHome session -- GFN has its own separate client (gfn/webrtcClient.ts),
-// so this is xcloud-session's own concern, not a shared transport.
+// xCloud/xHome session -- GFN has its own separate client
+// (features/gfn-session's lib/webrtcClient.ts), so this is xcloud-session's
+// own concern, not a shared transport.
 export {default as webRTCClient} from './lib/webrtc';
 export type {PointerWireData} from './lib/webrtc/Channel/Input';

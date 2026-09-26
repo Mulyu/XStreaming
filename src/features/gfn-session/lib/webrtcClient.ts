@@ -4,7 +4,7 @@ import {
   RTCIceCandidate,
   MediaStream,
 } from 'react-native-webrtc';
-import {GfnSession, parseResolution} from './session';
+import {GfnSession, parseResolution} from '../api/session';
 import {
   GfnSignalingClient,
   GfnIceCandidate,
@@ -21,7 +21,7 @@ import {
   GamepadInput,
   parseInputHandshake,
   startInputSessionClock,
-} from '../entities/gfn-input';
+} from '../../../entities/gfn-input';
 
 // GeForce NOW WebRTC streaming client for React Native. Given a ready CloudMatch
 // session, it connects the nvst signaling socket, answers the server's WebRTC

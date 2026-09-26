@@ -7,11 +7,11 @@ import {
   GfnStreamSettings,
   DEFAULT_GFN_SETTINGS,
 } from './session';
-import {GfnWebRtcClient, GfnConnectionState} from './webrtcClient';
-import {getValidGfnJwt} from '../entities/gfn-account';
-import {getSettings} from '../shared/lib/settings';
-import i18next from '../i18n';
-import type {LoadingPhase} from '../shared/lib/loadingPhase';
+import {GfnWebRtcClient, GfnConnectionState} from '../lib/webrtcClient';
+import {getValidGfnJwt} from '../../../entities/gfn-account';
+import {getSettings} from '../../../shared/lib/settings';
+import i18next from '../../../i18n';
+import type {LoadingPhase} from '../../../shared/lib/loadingPhase';
 import {
   GamepadInput,
   normalizeAxisToInt16,
@@ -31,8 +31,8 @@ import {
   GAMEPAD_DPAD_DOWN,
   GAMEPAD_DPAD_LEFT,
   GAMEPAD_DPAD_RIGHT,
-} from '../entities/gfn-input';
-import {GfnTouchGestureTracker} from './touchGesture';
+} from '../../../entities/gfn-input';
+import {GfnTouchGestureTracker} from '../lib/touchGesture';
 
 // GfnStreamAdapter makes a GeForce NOW session look like the xCloud
 // `webRTCClient` so NativeStream can drive it with its full UI: virtual

@@ -41,7 +41,7 @@ import {
   fetchGfnRegions,
   GfnSubscriptionInfo,
   GfnRegionOption,
-} from '../gfn/session';
+} from '../features/gfn-session';
 import {
   basesSettings as bases,
   displaySettings as display,

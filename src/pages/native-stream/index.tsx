@@ -44,7 +44,7 @@ import {
   createDefaultSwipePad,
 } from '../../features/controller-customization';
 import {useTranslation} from 'react-i18next';
-import {GfnStreamAdapter} from '../../gfn/streamAdapter';
+import {GfnStreamAdapter} from '../../features/gfn-session';
 import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../../shared/lib/debug';
 import {GAMEPAD_MAPING, XBOX_360_GAMEPAD_MAPING} from '../../entities/gamepad';
