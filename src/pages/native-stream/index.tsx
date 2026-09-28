@@ -3212,10 +3212,14 @@ export function NativeStreamScreenBase({
       sens > 0 &&
       activeSwipeRect.show !== false &&
       swipeAimActive;
+    const accel = Number(activeSwipe.acceleration) || 0;
     const swipeAimProps = {
       swipeAimEnabled,
       // Map the 0–100 slider to a per-pixel stick factor.
       swipeAimSensitivity: sens * 0.0025,
+      // Map the 0-100 slider to SwipeAimZone's per-pixel-of-speed boost
+      // factor -- see its own acceleration prop for the shape of the curve.
+      swipeAimAcceleration: accel * 0.0003,
       swipeAimRect: {
         x: activeSwipeRect.x,
         y: activeSwipeRect.y,
@@ -3693,6 +3697,9 @@ export function NativeStreamScreenBase({
         }
         swipeActivation={
           getSwipeConfig(editorProfile || getActiveProfileName()).activation
+        }
+        swipeAcceleration={
+          getSwipeConfig(editorProfile || getActiveProfileName()).acceleration
         }
         joystickMode={
           getJoystickMode(editorProfile || getActiveProfileName()) ?? 1

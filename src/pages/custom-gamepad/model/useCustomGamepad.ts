@@ -129,6 +129,7 @@ export function useCustomGamepad(navigation: any, route: any) {
     swipeSensitivity: getSwipeConfig(profileName).sensitivity,
     swipeInvertY: getSwipeConfig(profileName).invertY,
     swipeActivation: getSwipeConfig(profileName).activation,
+    swipeAcceleration: getSwipeConfig(profileName).acceleration,
     joystickMode: getJoystickMode(profileName) ?? 1,
     sensorConfig: getSensorConfig(profileName),
     onSave,

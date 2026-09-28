@@ -30,6 +30,9 @@ type Props = {
   // styles.stickCatcher's comment.
   swipeAimEnabled?: boolean;
   swipeAimSensitivity?: number;
+  // Extra speed-based boost on top of sensitivity -- see SwipeAimZone's own
+  // acceleration prop.
+  swipeAimAcceleration?: number;
   swipeAimRect?: SwipeAimRect;
   onSwipeAim?: (dx: number, dy: number) => void;
   onSwipeAimEnd?: () => void;
@@ -48,6 +51,7 @@ const CustomVirtualGamepad: React.FC<Props> = ({
   loopingMacroNames,
   swipeAimEnabled,
   swipeAimSensitivity = 0,
+  swipeAimAcceleration = 0,
   swipeAimRect,
   onSwipeAim,
   onSwipeAimEnd,
@@ -198,6 +202,7 @@ const CustomVirtualGamepad: React.FC<Props> = ({
         <SwipeAimZone
           enabled
           sensitivity={swipeAimSensitivity}
+          acceleration={swipeAimAcceleration}
           rect={swipeAimRect}
           onAim={onSwipeAim ?? (() => {})}
           onEnd={onSwipeAimEnd ?? (() => {})}

@@ -14,6 +14,9 @@ type Props = {
   // it's rendered nested here rather than as a plain sibling.
   swipeAimEnabled?: boolean;
   swipeAimSensitivity?: number;
+  // Extra speed-based boost on top of sensitivity -- see SwipeAimZone's own
+  // acceleration prop.
+  swipeAimAcceleration?: number;
   swipeAimRect?: SwipeAimRect;
   onSwipeAim?: (dx: number, dy: number) => void;
   onSwipeAimEnd?: () => void;
@@ -29,6 +32,7 @@ const VirtualGamepad: React.FC<Props> = ({
   onStickMove,
   swipeAimEnabled,
   swipeAimSensitivity = 0,
+  swipeAimAcceleration = 0,
   swipeAimRect,
   onSwipeAim,
   onSwipeAimEnd,
@@ -239,6 +243,7 @@ const VirtualGamepad: React.FC<Props> = ({
         <SwipeAimZone
           enabled
           sensitivity={swipeAimSensitivity}
+          acceleration={swipeAimAcceleration}
           rect={swipeAimRect}
           onAim={onSwipeAim ?? (() => {})}
           onEnd={onSwipeAimEnd ?? (() => {})}
