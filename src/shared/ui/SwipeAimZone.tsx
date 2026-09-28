@@ -61,6 +61,13 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   isActive,
 }) => {
   const last = React.useRef<{x: number; y: number} | null>(null);
+  // The identifier of the one finger that actually started this swipe.
+  // Once more than one finger is down anywhere on screen (e.g. the other
+  // hand working the free left stick), nativeEvent's top-level pageX/pageY
+  // can reflect whichever touch last changed rather than ours -- so a
+  // second, unrelated finger's movement must never be read as a continuation
+  // of this gesture.
+  const touchId = React.useRef<string | null>(null);
 
   const responder = React.useMemo(() => {
     const shouldCapture = () => enabled && (!isActive || isActive());
@@ -69,17 +76,29 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
       onMoveShouldSetPanResponder: shouldCapture,
       onPanResponderGrant: evt => {
         const t = evt.nativeEvent;
+        const touch = t.changedTouches?.[0] ?? t.touches?.[0];
+        touchId.current = touch ? touch.identifier : null;
         last.current = {x: t.pageX, y: t.pageY};
       },
       onPanResponderMove: evt => {
         const t = evt.nativeEvent;
-        if (!last.current) {
-          last.current = {x: t.pageX, y: t.pageY};
+        // Find our own finger among whatever touches are currently active,
+        // and ignore the event entirely if it isn't one of them -- it's some
+        // other finger moving, not this swipe.
+        const ownTouch = (t.touches || []).find(
+          touch => touch.identifier === touchId.current,
+        );
+        if (touchId.current != null && !ownTouch) {
           return;
         }
-        const dx = t.pageX - last.current.x;
-        const dy = t.pageY - last.current.y;
-        last.current = {x: t.pageX, y: t.pageY};
+        const point = ownTouch ?? t;
+        if (!last.current) {
+          last.current = {x: point.pageX, y: point.pageY};
+          return;
+        }
+        const dx = point.pageX - last.current.x;
+        const dy = point.pageY - last.current.y;
+        last.current = {x: point.pageX, y: point.pageY};
         // Boost grows with how far the finger moved this one event (a proxy
         // for swipe speed): a slow drag has boost ~= 1 (acceleration barely
         // contributes), a fast flick's larger per-event distance multiplies
@@ -90,10 +109,12 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
       },
       onPanResponderRelease: () => {
         last.current = null;
+        touchId.current = null;
         onEnd();
       },
       onPanResponderTerminate: () => {
         last.current = null;
+        touchId.current = null;
         onEnd();
       },
     });
