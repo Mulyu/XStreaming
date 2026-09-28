@@ -57,6 +57,19 @@ const CustomGamepadView: React.FC<Props> = ({
   setSwipeInvert,
   stickMode,
   setStickMode,
+  showGyroModal,
+  setShowGyroModal,
+  onOpenGyroModal,
+  gyroMode,
+  setGyroMode,
+  gyroActivation,
+  setGyroActivation,
+  gyroSensitivityX,
+  setGyroSensitivityX,
+  gyroSensitivityY,
+  setGyroSensitivityY,
+  gyroInvert,
+  setGyroInvert,
   reloader,
   currentButton,
   currentScale,
@@ -158,6 +171,11 @@ const CustomGamepadView: React.FC<Props> = ({
                   }}
                 />
                 <List.Item
+                  title={t('Gyro aim')}
+                  background={background}
+                  onPress={onOpenGyroModal}
+                />
+                <List.Item
                   title={t('Add a key')}
                   background={background}
                   onPress={() => {
@@ -227,6 +245,101 @@ const CustomGamepadView: React.FC<Props> = ({
                 <RadioButton.Item label={t('Disable')} value="false" />
                 <RadioButton.Item label={t('Enable')} value="true" />
               </RadioButton.Group>
+            </Card.Content>
+          </Card>
+        </Modal>
+      </Portal>
+
+      <Portal>
+        <Modal
+          visible={showGyroModal}
+          onDismiss={() => setShowGyroModal(false)}
+          contentContainerStyle={styles.modal}>
+          <Card>
+            <Card.Content>
+              <View style={styles.title}>
+                <Text>{t('Gyro aim source')}</Text>
+                <Divider style={styles.divider} />
+              </View>
+              <RadioButton.Group
+                onValueChange={val => setGyroMode(Number(val))}
+                value={String(gyroMode)}>
+                <RadioButton.Item label={t('Off')} value="0" />
+                <RadioButton.Item label={t('This device')} value="1" />
+                <RadioButton.Item label={t('Controller')} value="2" />
+              </RadioButton.Group>
+
+              {gyroMode !== 0 && (
+                <>
+                  <View style={styles.title}>
+                    <Text>{t('Gyro aim activation')}</Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <RadioButton.Group
+                    onValueChange={val => setGyroActivation(Number(val))}
+                    value={String(gyroActivation)}>
+                    <RadioButton.Item
+                      label={t('While left trigger held')}
+                      value="1"
+                    />
+                    <RadioButton.Item
+                      label={t('While left bumper held')}
+                      value="2"
+                    />
+                    <RadioButton.Item
+                      label={t('While either held')}
+                      value="3"
+                    />
+                    <RadioButton.Item label={t('Always')} value="4" />
+                  </RadioButton.Group>
+
+                  <View style={styles.title}>
+                    <Text>
+                      {t('Gyro aim sensitivity X')}: {gyroSensitivityX}
+                    </Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <Slider
+                    value={gyroSensitivityX}
+                    minimumValue={1000}
+                    maximumValue={40000}
+                    step={500}
+                    onValueChange={val => setGyroSensitivityX(Math.round(val))}
+                    minimumTrackTintColor={primaryColor}
+                    maximumTrackTintColor="grey"
+                  />
+
+                  <View style={styles.title}>
+                    <Text>
+                      {t('Gyro aim sensitivity Y')}: {gyroSensitivityY}
+                    </Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <Slider
+                    value={gyroSensitivityY}
+                    minimumValue={1000}
+                    maximumValue={40000}
+                    step={500}
+                    onValueChange={val => setGyroSensitivityY(Math.round(val))}
+                    minimumTrackTintColor={primaryColor}
+                    maximumTrackTintColor="grey"
+                  />
+
+                  <View style={styles.title}>
+                    <Text>{t('Invert gyro aim')}</Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <RadioButton.Group
+                    onValueChange={val => setGyroInvert(Number(val))}
+                    value={String(gyroInvert)}>
+                    <RadioButton.Item label={t('None')} value="0" />
+                    <RadioButton.Item label={t('Invert X')} value="1" />
+                    <RadioButton.Item label={t('Invert Y')} value="2" />
+                    <RadioButton.Item label={t('Invert both')} value="3" />
+                    <RadioButton.Item label={t('Swap X/Y')} value="4" />
+                  </RadioButton.Group>
+                </>
+              )}
             </Card.Content>
           </Card>
         </Modal>

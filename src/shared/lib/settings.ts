@@ -35,11 +35,6 @@ export type Settings = {
   gamepad_maping: Record<string, number> | null;
   native_gamepad_maping: Record<string, number> | null;
   polling_rate: number;
-  sensor: number;
-  sensor_type: number;
-  sensor_sensitivity_x: number;
-  sensor_sensitivity_y: number;
-  sensor_invert: number;
   left_trigger_type: number;
   left_trigger_effects: [];
   right_trigger_type: number;
@@ -96,11 +91,6 @@ const defaultSettings: Settings = {
   gamepad_maping: null,
   native_gamepad_maping: null,
   polling_rate: 62.5,
-  sensor: 0,
-  sensor_type: 1,
-  sensor_sensitivity_x: 15000,
-  sensor_sensitivity_y: 15000,
-  sensor_invert: 0,
   left_trigger_type: 0,
   left_trigger_effects: [],
   right_trigger_type: 0,

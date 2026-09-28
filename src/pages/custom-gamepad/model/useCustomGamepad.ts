@@ -12,6 +12,8 @@ import {
   setSwipeConfig,
   getJoystickMode,
   setJoystickMode,
+  getSensorConfig,
+  setSensorConfig,
   createDefaultMacroLayoutButtons,
   ensureMacroLayoutButtons,
   isMacroButtonName,
@@ -52,6 +54,16 @@ export function useCustomGamepad(navigation: any, route: any) {
   const [swipeInvert, setSwipeInvert] = React.useState(false);
   const [stickMode, setStickMode] = React.useState(1);
   const [reloader, setReloader] = React.useState(Date.now());
+
+  // Gyro-aim -- an alternative camera-look method to swipe-aim above, also
+  // configured per profile (see features/controller-customization's
+  // touchProfile.ts).
+  const [showGyroModal, setShowGyroModal] = React.useState(false);
+  const [gyroMode, setGyroMode] = React.useState(0);
+  const [gyroActivation, setGyroActivation] = React.useState(1);
+  const [gyroSensitivityX, setGyroSensitivityX] = React.useState(15000);
+  const [gyroSensitivityY, setGyroSensitivityY] = React.useState(15000);
+  const [gyroInvert, setGyroInvert] = React.useState(0);
 
   const [currentButton, setCurrentButton] = React.useState('');
   const [currentScale, setCurrentScale] = React.useState(1);
@@ -97,6 +109,13 @@ export function useCustomGamepad(navigation: any, route: any) {
     setSwipeInvert(swipe.invertY);
     const storedStick = getJoystickMode(_title);
     setStickMode(storedStick === null ? 1 : storedStick);
+
+    const sensor = getSensorConfig(_title);
+    setGyroMode(sensor.mode);
+    setGyroActivation(sensor.activation);
+    setGyroSensitivityX(sensor.sensitivityX);
+    setGyroSensitivityY(sensor.sensitivityY);
+    setGyroInvert(sensor.invert);
 
     // console.log('_settings:', _settings);
     FullScreenManager.immersiveModeOn();
@@ -346,6 +365,13 @@ export function useCustomGamepad(navigation: any, route: any) {
     saveSettings(title, buttons);
     setSwipeConfig(title, {sensitivity: swipeSens, invertY: swipeInvert});
     setJoystickMode(title, stickMode);
+    setSensorConfig(title, {
+      mode: gyroMode,
+      activation: gyroActivation,
+      sensitivityX: gyroSensitivityX,
+      sensitivityY: gyroSensitivityY,
+      invert: gyroInvert,
+    });
     navigation.navigate('Main', {screen: 'Settings'});
   };
 
@@ -371,6 +397,11 @@ export function useCustomGamepad(navigation: any, route: any) {
     setCurrentButton(name);
     setCurrentShow(show ?? true);
     setShowSwipeModal(true);
+  };
+
+  const onOpenGyroModal = () => {
+    setActionShowModal(false);
+    setShowGyroModal(true);
   };
 
   const onSelectStick = (name: string, show: boolean, turbo: boolean) => {
@@ -428,6 +459,19 @@ export function useCustomGamepad(navigation: any, route: any) {
     setSwipeInvert,
     stickMode,
     setStickMode,
+    showGyroModal,
+    setShowGyroModal,
+    onOpenGyroModal,
+    gyroMode,
+    setGyroMode,
+    gyroActivation,
+    setGyroActivation,
+    gyroSensitivityX,
+    setGyroSensitivityX,
+    gyroSensitivityY,
+    setGyroSensitivityY,
+    gyroInvert,
+    setGyroInvert,
     reloader,
     currentButton,
     currentScale,

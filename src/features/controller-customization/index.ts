@@ -4,7 +4,7 @@ export {
   getSettings as getVirtualGamepadLayouts,
 } from './model/virtualGamepadLayout';
 
-export type {SwipeConfig} from './model/touchProfile';
+export type {SwipeConfig, SensorConfig} from './model/touchProfile';
 export {
   DEFAULT_SWIPE,
   getSwipeConfig,
@@ -15,6 +15,9 @@ export {
   setCoverEnabled,
   getLastProfileForGame,
   setLastProfileForGame,
+  DEFAULT_SENSOR,
+  getSensorConfig,
+  setSensorConfig,
 } from './model/touchProfile';
 
 export type {CoverButton} from './model/coverLayout';

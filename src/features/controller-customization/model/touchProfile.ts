@@ -13,6 +13,11 @@ const GAME_KEY = 'user.gameLastProfile';
 const JOYSTICK_KEY = 'user.profileJoystick';
 // Per-profile flag: whether the cover-screen controls are enabled (default off).
 const COVER_KEY = 'user.profileCover';
+// Per-profile gyro-aim config, keyed the same way as swipe-aim above --
+// previously a single global setting with no UI to change it at all (see
+// SensorModule/GamepadSensorModule's own native startSensor/SensorData), now
+// alongside swipe-aim as another per-profile camera-look method.
+const SENSOR_KEY = 'user.profileSensor';
 
 export type SwipeConfig = {
   sensitivity: number;
@@ -72,6 +77,59 @@ export const setJoystickMode = (profileName: string, mode: number) => {
   const map = readMap(JOYSTICK_KEY);
   map[profileName || ''] = mode === 0 ? 0 : 1;
   writeMap(JOYSTICK_KEY, map);
+};
+
+export type SensorConfig = {
+  // 0 = off, 1 = this device's own gyroscope, 2 = a paired controller's own
+  // gyroscope (DualSense etc., Android 12L/13+ only -- see
+  // GamepadSensorModule).
+  mode: number;
+  // When the gyroscope actually drives the right stick: 1 = while the left
+  // trigger is held, 2 = while the left bumper is held, 3 = either, 4 =
+  // always.
+  activation: number;
+  sensitivityX: number;
+  sensitivityY: number;
+  // 0 = none, 1 = invert X, 2 = invert Y, 3 = invert both, 4 = swap X/Y.
+  invert: number;
+};
+
+const SENSOR_MODES = [0, 1, 2];
+const SENSOR_ACTIVATIONS = [1, 2, 3, 4];
+const SENSOR_INVERTS = [0, 1, 2, 3, 4];
+
+export const DEFAULT_SENSOR: SensorConfig = {
+  mode: 0,
+  activation: 1,
+  sensitivityX: 15000,
+  sensitivityY: 15000,
+  invert: 0,
+};
+
+const normalizeSensor = (
+  cfg: Partial<SensorConfig> | undefined,
+): SensorConfig => ({
+  mode: SENSOR_MODES.includes(cfg?.mode as number)
+    ? (cfg!.mode as number)
+    : DEFAULT_SENSOR.mode,
+  activation: SENSOR_ACTIVATIONS.includes(cfg?.activation as number)
+    ? (cfg!.activation as number)
+    : DEFAULT_SENSOR.activation,
+  sensitivityX: Number(cfg?.sensitivityX) || DEFAULT_SENSOR.sensitivityX,
+  sensitivityY: Number(cfg?.sensitivityY) || DEFAULT_SENSOR.sensitivityY,
+  invert: SENSOR_INVERTS.includes(cfg?.invert as number)
+    ? (cfg!.invert as number)
+    : DEFAULT_SENSOR.invert,
+});
+
+export const getSensorConfig = (profileName: string): SensorConfig =>
+  normalizeSensor(readMap(SENSOR_KEY)[profileName || '']);
+
+export const setSensorConfig = (profileName: string, cfg: SensorConfig) => {
+  const map = readMap(SENSOR_KEY);
+  map[profileName || ''] = normalizeSensor(cfg);
+  writeMap(SENSOR_KEY, map);
+  log.info('setSensorConfig:', profileName, map[profileName || '']);
 };
 
 // Per-profile cover-controls enable flag (default false).
