@@ -57,7 +57,6 @@ import PerfPanel from './ui/PerfPanel';
 import StreamControlRail, {StreamInputMode} from './ui/StreamControlRail';
 import RTCFsrView from '../../shared/ui/RTCFsrView';
 import NativeTouchOverlay from './ui/NativeTouchOverlay';
-import SwipeAimZone from '../../shared/ui/SwipeAimZone';
 import {MouseTrackpadZone} from '../../entities/gfn-input';
 import CustomKeyButtons from './ui/CustomKeyButtons';
 import {
@@ -3114,6 +3113,31 @@ export function NativeStreamScreenBase({
     if (isInPictureInPicture || !showVirtualGamepad) {
       return null;
     }
+
+    // The swipe-aim trackpad is rendered *inside* whichever gamepad
+    // component is active (not as a plain sibling) so it can out-rank that
+    // component's free analog-stick touch catcher -- see
+    // CustomVirtualGamepad/VirtualGamepad's swipeAim* props.
+    const sens = Number(activeSwipe.sensitivity) || 0;
+    const swipeAimEnabled =
+      !showNativeTouch &&
+      connectState === CONNECTED &&
+      sens > 0 &&
+      activeSwipeRect.show !== false;
+    const swipeAimProps = {
+      swipeAimEnabled,
+      // Map the 0–100 slider to a per-pixel stick factor.
+      swipeAimSensitivity: sens * 0.0025,
+      swipeAimRect: {
+        x: activeSwipeRect.x,
+        y: activeSwipeRect.y,
+        width: activeSwipeRect.width ?? 300,
+        height: activeSwipeRect.height ?? 260,
+      },
+      onSwipeAim: handleSwipeAim,
+      onSwipeAimEnd: clearSwipeAim,
+    };
+
     const useCustomVirtualGamepad = settings.custom_virtual_gamepad !== '';
     if (useCustomVirtualGamepad) {
       return (
@@ -3126,6 +3150,7 @@ export function NativeStreamScreenBase({
           onStickMove={handleStickMove}
           refreshKey={gamepadLayoutVersion}
           loopingMacroNames={loopingMacroNames}
+          {...swipeAimProps}
         />
       );
     } else {
@@ -3136,38 +3161,10 @@ export function NativeStreamScreenBase({
           onPressIn={handleButtonPressIn}
           onPressOut={handleButtonPressOut}
           onStickMove={handleStickMove}
+          {...swipeAimProps}
         />
       );
     }
-  };
-
-  const renderSwipeAimZone = () => {
-    const sens = Number(activeSwipe.sensitivity) || 0;
-    if (
-      portraitMode ||
-      isInPictureInPicture ||
-      showNativeTouch ||
-      connectState !== CONNECTED ||
-      sens <= 0 ||
-      activeSwipeRect.show === false
-    ) {
-      return null;
-    }
-    return (
-      <SwipeAimZone
-        enabled
-        // Map the 0–100 slider to a per-pixel stick factor.
-        sensitivity={sens * 0.0025}
-        rect={{
-          x: activeSwipeRect.x,
-          y: activeSwipeRect.y,
-          width: activeSwipeRect.width ?? 300,
-          height: activeSwipeRect.height ?? 260,
-        }}
-        onAim={handleSwipeAim}
-        onEnd={clearSwipeAim}
-      />
-    );
   };
 
   // GFN-only mouse trackpad: relative move + click/right-click/scroll for
@@ -3585,8 +3582,6 @@ export function NativeStreamScreenBase({
       {renderStreamPlayer(styles.playerContainer, styles.player)}
 
       {renderPerformancePanel()}
-
-      {renderSwipeAimZone()}
 
       {renderMouseTrackpad()}
 

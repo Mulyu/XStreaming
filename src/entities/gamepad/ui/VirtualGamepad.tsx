@@ -2,6 +2,7 @@ import React from 'react';
 import {StyleSheet, View, Dimensions} from 'react-native';
 import AnalogStick from './AnalogStick';
 import ButtonView from './ButtonView';
+import SwipeAimZone, {SwipeAimRect} from '../../../shared/ui/SwipeAimZone';
 
 type Props = {
   opacity: number;
@@ -9,6 +10,13 @@ type Props = {
   onPressIn: (name: string) => any;
   onPressOut: (name: string) => any;
   onStickMove: (id: string, position: any) => any;
+  // Swipe-aim trackpad -- see CustomVirtualGamepad's identical props for why
+  // it's rendered nested here rather than as a plain sibling.
+  swipeAimEnabled?: boolean;
+  swipeAimSensitivity?: number;
+  swipeAimRect?: SwipeAimRect;
+  onSwipeAim?: (dx: number, dy: number) => void;
+  onSwipeAimEnd?: () => void;
 };
 
 const VirtualGamepad: React.FC<Props> = ({
@@ -17,6 +25,11 @@ const VirtualGamepad: React.FC<Props> = ({
   onPressIn,
   onPressOut,
   onStickMove,
+  swipeAimEnabled,
+  swipeAimSensitivity = 0,
+  swipeAimRect,
+  onSwipeAim,
+  onSwipeAimEnd,
 }) => {
   // Per-profile override wins; fall back to Free.
   const joystick = joystickMode === 0 || joystickMode === 1 ? joystickMode : 1;
@@ -171,16 +184,7 @@ const VirtualGamepad: React.FC<Props> = ({
       />
 
       {joystick === 1 ? (
-        <View
-          // eslint-disable-next-line react-native/no-inline-styles
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            zIndex: 9,
-            width: width * 0.5,
-            height: height,
-          }}>
+        <View style={[styles.stickCatcherLeft, {width: width * 0.5, height}]}>
           <AnalogStick
             style={{
               width: width * 0.5,
@@ -194,16 +198,7 @@ const VirtualGamepad: React.FC<Props> = ({
       ) : null}
 
       {joystick === 1 ? (
-        <View
-          // eslint-disable-next-line react-native/no-inline-styles
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 0,
-            zIndex: 9,
-            width: width * 0.5,
-            height: height,
-          }}>
+        <View style={[styles.stickCatcherRight, {width: width * 0.5, height}]}>
           <AnalogStick
             style={{
               width: width * 0.5,
@@ -237,6 +232,16 @@ const VirtualGamepad: React.FC<Props> = ({
           />
         </View>
       ) : null}
+      {swipeAimEnabled && swipeAimRect && (
+        <SwipeAimZone
+          enabled
+          sensitivity={swipeAimSensitivity}
+          rect={swipeAimRect}
+          onAim={onSwipeAim ?? (() => {})}
+          onEnd={onSwipeAimEnd ?? (() => {})}
+          zIndex={9}
+        />
+      )}
     </View>
   );
 };
@@ -250,6 +255,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     zIndex: 9,
+  },
+  // See CustomVirtualGamepad's identical style for why this sits below the
+  // nested swipe-aim trackpad (zIndex 9) and every button (zIndex 10).
+  stickCatcherLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 8,
+  },
+  stickCatcherRight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 8,
   },
   button: {
     width: 50,

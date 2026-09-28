@@ -19,6 +19,13 @@ export interface SwipeAimZoneProps {
   onAim: (dx: number, dy: number) => void;
   // Fired when the aiming finger lifts, so the caller can recentre the stick.
   onEnd: () => void;
+  // Overrides the zone's paint order. Callers that nest this inside another
+  // absolutely-positioned control stack (e.g. the virtual gamepad's free
+  // analog-stick catcher, which otherwise sits above and swallows every touch
+  // in its half of the screen) need this higher than that catcher's own
+  // zIndex so the trackpad rectangle actually receives touches that land
+  // inside it.
+  zIndex?: number;
 }
 
 /**
@@ -34,6 +41,7 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   rect,
   onAim,
   onEnd,
+  zIndex = 1,
 }) => {
   const last = React.useRef<{x: number; y: number} | null>(null);
 
@@ -82,6 +90,7 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
           top: rect.y,
           width: rect.width,
           height: rect.height,
+          zIndex,
         },
       ]}
       {...responder.panHandlers}

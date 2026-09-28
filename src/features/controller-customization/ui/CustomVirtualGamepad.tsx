@@ -2,6 +2,7 @@ import React from 'react';
 import {StyleSheet, View, Dimensions} from 'react-native';
 import GamepadButton from './GamepadButton';
 import {AnalogStick} from '../../../entities/gamepad';
+import SwipeAimZone, {SwipeAimRect} from '../../../shared/ui/SwipeAimZone';
 import {getSettings} from '../model/virtualGamepadLayout';
 import {
   createDefaultMacroLayoutButtons,
@@ -22,6 +23,16 @@ type Props = {
   // lifts. More than one can be active at once, since macro buttons run
   // independently of each other.
   loopingMacroNames?: Set<string>;
+  // Swipe-aim trackpad, rendered here (rather than as a separate sibling
+  // higher up the tree) specifically so it can out-rank the free analog
+  // stick's full-half-screen touch catcher below -- a plain sibling can't do
+  // that without also out-ranking every button in this layer. See
+  // styles.stickCatcher's comment.
+  swipeAimEnabled?: boolean;
+  swipeAimSensitivity?: number;
+  swipeAimRect?: SwipeAimRect;
+  onSwipeAim?: (dx: number, dy: number) => void;
+  onSwipeAimEnd?: () => void;
 };
 
 const CustomVirtualGamepad: React.FC<Props> = ({
@@ -33,6 +44,11 @@ const CustomVirtualGamepad: React.FC<Props> = ({
   onStickMove,
   refreshKey = 0,
   loopingMacroNames,
+  swipeAimEnabled,
+  swipeAimSensitivity = 0,
+  swipeAimRect,
+  onSwipeAim,
+  onSwipeAimEnd,
 }) => {
   const [buttons, setButtons] = React.useState<any>([]);
   // Per-profile override wins; fall back to Free.
@@ -80,14 +96,10 @@ const CustomVirtualGamepad: React.FC<Props> = ({
             return (
               <View
                 key={button.name}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  zIndex: 9,
-                  width: clientW * 0.5,
-                  height: clientH,
-                }}>
+                style={[
+                  styles.stickCatcherLeft,
+                  {width: clientW * 0.5, height: clientH},
+                ]}>
                 <AnalogStick
                   style={{
                     width: clientW * 0.5,
@@ -124,14 +136,10 @@ const CustomVirtualGamepad: React.FC<Props> = ({
             return (
               <View
                 key={button.name}
-                style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  zIndex: 9,
-                  width: clientW * 0.5,
-                  height: clientH,
-                }}>
+                style={[
+                  styles.stickCatcherRight,
+                  {width: clientW * 0.5, height: clientH},
+                ]}>
                 <AnalogStick
                   style={{
                     width: clientW * 0.5,
@@ -183,6 +191,16 @@ const CustomVirtualGamepad: React.FC<Props> = ({
           );
         }
       })}
+      {swipeAimEnabled && swipeAimRect && (
+        <SwipeAimZone
+          enabled
+          sensitivity={swipeAimSensitivity}
+          rect={swipeAimRect}
+          onAim={onSwipeAim ?? (() => {})}
+          onEnd={onSwipeAimEnd ?? (() => {})}
+          zIndex={9}
+        />
+      )}
     </View>
   );
 };
@@ -196,6 +214,23 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     zIndex: 9,
+  },
+  // The free analog stick's touch catcher covers half the whole screen so a
+  // tap anywhere in it can spawn the stick -- deliberately below the
+  // swipe-aim trackpad (zIndex 9, nested above) so a trackpad rect placed
+  // inside that half still gets its own touches, and below every button
+  // (zIndex 10) for the same reason.
+  stickCatcherLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 8,
+  },
+  stickCatcherRight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 8,
   },
   button: {
     opacity: 0.5,
