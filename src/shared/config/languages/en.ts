@@ -198,6 +198,7 @@ export default {
     'Gyro aim source': 'Gyro aim source',
     'This device': 'This device',
     Controller: 'Controller',
+    'Swipe aim activation': 'Swipe aim activation',
     'Gyro aim activation': 'Gyro aim activation',
     'While left trigger held': 'While left trigger held',
     'While left bumper held': 'While left bumper held',

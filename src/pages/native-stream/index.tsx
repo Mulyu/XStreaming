@@ -69,6 +69,7 @@ import {
   PortraitVirtualGamepad,
   PortraitGamepadControl,
   SensorConfig,
+  SwipeConfig,
 } from '../../features/controller-customization';
 import {
   VirtualGamepadEditor,
@@ -2764,13 +2765,47 @@ export function NativeStreamScreenBase({
     flushVirtualGpState();
   };
 
+  // Below this magnitude a game's own analog-stick dead zone (commonly
+  // 10-15%) swallows the input entirely, so a slow, deliberate small swipe
+  // can end up doing nothing even though we reported *some* movement. Once a
+  // swipe produces any output at all, floor it above that dead zone and scale
+  // the rest of the range up to fill the gap, instead of reporting the raw
+  // (often sub-dead-zone) value.
+  const SWIPE_AIM_DEADZONE_FLOOR = 0.2;
+  const shapeSwipeAim = (v: number) => {
+    const clamped = Math.max(-1, Math.min(1, v));
+    if (clamped === 0) {
+      return 0;
+    }
+    const magnitude =
+      SWIPE_AIM_DEADZONE_FLOOR +
+      (1 - SWIPE_AIM_DEADZONE_FLOOR) * Math.abs(clamped);
+    return Math.sign(clamped) * magnitude;
+  };
+
   const handleSwipeAim = (dx: number, dy: number) => {
-    const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+    const activation = activeSwipe.activation;
+    if (activation !== 4) {
+      // Same activation scheme as gyro-aim's SensorConfig.activation: only
+      // let the swipe actually move the camera while the configured
+      // trigger/bumper is held, so the same touch area can be used for
+      // something else the rest of the time.
+      const aiming =
+        activation === 1
+          ? gpState.LeftTrigger >= settings.dead_zone
+          : activation === 2
+          ? gpState.LeftShoulder > 0
+          : gpState.LeftTrigger >= settings.dead_zone ||
+            gpState.LeftShoulder > 0;
+      if (!aiming) {
+        return;
+      }
+    }
     const invertY = activeSwipe.invertY;
-    gpState.RightThumbXAxis = clamp(dx);
+    gpState.RightThumbXAxis = shapeSwipeAim(dx);
     // Screen y is down-positive; a right stick pushed up (look up) is positive,
     // so negate by default. Invert flips it back.
-    gpState.RightThumbYAxis = clamp(invertY ? dy : -dy);
+    gpState.RightThumbYAxis = shapeSwipeAim(invertY ? dy : -dy);
     isRightstickMoving.current = true;
     flushVirtualGpState();
     if (swipeAimResetTimer.current) {
@@ -2905,7 +2940,7 @@ export function NativeStreamScreenBase({
 
   const handleSaveGamepadLayout = (
     layout: ButtonConfig[],
-    swipe?: {sensitivity: number; invertY: boolean},
+    swipe?: SwipeConfig,
     joystickMode?: number,
     sensor?: SensorConfig,
   ) => {
@@ -3609,6 +3644,9 @@ export function NativeStreamScreenBase({
         }
         swipeInvertY={
           getSwipeConfig(editorProfile || getActiveProfileName()).invertY
+        }
+        swipeActivation={
+          getSwipeConfig(editorProfile || getActiveProfileName()).activation
         }
         joystickMode={
           getJoystickMode(editorProfile || getActiveProfileName()) ?? 1

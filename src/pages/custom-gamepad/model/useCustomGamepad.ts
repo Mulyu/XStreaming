@@ -16,6 +16,7 @@ import {
 import type {
   ButtonConfig,
   SensorConfig,
+  SwipeConfig,
 } from '../../../features/controller-customization';
 import {
   getSettings as getUserSettings,
@@ -100,7 +101,7 @@ export function useCustomGamepad(navigation: any, route: any) {
 
   const onSave = (
     buttons: ButtonConfig[],
-    swipe: {sensitivity: number; invertY: boolean},
+    swipe: SwipeConfig,
     joystickMode: number,
     sensor: SensorConfig,
   ) => {
@@ -127,6 +128,7 @@ export function useCustomGamepad(navigation: any, route: any) {
     activeProfile: profileName,
     swipeSensitivity: getSwipeConfig(profileName).sensitivity,
     swipeInvertY: getSwipeConfig(profileName).invertY,
+    swipeActivation: getSwipeConfig(profileName).activation,
     joystickMode: getJoystickMode(profileName) ?? 1,
     sensorConfig: getSensorConfig(profileName),
     onSave,
