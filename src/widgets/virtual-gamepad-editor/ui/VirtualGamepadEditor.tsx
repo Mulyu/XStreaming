@@ -26,14 +26,14 @@ import {
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
 import GridBackground from '../../../shared/ui/GridBackground';
+import {KeyPicker, PickableKey} from '../../../features/virtual-keyboard';
 import {
   GamepadButtonPreview as GamepadButton,
   KeyChip,
   CoverLayoutOverlay,
-} from '../../../features/controller-customization';
-import {KeyPicker, PickableKey} from '../../../features/virtual-keyboard';
-import {
   getVirtualGamepadLayouts as getGamepadLayouts,
+  DEFAULT_SENSOR,
+  type SensorConfig,
   createDefaultMacroLayoutButtons,
   ensureMacroLayoutButtons,
   isMacroButtonName,
@@ -64,10 +64,14 @@ export interface VirtualGamepadEditorProps {
   swipeInvertY?: boolean;
   // This profile's virtual-stick mode (0 = fixed, 1 = free).
   joystickMode?: number;
+  // This profile's gyro-aim config -- an alternative camera-look method to
+  // swipe-aim above, also edited here.
+  sensorConfig?: SensorConfig;
   onSave: (
     buttons: ButtonConfig[],
     swipe: {sensitivity: number; invertY: boolean},
     joystickMode: number,
+    sensor: SensorConfig,
   ) => void;
   onCancel: () => void;
   // Switch the live/active layout: '' selects the built-in Default.
@@ -91,6 +95,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   swipeSensitivity = 0,
   swipeInvertY = false,
   joystickMode = 1,
+  sensorConfig = DEFAULT_SENSOR,
   onSave,
   onCancel,
   onSwitchProfile,
@@ -129,6 +134,16 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [stickMode, setStickMode] = React.useState(1);
   const [reloadKey, setReloadKey] = React.useState(Date.now());
 
+  // Gyro-aim -- an alternative camera-look method to swipe-aim, also
+  // configured per profile (see features/controller-customization's
+  // touchProfile.ts).
+  const [showGyroModal, setShowGyroModal] = React.useState(false);
+  const [gyroMode, setGyroMode] = React.useState(0);
+  const [gyroActivation, setGyroActivation] = React.useState(1);
+  const [gyroSensitivityX, setGyroSensitivityX] = React.useState(15000);
+  const [gyroSensitivityY, setGyroSensitivityY] = React.useState(15000);
+  const [gyroInvert, setGyroInvert] = React.useState(0);
+
   // GFN keyboard-key buttons -- see CustomGamepad.tsx's own copy of this
   // pattern.
   const [showKeyPicker, setShowKeyPicker] = React.useState(false);
@@ -162,10 +177,22 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     setSwipeSens(Number(swipeSensitivity) || 0);
     setSwipeInvert(!!swipeInvertY);
     setStickMode(joystickMode === 0 ? 0 : 1);
+    setGyroMode(sensorConfig.mode);
+    setGyroActivation(sensorConfig.activation);
+    setGyroSensitivityX(sensorConfig.sensitivityX);
+    setGyroSensitivityY(sensorConfig.sensitivityY);
+    setGyroInvert(sensorConfig.invert);
     setShowGrid(true);
     setShowTips(true);
     setReloadKey(Date.now());
-  }, [visible, profileName, swipeSensitivity, swipeInvertY, joystickMode]);
+  }, [
+    visible,
+    profileName,
+    swipeSensitivity,
+    swipeInvertY,
+    joystickMode,
+    sensorConfig,
+  ]);
 
   if (!visible) {
     return null;
@@ -364,7 +391,13 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   };
 
   const handleSave = () => {
-    onSave(buttons, {sensitivity: swipeSens, invertY: swipeInvert}, stickMode);
+    onSave(buttons, {sensitivity: swipeSens, invertY: swipeInvert}, stickMode, {
+      mode: gyroMode,
+      activation: gyroActivation,
+      sensitivityX: gyroSensitivityX,
+      sensitivityY: gyroSensitivityY,
+      invert: gyroInvert,
+    });
   };
 
   const renderSwipeModal = () => (
@@ -418,6 +451,111 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               style={styles.profileAction}>
               {t('Close')}
             </Button>
+          </Card.Content>
+        </Card>
+      </Modal>
+    </Portal>
+  );
+
+  const renderGyroModal = () => (
+    <Portal>
+      <Modal
+        visible={showGyroModal}
+        onDismiss={() => setShowGyroModal(false)}
+        contentContainerStyle={styles.modal}>
+        <Card>
+          <Card.Content>
+            <ScrollView>
+              <View style={styles.title}>
+                <Text>{t('Gyro aim source')}</Text>
+                <Divider style={styles.divider} />
+              </View>
+              <RadioButton.Group
+                onValueChange={val => setGyroMode(Number(val))}
+                value={String(gyroMode)}>
+                <RadioButton.Item label={t('Off')} value="0" />
+                <RadioButton.Item label={t('This device')} value="1" />
+                <RadioButton.Item label={t('Controller')} value="2" />
+              </RadioButton.Group>
+
+              {gyroMode !== 0 && (
+                <>
+                  <View style={styles.title}>
+                    <Text>{t('Gyro aim activation')}</Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <RadioButton.Group
+                    onValueChange={val => setGyroActivation(Number(val))}
+                    value={String(gyroActivation)}>
+                    <RadioButton.Item
+                      label={t('While left trigger held')}
+                      value="1"
+                    />
+                    <RadioButton.Item
+                      label={t('While left bumper held')}
+                      value="2"
+                    />
+                    <RadioButton.Item
+                      label={t('While either held')}
+                      value="3"
+                    />
+                    <RadioButton.Item label={t('Always')} value="4" />
+                  </RadioButton.Group>
+
+                  <View style={styles.title}>
+                    <Text>
+                      {t('Gyro aim sensitivity X')}: {gyroSensitivityX}
+                    </Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <Slider
+                    value={gyroSensitivityX}
+                    minimumValue={1000}
+                    maximumValue={40000}
+                    step={500}
+                    onValueChange={val => setGyroSensitivityX(Math.round(val))}
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor="grey"
+                  />
+
+                  <View style={styles.title}>
+                    <Text>
+                      {t('Gyro aim sensitivity Y')}: {gyroSensitivityY}
+                    </Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <Slider
+                    value={gyroSensitivityY}
+                    minimumValue={1000}
+                    maximumValue={40000}
+                    step={500}
+                    onValueChange={val => setGyroSensitivityY(Math.round(val))}
+                    minimumTrackTintColor={theme.colors.primary}
+                    maximumTrackTintColor="grey"
+                  />
+
+                  <View style={styles.title}>
+                    <Text>{t('Invert gyro aim')}</Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <RadioButton.Group
+                    onValueChange={val => setGyroInvert(Number(val))}
+                    value={String(gyroInvert)}>
+                    <RadioButton.Item label={t('None')} value="0" />
+                    <RadioButton.Item label={t('Invert X')} value="1" />
+                    <RadioButton.Item label={t('Invert Y')} value="2" />
+                    <RadioButton.Item label={t('Invert both')} value="3" />
+                    <RadioButton.Item label={t('Swap X/Y')} value="4" />
+                  </RadioButton.Group>
+                </>
+              )}
+              <Button
+                mode="text"
+                onPress={() => setShowGyroModal(false)}
+                style={styles.profileAction}>
+                {t('Close')}
+              </Button>
+            </ScrollView>
           </Card.Content>
         </Card>
       </Modal>
@@ -1137,6 +1275,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
         {renderMacroStepModal()}
         {canManageProfiles && renderProfileModal()}
         {renderSwipeModal()}
+        {renderGyroModal()}
         <KeyPicker
           visible={showKeyPicker}
           onDismiss={() => setShowKeyPicker(false)}
@@ -1184,6 +1323,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               icon="crosshairs-gps"
               size={20}
               onPress={() => setShowSwipeModal(true)}
+              style={styles.toolbarIcon}
+            />
+            <IconButton
+              icon="rotate-3d-variant"
+              size={20}
+              onPress={() => setShowGyroModal(true)}
               style={styles.toolbarIcon}
             />
             <IconButton

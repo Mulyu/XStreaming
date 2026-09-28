@@ -36,6 +36,7 @@ import {
   getJoystickMode,
   setJoystickMode,
   getSensorConfig,
+  setSensorConfig,
   getCoverEnabled,
   getLastProfileForGame,
   setLastProfileForGame,
@@ -53,7 +54,6 @@ import {
   XBOX_360_GAMEPAD_MAPING,
   VirtualGamepad,
 } from '../../entities/gamepad';
-import VirtualGamepadEditor, {ButtonConfig} from './ui/VirtualGamepadEditor';
 import PerfPanel from './ui/PerfPanel';
 import StreamControlRail, {StreamInputMode} from './ui/StreamControlRail';
 import RTCFsrView from '../../shared/ui/RTCFsrView';
@@ -68,7 +68,12 @@ import {
   CustomVirtualGamepad,
   PortraitVirtualGamepad,
   PortraitGamepadControl,
+  SensorConfig,
 } from '../../features/controller-customization';
+import {
+  VirtualGamepadEditor,
+  ButtonConfig,
+} from '../../widgets/virtual-gamepad-editor';
 import {
   coverGamepadBus,
   normalizeMacroLoopIntervalMs,
@@ -2907,6 +2912,7 @@ export function NativeStreamScreenBase({
     layout: ButtonConfig[],
     swipe?: {sensitivity: number; invertY: boolean},
     joystickMode?: number,
+    sensor?: SensorConfig,
   ) => {
     const profileName = editorProfile || getActiveProfileName();
     saveGamepadLayout(profileName, layout);
@@ -2917,6 +2923,9 @@ export function NativeStreamScreenBase({
     }
     if (joystickMode === 0 || joystickMode === 1) {
       setJoystickMode(profileName, joystickMode);
+    }
+    if (sensor) {
+      setSensorConfig(profileName, sensor);
     }
     if (!settings.custom_virtual_gamepad) {
       settings.custom_virtual_gamepad = profileName;
@@ -3609,6 +3618,7 @@ export function NativeStreamScreenBase({
         joystickMode={
           getJoystickMode(editorProfile || getActiveProfileName()) ?? 1
         }
+        sensorConfig={getSensorConfig(editorProfile || getActiveProfileName())}
         onSave={handleSaveGamepadLayout}
         onCancel={() => setShowGamepadEditor(false)}
         onSwitchProfile={handleSwitchGamepadProfile}
