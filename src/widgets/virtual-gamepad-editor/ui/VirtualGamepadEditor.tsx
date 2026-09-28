@@ -65,6 +65,9 @@ export interface VirtualGamepadEditorProps {
   // When swipe-aim actually drives the right stick -- same scheme as
   // sensorConfig.activation below.
   swipeActivation?: number;
+  // Extra speed-based boost on top of sensitivity -- see SwipeAimZone's own
+  // acceleration prop.
+  swipeAcceleration?: number;
   // This profile's virtual-stick mode (0 = fixed, 1 = free).
   joystickMode?: number;
   // This profile's gyro-aim config -- an alternative camera-look method to
@@ -72,7 +75,12 @@ export interface VirtualGamepadEditorProps {
   sensorConfig?: SensorConfig;
   onSave: (
     buttons: ButtonConfig[],
-    swipe: {sensitivity: number; invertY: boolean; activation: number},
+    swipe: {
+      sensitivity: number;
+      invertY: boolean;
+      activation: number;
+      acceleration: number;
+    },
     joystickMode: number,
     sensor: SensorConfig,
   ) => void;
@@ -98,6 +106,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   swipeSensitivity = 0,
   swipeInvertY = false,
   swipeActivation = 4,
+  swipeAcceleration = 0,
   joystickMode = 1,
   sensorConfig = DEFAULT_SENSOR,
   onSave,
@@ -136,6 +145,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [swipeSens, setSwipeSens] = React.useState(0);
   const [swipeInvert, setSwipeInvert] = React.useState(false);
   const [swipeActivationMode, setSwipeActivationMode] = React.useState(4);
+  const [swipeAccel, setSwipeAccel] = React.useState(0);
   const [stickMode, setStickMode] = React.useState(1);
   const [reloadKey, setReloadKey] = React.useState(Date.now());
 
@@ -184,6 +194,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     setSwipeSens(Number(swipeSensitivity) || 0);
     setSwipeInvert(!!swipeInvertY);
     setSwipeActivationMode(swipeActivation);
+    setSwipeAccel(Number(swipeAcceleration) || 0);
     setStickMode(joystickMode === 0 ? 0 : 1);
     setGyroMode(sensorConfig.mode);
     setGyroActivation(sensorConfig.activation);
@@ -201,6 +212,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     swipeSensitivity,
     swipeInvertY,
     swipeActivation,
+    swipeAcceleration,
     joystickMode,
     sensorConfig,
   ]);
@@ -408,6 +420,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
         sensitivity: swipeSens,
         invertY: swipeInvert,
         activation: swipeActivationMode,
+        acceleration: swipeAccel,
       },
       stickMode,
       {
@@ -457,6 +470,24 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 minimumTrackTintColor={theme.colors.primary}
                 maximumTrackTintColor="grey"
               />
+              <View style={styles.title}>
+                <Text>
+                  {t('Swipe aim acceleration (0 = off)')}: {swipeAccel}
+                </Text>
+                <Divider style={styles.divider} />
+              </View>
+              <Slider
+                value={swipeAccel}
+                minimumValue={0}
+                maximumValue={100}
+                step={1}
+                onValueChange={val => setSwipeAccel(Math.round(val))}
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor="grey"
+              />
+              <Text style={styles.swipeHint}>
+                {t('SwipeAimAccelerationDesc')}
+              </Text>
               <View style={styles.title}>
                 <Text>{t('Invert swipe aim Y')}</Text>
                 <Divider style={styles.divider} />

@@ -193,6 +193,9 @@ export default {
     'Swipe aim sensitivity (0 = off)': 'Swipe aim sensitivity (0 = off)',
     SwipeAimDesc:
       'A trackpad area you place in the layout: drag inside it to move the camera by how fast you swipe, like mobile shooters. Higher = faster. Set to 0 to turn it off. Tip: place the pad where your right thumb rests and hide the on-screen right stick.',
+    'Swipe aim acceleration (0 = off)': 'Swipe aim acceleration (0 = off)',
+    SwipeAimAccelerationDesc:
+      "Boosts a fast swipe's turn speed on top of sensitivity, so a quick flick can spin the camera around without needing to raise sensitivity itself (which would also make slow, precise aim harder to control). Set to 0 for sensitivity alone to decide speed, like before.",
     'Invert swipe aim Y': 'Invert swipe aim (vertical)',
     'Gyro aim': 'Gyro aim',
     'Gyro aim source': 'Gyro aim source',

@@ -13,6 +13,12 @@ export interface SwipeAimZoneProps {
   // Multiplier applied to the per-move finger delta (in px) before it is
   // reported. Larger = faster camera turn for the same swipe.
   sensitivity: number;
+  // Extra per-pixel-of-speed boost on top of sensitivity, so a fast flick
+  // turns disproportionately faster than a slow, deliberate drag -- lets a
+  // quick swipe reach full turn speed for spinning around without raising
+  // sensitivity itself, which would also ruin precision at low speed. 0 (the
+  // default) reports sensitivity * delta with no extra boost, unchanged.
+  acceleration?: number;
   // The trackpad rectangle (play-surface pixels). Only touches inside it aim.
   rect: SwipeAimRect;
   // Reports the scaled finger delta (screen coordinates, y-down) for one move.
@@ -47,6 +53,7 @@ export interface SwipeAimZoneProps {
 const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   enabled,
   sensitivity,
+  acceleration = 0,
   rect,
   onAim,
   onEnd,
@@ -73,7 +80,13 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
         const dx = t.pageX - last.current.x;
         const dy = t.pageY - last.current.y;
         last.current = {x: t.pageX, y: t.pageY};
-        onAim(dx * sensitivity, dy * sensitivity);
+        // Boost grows with how far the finger moved this one event (a proxy
+        // for swipe speed): a slow drag has boost ~= 1 (acceleration barely
+        // contributes), a fast flick's larger per-event distance multiplies
+        // it up sharply.
+        const boost =
+          acceleration > 0 ? 1 + acceleration * Math.hypot(dx, dy) : 1;
+        onAim(dx * sensitivity * boost, dy * sensitivity * boost);
       },
       onPanResponderRelease: () => {
         last.current = null;
@@ -84,7 +97,7 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
         onEnd();
       },
     });
-  }, [enabled, sensitivity, onAim, onEnd, isActive]);
+  }, [enabled, sensitivity, acceleration, onAim, onEnd, isActive]);
 
   if (!enabled) {
     return null;

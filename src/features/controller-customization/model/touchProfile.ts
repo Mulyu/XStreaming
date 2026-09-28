@@ -27,6 +27,11 @@ export type SwipeConfig = {
   // is held, 2 = while the left bumper is held, 3 = either, 4 = always. Kept
   // as the default so existing profiles keep today's always-on behavior.
   activation: number;
+  // How much a faster swipe gets *extra* boost on top of sensitivity, so a
+  // quick flick can reach full turn speed (for spinning around) without
+  // raising sensitivity itself, which would also ruin slow, precise aim.
+  // 0 = off (sensitivity alone decides output, today's behavior).
+  acceleration: number;
 };
 
 const AIM_ACTIVATIONS = [1, 2, 3, 4];
@@ -35,6 +40,7 @@ export const DEFAULT_SWIPE: SwipeConfig = {
   sensitivity: 0,
   invertY: false,
   activation: 4,
+  acceleration: 0,
 };
 
 const readMap = (key: string): Record<string, any> => {
@@ -64,6 +70,7 @@ export const getSwipeConfig = (profileName: string): SwipeConfig => {
     activation: AIM_ACTIVATIONS.includes(cfg?.activation)
       ? cfg.activation
       : DEFAULT_SWIPE.activation,
+    acceleration: Number(cfg?.acceleration) || 0,
   };
 };
 
@@ -75,6 +82,7 @@ export const setSwipeConfig = (profileName: string, cfg: SwipeConfig) => {
     activation: AIM_ACTIVATIONS.includes(cfg.activation)
       ? cfg.activation
       : DEFAULT_SWIPE.activation,
+    acceleration: Number(cfg.acceleration) || 0,
   };
   writeMap(SWIPE_KEY, map);
   log.info('setSwipeConfig:', profileName, map[profileName || '']);
