@@ -35,6 +35,7 @@ import {
   setSwipeConfig,
   getJoystickMode,
   setJoystickMode,
+  getSensorConfig,
   getCoverEnabled,
   getLastProfileForGame,
   setLastProfileForGame,
@@ -1251,15 +1252,20 @@ export function NativeStreamScreenBase({
       }, 1000 / _settings.polling_rate);
     }
 
-    // Sensor
-    if (_settings.sensor) {
+    // Gyro-aim, per touch-controller profile (like swipe-aim above) rather
+    // than a single global setting -- resolved once here for the profile
+    // active at connect time. A profile switch mid-stream (the in-stream
+    // editor's "switch profile") updates buttons/swipe-aim/joystick mode
+    // live, but not this: the native sensor module's own lifecycle
+    // (which source, and its baked-in sensitivity scale) can only be
+    // (re)started, so picking up a different profile's gyro config needs a
+    // reconnect, same as this block's global predecessor always did.
+    const sensorCfg = getSensorConfig(_settings.custom_virtual_gamepad || '');
+    if (sensorCfg.mode) {
       const sensorManager =
-        _settings.sensor === 2 ? GamepadSensorModule : SensorModule;
+        sensorCfg.mode === 2 ? GamepadSensorModule : SensorModule;
 
-      sensorManager.startSensor(
-        _settings.sensor_sensitivity_x,
-        _settings.sensor_sensitivity_y,
-      );
+      sensorManager.startSensor(sensorCfg.sensitivityX, sensorCfg.sensitivityY);
 
       sensorEventListener.current = eventEmitter.addListener(
         'SensorData',
@@ -1272,16 +1278,16 @@ export function NativeStreamScreenBase({
           // gyroscope only work when Rightstick not moving
           if (!isRightstickMoving.current) {
             const scaleX =
-              _settings.sensor_sensitivity_x > 10000
-                ? _settings.sensor_sensitivity_x / 10000
+              sensorCfg.sensitivityX > 10000
+                ? sensorCfg.sensitivityX / 10000
                 : 1;
 
             const scaleY =
-              _settings.sensor_sensitivity_y > 10000
-                ? _settings.sensor_sensitivity_y / 10000
+              sensorCfg.sensitivityY > 10000
+                ? sensorCfg.sensitivityY / 10000
                 : 1;
 
-            switch (_settings.sensor_invert) {
+            switch (sensorCfg.invert) {
               case 1: // x
                 stickX = -stickX;
                 break;
@@ -1301,7 +1307,7 @@ export function NativeStreamScreenBase({
                 break;
             }
             // gyroscope only work when LT button press
-            if (_settings.sensor_type === 1) {
+            if (sensorCfg.activation === 1) {
               if (gpState.LeftTrigger >= _settings.dead_zone) {
                 gpState.RightThumbXAxis = stickX.toFixed(3) * scaleX;
                 gpState.RightThumbYAxis = stickY.toFixed(3) * scaleY;
@@ -1309,7 +1315,7 @@ export function NativeStreamScreenBase({
                 gpState.RightThumbXAxis = 0;
                 gpState.RightThumbYAxis = 0;
               }
-            } else if (_settings.sensor_type === 2) {
+            } else if (sensorCfg.activation === 2) {
               // LB
               if (gpState.LeftShoulder > 0) {
                 gpState.RightThumbXAxis = stickX.toFixed(3) * scaleX;
@@ -1318,7 +1324,7 @@ export function NativeStreamScreenBase({
                 gpState.RightThumbXAxis = 0;
                 gpState.RightThumbYAxis = 0;
               }
-            } else if (_settings.sensor_type === 3) {
+            } else if (sensorCfg.activation === 3) {
               // LT/LB
               if (
                 gpState.LeftTrigger >= _settings.dead_zone ||
@@ -1330,7 +1336,7 @@ export function NativeStreamScreenBase({
                 gpState.RightThumbXAxis = 0;
                 gpState.RightThumbYAxis = 0;
               }
-            } else if (_settings.sensor_type === 4) {
+            } else if (sensorCfg.activation === 4) {
               // Global
               gpState.RightThumbXAxis = stickX.toFixed(3) * scaleX;
               gpState.RightThumbYAxis = stickY.toFixed(3) * scaleY;
@@ -2780,12 +2786,10 @@ export function NativeStreamScreenBase({
     setShowVirtualGamepad(false);
     webrtcClient && webrtcClient.close();
     setShowControlRail(false);
-    if (settings.sensor) {
-      SensorModule.stopSensor();
-      GamepadSensorModule.stopSensor();
-    }
+    SensorModule.stopSensor();
+    GamepadSensorModule.stopSensor();
     handleExit();
-  }, [clearAllMacroTimers, handleExit, settings.sensor, webrtcClient]);
+  }, [clearAllMacroTimers, handleExit, webrtcClient]);
 
   const handleToggleMic = React.useCallback(async () => {
     if (!webrtcClient) {
