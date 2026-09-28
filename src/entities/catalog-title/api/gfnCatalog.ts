@@ -167,11 +167,31 @@ type RawVariant = {
   gfn?: {library?: {status?: string}};
 };
 
-type RawApp = {
+export type RawApp = {
   id?: string;
   title?: string;
   images?: Record<string, string | string[] | undefined>;
   variants?: RawVariant[];
+  // App-level (not per-variant) playability, requested by the browse query
+  // only -- see isConfirmedPlayable below.
+  gfn?: {playType?: string; playabilityState?: string};
+};
+
+// A title can be launchable on GFN with no purchase at all -- free-to-play
+// (Apex Legends, Fortnite, ...) needs no linked store account, so every
+// variant's own gfn.library.status still reports NOT_OWNED (there's nothing
+// to own) even though the game streams fine. GFN's own API exposes this at
+// the app level via playType ("...FREE...") and playabilityState
+// ("PLAYABLE"/"AVAILABLE"), independent of per-variant ownership -- mirrors
+// OpenNOW (github.com/OpenCloudGaming/OpenNOW)'s own priority order: trust
+// this signal when it says the title is playable, and only fall back to
+// per-variant ownership when it doesn't.
+export const isConfirmedPlayable = (app: RawApp): boolean => {
+  const state = app.gfn?.playabilityState?.toUpperCase();
+  if (state === 'PLAYABLE' || state === 'AVAILABLE') {
+    return true;
+  }
+  return !!app.gfn?.playType?.toUpperCase().includes('FREE');
 };
 
 const optimizeImage = (url: string, width = 460): string =>
@@ -336,7 +356,8 @@ export const clearOwnedGames = (): void => {
 // Same variant-flattening as toOwnedGames, but for the unfiltered full-catalog
 // browse query below -- most items here are NOT owned, so ownership is read
 // per variant from gfn.library.status (present whenever the caller is signed
-// in) instead of being hardcoded true.
+// in) instead of being hardcoded true, unless isConfirmedPlayable already
+// says the whole app is playable regardless (free-to-play).
 const toBrowseGames = (app: RawApp): GfnGame[] => {
   const title = app.title?.trim();
   if (!title) {
@@ -352,6 +373,7 @@ const toBrowseGames = (app: RawApp): GfnGame[] => {
     'GAME_BOX_ART',
   ]);
   const appId = app.id && !isNumeric(app.id) ? app.id : undefined;
+  const confirmedPlayable = isConfirmedPlayable(app);
 
   if (usable.length === 0) {
     return [
@@ -361,6 +383,7 @@ const toBrowseGames = (app: RawApp): GfnGame[] => {
         store: 'GFN',
         genres: [],
         imageUrl: image,
+        owned: confirmedPlayable || undefined,
         appId,
       },
     ];
@@ -381,9 +404,11 @@ const toBrowseGames = (app: RawApp): GfnGame[] => {
       store,
       genres: [],
       imageUrl: image,
-      owned: variant.gfn?.library?.status
-        ? variant.gfn.library.status !== 'NOT_OWNED'
-        : undefined,
+      owned:
+        confirmedPlayable ||
+        (variant.gfn?.library?.status
+          ? variant.gfn.library.status !== 'NOT_OWNED'
+          : undefined),
       appId,
       steamAppId:
         store.toUpperCase() === 'STEAM'
@@ -415,6 +440,7 @@ const BROWSE_QUERY = `query GetStoreBrowseApps(
       id
       title
       images { HERO_IMAGE TV_BANNER KEY_ART GAME_BOX_ART }
+      gfn { playType playabilityState }
       variants {
         id
         appStore
