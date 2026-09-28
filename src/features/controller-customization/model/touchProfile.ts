@@ -90,20 +90,25 @@ export type SensorConfig = {
   activation: number;
   sensitivityX: number;
   sensitivityY: number;
-  // 0 = none, 1 = invert X, 2 = invert Y, 3 = invert both, 4 = swap X/Y.
-  invert: number;
+  // Each independently toggleable, so any combination (e.g. both axes
+  // inverted, or swapped *and* one axis inverted) is expressible -- not a
+  // single choose-one-combination setting.
+  invertX: boolean;
+  invertY: boolean;
+  swapXY: boolean;
 };
 
 const SENSOR_MODES = [0, 1, 2];
 const SENSOR_ACTIVATIONS = [1, 2, 3, 4];
-const SENSOR_INVERTS = [0, 1, 2, 3, 4];
 
 export const DEFAULT_SENSOR: SensorConfig = {
   mode: 0,
   activation: 1,
   sensitivityX: 15000,
   sensitivityY: 15000,
-  invert: 0,
+  invertX: false,
+  invertY: false,
+  swapXY: false,
 };
 
 const normalizeSensor = (
@@ -117,9 +122,9 @@ const normalizeSensor = (
     : DEFAULT_SENSOR.activation,
   sensitivityX: Number(cfg?.sensitivityX) || DEFAULT_SENSOR.sensitivityX,
   sensitivityY: Number(cfg?.sensitivityY) || DEFAULT_SENSOR.sensitivityY,
-  invert: SENSOR_INVERTS.includes(cfg?.invert as number)
-    ? (cfg!.invert as number)
-    : DEFAULT_SENSOR.invert,
+  invertX: !!cfg?.invertX,
+  invertY: !!cfg?.invertY,
+  swapXY: !!cfg?.swapXY,
 });
 
 export const getSensorConfig = (profileName: string): SensorConfig =>

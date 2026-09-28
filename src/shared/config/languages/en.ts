@@ -205,11 +205,8 @@ export default {
     Always: 'Always',
     'Gyro aim sensitivity X': 'Gyro aim sensitivity X',
     'Gyro aim sensitivity Y': 'Gyro aim sensitivity Y',
-    'Invert gyro aim': 'Invert gyro aim',
-    None: 'None',
-    'Invert X': 'Invert X',
-    'Invert Y': 'Invert Y',
-    'Invert both': 'Invert both',
+    'Invert gyro aim X': 'Invert gyro aim X',
+    'Invert gyro aim Y': 'Invert gyro aim Y',
     'Swap X/Y': 'Swap X/Y',
     'Hidden controls appear dimmed here; tap one to show it again':
       'Hidden controls appear dimmed here; tap one to show it again',

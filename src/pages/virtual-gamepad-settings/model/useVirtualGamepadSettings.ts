@@ -17,13 +17,22 @@ export function useVirtualGamepadSettings(navigation: any) {
   const [settings, setSettings] = React.useState<any>([]);
   const [showAddModal, setShowAddModal] = React.useState(false);
 
+  // The editor can now create/delete/switch profiles on its own (its
+  // profile-switcher unifies with the in-stream quick-editor's own one), so
+  // this list and the active-profile selection can go stale from that alone
+  // -- reload on every return to this screen, not just its first mount.
   React.useEffect(() => {
-    const _settings = getSettings();
-    setSettings(Object.keys(_settings));
+    const reload = () => {
+      const _settings = getSettings();
+      setSettings(Object.keys(_settings));
 
-    const _userSettings = getUserSettings();
-    setUserSettings(_userSettings);
-    setValue(_userSettings.custom_virtual_gamepad || '');
+      const _userSettings = getUserSettings();
+      setUserSettings(_userSettings);
+      setValue(_userSettings.custom_virtual_gamepad || '');
+    };
+    reload();
+    const unsubscribe = navigation.addListener('focus', reload);
+    return unsubscribe;
   }, [navigation]);
 
   const onSave = () => {

@@ -1,4 +1,8 @@
-import {normalizeTitle, mergeOwnedGames} from '../gfnCatalog';
+import {
+  normalizeTitle,
+  mergeOwnedGames,
+  isConfirmedPlayable,
+} from '../gfnCatalog';
 import {GfnGame} from '../gfnPublicGames';
 
 describe('normalizeTitle', () => {
@@ -41,6 +45,47 @@ describe('normalizeTitle', () => {
 
   it('still trims and collapses internal whitespace/punctuation runs', () => {
     expect(normalizeTitle('  Foo!!  Bar  ')).toBe('foo bar');
+  });
+});
+
+// Regression: Apex Legends (and other free-to-play titles) stream fine on
+// GFN with no linked store purchase, but every variant's own
+// gfn.library.status still reports NOT_OWNED -- there's nothing to own.
+// isConfirmedPlayable is the app-level override that catches this via
+// GFN's own playType/playabilityState fields, independent of any variant's
+// ownership.
+describe('isConfirmedPlayable', () => {
+  it('is false for an app with neither field set', () => {
+    expect(isConfirmedPlayable({})).toBe(false);
+  });
+
+  it('is true when playabilityState says the app is playable', () => {
+    expect(isConfirmedPlayable({gfn: {playabilityState: 'PLAYABLE'}})).toBe(
+      true,
+    );
+    expect(isConfirmedPlayable({gfn: {playabilityState: 'AVAILABLE'}})).toBe(
+      true,
+    );
+  });
+
+  it('is case-insensitive on playabilityState', () => {
+    expect(isConfirmedPlayable({gfn: {playabilityState: 'playable'}})).toBe(
+      true,
+    );
+  });
+
+  it('is false when playabilityState says the app is not playable yet', () => {
+    expect(isConfirmedPlayable({gfn: {playabilityState: 'COMING_SOON'}})).toBe(
+      false,
+    );
+  });
+
+  it('is true when playType marks the app free-to-play', () => {
+    expect(isConfirmedPlayable({gfn: {playType: 'FREE_TO_PLAY'}})).toBe(true);
+  });
+
+  it('is false for a normal paid app with neither signal set to playable', () => {
+    expect(isConfirmedPlayable({gfn: {playType: 'STANDARD'}})).toBe(false);
   });
 });
 

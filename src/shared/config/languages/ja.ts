@@ -199,11 +199,8 @@ export default {
     Always: '常時',
     'Gyro aim sensitivity X': 'ジャイロエイム感度（左右）',
     'Gyro aim sensitivity Y': 'ジャイロエイム感度（上下）',
-    'Invert gyro aim': 'ジャイロエイムの反転',
-    None: 'なし',
-    'Invert X': '左右反転',
-    'Invert Y': '上下反転',
-    'Invert both': '両方反転',
+    'Invert gyro aim X': 'ジャイロエイムの左右反転',
+    'Invert gyro aim Y': 'ジャイロエイムの上下反転',
     'Swap X/Y': '左右上下を入れ替え',
     'Hidden controls appear dimmed here; tap one to show it again':
       '非表示のコントロールはここでは半透明で表示されます。タップすると再表示できます。',
