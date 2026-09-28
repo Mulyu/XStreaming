@@ -62,6 +62,9 @@ export interface VirtualGamepadEditorProps {
   // This profile's swipe-aim config (per-profile, edited here).
   swipeSensitivity?: number;
   swipeInvertY?: boolean;
+  // When swipe-aim actually drives the right stick -- same scheme as
+  // sensorConfig.activation below.
+  swipeActivation?: number;
   // This profile's virtual-stick mode (0 = fixed, 1 = free).
   joystickMode?: number;
   // This profile's gyro-aim config -- an alternative camera-look method to
@@ -69,7 +72,7 @@ export interface VirtualGamepadEditorProps {
   sensorConfig?: SensorConfig;
   onSave: (
     buttons: ButtonConfig[],
-    swipe: {sensitivity: number; invertY: boolean},
+    swipe: {sensitivity: number; invertY: boolean; activation: number},
     joystickMode: number,
     sensor: SensorConfig,
   ) => void;
@@ -94,6 +97,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   activeProfile = '',
   swipeSensitivity = 0,
   swipeInvertY = false,
+  swipeActivation = 4,
   joystickMode = 1,
   sensorConfig = DEFAULT_SENSOR,
   onSave,
@@ -131,6 +135,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [coverMode, setCoverMode] = React.useState(false);
   const [swipeSens, setSwipeSens] = React.useState(0);
   const [swipeInvert, setSwipeInvert] = React.useState(false);
+  const [swipeActivationMode, setSwipeActivationMode] = React.useState(4);
   const [stickMode, setStickMode] = React.useState(1);
   const [reloadKey, setReloadKey] = React.useState(Date.now());
 
@@ -178,6 +183,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     }
     setSwipeSens(Number(swipeSensitivity) || 0);
     setSwipeInvert(!!swipeInvertY);
+    setSwipeActivationMode(swipeActivation);
     setStickMode(joystickMode === 0 ? 0 : 1);
     setGyroMode(sensorConfig.mode);
     setGyroActivation(sensorConfig.activation);
@@ -194,6 +200,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     profileName,
     swipeSensitivity,
     swipeInvertY,
+    swipeActivation,
     joystickMode,
     sensorConfig,
   ]);
@@ -395,15 +402,24 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   };
 
   const handleSave = () => {
-    onSave(buttons, {sensitivity: swipeSens, invertY: swipeInvert}, stickMode, {
-      mode: gyroMode,
-      activation: gyroActivation,
-      sensitivityX: gyroSensitivityX,
-      sensitivityY: gyroSensitivityY,
-      invertX: gyroInvertX,
-      invertY: gyroInvertY,
-      swapXY: gyroSwapXY,
-    });
+    onSave(
+      buttons,
+      {
+        sensitivity: swipeSens,
+        invertY: swipeInvert,
+        activation: swipeActivationMode,
+      },
+      stickMode,
+      {
+        mode: gyroMode,
+        activation: gyroActivation,
+        sensitivityX: gyroSensitivityX,
+        sensitivityY: gyroSensitivityY,
+        invertX: gyroInvertX,
+        invertY: gyroInvertY,
+        swapXY: gyroSwapXY,
+      },
+    );
   };
 
   const renderSwipeModal = () => (
@@ -414,49 +430,70 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
         contentContainerStyle={styles.modal}>
         <Card>
           <Card.Content>
-            <View style={styles.title}>
-              <Text>{t('virtual_joystick_title')}</Text>
-              <Divider style={styles.divider} />
-            </View>
-            <RadioButton.Group
-              onValueChange={val => setStickMode(Number(val))}
-              value={String(stickMode)}>
-              <RadioButton.Item label={t('Free')} value="1" />
-              <RadioButton.Item label={t('Fixed')} value="0" />
-            </RadioButton.Group>
+            <ScrollView>
+              <View style={styles.title}>
+                <Text>{t('virtual_joystick_title')}</Text>
+                <Divider style={styles.divider} />
+              </View>
+              <RadioButton.Group
+                onValueChange={val => setStickMode(Number(val))}
+                value={String(stickMode)}>
+                <RadioButton.Item label={t('Free')} value="1" />
+                <RadioButton.Item label={t('Fixed')} value="0" />
+              </RadioButton.Group>
 
-            <View style={styles.title}>
-              <Text>
-                {t('Swipe aim sensitivity (0 = off)')}: {swipeSens}
-              </Text>
-              <Divider style={styles.divider} />
-            </View>
-            <Slider
-              value={swipeSens}
-              minimumValue={0}
-              maximumValue={100}
-              step={1}
-              onValueChange={val => setSwipeSens(Math.round(val))}
-              minimumTrackTintColor={theme.colors.primary}
-              maximumTrackTintColor="grey"
-            />
-            <View style={styles.title}>
-              <Text>{t('Invert swipe aim Y')}</Text>
-              <Divider style={styles.divider} />
-            </View>
-            <RadioButton.Group
-              onValueChange={val => setSwipeInvert(val === 'true')}
-              value={swipeInvert ? 'true' : 'false'}>
-              <RadioButton.Item label={t('Disable')} value="false" />
-              <RadioButton.Item label={t('Enable')} value="true" />
-            </RadioButton.Group>
-            <Text style={styles.swipeHint}>{t('SwipeAimDesc')}</Text>
-            <Button
-              mode="text"
-              onPress={() => setShowSwipeModal(false)}
-              style={styles.profileAction}>
-              {t('Close')}
-            </Button>
+              <View style={styles.title}>
+                <Text>
+                  {t('Swipe aim sensitivity (0 = off)')}: {swipeSens}
+                </Text>
+                <Divider style={styles.divider} />
+              </View>
+              <Slider
+                value={swipeSens}
+                minimumValue={0}
+                maximumValue={100}
+                step={1}
+                onValueChange={val => setSwipeSens(Math.round(val))}
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor="grey"
+              />
+              <View style={styles.title}>
+                <Text>{t('Invert swipe aim Y')}</Text>
+                <Divider style={styles.divider} />
+              </View>
+              <RadioButton.Group
+                onValueChange={val => setSwipeInvert(val === 'true')}
+                value={swipeInvert ? 'true' : 'false'}>
+                <RadioButton.Item label={t('Disable')} value="false" />
+                <RadioButton.Item label={t('Enable')} value="true" />
+              </RadioButton.Group>
+
+              <View style={styles.title}>
+                <Text>{t('Swipe aim activation')}</Text>
+                <Divider style={styles.divider} />
+              </View>
+              <RadioButton.Group
+                onValueChange={val => setSwipeActivationMode(Number(val))}
+                value={String(swipeActivationMode)}>
+                <RadioButton.Item
+                  label={t('While left trigger held')}
+                  value="1"
+                />
+                <RadioButton.Item
+                  label={t('While left bumper held')}
+                  value="2"
+                />
+                <RadioButton.Item label={t('While either held')} value="3" />
+                <RadioButton.Item label={t('Always')} value="4" />
+              </RadioButton.Group>
+              <Text style={styles.swipeHint}>{t('SwipeAimDesc')}</Text>
+              <Button
+                mode="text"
+                onPress={() => setShowSwipeModal(false)}
+                style={styles.profileAction}>
+                {t('Close')}
+              </Button>
+            </ScrollView>
           </Card.Content>
         </Card>
       </Modal>

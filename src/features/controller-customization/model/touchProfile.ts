@@ -22,11 +22,19 @@ const SENSOR_KEY = 'user.profileSensor';
 export type SwipeConfig = {
   sensitivity: number;
   invertY: boolean;
+  // When swipe-aim actually drives the right stick -- same activation scheme
+  // as gyro-aim's SensorConfig.activation below: 1 = while the left trigger
+  // is held, 2 = while the left bumper is held, 3 = either, 4 = always. Kept
+  // as the default so existing profiles keep today's always-on behavior.
+  activation: number;
 };
+
+const AIM_ACTIVATIONS = [1, 2, 3, 4];
 
 export const DEFAULT_SWIPE: SwipeConfig = {
   sensitivity: 0,
   invertY: false,
+  activation: 4,
 };
 
 const readMap = (key: string): Record<string, any> => {
@@ -53,6 +61,9 @@ export const getSwipeConfig = (profileName: string): SwipeConfig => {
   return {
     sensitivity: Number(cfg?.sensitivity) || 0,
     invertY: !!cfg?.invertY,
+    activation: AIM_ACTIVATIONS.includes(cfg?.activation)
+      ? cfg.activation
+      : DEFAULT_SWIPE.activation,
   };
 };
 
@@ -61,6 +72,9 @@ export const setSwipeConfig = (profileName: string, cfg: SwipeConfig) => {
   map[profileName || ''] = {
     sensitivity: Number(cfg.sensitivity) || 0,
     invertY: !!cfg.invertY,
+    activation: AIM_ACTIVATIONS.includes(cfg.activation)
+      ? cfg.activation
+      : DEFAULT_SWIPE.activation,
   };
   writeMap(SWIPE_KEY, map);
   log.info('setSwipeConfig:', profileName, map[profileName || '']);

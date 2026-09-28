@@ -192,6 +192,7 @@ export default {
     'Gyro aim source': 'ジャイロエイムの入力元',
     'This device': '本体',
     Controller: 'コントローラー',
+    'Swipe aim activation': 'スワイプエイムの発動条件',
     'Gyro aim activation': 'ジャイロエイムの発動条件',
     'While left trigger held': '左トリガーを押している間',
     'While left bumper held': '左ボタン(LB)を押している間',
