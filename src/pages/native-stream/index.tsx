@@ -2754,6 +2754,29 @@ export function NativeStreamScreenBase({
   // "no camera movement" (relative aiming, like mobile shooters).
   const swipeAimResetTimer = React.useRef<any>(null);
 
+  // Whether swipe-aim should actually claim/apply a touch right now, per its
+  // activation scheme (same as gyro-aim's SensorConfig.activation): always,
+  // or only while the configured trigger/bumper is held. Read live off
+  // gpState -- not memoized -- so both the touch-capture gate (passed to
+  // SwipeAimZone, so an inactive swipe-aim never steals a touch meant for a
+  // button or the left stick underneath it) and the per-move output gate
+  // below agree with the current button state.
+  const isSwipeAimActive = () => {
+    const activation = activeSwipe.activation;
+    if (activation === 4) {
+      return true;
+    }
+    if (activation === 1) {
+      return gpState.LeftTrigger >= settings.dead_zone;
+    }
+    if (activation === 2) {
+      return gpState.LeftShoulder > 0;
+    }
+    return (
+      gpState.LeftTrigger >= settings.dead_zone || gpState.LeftShoulder > 0
+    );
+  };
+
   const clearSwipeAim = () => {
     if (swipeAimResetTimer.current) {
       clearTimeout(swipeAimResetTimer.current);
@@ -2784,22 +2807,13 @@ export function NativeStreamScreenBase({
   };
 
   const handleSwipeAim = (dx: number, dy: number) => {
-    const activation = activeSwipe.activation;
-    if (activation !== 4) {
-      // Same activation scheme as gyro-aim's SensorConfig.activation: only
-      // let the swipe actually move the camera while the configured
-      // trigger/bumper is held, so the same touch area can be used for
-      // something else the rest of the time.
-      const aiming =
-        activation === 1
-          ? gpState.LeftTrigger >= settings.dead_zone
-          : activation === 2
-          ? gpState.LeftShoulder > 0
-          : gpState.LeftTrigger >= settings.dead_zone ||
-            gpState.LeftShoulder > 0;
-      if (!aiming) {
-        return;
-      }
+    // The touch-capture gate below (SwipeAimZone's isActive prop) already
+    // keeps an inactive swipe-aim from claiming a touch at all; this repeats
+    // the same check so releasing the trigger mid-swipe stops applying
+    // movement immediately too, since a granted gesture keeps delivering
+    // move events regardless of activation state.
+    if (!isSwipeAimActive()) {
+      return;
     }
     const invertY = activeSwipe.invertY;
     gpState.RightThumbXAxis = shapeSwipeAim(dx);
@@ -3179,6 +3193,7 @@ export function NativeStreamScreenBase({
       },
       onSwipeAim: handleSwipeAim,
       onSwipeAimEnd: clearSwipeAim,
+      swipeAimIsActive: isSwipeAimActive,
     };
 
     const useCustomVirtualGamepad = settings.custom_virtual_gamepad !== '';

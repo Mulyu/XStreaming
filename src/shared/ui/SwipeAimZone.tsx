@@ -26,6 +26,15 @@ export interface SwipeAimZoneProps {
   // zIndex so the trackpad rectangle actually receives touches that land
   // inside it.
   zIndex?: number;
+  // Whether the zone should actually claim a touch right now (e.g. an
+  // activation scheme like "only while the left trigger is held"). Checked
+  // live at each touch, not memoized, so a trigger release is picked up
+  // immediately rather than waiting for a re-render. When it declines, the
+  // touch falls through to whatever this zone would otherwise sit above --
+  // a button, or the free analog-stick catcher it's nested over -- instead
+  // of being swallowed by an aim mode that isn't actually active right now.
+  // Omit to always claim touches whenever enabled.
+  isActive?: () => boolean;
 }
 
 /**
@@ -42,40 +51,40 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   onAim,
   onEnd,
   zIndex = 1,
+  isActive,
 }) => {
   const last = React.useRef<{x: number; y: number} | null>(null);
 
-  const responder = React.useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => enabled,
-        onMoveShouldSetPanResponder: () => enabled,
-        onPanResponderGrant: evt => {
-          const t = evt.nativeEvent;
+  const responder = React.useMemo(() => {
+    const shouldCapture = () => enabled && (!isActive || isActive());
+    return PanResponder.create({
+      onStartShouldSetPanResponder: shouldCapture,
+      onMoveShouldSetPanResponder: shouldCapture,
+      onPanResponderGrant: evt => {
+        const t = evt.nativeEvent;
+        last.current = {x: t.pageX, y: t.pageY};
+      },
+      onPanResponderMove: evt => {
+        const t = evt.nativeEvent;
+        if (!last.current) {
           last.current = {x: t.pageX, y: t.pageY};
-        },
-        onPanResponderMove: evt => {
-          const t = evt.nativeEvent;
-          if (!last.current) {
-            last.current = {x: t.pageX, y: t.pageY};
-            return;
-          }
-          const dx = t.pageX - last.current.x;
-          const dy = t.pageY - last.current.y;
-          last.current = {x: t.pageX, y: t.pageY};
-          onAim(dx * sensitivity, dy * sensitivity);
-        },
-        onPanResponderRelease: () => {
-          last.current = null;
-          onEnd();
-        },
-        onPanResponderTerminate: () => {
-          last.current = null;
-          onEnd();
-        },
-      }),
-    [enabled, sensitivity, onAim, onEnd],
-  );
+          return;
+        }
+        const dx = t.pageX - last.current.x;
+        const dy = t.pageY - last.current.y;
+        last.current = {x: t.pageX, y: t.pageY};
+        onAim(dx * sensitivity, dy * sensitivity);
+      },
+      onPanResponderRelease: () => {
+        last.current = null;
+        onEnd();
+      },
+      onPanResponderTerminate: () => {
+        last.current = null;
+        onEnd();
+      },
+    });
+  }, [enabled, sensitivity, onAim, onEnd, isActive]);
 
   if (!enabled) {
     return null;

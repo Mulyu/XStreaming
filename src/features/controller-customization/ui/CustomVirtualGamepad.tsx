@@ -33,6 +33,8 @@ type Props = {
   swipeAimRect?: SwipeAimRect;
   onSwipeAim?: (dx: number, dy: number) => void;
   onSwipeAimEnd?: () => void;
+  // Live activation gate -- see SwipeAimZone's own isActive prop.
+  swipeAimIsActive?: () => boolean;
 };
 
 const CustomVirtualGamepad: React.FC<Props> = ({
@@ -49,6 +51,7 @@ const CustomVirtualGamepad: React.FC<Props> = ({
   swipeAimRect,
   onSwipeAim,
   onSwipeAimEnd,
+  swipeAimIsActive,
 }) => {
   const [buttons, setButtons] = React.useState<any>([]);
   // Per-profile override wins; fall back to Free.
@@ -198,6 +201,7 @@ const CustomVirtualGamepad: React.FC<Props> = ({
           rect={swipeAimRect}
           onAim={onSwipeAim ?? (() => {})}
           onEnd={onSwipeAimEnd ?? (() => {})}
+          isActive={swipeAimIsActive}
           zIndex={9}
         />
       )}
