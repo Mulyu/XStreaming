@@ -142,7 +142,9 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const [gyroActivation, setGyroActivation] = React.useState(1);
   const [gyroSensitivityX, setGyroSensitivityX] = React.useState(15000);
   const [gyroSensitivityY, setGyroSensitivityY] = React.useState(15000);
-  const [gyroInvert, setGyroInvert] = React.useState(0);
+  const [gyroInvertX, setGyroInvertX] = React.useState(false);
+  const [gyroInvertY, setGyroInvertY] = React.useState(false);
+  const [gyroSwapXY, setGyroSwapXY] = React.useState(false);
 
   // GFN keyboard-key buttons -- see CustomGamepad.tsx's own copy of this
   // pattern.
@@ -181,7 +183,9 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     setGyroActivation(sensorConfig.activation);
     setGyroSensitivityX(sensorConfig.sensitivityX);
     setGyroSensitivityY(sensorConfig.sensitivityY);
-    setGyroInvert(sensorConfig.invert);
+    setGyroInvertX(sensorConfig.invertX);
+    setGyroInvertY(sensorConfig.invertY);
+    setGyroSwapXY(sensorConfig.swapXY);
     setShowGrid(true);
     setShowTips(true);
     setReloadKey(Date.now());
@@ -396,7 +400,9 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
       activation: gyroActivation,
       sensitivityX: gyroSensitivityX,
       sensitivityY: gyroSensitivityY,
-      invert: gyroInvert,
+      invertX: gyroInvertX,
+      invertY: gyroInvertY,
+      swapXY: gyroSwapXY,
     });
   };
 
@@ -534,18 +540,40 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     maximumTrackTintColor="grey"
                   />
 
+                  {/* Each toggle is independent, so any combination applies
+                      together -- e.g. both axes inverted, or swapped and one
+                      axis inverted. */}
                   <View style={styles.title}>
-                    <Text>{t('Invert gyro aim')}</Text>
+                    <Text>{t('Invert gyro aim X')}</Text>
                     <Divider style={styles.divider} />
                   </View>
                   <RadioButton.Group
-                    onValueChange={val => setGyroInvert(Number(val))}
-                    value={String(gyroInvert)}>
-                    <RadioButton.Item label={t('None')} value="0" />
-                    <RadioButton.Item label={t('Invert X')} value="1" />
-                    <RadioButton.Item label={t('Invert Y')} value="2" />
-                    <RadioButton.Item label={t('Invert both')} value="3" />
-                    <RadioButton.Item label={t('Swap X/Y')} value="4" />
+                    onValueChange={val => setGyroInvertX(val === 'true')}
+                    value={gyroInvertX ? 'true' : 'false'}>
+                    <RadioButton.Item label={t('Disable')} value="false" />
+                    <RadioButton.Item label={t('Enable')} value="true" />
+                  </RadioButton.Group>
+
+                  <View style={styles.title}>
+                    <Text>{t('Invert gyro aim Y')}</Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <RadioButton.Group
+                    onValueChange={val => setGyroInvertY(val === 'true')}
+                    value={gyroInvertY ? 'true' : 'false'}>
+                    <RadioButton.Item label={t('Disable')} value="false" />
+                    <RadioButton.Item label={t('Enable')} value="true" />
+                  </RadioButton.Group>
+
+                  <View style={styles.title}>
+                    <Text>{t('Swap X/Y')}</Text>
+                    <Divider style={styles.divider} />
+                  </View>
+                  <RadioButton.Group
+                    onValueChange={val => setGyroSwapXY(val === 'true')}
+                    value={gyroSwapXY ? 'true' : 'false'}>
+                    <RadioButton.Item label={t('Disable')} value="false" />
+                    <RadioButton.Item label={t('Enable')} value="true" />
                   </RadioButton.Group>
                 </>
               )}

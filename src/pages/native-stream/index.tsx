@@ -1292,24 +1292,19 @@ export function NativeStreamScreenBase({
                 ? sensorCfg.sensitivityY / 10000
                 : 1;
 
-            switch (sensorCfg.invert) {
-              case 1: // x
-                stickX = -stickX;
-                break;
-              case 2: // y
-                stickY = -stickY;
-                break;
-              case 3: // All
-                stickX = -stickX;
-                stickY = -stickY;
-                break;
-              case 4: // x <-> y
-                const temp = stickX;
-                stickX = stickY;
-                stickY = temp;
-                break;
-              default:
-                break;
+            // Each axis toggle is independent, so any combination applies
+            // together (e.g. swapped and one axis inverted) -- swap first,
+            // then invert whatever ends up on each axis.
+            if (sensorCfg.swapXY) {
+              const temp = stickX;
+              stickX = stickY;
+              stickY = temp;
+            }
+            if (sensorCfg.invertX) {
+              stickX = -stickX;
+            }
+            if (sensorCfg.invertY) {
+              stickY = -stickY;
             }
             // gyroscope only work when LT button press
             if (sensorCfg.activation === 1) {
