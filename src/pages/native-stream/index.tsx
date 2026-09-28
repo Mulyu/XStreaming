@@ -2551,10 +2551,16 @@ export function NativeStreamScreenBase({
     if (holdToggleSetRef.current.has(name)) {
       gpState[name] = gpState[name] === 1 ? 0 : 1;
       flushVirtualGpState();
+      if (name === 'LeftTrigger' || name === 'LeftShoulder') {
+        setSwipeAimActive(isSwipeAimActive());
+      }
       return;
     }
     gpState[name] = 1;
     flushVirtualGpState();
+    if (name === 'LeftTrigger' || name === 'LeftShoulder') {
+      setSwipeAimActive(isSwipeAimActive());
+    }
 
     if (settings.vibration) {
       Vibration.vibrate(30);
@@ -2593,6 +2599,9 @@ export function NativeStreamScreenBase({
     // immediate flush on press/release delivers each edge reliably without it.
     gpState[name] = 0;
     flushVirtualGpState();
+    if (name === 'LeftTrigger' || name === 'LeftShoulder') {
+      setSwipeAimActive(isSwipeAimActive());
+    }
   };
 
   // Keep stable refs to the latest press handlers so the cover-display bus can
@@ -2757,10 +2766,10 @@ export function NativeStreamScreenBase({
   // Whether swipe-aim should actually claim/apply a touch right now, per its
   // activation scheme (same as gyro-aim's SensorConfig.activation): always,
   // or only while the configured trigger/bumper is held. Read live off
-  // gpState -- not memoized -- so both the touch-capture gate (passed to
-  // SwipeAimZone, so an inactive swipe-aim never steals a touch meant for a
-  // button or the left stick underneath it) and the per-move output gate
-  // below agree with the current button state.
+  // gpState -- not memoized -- so the per-move output gate further below,
+  // the swipeAimActive React state synced to it just below, and (as a
+  // narrow-race backstop) SwipeAimZone's own isActive prop all agree with
+  // the current button state.
   const isSwipeAimActive = () => {
     const activation = activeSwipe.activation;
     if (activation === 4) {
@@ -2776,6 +2785,23 @@ export function NativeStreamScreenBase({
       gpState.LeftTrigger >= settings.dead_zone || gpState.LeftShoulder > 0
     );
   };
+
+  // Mirrors isSwipeAimActive() as React state, kept in sync from the virtual
+  // LT/LB button handlers below. A PanResponder that merely *declines* to
+  // become responder while inactive did not reliably let the touch fall
+  // through to a button or the left stick underneath it in practice, so the
+  // trackpad's own view is unmounted outright while inactive instead (see
+  // its use in renderVirtualGamepad below) -- nothing left to intercept the
+  // touch at all.
+  const [swipeAimActive, setSwipeAimActive] = React.useState(false);
+
+  // Re-sync whenever the activation scheme itself changes (e.g. switching
+  // profiles, or picking a different activation option in the editor),
+  // rather than waiting for the next trigger/bumper press to notice.
+  React.useEffect(() => {
+    setSwipeAimActive(isSwipeAimActive());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSwipe.activation]);
 
   const clearSwipeAim = () => {
     if (swipeAimResetTimer.current) {
@@ -3176,11 +3202,16 @@ export function NativeStreamScreenBase({
     // component's free analog-stick touch catcher -- see
     // CustomVirtualGamepad/VirtualGamepad's swipeAim* props.
     const sens = Number(activeSwipe.sensitivity) || 0;
+    // swipeAimActive (activation gate) folds into this so the trackpad is
+    // unmounted outright while inactive -- a declined PanResponder grant
+    // didn't reliably let the touch fall through to whatever's underneath in
+    // practice, so nothing should be there to intercept it at all.
     const swipeAimEnabled =
       !showNativeTouch &&
       connectState === CONNECTED &&
       sens > 0 &&
-      activeSwipeRect.show !== false;
+      activeSwipeRect.show !== false &&
+      swipeAimActive;
     const swipeAimProps = {
       swipeAimEnabled,
       // Map the 0–100 slider to a per-pixel stick factor.
