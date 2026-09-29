@@ -33,6 +33,23 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	// The one active stream session, if any -- only one PS Plus stream can
 	// run at a time. PsPlusSurfaceView reaches this via the react context to
 	// attach/detach the native Surface as the view mounts/unmounts.
+	//
+	// @Volatile on this and currentSurface below: startSession()/
+	// stopSession() run on RN's Native Modules thread while
+	// PsPlusStreamView's surfaceCreated()/surfaceDestroyed() always run on
+	// the UI thread. Without it, a write to either field on one thread has
+	// no guaranteed visibility to a read on the other -- the debug counters
+	// added while investigating the black-screen bug confirmed the actual
+	// failure mode this caused: chiaki_video_receiver_flush_frame()
+	// successfully reassembled frames the whole time (flushOk in the
+	// thousands), but android_chiaki_video_decoder_video_sample() bailed
+	// out on every single one via its "decoder is not initialized" branch,
+	// because startSession() was reading a stale null currentSurface and
+	// so never called Session.setSurface() at all -- AMediaCodec was never
+	// even created. Exactly matches every symptom seen throughout this
+	// investigation: audio (unaffected by any of this) always worked,
+	// video never did.
+	@Volatile
 	internal var session: Session? = null
 		private set
 
@@ -43,6 +60,7 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	// surface onto every newly created session below, since surfaceCreated
 	// won't fire again on its own (only on a real surface recreation, e.g.
 	// backgrounding or rotation).
+	@Volatile
 	internal var currentSurface: Surface? = null
 
 	private fun emit(name: String, params: WritableMap?) {
