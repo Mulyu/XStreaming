@@ -9,7 +9,7 @@ name: Build Android APK
 # needed) suitable for sideloading onto a device for testing.
 on:
   push:
-    branches: [main, claude/game-screen-position-settings-svkxru]
+    branches: [main]
   workflow_dispatch:
     inputs:
       abi:

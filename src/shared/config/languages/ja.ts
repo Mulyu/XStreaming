@@ -109,6 +109,7 @@ export default {
     CommonSettings: '共通',
     SectionAccount: 'アカウント',
     SectionVideo: '映像',
+    SectionDebug: 'デバッグ',
     SectionRegionSignaling: 'リージョン・シグナリング',
     SectionSignInLanguage: 'サインイン・言語',
     SectionControllers: 'コントローラー',
@@ -313,6 +314,11 @@ export default {
     PsPlusDatacenterTitle: 'データセンター',
     PsPlusDatacenterDesc:
       '80ms以内の最寄りデータセンターの代わりに、特定のデータセンターを固定します。80msの自動選択の上限を完全にバイパスしますが、通信品質が悪化する可能性があります。一覧には過去の接続試行で測定済みのデータセンターのみ表示されます。起動に失敗する場合は自動に戻してみてください。',
+    PsPlusCopyDebugInfoTitle: 'デバッグ情報をコピー',
+    PsPlusCopyDebugInfoDesc:
+      'トラブルシューティング用に、PSNセッショントークンを含む機密情報をクリップボードにコピーします。信頼できる相手以外とは共有しないでください。',
+    PsPlusDebugCopyFailed:
+      'サインインしていないため、コピーする情報がありません',
     GfnPlaytimeTitle: '今月の残りプレイ時間',
     GfnPlaytimeSignedOutDesc:
       'サインインすると、今の請求期間内の残りプレイ時間を確認できます。',

@@ -59,6 +59,7 @@ const SettingsView: React.FC<Props> = ({
   onGfnAccountPress,
   onPsPlusAccountPress,
   onNavigatePsPlusLibrary,
+  onCopyPsPlusDebugInfo,
   onXcloudAccountPress,
   onXcloudCatalogReload,
   onGfnCatalogReload,
@@ -408,6 +409,17 @@ const SettingsView: React.FC<Props> = ({
             accent={PS_ACCENT}
             emptyLabel={t('Auto')}
           />
+
+          {psPlusSignedIn && (
+            <>
+              <SectionLabel title={t('SectionDebug')} />
+              <SettingItem
+                title={t('PsPlusCopyDebugInfoTitle')}
+                description={t('PsPlusCopyDebugInfoDesc')}
+                onPress={onCopyPsPlusDebugInfo}
+              />
+            </>
+          )}
         </ScrollView>
       )}
 
