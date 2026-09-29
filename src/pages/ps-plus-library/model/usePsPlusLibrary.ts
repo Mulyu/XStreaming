@@ -12,6 +12,8 @@ import {debugFactory} from '../../../shared/lib/debug';
 
 const log = debugFactory('PsPlusLibraryScreen');
 
+export type PsPlusPlatformFilter = 'ps5' | 'ps4' | 'ps3';
+
 export function usePsPlusLibrary(navigation: any) {
   const {t} = useTranslation();
   const [signedIn, setSignedIn] = React.useState(isPsPlusSignedIn());
@@ -19,6 +21,15 @@ export function usePsPlusLibrary(navigation: any) {
   const [loading, setLoading] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [keyword, setKeyword] = React.useState('');
+  // Category chips narrow within what's already shown (owned + streamable
+  // only -- see the fetch filter below); neither active shows both, same
+  // OR-within-group convention as the main Library screen's provider chips.
+  const [filterOwned, setFilterOwned] = React.useState(false);
+  const [filterStreamable, setFilterStreamable] = React.useState(false);
+  const [platformFilters, setPlatformFilters] = React.useState<
+    Set<PsPlusPlatformFilter>
+  >(new Set());
 
   const load = React.useCallback(
     async (opts?: {isRefresh?: boolean; forceRefresh?: boolean}) => {
@@ -105,13 +116,58 @@ export function usePsPlusLibrary(navigation: any) {
     [navigation],
   );
 
+  const togglePlatformFilter = React.useCallback(
+    (platform: PsPlusPlatformFilter) => {
+      setPlatformFilters(prev => {
+        const next = new Set(prev);
+        if (next.has(platform)) {
+          next.delete(platform);
+        } else {
+          next.add(platform);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const filteredGames = React.useMemo(() => {
+    let list = games;
+    if (filterOwned || filterStreamable) {
+      list = list.filter(
+        g =>
+          (filterOwned && g.category === CloudCategory.OWNED) ||
+          (filterStreamable && g.category === CloudCategory.STREAMABLE),
+      );
+    }
+    if (platformFilters.size > 0) {
+      list = list.filter(g =>
+        platformFilters.has(g.platform as PsPlusPlatformFilter),
+      );
+    }
+    const q = keyword.trim().toLowerCase();
+    if (q) {
+      list = list.filter(g => g.name.toLowerCase().includes(q));
+    }
+    return list;
+  }, [games, filterOwned, filterStreamable, platformFilters, keyword]);
+
   return {
     t,
     signedIn,
-    games,
+    games: filteredGames,
+    totalCount: games.length,
     loading,
     refreshing,
     error,
+    keyword,
+    setKeyword,
+    filterOwned,
+    setFilterOwned: () => setFilterOwned(v => !v),
+    filterStreamable,
+    setFilterStreamable: () => setFilterStreamable(v => !v),
+    platformFilters,
+    togglePlatformFilter,
     onRefresh,
     onSignIn,
     onSignOut,

@@ -264,6 +264,8 @@ export default {
       'この端末でPlayStation Networkからサインアウトしますか？',
     PsPlusLibraryTitle: 'PS Plusライブラリ',
     PsPlusBrowseLibraryDesc: 'クラウドストリーミング対応のPS Plusゲームを見る',
+    PsPlusFilterIncluded: 'PS Plus対象',
+    NoResults: '検索・フィルタ条件に一致するゲームがありません',
     PsPlusSignInPrompt:
       'PlayStation Networkアカウントにサインインすると、クラウドストリーミング対応のPS Plusゲームを見られます。',
     SignOut: 'サインアウト',

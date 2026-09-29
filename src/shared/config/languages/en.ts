@@ -268,6 +268,8 @@ export default {
     PsPlusSignOutConfirm: 'Sign out of PlayStation Network on this device?',
     PsPlusLibraryTitle: 'PS Plus library',
     PsPlusBrowseLibraryDesc: 'Browse cloud-streamable PS Plus games',
+    PsPlusFilterIncluded: 'Included with PS Plus',
+    NoResults: 'No games match your search/filters',
     PsPlusSignInPrompt:
       'Sign in with your PlayStation Network account to browse PS Plus cloud-streaming games.',
     SignOut: 'Sign out',
