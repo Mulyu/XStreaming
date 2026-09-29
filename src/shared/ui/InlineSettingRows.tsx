@@ -8,6 +8,7 @@ import RNSlider from '@react-native-community/slider';
 // system as the availability dots and filter chips on the Library screen.
 export const XBOX_ACCENT = '#107C10';
 export const NVIDIA_ACCENT = '#76B900';
+export const PS_ACCENT = '#0070D1';
 
 export type SettingOption = {value: any; text: string};
 

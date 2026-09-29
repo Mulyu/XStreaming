@@ -238,6 +238,12 @@ export function usePsPlusStream(navigation: any, route: any) {
         GamepadManager.vibrate(120, weak, strong, 0, 0, 3);
       },
       onPsChord: () => openControlRail(),
+      // Persisted regardless of whether this attempt succeeded -- a
+      // ping-gate rejection is exactly when a fresh measurement is most
+      // worth keeping for the Settings datacenter picker and future runs.
+      onDatacenterPings: json => {
+        saveSettings({...getSettings(), psplus_datacenter_pings: json});
+      },
     });
     sessionRef.current = session;
     // The owned-entitlement fast path only means anything on the PSNOW
@@ -251,6 +257,7 @@ export function usePsPlusStream(navigation: any, route: any) {
       params.isOwned &&
       params.serviceType === 'psnow' &&
       !!params.entitlementId;
+    const videoSettings = getSettings();
     void session.connect({
       npsso,
       serviceType: params.serviceType === 'psnow' ? 'psnow' : 'pscloud',
@@ -258,6 +265,14 @@ export function usePsPlusStream(navigation: any, route: any) {
       gameName: params.name ?? '',
       ownedEntitlementId: ownedFastPath ? params.entitlementId : undefined,
       ownedPlatform: ownedFastPath ? params.platform : undefined,
+      resolution: videoSettings.psplus_resolution,
+      fpsPreset: videoSettings.psplus_fps,
+      bitrateKbps:
+        videoSettings.psplus_bitrate_mode === 'custom'
+          ? videoSettings.psplus_bitrate_kbps
+          : undefined,
+      forcedDatacenter: videoSettings.psplus_datacenter || undefined,
+      priorDatacentersJson: videoSettings.psplus_datacenter_pings || undefined,
     });
 
     return () => {

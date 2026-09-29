@@ -304,6 +304,18 @@ export default {
     GfnRegionTitle: 'Server region',
     GfnRegionDesc:
       'Pin a specific GeForce NOW region instead of letting CloudMatch pick the nearest one automatically. If a title fails to start, try switching back to Auto.',
+    PsPlusResolutionTitle: 'Resolution',
+    PsPlusResolutionDesc:
+      'Set the streaming resolution requested from PS Plus cloud streaming.',
+    PsPlusFpsTitle: 'Frame rate',
+    PsPlusFpsDesc:
+      'Set the streaming frame rate requested from PS Plus cloud streaming.',
+    PsPlusBitrateTitle: 'Bitrate',
+    PsPlusBitrateDesc:
+      'Set the streaming bitrate for PS Plus cloud streaming (Note: a lower bitrate can help on weaker networks).',
+    PsPlusDatacenterTitle: 'Datacenter',
+    PsPlusDatacenterDesc:
+      'Force a specific datacenter instead of the closest one under 80ms. Bypasses the 80ms auto-select limit entirely, at the cost of possibly worse quality -- only datacenters measured on a prior connection attempt are listed. If a title fails to start, try switching back to Auto.',
     GfnPlaytimeTitle: 'Playtime remaining this month',
     GfnPlaytimeSignedOutDesc:
       'Sign in to see how much playtime is left in your current billing period.',
