@@ -5,6 +5,7 @@ import {
   getNpsso,
   isPsPlusSignedIn,
   clearNpsso,
+  CloudCategory,
   CloudGame,
 } from '../../../features/ps-plus-session';
 import {debugFactory} from '../../../shared/lib/debug';
@@ -39,7 +40,20 @@ export function usePsPlusLibrary(navigation: any) {
           undefined,
           !!opts?.forceRefresh,
         );
-        setGames(result.games);
+        // "purchaseable" PS5 titles are the store's full browse catalog minus
+        // what this account can actually play -- streaming one would just
+        // fail with no PS Plus entitlement to back it. This screen is the
+        // cloud-streaming library (see PsPlusBrowseLibraryDesc), not a store,
+        // so only show what's actually streamable right now: games already
+        // owned, plus the PS Now (psnow) subscription titles that stream
+        // without ownership.
+        setGames(
+          result.games.filter(
+            g =>
+              g.category === CloudCategory.OWNED ||
+              g.category === CloudCategory.STREAMABLE,
+          ),
+        );
         if (result.warning) {
           log.warn('Catalog warning:', result.warning);
         }
