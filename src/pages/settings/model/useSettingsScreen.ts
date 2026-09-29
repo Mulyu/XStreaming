@@ -20,6 +20,7 @@ import {
   GfnFullCatalogStatus,
 } from '../../../entities/catalog-title';
 import {useGfnSignIn} from '../../../features/gfn-auth';
+import {isPsPlusSignedIn, clearNpsso} from '../../../features/ps-plus-session';
 import {getValidGfnJwt, getValidGfnUserId} from '../../../entities/gfn-account';
 import {
   fetchGfnSubscription,
@@ -60,7 +61,7 @@ const allMetas = [
 
 export const M = (name: string): any => allMetas.find(m => m.name === name);
 
-export type Lane = 'common' | 'xbox' | 'gfn';
+export type Lane = 'common' | 'xbox' | 'gfn' | 'psplus';
 
 export function useSettingsScreen(navigation: any) {
   const {t} = useTranslation();
@@ -69,6 +70,18 @@ export function useSettingsScreen(navigation: any) {
 
   const [loading, setLoading] = React.useState(false);
   const [lane, setLane] = React.useState<Lane>('common');
+  // Unlike GFN's own device-code flow, PS Plus sign-in/out never happens
+  // while this screen stays mounted (it's a WebView screen navigated away
+  // to), so this only needs to resync when this screen regains focus.
+  const [psPlusSignedIn, setPsPlusSignedIn] = React.useState(
+    isPsPlusSignedIn(),
+  );
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setPsPlusSignedIn(isPsPlusSignedIn());
+    });
+    return unsubscribe;
+  }, [navigation]);
   const [settings, setSettings] = React.useState(() => getSettings());
 
   const {
@@ -257,6 +270,27 @@ export function useSettingsScreen(navigation: any) {
       return;
     }
     startGfnLogin();
+  };
+
+  // Mirrors handleGfnAccountPress: signed in -> confirm-then-sign-out
+  // (npsso is just cleared locally, no server-side call needed); signed
+  // out -> the WebView login screen.
+  const handlePsPlusAccountPress = () => {
+    if (psPlusSignedIn) {
+      Alert.alert(t('Warning'), t('PsPlusSignOutConfirm'), [
+        {text: t('Cancel'), style: 'cancel'},
+        {
+          text: t('Confirm'),
+          style: 'default',
+          onPress: () => {
+            clearNpsso();
+            setPsPlusSignedIn(false);
+          },
+        },
+      ]);
+      return;
+    }
+    navigation.navigate('PsPlusLogin');
   };
 
   // Mirrors the GFN account row above: signed in -> confirm-then-logout
@@ -467,6 +501,7 @@ export function useSettingsScreen(navigation: any) {
     lane,
     settings,
     gfnSignedIn,
+    psPlusSignedIn,
     gfnLoginVisible,
     gfnChallenge,
     gfnLoginStatus,
@@ -491,6 +526,8 @@ export function useSettingsScreen(navigation: any) {
     onSignalingCloudChange: handleSignalingCloudChange,
     onItemPress: handleItemPress,
     onGfnAccountPress: handleGfnAccountPress,
+    onPsPlusAccountPress: handlePsPlusAccountPress,
+    onNavigatePsPlusLibrary: () => navigation.navigate('PsPlusLibrary'),
     onXcloudAccountPress: handleXcloudAccountPress,
     onXcloudCatalogReload: handleXcloudCatalogReload,
     onGfnCatalogReload: handleGfnCatalogReload,
