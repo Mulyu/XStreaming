@@ -13,6 +13,40 @@ const {FullScreenManager} = NativeModules;
 
 const log = debugFactory('PsPlusStreamScreen');
 
+// The native engine's error_message is often an internal code, or (for a
+// Gaikai session-start rejection) the raw JSON error body verbatim --
+// {"sessionId":"...","eventCode":"002.2026","name":"noGameForEntitlementId"}
+// was shown to a user as-is before this. Map the known ones to something a
+// player can actually act on; anything unrecognized still falls through to
+// the raw string rather than hiding it.
+function friendlyStreamError(
+  detail: string,
+  t: (key: string) => string,
+): string {
+  let name = detail;
+  try {
+    const parsed = JSON.parse(detail);
+    if (parsed && typeof parsed.name === 'string') {
+      name = parsed.name;
+    }
+  } catch {
+    // Not JSON -- one of the bare internal codes below, or already a
+    // human-readable sentence from the native layer.
+  }
+  switch (name) {
+    case 'noGameForEntitlementId':
+      return t('PsPlusErrorNoGameForEntitlement');
+    case 'PS_PLUS_SUBSCRIPTION_REQUIRED':
+      return t('PsPlusErrorSubscriptionRequired');
+    case 'AUTHORIZATION_FAILED':
+      return t('PsPlusErrorAuthExpired');
+    case 'PING_TIMEOUT':
+      return t('PsPlusErrorPingTimeout');
+    default:
+      return detail;
+  }
+}
+
 // Xbox-shaped controller state, matching what gpStateToPsPlusInput (see
 // features/ps-plus-session) reads -- the same field names native-stream's
 // own gpState uses, so the shared VirtualGamepad UI component (built for
@@ -79,7 +113,7 @@ export function usePsPlusStream(navigation: any, route: any) {
       onState: (state, detail) => {
         setConnectState(state);
         if (detail) {
-          setErrorDetail(detail);
+          setErrorDetail(friendlyStreamError(detail, t));
         }
       },
       onProgress: stage => setProgressText(stage),
@@ -88,13 +122,24 @@ export function usePsPlusStream(navigation: any, route: any) {
       onPsChord: () => {},
     });
     sessionRef.current = session;
+    // The owned-entitlement fast path only means anything on the PSNOW
+    // (Kamaji resolve) branch -- cc_kamaji_resolve branches on it, but
+    // provision_once's pscloud branch never reads it at all, always using
+    // gameIdentifier directly. Sending it for a pscloud launch anyway (Pylux's
+    // own client never does -- CloudPlayFragment.kt gates this identically)
+    // only trips the one-shot noGameForEntitlement retry into a guaranteed
+    // no-op extra round-trip when a PS5 entitlement is rejected.
+    const ownedFastPath =
+      params.isOwned &&
+      params.serviceType === 'psnow' &&
+      !!params.entitlementId;
     void session.connect({
       npsso,
       serviceType: params.serviceType === 'psnow' ? 'psnow' : 'pscloud',
       gameIdentifier: params.streamIdentifier ?? params.productId ?? '',
       gameName: params.name ?? '',
-      ownedEntitlementId: params.isOwned ? params.entitlementId : undefined,
-      ownedPlatform: params.isOwned ? params.platform : undefined,
+      ownedEntitlementId: ownedFastPath ? params.entitlementId : undefined,
+      ownedPlatform: ownedFastPath ? params.platform : undefined,
     });
 
     return () => {

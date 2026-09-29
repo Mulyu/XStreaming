@@ -272,6 +272,14 @@ export default {
     'Stream ended': 'ストリーミングが終了しました',
     'Enter your PSN login PIN': 'PSNログインPINを入力してください',
     'Incorrect PIN, try again': 'PINが正しくありません。もう一度お試しください',
+    PsPlusErrorNoGameForEntitlement:
+      'このアカウントでは、このゲームは現在クラウドストリーミングに対応していません。',
+    PsPlusErrorSubscriptionRequired:
+      'クラウドストリーミングにはPS Plusプレミアムへの加入が必要です。',
+    PsPlusErrorAuthExpired:
+      'PlayStationのサインインが期限切れです。もう一度サインインしてください。',
+    PsPlusErrorPingTimeout:
+      'ストリーミング枠の確保がタイムアウトしました。もう一度お試しください。',
     PlayOn: 'プレイ先',
     IncludedWithGamePass: 'Game Passに含まれています',
     LibraryViewDetails: '詳細を見る',

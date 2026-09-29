@@ -276,6 +276,14 @@ export default {
     'Stream ended': 'Stream ended',
     'Enter your PSN login PIN': 'Enter your PSN login PIN',
     'Incorrect PIN, try again': 'Incorrect PIN, try again',
+    PsPlusErrorNoGameForEntitlement:
+      "This game isn't currently available for cloud streaming on this account.",
+    PsPlusErrorSubscriptionRequired:
+      'A PS Plus Premium subscription is required for cloud streaming.',
+    PsPlusErrorAuthExpired:
+      'Your PlayStation sign-in has expired. Please sign in again.',
+    PsPlusErrorPingTimeout:
+      'Timed out waiting for a streaming slot. Please try again.',
     PlayOn: 'Play on',
     IncludedWithGamePass: 'Included with Game Pass',
     LibraryViewDetails: 'View details',
