@@ -481,7 +481,14 @@ function App() {
                 <RootStack.Screen
                   name="PsPlusStream"
                   component={PsPlusStreamScreen}
-                  options={{headerShown: false}}
+                  // No push/pop transition animation for this screen: the
+                  // stack navigator (react-native-screens, on by default with
+                  // @react-navigation/native) snapshots/hardware-layers the
+                  // screen during that animation, which is a well-known way
+                  // for a SurfaceView's transparent hole-punch to silently
+                  // stop compositing -- worth ruling out before spending any
+                  // more native-side effort on the black-video bug.
+                  options={{headerShown: false, animationEnabled: false}}
                 />
               </RootStack.Group>
 
