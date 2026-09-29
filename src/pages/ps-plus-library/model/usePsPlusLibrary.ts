@@ -5,7 +5,6 @@ import {
   getNpsso,
   isPsPlusSignedIn,
   clearNpsso,
-  CloudCategory,
   CloudGame,
 } from '../../../features/ps-plus-session';
 import {debugFactory} from '../../../shared/lib/debug';
@@ -22,11 +21,11 @@ export function usePsPlusLibrary(navigation: any) {
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState('');
   const [keyword, setKeyword] = React.useState('');
-  // Category chips narrow within what's already shown (owned + streamable
-  // only -- see the fetch filter below); neither active shows both, same
-  // OR-within-group convention as the main Library screen's provider chips.
-  const [filterOwned, setFilterOwned] = React.useState(false);
-  const [filterStreamable, setFilterStreamable] = React.useState(false);
+  // Owned-only defaults on (this screen used to hard-filter to owned +
+  // "streamable" before this could be toggled at all), but is now a plain
+  // switch over the pscloud catalog fetched below, same "Owned" filter
+  // convention as the main Library screen's own filterOwnedOnly.
+  const [filterOwnedOnly, setFilterOwnedOnly] = React.useState(true);
   const [platformFilters, setPlatformFilters] = React.useState<
     Set<PsPlusPlatformFilter>
   >(new Set());
@@ -51,20 +50,25 @@ export function usePsPlusLibrary(navigation: any) {
           undefined,
           !!opts?.forceRefresh,
         );
-        // "purchaseable" PS5 titles are the store's full browse catalog minus
-        // what this account can actually play -- streaming one would just
-        // fail with no PS Plus entitlement to back it. This screen is the
-        // cloud-streaming library (see PsPlusBrowseLibraryDesc), not a store,
-        // so only show what's actually streamable right now: games already
-        // owned, plus the PS Now (psnow) subscription titles that stream
-        // without ownership.
-        setGames(
-          result.games.filter(
-            g =>
-              g.category === CloudCategory.OWNED ||
-              g.category === CloudCategory.STREAMABLE,
-          ),
-        );
+        // Sony's own "PS5 Game Cloud Streaming" page
+        // (playstation.com/*/ps5-game-cloud-streaming/) is powered by exactly
+        // this same imagic gameslist API, gating each PS5 title by its own
+        // streamingSupported flag -- confirmed live (all-ps5-list returns the
+        // FULL PS5 store catalog, most titles with streamingSupported:false).
+        // That's exactly what streamServiceType=="pscloud" already encodes
+        // here (see category_for/stream_service_type in cloudcatalog_merge.c).
+        // The "psnow" (PS3/PS4 "PS Now") side is a separate Sony offering that
+        // page doesn't cover at all, and -- unlike pscloud -- carries no
+        // per-title eligibility signal of its own (every row returned by the
+        // Kamaji/APOLLOROOT catalog is unconditionally badged "streamable");
+        // that's almost certainly the "remote-play-flavored, not actually
+        // cloud-play" titles seen in this list before. So this screen is now
+        // scoped to the pscloud (PS5) catalog only, ownership handled as its
+        // own toggle below rather than a hard filter -- this endpoint is
+        // Sony's whole PS5 store, not just what's streamable, so showing the
+        // full catalog here (not just owned) is what makes a "which games can
+        // I cloud-stream" browser actually useful.
+        setGames(result.games.filter(g => g.streamServiceType === 'pscloud'));
         if (result.warning) {
           log.warn('Catalog warning:', result.warning);
         }
@@ -133,12 +137,8 @@ export function usePsPlusLibrary(navigation: any) {
 
   const filteredGames = React.useMemo(() => {
     let list = games;
-    if (filterOwned || filterStreamable) {
-      list = list.filter(
-        g =>
-          (filterOwned && g.category === CloudCategory.OWNED) ||
-          (filterStreamable && g.category === CloudCategory.STREAMABLE),
-      );
+    if (filterOwnedOnly) {
+      list = list.filter(g => g.isOwned);
     }
     if (platformFilters.size > 0) {
       list = list.filter(g =>
@@ -150,7 +150,7 @@ export function usePsPlusLibrary(navigation: any) {
       list = list.filter(g => g.name.toLowerCase().includes(q));
     }
     return list;
-  }, [games, filterOwned, filterStreamable, platformFilters, keyword]);
+  }, [games, filterOwnedOnly, platformFilters, keyword]);
 
   return {
     t,
@@ -162,10 +162,8 @@ export function usePsPlusLibrary(navigation: any) {
     error,
     keyword,
     setKeyword,
-    filterOwned,
-    setFilterOwned: () => setFilterOwned(v => !v),
-    filterStreamable,
-    setFilterStreamable: () => setFilterStreamable(v => !v),
+    filterOwnedOnly,
+    setFilterOwnedOnly: () => setFilterOwnedOnly(v => !v),
     platformFilters,
     togglePlatformFilter,
     onRefresh,

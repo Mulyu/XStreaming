@@ -30,10 +30,8 @@ const PsPlusLibraryView: React.FC<Props> = ({
   error,
   keyword,
   setKeyword,
-  filterOwned,
-  setFilterOwned,
-  filterStreamable,
-  setFilterStreamable,
+  filterOwnedOnly,
+  setFilterOwnedOnly,
   platformFilters,
   togglePlatformFilter,
   onRefresh,
@@ -62,11 +60,20 @@ const PsPlusLibraryView: React.FC<Props> = ({
 
   const renderItem = ({item}: {item: CloudGame}) => (
     <Pressable style={styles.tile} onPress={() => onSelectGame(item)}>
-      {item.imageUrl ? (
-        <Image source={{uri: item.imageUrl}} style={styles.tileImage} />
-      ) : (
-        <View style={[styles.tileImage, styles.tileImageFallback]} />
-      )}
+      <View style={styles.tileImageWrap}>
+        {item.imageUrl ? (
+          <Image source={{uri: item.imageUrl}} style={styles.tileImage} />
+        ) : (
+          <View style={[styles.tileImage, styles.tileImageFallback]} />
+        )}
+        {/* Shown only when "Owned" is off: this screen doubles as Sony's own
+            "which games can I cloud-stream" browser (the whole PS5 store,
+            gated by streamingSupported -- see the model's own comment), so a
+            not-yet-owned title is a real, expected row here, not an error --
+            just dimmed so it doesn't look identical to one that's actually
+            playable right now. */}
+        {!item.isOwned && <View style={styles.tileDim} pointerEvents="none" />}
+      </View>
       <Text style={styles.tileTitle} numberOfLines={2}>
         {item.name}
       </Text>
@@ -99,25 +106,14 @@ const PsPlusLibraryView: React.FC<Props> = ({
         </View>
         <View style={styles.chipsRow}>
           <Pressable
-            style={[styles.filterChip, filterOwned && styles.filterChipOn]}
-            onPress={setFilterOwned}>
+            style={[styles.filterChip, filterOwnedOnly && styles.filterChipOn]}
+            onPress={setFilterOwnedOnly}>
             <Text
               style={[
                 styles.filterChipText,
-                filterOwned && styles.filterChipTextOn,
+                filterOwnedOnly && styles.filterChipTextOn,
               ]}>
               {t('LibraryFilterOwned')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.filterChip, filterStreamable && styles.filterChipOn]}
-            onPress={setFilterStreamable}>
-            <Text
-              style={[
-                styles.filterChipText,
-                filterStreamable && styles.filterChipTextOn,
-              ]}>
-              {t('PsPlusFilterIncluded')}
             </Text>
           </Pressable>
           {PLATFORM_CHIPS.map(platform => {
@@ -257,6 +253,11 @@ const styles = StyleSheet.create({
     flex: 1 / 3,
     padding: 6,
   },
+  tileImageWrap: {
+    position: 'relative',
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
   tileImage: {
     width: '100%',
     aspectRatio: 2 / 3,
@@ -264,6 +265,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#222',
   },
   tileImageFallback: {},
+  tileDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,16,18,0.65)',
+  },
   tileTitle: {
     marginTop: 4,
     fontSize: 12,
