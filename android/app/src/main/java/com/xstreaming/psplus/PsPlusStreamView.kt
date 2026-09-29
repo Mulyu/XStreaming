@@ -14,6 +14,15 @@ import com.facebook.react.bridge.ReactContext
 class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
 
 	init {
+		// A plain SurfaceView punches a hole and composites on its own hardware
+		// layer *below* the normal view hierarchy by default -- without this,
+		// decoded video renders onto a Surface nothing else ever draws over
+		// (screen looks solid black/whatever the window background is) even
+		// though decoding itself is working fine, which is exactly why audio
+		// still played. MediaOverlay (not OnTop) so this still stays under the
+		// RN-rendered overlays (VirtualGamepad, PsPlusControlRail, ...), which
+		// are ordinary Views drawn after it, not other SurfaceViews.
+		setZOrderMediaOverlay(true)
 		holder.addCallback(this)
 	}
 
