@@ -16,6 +16,7 @@ import com.oney.WebRTCModule.webrtcutils.H264AndSoftwareVideoEncoderFactory;
 import com.xstreaming.touchcontrols.AnalogStickPackage;
 import com.xstreaming.touchcontrols.ButtonViewPackage;
 import com.xstreaming.webrtc.LowLatencyVideoDecoderFactory;
+import com.xstreaming.psplus.PsPlusPackage;
 
 import android.media.AudioAttributes;
 import org.webrtc.EglBase;
@@ -54,6 +55,7 @@ public class MainApplication extends Application implements ReactApplication {
             packages.add(new ConfigTransferPackage());
             packages.add(new ShortcutManagerPackage());
             packages.add(new CoverDisplayPackage());
+            packages.add(new PsPlusPackage());
           return packages;
         }
 
