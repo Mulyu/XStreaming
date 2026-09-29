@@ -842,21 +842,26 @@ JNIEXPORT void JNICALL JNI_FCN(sessionSetSurface)(JNIEnv *env, jobject obj, jlon
 
 // Live stream metrics for the optional on-screen stats overlay. All values are
 // owned/computed by libchiaki (shared with Qt/iOS) so the client just renders
-// them. Returns a double[11]:
+// them. Returns a double[15]:
 //   [0] bitrate (Mbit/s)   [1] packet loss (0..1)   [2] dropped frames (cumulative)
 //   [3] fps                [4] rtt (ms)             [5] width   [6] height
 //   [7..10] TEMPORARY video-decoder debug counters for the black-screen
 //   investigation (see video-decoder.h's own comment): samples fed to
 //   AMediaCodec, output buffers dequeued, of those actually rendered
-//   (non-empty), and whether configure/start ever failed (0/1). [0..6] only
-//   prove compressed video is arriving over the network; these prove
+//   (non-empty), and whether configure/start ever failed (0/1).
+//   [11..14] TEMPORARY video-receiver debug counters (see
+//   videoreceiver.h's own comment): AV packets received, and how the
+//   resulting frame flushes split across success / FEC-failed / other-
+//   failed -- narrows down whether packets are arriving at all vs.
+//   arriving but never reassembling into a decodable frame. [0..6] only
+//   prove compressed video is arriving over the network; [7..14] prove
 //   whether it's actually reaching the decoder and coming back out.
 // Cheap best-effort read (same as Qt's polling timer); video_receiver-derived
 // values go through locked accessors, the rest are unlocked scalar reads. Only
 // called while a session is live and the overlay is toggled on.
 JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject obj, jlong ptr)
 {
-	jdouble vals[11] = { 0 };
+	jdouble vals[15] = { 0 };
 	AndroidChiakiSession *session = (AndroidChiakiSession *)ptr;
 	if(session)
 	{
@@ -884,10 +889,19 @@ JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject o
 		vals[8] = (jdouble)debug_counts[1];
 		vals[9] = (jdouble)debug_counts[2];
 		vals[10] = (jdouble)debug_counts[3];
+		if(sc->video_receiver) // not yet created before the stream info packet, on a still-connecting session
+		{
+			int vr_debug_counts[4];
+			chiaki_video_receiver_get_debug_counts(sc->video_receiver, vr_debug_counts);
+			vals[11] = (jdouble)vr_debug_counts[0];
+			vals[12] = (jdouble)vr_debug_counts[1];
+			vals[13] = (jdouble)vr_debug_counts[2];
+			vals[14] = (jdouble)vr_debug_counts[3];
+		}
 	}
-	jdoubleArray arr = E->NewDoubleArray(env, 11);
+	jdoubleArray arr = E->NewDoubleArray(env, 15);
 	if(arr)
-		E->SetDoubleArrayRegion(env, arr, 0, 11, vals);
+		E->SetDoubleArrayRegion(env, arr, 0, 15, vals);
 	return arr;
 }
 
