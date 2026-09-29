@@ -108,13 +108,27 @@ jobs:
           # arm64-v8a-only APK fails to install on those with a bare "this app
           # isn't compatible with your device" and no further explanation.
           TARGET_ABI: ${{ github.event_name == 'push' && 'armeabi-v7a,arm64-v8a,x86,x86_64' || (inputs.abi || 'arm64-v8a') }}
+        # android/build.gradle's Aliyun mirrors (ahead of Maven Central, for
+        # faster resolution from some networks) occasionally answer a
+        # transient 502 during the very first dependency-resolution pass,
+        # which fails the whole build before a single module compiles even
+        # though the mirror is back within seconds. Retry a couple of times
+        # rather than losing the entire (otherwise successful) build to one
+        # flaky resolve.
         run: |
-          ./gradlew assembleProdRelease --no-daemon \
-            -PreactNativeArchitectures="${TARGET_ABI}" \
-            -PXSTREAMING_RELEASE_STORE_FILE=debug.keystore \
-            -PXSTREAMING_RELEASE_STORE_PASSWORD=android \
-            -PXSTREAMING_RELEASE_KEY_ALIAS=androiddebugkey \
-            -PXSTREAMING_RELEASE_KEY_PASSWORD=android
+          for attempt in 1 2 3; do
+            if ./gradlew assembleProdRelease --no-daemon \
+              -PreactNativeArchitectures="${TARGET_ABI}" \
+              -PXSTREAMING_RELEASE_STORE_FILE=debug.keystore \
+              -PXSTREAMING_RELEASE_STORE_PASSWORD=android \
+              -PXSTREAMING_RELEASE_KEY_ALIAS=androiddebugkey \
+              -PXSTREAMING_RELEASE_KEY_PASSWORD=android; then
+              exit 0
+            fi
+            echo "Gradle build attempt ${attempt} failed; retrying in 30s..."
+            sleep 30
+          done
+          exit 1
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
