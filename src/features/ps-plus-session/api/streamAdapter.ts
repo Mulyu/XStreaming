@@ -70,7 +70,16 @@ export type PsPlusLaunchOptions = {
   ownedEntitlementId?: string;
   ownedPlatform?: string;
   resolution?: number;
+  fpsPreset?: number;
   bitrateKbps?: number;
+  /** Forces a specific Gaikai datacenter, bypassing the 80ms auto-select
+   * ping gate entirely (see cloudsession_gaikai.c's gk_step11/12) -- empty/
+   * unset picks the lowest-measured-RTT datacenter under that gate. */
+  forcedDatacenter?: string;
+  /** Prior run(s)' measured datacenter pings (Gaikai's own ping-results
+   * JSON), merged into this run's picker so a datacenter that isn't probed
+   * this time doesn't disappear from it. */
+  priorDatacentersJson?: string;
 };
 
 export type PsPlusConnectionState =
@@ -85,6 +94,11 @@ export type PsPlusAdapterHandlers = {
   onLoginPinRequest?: (pinIncorrect: boolean) => void;
   onRumble?: (left: number, right: number) => void;
   onPsChord?: () => void;
+  /** Fired once the provisioning call returns, success or failure, whenever
+   * it carried a non-empty datacenter-pings list -- lets the caller persist
+   * it (see PsPlusLaunchOptions.priorDatacentersJson) for the Settings
+   * datacenter picker and future runs. */
+  onDatacenterPings?: (json: string) => void;
 };
 
 // Drives one PS Plus cloud-streaming session end to end: provisioning
@@ -130,6 +144,8 @@ export class PsPlusSession {
       ownedPlatform: options.ownedPlatform,
       resolution: options.resolution ?? VideoResolutionPreset.RES_1080P,
       bitrateKbps: options.bitrateKbps ?? 15000,
+      forcedDatacenter: options.forcedDatacenter,
+      priorDatacentersJson: options.priorDatacentersJson,
     };
 
     let provisioned;
@@ -146,6 +162,12 @@ export class PsPlusSession {
     }
     if (this.disposed) {
       return;
+    }
+    // Carried on both success and failure -- a failed ping-gate rejection is
+    // exactly the case where a fresh measurement matters most for the
+    // Settings datacenter picker.
+    if (provisioned.datacenterPings) {
+      this.handlers.onDatacenterPings?.(provisioned.datacenterPings);
     }
     if (provisioned.err !== 0) {
       this.handlers.onState?.(
@@ -171,7 +193,7 @@ export class PsPlusSession {
       mtuOut: provisioned.mtuOut,
       rttMs: provisioned.rttMs,
       resolutionPreset: options.resolution ?? VideoResolutionPreset.RES_1080P,
-      fpsPreset: VideoFPSPreset.FPS_60,
+      fpsPreset: options.fpsPreset ?? VideoFPSPreset.FPS_60,
       codec: Codec.CODEC_H265,
     };
 

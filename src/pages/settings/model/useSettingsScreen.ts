@@ -41,6 +41,7 @@ import {
   audioSettings as audio,
   xcloudSettings as xcloud,
   gfnSettings as gfn,
+  psPlusSettings as psplus,
   othersSettings as others,
 } from '../../../features/app-settings';
 
@@ -56,6 +57,7 @@ const allMetas = [
   ...audio,
   ...xcloud,
   ...gfn,
+  ...psplus,
   ...others,
 ];
 
@@ -495,6 +497,36 @@ export function useSettingsScreen(navigation: any) {
     ...gfnRegions.map(r => ({value: r.url, text: r.name})),
   ];
 
+  // Datacenters can't be listed ahead of a connection attempt (Gaikai's
+  // /datacenters endpoint is session-scoped), so this picker is built from
+  // whatever's been measured across prior attempts instead of a pre-fetch
+  // like gfnRegionOptions -- see settings.psplus_datacenter_pings.
+  const psPlusDatacenterOptions = (() => {
+    const options: {value: string; text: string}[] = [
+      {value: '', text: t('Auto')},
+    ];
+    try {
+      const pings = JSON.parse(settings.psplus_datacenter_pings || '[]');
+      if (Array.isArray(pings)) {
+        for (const p of pings) {
+          const name = p?.dataCenter;
+          if (!name || typeof name !== 'string') {
+            continue;
+          }
+          const rtt = typeof p?.rtt === 'number' ? p.rtt : null;
+          const text =
+            p?.measured && rtt != null && rtt < 999
+              ? `${name} (${rtt}ms)`
+              : name;
+          options.push({value: name, text});
+        }
+      }
+    } catch {
+      // No measurements yet, or a malformed stored value -- Auto-only.
+    }
+    return options;
+  })();
+
   return {
     t,
     loading,
@@ -513,6 +545,7 @@ export function useSettingsScreen(navigation: any) {
     signalingCloudValue,
     gfnNoOpFlag,
     gfnRegionOptions,
+    psPlusDatacenterOptions,
     xcloudCatalogDescription: xcloudCatalogDescription(),
     gfnCatalogDescription: gfnCatalogDescription(),
     gfnPlaytimeDescription: gfnPlaytimeDescription(),

@@ -3,6 +3,7 @@ export {default as audioSettings} from './config/audio';
 export {default as displaySettings} from './config/display';
 export {default as gamepadSettings} from './config/gamepad';
 export {default as gfnSettings} from './config/gfn';
+export {default as psPlusSettings} from './config/psplus';
 export {default as othersSettings} from './config/others';
 export {
   default as xcloudSettings,

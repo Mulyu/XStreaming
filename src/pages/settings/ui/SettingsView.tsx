@@ -11,6 +11,7 @@ import {
   InfoRow,
   XBOX_ACCENT,
   NVIDIA_ACCENT,
+  PS_ACCENT,
 } from '../../../shared/ui/InlineSettingRows';
 import {GfnSignInModal} from '../../../entities/gfn-account';
 import {M} from '../model/useSettingsScreen';
@@ -42,6 +43,7 @@ const SettingsView: React.FC<Props> = ({
   signalingCloudValue,
   gfnNoOpFlag,
   gfnRegionOptions,
+  psPlusDatacenterOptions,
   xcloudCatalogDescription,
   gfnCatalogDescription,
   gfnPlaytimeDescription,
@@ -359,6 +361,53 @@ const SettingsView: React.FC<Props> = ({
               onPress={onNavigatePsPlusLibrary}
             />
           )}
+
+          <SectionLabel title={t('SectionVideo')} />
+          <SegmentedRow
+            title={M('psplus_resolution').title}
+            desc={M('psplus_resolution').description}
+            options={M('psplus_resolution').data}
+            value={settings.psplus_resolution}
+            onChange={v => updateSetting('psplus_resolution', v)}
+            accent={PS_ACCENT}
+          />
+          <SegmentedRow
+            title={M('psplus_fps').title}
+            desc={M('psplus_fps').description}
+            options={M('psplus_fps').data}
+            value={settings.psplus_fps}
+            onChange={v => updateSetting('psplus_fps', v)}
+            accent={PS_ACCENT}
+          />
+          <SegmentedRow
+            title={M('psplus_bitrate_mode').title}
+            desc={M('psplus_bitrate_mode').description}
+            options={M('psplus_bitrate_mode').data}
+            value={settings.psplus_bitrate_mode}
+            onChange={v => updateSetting('psplus_bitrate_mode', v)}
+            accent={PS_ACCENT}
+          />
+          {settings.psplus_bitrate_mode === 'custom' && (
+            <SliderRow
+              title={t('Custom')}
+              min={5000}
+              max={25000}
+              step={500}
+              value={settings.psplus_bitrate_kbps}
+              onChange={v => updateSetting('psplus_bitrate_kbps', v)}
+              formatValue={v => `${(v / 1000).toFixed(1)} Mbps`}
+              accent={PS_ACCENT}
+            />
+          )}
+          <DropdownRow
+            title={M('psplus_datacenter').title}
+            desc={M('psplus_datacenter').description}
+            options={psPlusDatacenterOptions}
+            value={settings.psplus_datacenter}
+            onChange={v => updateSetting('psplus_datacenter', v)}
+            accent={PS_ACCENT}
+            emptyLabel={t('Auto')}
+          />
         </ScrollView>
       )}
 

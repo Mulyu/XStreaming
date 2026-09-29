@@ -301,6 +301,18 @@ export default {
     GfnRegionTitle: 'サーバーリージョン',
     GfnRegionDesc:
       'CloudMatch による自動選択の代わりに、特定のGeForce NOWリージョンを固定します。起動に失敗する場合は自動に戻してみてください。',
+    PsPlusResolutionTitle: '解像度',
+    PsPlusResolutionDesc:
+      'PS Plusクラウドストリーミングでリクエストする解像度を設定します。',
+    PsPlusFpsTitle: 'フレームレート',
+    PsPlusFpsDesc:
+      'PS Plusクラウドストリーミングでリクエストするフレームレートを設定します。',
+    PsPlusBitrateTitle: 'ビットレート',
+    PsPlusBitrateDesc:
+      'PS Plusクラウドストリーミングのビットレートを設定します(注:回線が弱い場合、ビットレートを下げると改善することがあります)。',
+    PsPlusDatacenterTitle: 'データセンター',
+    PsPlusDatacenterDesc:
+      '80ms以内の最寄りデータセンターの代わりに、特定のデータセンターを固定します。80msの自動選択の上限を完全にバイパスしますが、通信品質が悪化する可能性があります。一覧には過去の接続試行で測定済みのデータセンターのみ表示されます。起動に失敗する場合は自動に戻してみてください。',
     GfnPlaytimeTitle: '今月の残りプレイ時間',
     GfnPlaytimeSignedOutDesc:
       'サインインすると、今の請求期間内の残りプレイ時間を確認できます。',
