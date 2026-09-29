@@ -42,6 +42,27 @@ export const launchWithProvider = (
     return;
   }
 
+  if (preference.provider === 'psplus') {
+    const game = catalogTitle.psplus?.raw;
+    if (!game) {
+      return;
+    }
+    // PS Plus renders through its own native SurfaceView (see
+    // features/ps-plus-session), not NativeStream's WebRTC/xCloud-shaped
+    // stream screen, so it gets its own route -- same params
+    // ps-plus-library's own onSelectGame already builds for this screen.
+    navigation.navigate('PsPlusStream', {
+      productId: game.productId,
+      name: game.name,
+      serviceType: game.streamServiceType === 'psnow' ? 'psnow' : 'pscloud',
+      streamIdentifier: game.streamIdentifier,
+      platform: game.platform,
+      isOwned: game.isOwned,
+      entitlementId: game.entitlementId,
+    });
+    return;
+  }
+
   navigation.navigate('NativeStream', {
     streamType: 'gfn',
     appId: preference.gfnId,
@@ -58,6 +79,9 @@ export const isPreferenceAvailable = (
 ): boolean => {
   if (preference.provider === 'xcloud') {
     return !!catalogTitle.xcloud;
+  }
+  if (preference.provider === 'psplus') {
+    return !!catalogTitle.psplus;
   }
   return !!catalogTitle.gfn?.variants.some(
     variant =>

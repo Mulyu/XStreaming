@@ -396,6 +396,7 @@ export default {
     SortRecent: 'Recently played',
     LibraryFilterXcloud: 'Xbox Cloud',
     LibraryFilterGfn: 'GeForce NOW',
+    LibraryFilterPsPlus: 'PS Plus',
     LibraryFilterFavorite: 'Favorite',
     LibraryFilterOwned: 'Owned',
     LibraryFilterOnSale: 'On Sale',

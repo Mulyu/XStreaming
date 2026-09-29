@@ -18,6 +18,7 @@ import type {LibraryScreenViewModel} from '../model/useLibraryScreen';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
+const PS_ACCENT = '#0070D1';
 const SALE_ACCENT = '#E67E22';
 
 type Props = LibraryScreenViewModel;
@@ -38,6 +39,8 @@ const LibraryView: React.FC<Props> = ({
   setFilterXcloud,
   filterGfn,
   setFilterGfn,
+  filterPsPlus,
+  setFilterPsPlus,
   filterFavorite,
   setFilterFavorite,
   filterOwnedOnly,
@@ -110,6 +113,11 @@ const LibraryView: React.FC<Props> = ({
                 <Text style={styles.availDotText}>N</Text>
               </View>
             )}
+            {item.psplus && (
+              <View style={[styles.availDot, {backgroundColor: PS_ACCENT}]}>
+                <Text style={styles.availDotText}>PS</Text>
+              </View>
+            )}
           </View>
 
           {discount > 0 && (
@@ -172,6 +180,17 @@ const LibraryView: React.FC<Props> = ({
                   filterGfn && styles.filterChipTextOn,
                 ]}>
                 {t('LibraryFilterGfn')}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, filterPsPlus && styles.filterChipOn]}
+              onPress={() => setFilterPsPlus(v => !v)}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  filterPsPlus && styles.filterChipTextOn,
+                ]}>
+                {t('LibraryFilterPsPlus')}
               </Text>
             </Pressable>
             <Pressable
@@ -423,8 +442,9 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   availDot: {
-    width: 14,
+    minWidth: 14,
     height: 14,
+    paddingHorizontal: 2,
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',

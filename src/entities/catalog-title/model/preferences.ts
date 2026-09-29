@@ -9,7 +9,8 @@ import {storage} from '../../../shared/lib/mmkv';
 
 export type CatalogPreference =
   | {provider: 'xcloud'}
-  | {provider: 'gfn'; store: string; gfnId: string};
+  | {provider: 'gfn'; store: string; gfnId: string}
+  | {provider: 'psplus'};
 
 const KEY_PREFIX = 'catalogPref.';
 

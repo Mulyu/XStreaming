@@ -185,6 +185,10 @@ export function useLibraryTitleDetail() {
     launchWithProvider(navigation, catalogTitle, {provider: 'xcloud'});
   };
 
+  const playPsPlus = () => {
+    launchWithProvider(navigation, catalogTitle, {provider: 'psplus'});
+  };
+
   const playGfnVariant = (variant: {id: string; store: string}) => {
     const launch = () =>
       launchWithProvider(navigation, catalogTitle, {
@@ -268,6 +272,7 @@ export function useLibraryTitleDetail() {
     isFavorite,
     toggleFavorite,
     playXcloud,
+    playPsPlus,
     playGfnVariant,
     canAddShortcut,
     addXcloudShortcut,

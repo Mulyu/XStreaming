@@ -387,6 +387,7 @@ export default {
     SortRecent: '最近プレイした順',
     LibraryFilterXcloud: 'Xbox Cloud',
     LibraryFilterGfn: 'GeForce NOW',
+    LibraryFilterPsPlus: 'PS Plus',
     LibraryFilterFavorite: 'お気に入り',
     LibraryFilterOwned: '所有済み',
     LibraryFilterOnSale: 'セール中',
