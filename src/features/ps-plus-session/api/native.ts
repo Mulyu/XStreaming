@@ -96,6 +96,13 @@ export type StreamMetrics = {
   decoderBuffersOut: number;
   decoderBuffersRendered: number;
   decoderConfigureFailed: boolean;
+  // TEMPORARY video-receiver debug counters (see
+  // android/chiaki/lib/include/chiaki/videoreceiver.h's own comment).
+  // Remove together with the rest of that debug plumbing once found.
+  receiverAvPackets: number;
+  receiverFlushSuccess: number;
+  receiverFlushFecFailed: number;
+  receiverFlushFailed: number;
 };
 
 export type ControllerStateInput = {

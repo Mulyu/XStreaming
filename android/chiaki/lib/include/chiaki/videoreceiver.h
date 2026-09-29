@@ -10,6 +10,8 @@
 #include "frameprocessor.h"
 #include "bitstream.h"
 
+#include <stdatomic.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,7 +36,26 @@ typedef struct chiaki_video_receiver_t
 	uint64_t cumulative_frames_lost; // running total for the stats overlay (never reset mid-session)
 	int32_t reference_frames[16];
 	ChiakiBitstream bitstream;
+
+	// TEMPORARY debug counters for the black-screen investigation: a
+	// PsPlus cloud session's decoder never receives a single sample
+	// (android/chiaki/jni/video-decoder.h's own debug counters all stay 0)
+	// despite ChiakiStreamConnection reporting a healthy measured bitrate/
+	// fps -- those numbers come from this frame_processor's own packet
+	// stats (see stream_connection->measured_bitrate in streamconnection.c),
+	// updated as soon as packets arrive, regardless of whether a frame
+	// ever successfully flushes. These counters narrow down exactly where
+	// in chiaki_video_receiver_av_packet/flush_frame the pipeline actually
+	// stops: packets never arriving here at all vs. arriving but every
+	// frame failing to flush (FEC or otherwise). Remove once found.
+	atomic_int debug_av_packets;        // chiaki_video_receiver_av_packet calls
+	atomic_int debug_flush_success;     // chiaki_frame_processor_flush -> SUCCESS/FEC_SUCCESS
+	atomic_int debug_flush_fec_failed;  // ... -> FEC_FAILED
+	atomic_int debug_flush_failed;      // ... -> FAILED
 } ChiakiVideoReceiver;
+
+// out[0]=av_packets, out[1]=flush_success, out[2]=flush_fec_failed, out[3]=flush_failed.
+CHIAKI_EXPORT void chiaki_video_receiver_get_debug_counts(ChiakiVideoReceiver *video_receiver, int out[4]);
 
 CHIAKI_EXPORT void chiaki_video_receiver_init(ChiakiVideoReceiver *video_receiver, struct chiaki_session_t *session, ChiakiPacketStats *packet_stats);
 CHIAKI_EXPORT void chiaki_video_receiver_fini(ChiakiVideoReceiver *video_receiver);

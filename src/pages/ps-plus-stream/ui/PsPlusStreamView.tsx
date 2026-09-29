@@ -59,6 +59,11 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
               {`decoder in=${debugMetrics.decoderSamplesIn} out=${debugMetrics.decoderBuffersOut} rendered=${debugMetrics.decoderBuffersRendered} configFailed=${debugMetrics.decoderConfigureFailed}`}
             </Text>
           )}
+          {debugMetrics && (
+            <Text style={styles.debugText}>
+              {`receiver pkts=${debugMetrics.receiverAvPackets} flushOk=${debugMetrics.receiverFlushSuccess} fecFail=${debugMetrics.receiverFlushFecFailed} fail=${debugMetrics.receiverFlushFailed}`}
+            </Text>
+          )}
         </View>
       )}
 

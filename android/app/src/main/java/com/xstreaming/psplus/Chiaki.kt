@@ -120,6 +120,12 @@ data class StreamMetrics(
 	val decoderBuffersOut: Int = 0,
 	val decoderBuffersRendered: Int = 0,
 	val decoderConfigureFailed: Boolean = false,
+	// TEMPORARY video-receiver debug counters -- see videoreceiver.h's own
+	// comment. Remove together with the rest of that debug plumbing.
+	val receiverAvPackets: Int = 0,
+	val receiverFlushSuccess: Int = 0,
+	val receiverFlushFecFailed: Int = 0,
+	val receiverFlushFailed: Int = 0,
 )
 {
 	companion object
@@ -136,6 +142,10 @@ data class StreamMetrics(
 			decoderBuffersOut = a.getOrElse(8) { 0.0 }.toInt(),
 			decoderBuffersRendered = a.getOrElse(9) { 0.0 }.toInt(),
 			decoderConfigureFailed = a.getOrElse(10) { 0.0 } != 0.0,
+			receiverAvPackets = a.getOrElse(11) { 0.0 }.toInt(),
+			receiverFlushSuccess = a.getOrElse(12) { 0.0 }.toInt(),
+			receiverFlushFecFailed = a.getOrElse(13) { 0.0 }.toInt(),
+			receiverFlushFailed = a.getOrElse(14) { 0.0 }.toInt(),
 		)
 	}
 }

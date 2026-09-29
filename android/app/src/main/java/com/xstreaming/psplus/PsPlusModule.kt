@@ -286,6 +286,10 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 			putInt("decoderBuffersOut", metrics.decoderBuffersOut)
 			putInt("decoderBuffersRendered", metrics.decoderBuffersRendered)
 			putBoolean("decoderConfigureFailed", metrics.decoderConfigureFailed)
+			putInt("receiverAvPackets", metrics.receiverAvPackets)
+			putInt("receiverFlushSuccess", metrics.receiverFlushSuccess)
+			putInt("receiverFlushFecFailed", metrics.receiverFlushFecFailed)
+			putInt("receiverFlushFailed", metrics.receiverFlushFailed)
 		})
 	}
 }
