@@ -90,6 +90,13 @@ export const fetchUnifiedCatalog = async (
   locale: string | undefined,
   forceRefresh = false,
 ): Promise<UnifiedCatalogResult> => {
+  // The catalog fetch talks to Sony's HTTPS endpoints through the native
+  // curl+mbedTLS stack, which (unlike the system WebView used for login)
+  // has no OS trust store of its own -- it needs the CA bundle this sets up
+  // before its first request, or every fetch fails TLS verification. Cheap
+  // and safe to call every time: the native side no-ops once the bundle
+  // file already exists on disk.
+  psPlusChiaki.initNativeSsl();
   const raw = await psPlusChiaki.fetchCatalog(npsso, locale, forceRefresh);
   const root = JSON.parse(raw);
   const games: CloudGame[] = Array.isArray(root?.games)
