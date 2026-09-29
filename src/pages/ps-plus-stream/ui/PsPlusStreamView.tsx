@@ -150,6 +150,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.45)',
+    // VirtualGamepad's own wrapping View sits at zIndex 9 (see its styles.wrap)
+    // regardless of JSX order, so this needs to explicitly beat that to avoid
+    // losing touches to the free analog stick's full-half-screen catcher
+    // underneath it.
+    zIndex: 20,
   },
   video: {
     flex: 1,
