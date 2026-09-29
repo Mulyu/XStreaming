@@ -483,6 +483,36 @@ export function usePsPlusStream(navigation: any, route: any) {
     };
   }, [performanceVisible, connectState]);
 
+  // TEMPORARY debug aid for the black-screen investigation -- shows live
+  // decoder metrics right on screen with no rail tap and no adb/logcat
+  // needed, so a stuck decoder (fps/dimensions stay at 0) can be told apart
+  // from a pure compositing problem (metrics look healthy, nothing paints).
+  // Independent of performanceVisible/showControlRail on purpose. Remove
+  // once the black-screen cause is found.
+  const [debugMetrics, setDebugMetrics] = React.useState<StreamMetrics | null>(
+    null,
+  );
+  React.useEffect(() => {
+    if (connectState !== 'connected') {
+      setDebugMetrics(null);
+      return;
+    }
+    let cancelled = false;
+    const poll = () => {
+      sessionRef.current?.getMetrics().then(m => {
+        if (!cancelled) {
+          setDebugMetrics(m);
+        }
+      });
+    };
+    poll();
+    const interval = setInterval(poll, 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [connectState]);
+
   const [pin, setPin] = React.useState('');
 
   const onSubmitPin = React.useCallback(() => {
@@ -562,6 +592,7 @@ export function usePsPlusStream(navigation: any, route: any) {
     performanceVisible,
     onTogglePerformance,
     metrics,
+    debugMetrics,
     onEditGamepadLayout,
     onRailDisconnect,
   };

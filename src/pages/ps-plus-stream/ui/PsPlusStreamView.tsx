@@ -33,12 +33,29 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   performanceVisible,
   onTogglePerformance,
   metrics,
+  debugMetrics,
   onEditGamepadLayout,
   onRailDisconnect,
 }) => {
   return (
     <View style={styles.container}>
       <NativePsPlusStreamView style={styles.video} />
+
+      {connectState === 'connected' && (
+        <View pointerEvents="none" style={styles.debugBadge}>
+          <Text style={styles.debugText}>
+            {debugMetrics
+              ? `DEBUG ${debugMetrics.width}x${
+                  debugMetrics.height
+                } @ ${Math.round(
+                  debugMetrics.fps,
+                )}fps · ${debugMetrics.bitrateMbps.toFixed(1)}Mbps · ${
+                  debugMetrics.rttMs
+                }ms`
+              : 'DEBUG: no metrics yet'}
+          </Text>
+        </View>
+      )}
 
       {connectState !== 'connected' && (
         <View style={styles.overlay}>
@@ -138,7 +155,14 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    // TEMPORARY debug color for the black-screen investigation -- a loud,
+    // unmistakable color instead of black so we can tell apart "the
+    // SurfaceView's hole-punch isn't compositing at all" (the WHOLE screen,
+    // including where the video should be, shows this color) from "the
+    // video area itself is genuinely black" (this color only shows around
+    // the edges / behind overlay UI, with a black rectangle where the video
+    // is). Revert to '#000' once the cause is found.
+    backgroundColor: '#FF00FF',
   },
   settingsBtn: {
     position: 'absolute',
@@ -158,6 +182,23 @@ const styles = StyleSheet.create({
   },
   video: {
     flex: 1,
+  },
+  // TEMPORARY debug readout -- see the container style's own comment. Remove
+  // together with it once the black-screen cause is found.
+  debugBadge: {
+    position: 'absolute',
+    left: 10,
+    top: 10,
+    zIndex: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  debugText: {
+    color: '#0f0',
+    fontSize: 11,
+    fontWeight: '700',
   },
   overlay: {
     position: 'absolute',
