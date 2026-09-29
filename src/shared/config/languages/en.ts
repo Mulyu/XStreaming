@@ -284,6 +284,10 @@ export default {
       'Your PlayStation sign-in has expired. Please sign in again.',
     PsPlusErrorPingTimeout:
       'Timed out waiting for a streaming slot. Please try again.',
+    PsPlusErrorPingUnreachable:
+      "Couldn't reach any PS Plus cloud streaming server. Check your network connection and try again.",
+    PsPlusErrorPingTooHigh:
+      'Your connection is too slow for cloud streaming right now (measured {{rtt}}ms, 80ms or less is required). Try a faster or more stable network.',
     PlayOn: 'Play on',
     IncludedWithGamePass: 'Included with Game Pass',
     LibraryViewDetails: 'View details',
