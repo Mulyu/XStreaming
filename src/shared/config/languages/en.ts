@@ -258,6 +258,10 @@ export default {
     GfnSignOutConfirm: 'Sign out of GeForce NOW on this device?',
     PsPlusSettings: 'PS Plus',
     PsPlusLogin: 'Sign in to PlayStation',
+    PsPlusLoginPrompt: 'Sign in above, then tap the button below.',
+    PsPlusSignedInButton: "I've signed in",
+    PsPlusLoginFailedDesc:
+      "Couldn't confirm sign-in — make sure you're fully signed in above, then try again.",
     PsPlusAccountTitle: 'PlayStation Network account',
     PsPlusSignedIn: 'Signed in',
     PsPlusAccountSignedOutDesc: 'Not signed in — tap to sign in',

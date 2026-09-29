@@ -252,6 +252,11 @@ export default {
     GfnSignOutConfirm: 'この端末でGeForce NOWからサインアウトしますか？',
     PsPlusSettings: 'PS Plus',
     PsPlusLogin: 'PlayStationにサインイン',
+    PsPlusLoginPrompt:
+      '上でサインインしてから、下のボタンをタップしてください。',
+    PsPlusSignedInButton: 'サインインしました',
+    PsPlusLoginFailedDesc:
+      'サインインを確認できませんでした — 上で完全にサインインしてから、もう一度お試しください。',
     PsPlusAccountTitle: 'PlayStation Networkアカウント',
     PsPlusSignedIn: 'サインイン済み',
     PsPlusAccountSignedOutDesc: '未サインイン — タップしてサインイン',
