@@ -6,6 +6,14 @@
 //   - public APOLLOROOT one-level walk (region-unsupported accounts)
 //   - imagic 6-list fetch with locale fallback chain
 //   - owned entitlements OAuth(token) -> paginated internal_entitlements -> filter
+//
+// Deliberate local deviation from Pylux's own libcurl port: every plain GET/POST
+// below (everything except the two OAuth calls, which intentionally intercept
+// their own 302 to read `code`/`access_token` off the Location header) now sets
+// follow_redirects=true. QNetworkAccessManager auto-follows safe redirects by
+// default; libcurl does not unless told to. Without this, a CDN/region redirect
+// on any of these endpoints would be read as a failed request instead of the
+// final JSON body, when Qt would have just followed it.
 
 #include "cloudcatalog_internal.h"
 #include "curl_http.h"
@@ -279,6 +287,11 @@ static CCNativeResult psnow_stores(ChiakiLog *log, const char *jsession,
 	req.url = KAMAJI_BASE "/user/stores";
 	req.headers = headers;
 	req.header_count = 5;
+	// Unlike the two OAuth calls above, this is a plain GET with no reason to
+	// read a 3xx itself -- match the original Qt client's default (auto-follow
+	// safe redirects and return the final body) rather than treating a CDN/
+	// region redirect as a failure.
+	req.follow_redirects = true;
 
 	CCHttpResponse resp;
 	ChiakiErrorCode e = cc_http_perform(log, &req, &resp);
@@ -336,6 +349,7 @@ static bool psnow_root_categories(ChiakiLog *log, const char *base_url, const ch
 	req.url = url;
 	req.headers = headers;
 	req.header_count = 5;
+	req.follow_redirects = true;
 
 	CCHttpResponse resp;
 	ChiakiErrorCode e = cc_http_perform(log, &req, &resp);
@@ -382,6 +396,7 @@ static bool psnow_fetch_category(ChiakiLog *log, const char *cat_url, struct jso
 	req.url = url;
 	req.headers = headers;
 	req.header_count = 3;
+	req.follow_redirects = true;
 
 	CCHttpResponse resp;
 	if(cc_http_perform(log, &req, &resp) != CHIAKI_ERR_SUCCESS || resp.status_code != 200)
@@ -550,6 +565,7 @@ static bool apollo_walk_container(ChiakiLog *log, const char *store_country,
 		req.url = url;
 		req.headers = headers;
 		req.header_count = 2;
+		req.follow_redirects = true;
 
 		CCHttpResponse resp;
 		if(cc_http_perform(log, &req, &resp) != CHIAKI_ERR_SUCCESS || resp.status_code != 200)
@@ -737,6 +753,7 @@ bool cc_fetch_imagic(ChiakiLog *log, const char *stored_locale, CCImagicResult *
 			req.url = url;
 			req.headers = headers;
 			req.header_count = 3;
+			req.follow_redirects = true;
 
 			CCHttpResponse resp;
 			if(cc_http_perform(log, &req, &resp) != CHIAKI_ERR_SUCCESS || resp.status_code != 200)
@@ -854,6 +871,24 @@ static struct json_object *filter_owned(ChiakiLog *log, struct json_object *enti
 			cc_extract_cover_image(egm, img, sizeof(img));
 			if(!*img)
 				cc_extract_cover_image(e, img, sizeof(img));
+			// filterOwnedPs5Games's own further fallback chain -- some
+			// entitlements only carry art under one of these plain fields
+			// rather than in a recognized cover-image shape.
+			static const char *const fallback_keys[] = {
+				"imageUrl", "image_url", "thumbnail_url",
+			};
+			for(size_t k = 0; !*img && k < sizeof(fallback_keys) / sizeof(fallback_keys[0]); k++)
+			{
+				const char *v = cc_json_str(egm, fallback_keys[k]);
+				if(*v)
+					snprintf(img, sizeof(img), "%s", v);
+			}
+			for(size_t k = 0; !*img && k < sizeof(fallback_keys) / sizeof(fallback_keys[0]); k++)
+			{
+				const char *v = cc_json_str(e, fallback_keys[k]);
+				if(*v)
+					snprintf(img, sizeof(img), "%s", v);
+			}
 		}
 		if(*img)
 			cc_json_set_str(e, "imageUrl", img);
@@ -941,6 +976,7 @@ CCOwnedResult cc_fetch_owned(ChiakiLog *log, const char *npsso,
 		req.url = url;
 		req.headers = headers;
 		req.header_count = 2;
+		req.follow_redirects = true;
 
 		CCHttpResponse resp;
 		if(cc_http_perform(log, &req, &resp) != CHIAKI_ERR_SUCCESS)
