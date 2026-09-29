@@ -661,6 +661,12 @@ class Session(connectInfo: ConnectInfo, logFile: String?, logVerbose: Boolean)
 		fun sessionEvent(event: Event)
 	}
 
+	// dispose() runs on RN's Native Modules thread while stream calls
+	// (setSurface/setControllerState/...) can land from the UI thread (see
+	// PsPlusStreamView's TextureView callbacks) -- without @Volatile, a
+	// dispose() on one thread isn't guaranteed visible to a `nativePtr == 0L`
+	// check on the other, so the guards below could still race.
+	@Volatile
 	private var nativePtr: Long
 	var eventCallback: ((event: Event) -> Unit)? = null
 
@@ -674,8 +680,12 @@ class Session(connectInfo: ConnectInfo, logFile: String?, logVerbose: Boolean)
 		nativePtr = result.ptr
 	}
 
-	fun start() = ErrorCode(ChiakiNative.sessionStart(nativePtr))
-	fun stop() = ErrorCode(ChiakiNative.sessionStop(nativePtr))
+	// CHIAKI_ERR_UNKNOWN (1, see common.h) -- returned instead of touching
+	// native once nativePtr is 0 below, same reasoning as setSurface().
+	private val disposedErrorCode = ErrorCode(1)
+
+	fun start() = if(nativePtr == 0L) disposedErrorCode else ErrorCode(ChiakiNative.sessionStart(nativePtr))
+	fun stop() = if(nativePtr == 0L) disposedErrorCode else ErrorCode(ChiakiNative.sessionStop(nativePtr))
 
 	fun dispose()
 	{
@@ -743,16 +753,27 @@ class Session(connectInfo: ConnectInfo, logFile: String?, logVerbose: Boolean)
 
 	fun setControllerState(controllerState: ControllerState)
 	{
+		// Same disposed-session guard as setSurface() -- this is called on
+		// every input tick while streaming, by far the most frequent of
+		// these calls, so it's the most likely to land after a dispose().
+		if(nativePtr == 0L)
+			return
 		ChiakiNative.sessionSetControllerState(nativePtr, controllerState)
 	}
 
 	fun setPsChord(enabled: Boolean, holdMs: Int = 0)
 	{
+		// sessionSetPsChord itself null-checks on the native side, unlike
+		// the others here, but skip the JNI hop entirely once disposed.
+		if(nativePtr == 0L)
+			return
 		ChiakiNative.sessionSetPsChord(nativePtr, enabled, holdMs)
 	}
 
 	fun setLoginPin(pin: String)
 	{
+		if(nativePtr == 0L)
+			return
 		ChiakiNative.sessionSetLoginPin(nativePtr, pin)
 	}
 }
