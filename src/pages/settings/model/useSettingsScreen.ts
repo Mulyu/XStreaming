@@ -1,5 +1,6 @@
 import React from 'react';
 import {Alert, ToastAndroid} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
@@ -20,7 +21,11 @@ import {
   GfnFullCatalogStatus,
 } from '../../../entities/catalog-title';
 import {useGfnSignIn} from '../../../features/gfn-auth';
-import {isPsPlusSignedIn, clearNpsso} from '../../../features/ps-plus-session';
+import {
+  isPsPlusSignedIn,
+  clearNpsso,
+  getNpsso,
+} from '../../../features/ps-plus-session';
 import {getValidGfnJwt, getValidGfnUserId} from '../../../entities/gfn-account';
 import {
   fetchGfnSubscription,
@@ -491,6 +496,26 @@ export function useSettingsScreen(navigation: any) {
     }, 1000);
   };
 
+  // Debug aid so the npsso token (and whatever datacenter pings this device
+  // has measured so far, see psplus_datacenter_pings) can be handed over
+  // temporarily for off-device investigation, without the user having to
+  // dig it out of app storage themselves. npsso is a real, live PSN session
+  // credential -- this only ever copies it locally to the clipboard, never
+  // sends it anywhere on its own.
+  const handleCopyPsPlusDebugInfo = () => {
+    const npsso = getNpsso();
+    if (!npsso) {
+      ToastAndroid.show(t('PsPlusDebugCopyFailed'), ToastAndroid.SHORT);
+      return;
+    }
+    const payload = {
+      npsso,
+      datacenterPings: getSettings().psplus_datacenter_pings || null,
+    };
+    Clipboard.setString(JSON.stringify(payload));
+    ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
+  };
+
   const gfnNoOpFlag = t('FlagGfnNoOp');
   const gfnRegionOptions = [
     {value: '', text: t('Auto')},
@@ -561,6 +586,7 @@ export function useSettingsScreen(navigation: any) {
     onGfnAccountPress: handleGfnAccountPress,
     onPsPlusAccountPress: handlePsPlusAccountPress,
     onNavigatePsPlusLibrary: () => navigation.navigate('PsPlusLibrary'),
+    onCopyPsPlusDebugInfo: handleCopyPsPlusDebugInfo,
     onXcloudAccountPress: handleXcloudAccountPress,
     onXcloudCatalogReload: handleXcloudCatalogReload,
     onGfnCatalogReload: handleGfnCatalogReload,

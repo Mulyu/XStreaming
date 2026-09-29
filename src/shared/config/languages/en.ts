@@ -112,6 +112,7 @@ export default {
     CommonSettings: 'Common',
     SectionAccount: 'Account',
     SectionVideo: 'Video',
+    SectionDebug: 'Debug',
     SectionRegionSignaling: 'Region & Signaling',
     SectionSignInLanguage: 'Sign-in & Language',
     SectionControllers: 'Controllers',
@@ -316,6 +317,10 @@ export default {
     PsPlusDatacenterTitle: 'Datacenter',
     PsPlusDatacenterDesc:
       'Force a specific datacenter instead of the closest one under 80ms. Bypasses the 80ms auto-select limit entirely, at the cost of possibly worse quality -- only datacenters measured on a prior connection attempt are listed. If a title fails to start, try switching back to Auto.',
+    PsPlusCopyDebugInfoTitle: 'Copy debug info',
+    PsPlusCopyDebugInfoDesc:
+      'Copies sensitive debug data (including your PSN session token) to the clipboard for troubleshooting. Only share it with someone you trust.',
+    PsPlusDebugCopyFailed: 'Not signed in, nothing to copy',
     GfnPlaytimeTitle: 'Playtime remaining this month',
     GfnPlaytimeSignedOutDesc:
       'Sign in to see how much playtime is left in your current billing period.',
