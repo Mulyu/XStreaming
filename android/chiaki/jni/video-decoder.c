@@ -23,7 +23,19 @@ ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *dec
 	decoder->target_height = target_height;
 	decoder->target_codec = codec;
 	decoder->shutdown_output = false;
+	atomic_init(&decoder->debug_samples_in, 0);
+	atomic_init(&decoder->debug_buffers_out, 0);
+	atomic_init(&decoder->debug_buffers_rendered, 0);
+	atomic_init(&decoder->debug_configure_failed, 0);
 	return chiaki_mutex_init(&decoder->codec_mutex, false);
+}
+
+void android_chiaki_video_decoder_get_debug_counts(AndroidChiakiVideoDecoder *decoder, int out[4])
+{
+	out[0] = atomic_load(&decoder->debug_samples_in);
+	out[1] = atomic_load(&decoder->debug_buffers_out);
+	out[2] = atomic_load(&decoder->debug_buffers_rendered);
+	out[3] = atomic_load(&decoder->debug_configure_failed);
 }
 
 static void kill_decoder(AndroidChiakiVideoDecoder *decoder)
@@ -107,6 +119,7 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 	{
 		CHIAKI_LOGE(decoder->log, "AMediaCodec_configure() failed: %d", (int)r);
 		AMediaFormat_delete(format);
+		atomic_store(&decoder->debug_configure_failed, 1);
 		goto error_codec;
 	}
 
@@ -115,6 +128,7 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 	if(r != AMEDIA_OK)
 	{
 		CHIAKI_LOGE(decoder->log, "AMediaCodec_start() failed: %d", (int)r);
+		atomic_store(&decoder->debug_configure_failed, 1);
 		goto error_codec;
 	}
 
@@ -154,6 +168,8 @@ bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, in
 		CHIAKI_LOGE(decoder->log, "Received video data, but decoder is not initialized!");
 		goto beach;
 	}
+
+	atomic_fetch_add(&decoder->debug_samples_in, 1);
 
 	while(buf_size > 0)
 	{
@@ -204,6 +220,9 @@ static void *android_chiaki_video_decoder_output_thread_func(void *user)
 		ssize_t status = AMediaCodec_dequeueOutputBuffer(decoder->codec, &info, -1);
 		if(status >= 0)
 		{
+			atomic_fetch_add(&decoder->debug_buffers_out, 1);
+			if(info.size != 0)
+				atomic_fetch_add(&decoder->debug_buffers_rendered, 1);
 			AMediaCodec_releaseOutputBuffer(decoder->codec, (size_t)status, info.size != 0);
 			if(info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM)
 			{

@@ -54,6 +54,11 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
                 }ms`
               : 'DEBUG: no metrics yet'}
           </Text>
+          {debugMetrics && (
+            <Text style={styles.debugText}>
+              {`decoder in=${debugMetrics.decoderSamplesIn} out=${debugMetrics.decoderBuffersOut} rendered=${debugMetrics.decoderBuffersRendered} configFailed=${debugMetrics.decoderConfigureFailed}`}
+            </Text>
+          )}
         </View>
       )}
 

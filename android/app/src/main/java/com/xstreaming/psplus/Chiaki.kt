@@ -112,7 +112,14 @@ data class StreamMetrics(
 	val fps: Double,
 	val rttMs: Double,
 	val width: Int,
-	val height: Int
+	val height: Int,
+	// TEMPORARY video-decoder debug counters for the black-screen
+	// investigation -- see video-decoder.h's own comment. Remove together
+	// with the rest of that debug plumbing once the cause is found.
+	val decoderSamplesIn: Int = 0,
+	val decoderBuffersOut: Int = 0,
+	val decoderBuffersRendered: Int = 0,
+	val decoderConfigureFailed: Boolean = false,
 )
 {
 	companion object
@@ -124,7 +131,11 @@ data class StreamMetrics(
 			fps = a.getOrElse(3) { 0.0 },
 			rttMs = a.getOrElse(4) { 0.0 },
 			width = a.getOrElse(5) { 0.0 }.toInt(),
-			height = a.getOrElse(6) { 0.0 }.toInt()
+			height = a.getOrElse(6) { 0.0 }.toInt(),
+			decoderSamplesIn = a.getOrElse(7) { 0.0 }.toInt(),
+			decoderBuffersOut = a.getOrElse(8) { 0.0 }.toInt(),
+			decoderBuffersRendered = a.getOrElse(9) { 0.0 }.toInt(),
+			decoderConfigureFailed = a.getOrElse(10) { 0.0 } != 0.0,
 		)
 	}
 }
