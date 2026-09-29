@@ -191,19 +191,40 @@ export function usePsPlusStream(navigation: any, route: any) {
     setPin('');
   }, [pin]);
 
+  // beforeRemove fires again for the goBack() the Confirm button itself
+  // triggers -- without this guard, that second GO_BACK hits the exact same
+  // listener (connectState hasn't changed yet), which preventDefault()s it
+  // and reopens the same confirm dialog, forever: pressing back while
+  // connected became unable to actually exit at all.
+  const exitConfirmedRef = React.useRef(false);
+
   const requestExit = React.useCallback(() => {
+    // Nothing to confirm leaving once the stream already failed/ended -- the
+    // beforeRemove listener below only intercepts GO_BACK while connected
+    // anyway, so this "Close" button asking to confirm exiting a stream
+    // that isn't running was just a confusing extra tap.
+    if (connectState !== 'connected') {
+      navigation.goBack();
+      return;
+    }
     Alert.alert(t('Warning'), t('Exit stream?'), [
       {text: t('Cancel'), style: 'cancel'},
       {
         text: t('Confirm'),
         style: 'destructive',
-        onPress: () => navigation.goBack(),
+        onPress: () => {
+          exitConfirmedRef.current = true;
+          navigation.goBack();
+        },
       },
     ]);
-  }, [navigation, t]);
+  }, [navigation, t, connectState]);
 
   React.useEffect(() => {
     const beforeRemove = navigation.addListener('beforeRemove', (e: any) => {
+      if (exitConfirmedRef.current) {
+        return;
+      }
       if (e.data.action.type === 'GO_BACK' && connectState === 'connected') {
         e.preventDefault();
         requestExit();

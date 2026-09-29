@@ -1,5 +1,6 @@
 package com.xstreaming.psplus
 
+import android.view.Surface
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -34,6 +35,15 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	// attach/detach the native Surface as the view mounts/unmounts.
 	internal var session: Session? = null
 		private set
+
+	// The RN view mounts (and its SurfaceView's surfaceCreated fires) well
+	// before startSession's provisioning/Kamaji/Gaikai round trip finishes,
+	// so a fresh Session here almost always postdates that surfaceCreated
+	// call -- there is no video without also pushing the already-held
+	// surface onto every newly created session below, since surfaceCreated
+	// won't fire again on its own (only on a real surface recreation, e.g.
+	// backgrounding or rotation).
+	internal var currentSurface: Surface? = null
 
 	private fun emit(name: String, params: WritableMap?) {
 		reactApplicationContext
@@ -175,6 +185,10 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 
 			val newSession = Session(connectInfo, logFile = null, logVerbose = false)
 			newSession.eventCallback = { event -> handleSessionEvent(event) }
+			// The stream view's SurfaceView almost always mounted (and already
+			// fired surfaceCreated) before this session existed -- see
+			// currentSurface's own comment.
+			currentSurface?.let { newSession.setSurface(it) }
 			session = newSession
 
 			val startErr = newSession.start()

@@ -21,12 +21,17 @@ class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.C
 		get() = (context as? ReactContext)?.getNativeModule(PsPlusModule::class.java)
 
 	override fun surfaceCreated(holder: SurfaceHolder) {
+		// Cached regardless of whether a session exists yet -- startSession()
+		// reads this back for a session created after this view already
+		// mounted, which is the common case (see PsPlusModule.currentSurface).
+		psPlusModule?.currentSurface = holder.surface
 		psPlusModule?.session?.setSurface(holder.surface)
 	}
 
 	override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
 
 	override fun surfaceDestroyed(holder: SurfaceHolder) {
+		psPlusModule?.currentSurface = null
 		psPlusModule?.session?.setSurface(null)
 	}
 }
