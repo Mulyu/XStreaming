@@ -53,6 +53,12 @@ import {
   launchWithProvider,
   isPreferenceAvailable,
 } from '../../../features/launch-title';
+import {
+  isPsPlusSignedIn,
+  getNpsso,
+  fetchUnifiedCatalog,
+  CloudGame,
+} from '../../../features/ps-plus-session';
 import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
 
@@ -97,6 +103,13 @@ export function useLibraryScreen() {
   const [gfnOwnedGames, setGfnOwnedGames] = React.useState<GfnGame[]>(
     () => getFreshOwnedGames() || [],
   );
+  // PS Plus's cloud-streaming (pscloud) catalog -- the same scope
+  // pages/ps-plus-library shows, and for the same reason (that's Sony's own
+  // "PS5 Game Cloud Streaming" catalog, not the separate/less-reliable PS
+  // Now side -- see that screen's own model comment). The native fetch
+  // already disk-caches this for 24h, so there's no need for a second cache
+  // layer here the way GFN's full catalog has one.
+  const [psPlusGames, setPsPlusGames] = React.useState<CloudGame[]>([]);
   const [keyword, setKeyword] = React.useState('');
   const [sortMode, setSortMode] = React.useState<SortMode>('recent');
   const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
@@ -141,6 +154,7 @@ export function useLibraryScreen() {
   // defaults on; the rest default off.
   const [filterXcloud, setFilterXcloud] = React.useState(false);
   const [filterGfn, setFilterGfn] = React.useState(false);
+  const [filterPsPlus, setFilterPsPlus] = React.useState(false);
   const [filterFavorite, setFilterFavorite] = React.useState(false);
   const [filterOwnedOnly, setFilterOwnedOnly] = React.useState(true);
   const [filterOnSale, setFilterOnSale] = React.useState(false);
@@ -349,6 +363,30 @@ export function useLibraryScreen() {
     loadGfnFullCatalog();
   }, [loadGfnFullCatalog]);
 
+  // PS Plus's pscloud catalog. Needs a signed-in PSN account (npsso), same
+  // "stays empty while signed out" precondition as GFN's full catalog above.
+  const loadPsPlusGames = React.useCallback((force = false) => {
+    if (!isPsPlusSignedIn()) {
+      setPsPlusGames([]);
+      return;
+    }
+    const npsso = getNpsso();
+    if (!npsso) {
+      return;
+    }
+    fetchUnifiedCatalog(npsso, undefined, force)
+      .then(result =>
+        setPsPlusGames(
+          result.games.filter(g => g.streamServiceType === 'pscloud'),
+        ),
+      )
+      .catch(() => {});
+  }, []);
+
+  React.useEffect(() => {
+    loadPsPlusGames();
+  }, [loadPsPlusGames]);
+
   // GFN's catalog-wide Most Popular / Newest order, cached (24h). Requires a
   // signed-in token -- GFN's catalog-browse endpoint doesn't serve this
   // anonymously (same precondition as the owned-library query above) -- so
@@ -459,13 +497,21 @@ export function useLibraryScreen() {
         loadGfnFullCatalog(true);
       }
 
+      // Same reasoning as the GFN full catalog above -- not in `tasks`.
+      loadPsPlusGames(true);
+
       setFavoriteKeys(new Set(getFavoriteKeys()));
 
       await Promise.all(tasks);
     } finally {
       setRefreshing(false);
     }
-  }, [streamingTokens?.xCloudToken, loadGfnFullCatalog, persistXcloudTitles]);
+  }, [
+    streamingTokens?.xCloudToken,
+    loadGfnFullCatalog,
+    loadPsPlusGames,
+    persistXcloudTitles,
+  ]);
 
   const gfnGames = React.useMemo(
     () => mergeOwnedGames(gfnFullCatalog, gfnOwnedGames),
@@ -555,8 +601,8 @@ export function useLibraryScreen() {
   }, [xcloudTitles, releaseDates]);
 
   const catalog = React.useMemo(
-    () => buildUnifiedCatalog(xcloudTitles, gfnGames),
-    [xcloudTitles, gfnGames],
+    () => buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames),
+    [xcloudTitles, gfnGames, psPlusGames],
   );
 
   // Discount percent for the sale badge/filter: the best of xCloud's own
@@ -586,9 +632,12 @@ export function useLibraryScreen() {
 
   const providerOwnedFiltered = React.useMemo(() => {
     let list = catalog;
-    if (filterXcloud || filterGfn) {
+    if (filterXcloud || filterGfn || filterPsPlus) {
       list = list.filter(
-        item => (filterXcloud && item.xcloud) || (filterGfn && item.gfn),
+        item =>
+          (filterXcloud && item.xcloud) ||
+          (filterGfn && item.gfn) ||
+          (filterPsPlus && item.psplus),
       );
     }
     if (filterFavorite) {
@@ -604,6 +653,7 @@ export function useLibraryScreen() {
   }, [
     catalog,
     filterXcloud,
+    filterPsPlus,
     filterGfn,
     filterFavorite,
     favoriteKeys,
@@ -779,6 +829,8 @@ export function useLibraryScreen() {
     setFilterXcloud,
     filterGfn,
     setFilterGfn,
+    filterPsPlus,
+    setFilterPsPlus,
     filterFavorite,
     setFilterFavorite,
     filterOwnedOnly,

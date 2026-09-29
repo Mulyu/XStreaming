@@ -1,3 +1,18 @@
+As of the introduction of PS Plus cloud streaming support (which vendors AGPL-3.0-licensed
+code from chiaki-ng/Pylux), XStreaming as a whole is licensed under the GNU Affero General
+Public License v3.0, with an OpenSSL linking exception -- see ./COPYING for the full license
+text. Any distribution or modification of this project, in whole or in part, must comply
+with the terms in ./COPYING.
+
+This does not withdraw the original MIT grant for the code written before that change: the
+portions of this project originally authored by Geocld remain additionally available to you
+under the MIT License below, exactly as that license requires. Where the two licenses'
+obligations differ for a given file, the stricter (AGPL-3.0) terms govern how you may combine
+or redistribute it as part of this project; the MIT grant below is preserved only because MIT
+requires this notice to be kept, not as an alternative way to license the project as a whole.
+
+-----
+
 The MIT License (MIT)
 Copyright (c) 2024 Geocld (lijiahao5372@gmail.com)
 

@@ -30,6 +30,7 @@ const SettingsView: React.FC<Props> = ({
   lane,
   settings,
   gfnSignedIn,
+  psPlusSignedIn,
   gfnLoginVisible,
   gfnChallenge,
   gfnLoginStatus,
@@ -54,6 +55,8 @@ const SettingsView: React.FC<Props> = ({
   onSignalingCloudChange,
   onItemPress,
   onGfnAccountPress,
+  onPsPlusAccountPress,
+  onNavigatePsPlusLibrary,
   onXcloudAccountPress,
   onXcloudCatalogReload,
   onGfnCatalogReload,
@@ -76,6 +79,7 @@ const SettingsView: React.FC<Props> = ({
             {value: 'common', label: t('CommonSettings')},
             {value: 'xbox', label: t('XcloudSettings')},
             {value: 'gfn', label: t('GfnSettings')},
+            {value: 'psplus', label: t('PsPlusSettings')},
           ]}
         />
       </View>
@@ -333,6 +337,28 @@ const SettingsView: React.FC<Props> = ({
             accent={NVIDIA_ACCENT}
             emptyLabel={t('Auto')}
           />
+        </ScrollView>
+      )}
+
+      {lane === 'psplus' && (
+        <ScrollView style={styles.settingsScroll}>
+          <SectionLabel title={t('SectionAccount')} />
+          <SettingItem
+            title={t('PsPlusAccountTitle')}
+            description={
+              psPlusSignedIn
+                ? t('PsPlusSignedIn')
+                : t('PsPlusAccountSignedOutDesc')
+            }
+            onPress={onPsPlusAccountPress}
+          />
+          {psPlusSignedIn && (
+            <SettingItem
+              title={t('PsPlusLibraryTitle')}
+              description={t('PsPlusBrowseLibraryDesc')}
+              onPress={onNavigatePsPlusLibrary}
+            />
+          )}
         </ScrollView>
       )}
 

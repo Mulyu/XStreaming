@@ -250,6 +250,36 @@ export default {
     GfnAccountTitle: 'GeForce NOW アカウント',
     GfnAccountSignedOutDesc: '未サインイン — タップしてサインイン',
     GfnSignOutConfirm: 'この端末でGeForce NOWからサインアウトしますか？',
+    PsPlusSettings: 'PS Plus',
+    PsPlusLogin: 'PlayStationにサインイン',
+    PsPlusLoginPrompt:
+      '上でサインインしてから、下のボタンをタップしてください。',
+    PsPlusSignedInButton: 'サインインしました',
+    PsPlusLoginFailedDesc:
+      'サインインを確認できませんでした — 上で完全にサインインしてから、もう一度お試しください。',
+    PsPlusAccountTitle: 'PlayStation Networkアカウント',
+    PsPlusSignedIn: 'サインイン済み',
+    PsPlusAccountSignedOutDesc: '未サインイン — タップしてサインイン',
+    PsPlusSignOutConfirm:
+      'この端末でPlayStation Networkからサインアウトしますか？',
+    PsPlusLibraryTitle: 'PS Plusライブラリ',
+    PsPlusBrowseLibraryDesc: 'クラウドストリーミング対応のPS Plusゲームを見る',
+    NoResults: '検索・フィルタ条件に一致するゲームがありません',
+    PsPlusSignInPrompt:
+      'PlayStation Networkアカウントにサインインすると、クラウドストリーミング対応のPS Plusゲームを見られます。',
+    SignOut: 'サインアウト',
+    'Failed to connect': '接続に失敗しました',
+    'Stream ended': 'ストリーミングが終了しました',
+    'Enter your PSN login PIN': 'PSNログインPINを入力してください',
+    'Incorrect PIN, try again': 'PINが正しくありません。もう一度お試しください',
+    PsPlusErrorNoGameForEntitlement:
+      'このアカウントでは、このゲームは現在クラウドストリーミングに対応していません。',
+    PsPlusErrorSubscriptionRequired:
+      'クラウドストリーミングにはPS Plusプレミアムへの加入が必要です。',
+    PsPlusErrorAuthExpired:
+      'PlayStationのサインインが期限切れです。もう一度サインインしてください。',
+    PsPlusErrorPingTimeout:
+      'ストリーミング枠の確保がタイムアウトしました。もう一度お試しください。',
     PlayOn: 'プレイ先',
     IncludedWithGamePass: 'Game Passに含まれています',
     LibraryViewDetails: '詳細を見る',
@@ -357,6 +387,7 @@ export default {
     SortRecent: '最近プレイした順',
     LibraryFilterXcloud: 'Xbox Cloud',
     LibraryFilterGfn: 'GeForce NOW',
+    LibraryFilterPsPlus: 'PS Plus',
     LibraryFilterFavorite: 'お気に入り',
     LibraryFilterOwned: '所有済み',
     LibraryFilterOnSale: 'セール中',

@@ -256,6 +256,34 @@ export default {
     GfnAccountTitle: 'GeForce NOW account',
     GfnAccountSignedOutDesc: 'Not signed in — tap to sign in',
     GfnSignOutConfirm: 'Sign out of GeForce NOW on this device?',
+    PsPlusSettings: 'PS Plus',
+    PsPlusLogin: 'Sign in to PlayStation',
+    PsPlusLoginPrompt: 'Sign in above, then tap the button below.',
+    PsPlusSignedInButton: "I've signed in",
+    PsPlusLoginFailedDesc:
+      "Couldn't confirm sign-in — make sure you're fully signed in above, then try again.",
+    PsPlusAccountTitle: 'PlayStation Network account',
+    PsPlusSignedIn: 'Signed in',
+    PsPlusAccountSignedOutDesc: 'Not signed in — tap to sign in',
+    PsPlusSignOutConfirm: 'Sign out of PlayStation Network on this device?',
+    PsPlusLibraryTitle: 'PS Plus library',
+    PsPlusBrowseLibraryDesc: 'Browse cloud-streamable PS Plus games',
+    NoResults: 'No games match your search/filters',
+    PsPlusSignInPrompt:
+      'Sign in with your PlayStation Network account to browse PS Plus cloud-streaming games.',
+    SignOut: 'Sign out',
+    'Failed to connect': 'Failed to connect',
+    'Stream ended': 'Stream ended',
+    'Enter your PSN login PIN': 'Enter your PSN login PIN',
+    'Incorrect PIN, try again': 'Incorrect PIN, try again',
+    PsPlusErrorNoGameForEntitlement:
+      "This game isn't currently available for cloud streaming on this account.",
+    PsPlusErrorSubscriptionRequired:
+      'A PS Plus Premium subscription is required for cloud streaming.',
+    PsPlusErrorAuthExpired:
+      'Your PlayStation sign-in has expired. Please sign in again.',
+    PsPlusErrorPingTimeout:
+      'Timed out waiting for a streaming slot. Please try again.',
     PlayOn: 'Play on',
     IncludedWithGamePass: 'Included with Game Pass',
     LibraryViewDetails: 'View details',
@@ -368,6 +396,7 @@ export default {
     SortRecent: 'Recently played',
     LibraryFilterXcloud: 'Xbox Cloud',
     LibraryFilterGfn: 'GeForce NOW',
+    LibraryFilterPsPlus: 'PS Plus',
     LibraryFilterFavorite: 'Favorite',
     LibraryFilterOwned: 'Owned',
     LibraryFilterOnSale: 'On Sale',

@@ -9,7 +9,7 @@ name: Build Android APK
 # needed) suitable for sideloading onto a device for testing.
 on:
   push:
-    branches: [main]
+    branches: [main, claude/game-screen-position-settings-svkxru]
   workflow_dispatch:
     inputs:
       abi:
@@ -73,7 +73,19 @@ jobs:
           sdkmanager --install \
             "platforms;android-34" \
             "build-tools;34.0.0" \
-            "ndk;23.1.7779620"
+            "ndk;23.1.7779620" \
+            "cmake;3.30.5"
+
+      # android/chiaki/ (the vendored chiaki-ng/Pylux engine for PS Plus cloud
+      # streaming) needs protoc (or Python's grpc_tools.protoc) on PATH to
+      # compile takion.proto, plus Python's protobuf package regardless of
+      # which of the two produces the intermediate file -- see
+      # android/chiaki/README.md's "Build prerequisites".
+      - name: Install protobuf compiler (for PS Plus native build)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          pip install protobuf
 
       - name: Install JS dependencies
         run: yarn install --immutable
@@ -96,13 +108,27 @@ jobs:
           # arm64-v8a-only APK fails to install on those with a bare "this app
           # isn't compatible with your device" and no further explanation.
           TARGET_ABI: ${{ github.event_name == 'push' && 'armeabi-v7a,arm64-v8a,x86,x86_64' || (inputs.abi || 'arm64-v8a') }}
+        # android/build.gradle's Aliyun mirrors (ahead of Maven Central, for
+        # faster resolution from some networks) occasionally answer a
+        # transient 502 during the very first dependency-resolution pass,
+        # which fails the whole build before a single module compiles even
+        # though the mirror is back within seconds. Retry a couple of times
+        # rather than losing the entire (otherwise successful) build to one
+        # flaky resolve.
         run: |
-          ./gradlew assembleProdRelease --no-daemon \
-            -PreactNativeArchitectures="${TARGET_ABI}" \
-            -PXSTREAMING_RELEASE_STORE_FILE=debug.keystore \
-            -PXSTREAMING_RELEASE_STORE_PASSWORD=android \
-            -PXSTREAMING_RELEASE_KEY_ALIAS=androiddebugkey \
-            -PXSTREAMING_RELEASE_KEY_PASSWORD=android
+          for attempt in 1 2 3; do
+            if ./gradlew assembleProdRelease --no-daemon \
+              -PreactNativeArchitectures="${TARGET_ABI}" \
+              -PXSTREAMING_RELEASE_STORE_FILE=debug.keystore \
+              -PXSTREAMING_RELEASE_STORE_PASSWORD=android \
+              -PXSTREAMING_RELEASE_KEY_ALIAS=androiddebugkey \
+              -PXSTREAMING_RELEASE_KEY_PASSWORD=android; then
+              exit 0
+            fi
+            echo "Gradle build attempt ${attempt} failed; retrying in 30s..."
+            sleep 30
+          done
+          exit 1
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -116,13 +142,21 @@ jobs:
       # as a GitHub Release asset (release assets download unwrapped). This uses
       # a rolling "latest" pre-release so the download URL stays stable:
       #   https://github.com/<owner>/<repo>/releases/download/latest/xstreaming-latest.apk
+      #
+      # main-only: this "latest" release is what real users' in-app updater
+      # polls, so a push-triggered build on any other branch (added to the
+      # trigger above for pre-merge CI validation) must still build and
+      # upload the artifact above, but must never overwrite the release
+      # real users auto-update from with unreviewed/unmerged code.
       - name: Stage APK for release
+        if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p dist
           apk="$(ls android/app/build/outputs/apk/prod/release/*.apk | head -n1)"
           cp "$apk" "dist/xstreaming-latest.apk"
 
       - name: Publish APK to GitHub Release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest

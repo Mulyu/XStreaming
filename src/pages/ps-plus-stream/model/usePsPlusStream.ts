@@ -1,0 +1,540 @@
+import React from 'react';
+import {Alert, NativeEventEmitter, NativeModules} from 'react-native';
+import Orientation from 'react-native-orientation-locker';
+import {useTranslation} from 'react-i18next';
+import {
+  PsPlusSession,
+  PsPlusConnectionState,
+  StreamMetrics,
+  getNpsso,
+} from '../../../features/ps-plus-session';
+import {GAMEPAD_MAPING} from '../../../entities/gamepad';
+import {getJoystickMode} from '../../../features/controller-customization';
+import {getSettings, saveSettings} from '../../../shared/lib/settings';
+import {debugFactory} from '../../../shared/lib/debug';
+
+const {FullScreenManager, GamepadManager} = NativeModules;
+
+// keyCode -> button name, same convention native-stream's own gpMaping uses:
+// the user's saved custom mapping (shared across every streaming provider,
+// including this one) if they set one, else the stock Android gamepad
+// key-code mapping.
+const buildKeyMap = (): Record<number, string> => {
+  const custom = getSettings().native_gamepad_maping;
+  const source =
+    custom && Object.keys(custom).length > 0 ? custom : GAMEPAD_MAPING;
+  const map: Record<number, string> = {};
+  for (const [name, code] of Object.entries(source)) {
+    map[code as number] = name;
+  }
+  return map;
+};
+
+const normaliseAxis = (value: number): number => {
+  const deadZone = getSettings().dead_zone;
+  if (!deadZone) {
+    return value;
+  }
+  if (Math.abs(value) < deadZone) {
+    return 0;
+  }
+  const sign = Math.sign(value);
+  return (value - sign * deadZone) / (1 - deadZone);
+};
+
+const log = debugFactory('PsPlusStreamScreen');
+
+// The native engine's error_message is often an internal code, or (for a
+// Gaikai session-start rejection) the raw JSON error body verbatim --
+// {"sessionId":"...","eventCode":"002.2026","name":"noGameForEntitlementId"}
+// was shown to a user as-is before this. Map the known ones to something a
+// player can actually act on; anything unrecognized still falls through to
+// the raw string rather than hiding it.
+function friendlyStreamError(
+  detail: string,
+  t: (key: string) => string,
+): string {
+  let name = detail;
+  try {
+    const parsed = JSON.parse(detail);
+    if (parsed && typeof parsed.name === 'string') {
+      name = parsed.name;
+    }
+  } catch {
+    // Not JSON -- one of the bare internal codes below, or already a
+    // human-readable sentence from the native layer.
+  }
+  switch (name) {
+    case 'noGameForEntitlementId':
+      return t('PsPlusErrorNoGameForEntitlement');
+    case 'PS_PLUS_SUBSCRIPTION_REQUIRED':
+      return t('PsPlusErrorSubscriptionRequired');
+    case 'AUTHORIZATION_FAILED':
+      return t('PsPlusErrorAuthExpired');
+    case 'PING_TIMEOUT':
+      return t('PsPlusErrorPingTimeout');
+    default:
+      return detail;
+  }
+}
+
+// Xbox-shaped controller state, matching what gpStateToPsPlusInput (see
+// features/ps-plus-session) reads -- the same field names native-stream's
+// own gpState uses, so the shared VirtualGamepad UI component (built for
+// that shape) can drive this screen unmodified.
+const createGpState = () => ({
+  A: 0,
+  B: 0,
+  X: 0,
+  Y: 0,
+  LeftShoulder: 0,
+  RightShoulder: 0,
+  View: 0,
+  Menu: 0,
+  LeftThumb: 0,
+  RightThumb: 0,
+  DPadUp: 0,
+  DPadDown: 0,
+  DPadLeft: 0,
+  DPadRight: 0,
+  Nexus: 0,
+  LeftTrigger: 0,
+  RightTrigger: 0,
+  LeftThumbXAxis: 0,
+  LeftThumbYAxis: 0,
+  RightThumbXAxis: 0,
+  RightThumbYAxis: 0,
+});
+
+export function usePsPlusStream(navigation: any, route: any) {
+  const {t} = useTranslation();
+  const params = route.params ?? {};
+  const [connectState, setConnectState] =
+    React.useState<PsPlusConnectionState>('connecting');
+  const [progressText, setProgressText] = React.useState('');
+  const [errorDetail, setErrorDetail] = React.useState('');
+  const [pinRequest, setPinRequest] = React.useState<{
+    pinIncorrect: boolean;
+  } | null>(null);
+
+  // In-game settings rail: opened by the DualSense chord chiaki itself
+  // recognizes (OPTIONS+SHARE -> PsChordEvent, the purpose-built equivalent
+  // of a system PS-button menu on a cloud session), a long-press of a
+  // physical or virtual Menu button (same UX native-stream's own
+  // controller-driven menu uses), or the on-screen button PsPlusStreamView
+  // renders for touch-only players.
+  const [showControlRail, setShowControlRail] = React.useState(false);
+  const openControlRail = React.useCallback(() => setShowControlRail(true), []);
+  const closeControlRail = React.useCallback(
+    () => setShowControlRail(false),
+    [],
+  );
+
+  // The saved on-screen gamepad profile/layout and its joystick mode --
+  // shared with every other streaming provider (native-stream reads the
+  // exact same setting), so a profile made for xCloud/GFN carries straight
+  // over here instead of PS Plus always rendering the built-in default.
+  const [activeProfile, setActiveProfile] = React.useState(
+    () => getSettings().custom_virtual_gamepad || '',
+  );
+  const joystickMode = React.useMemo(
+    () => getJoystickMode(activeProfile) ?? 1,
+    [activeProfile],
+  );
+  // Picking up a layout renamed/deleted while this screen already has the
+  // rail open (via the same CustomGamepad settings screen every other
+  // provider uses) needs a re-read on return, not just at mount.
+  React.useEffect(() => {
+    if (!showControlRail) {
+      setActiveProfile(getSettings().custom_virtual_gamepad || '');
+    }
+  }, [showControlRail]);
+
+  const [vibrationEnabled, setVibrationEnabled] = React.useState(
+    () => getSettings().vibration,
+  );
+  const onToggleVibration = React.useCallback(() => {
+    const next = {...getSettings(), vibration: !getSettings().vibration};
+    saveSettings(next);
+    setVibrationEnabled(next.vibration);
+  }, []);
+
+  const [performanceVisible, setPerformanceVisible] = React.useState(false);
+  const [metrics, setMetrics] = React.useState<StreamMetrics | null>(null);
+  const onTogglePerformance = React.useCallback(
+    () => setPerformanceVisible(v => !v),
+    [],
+  );
+
+  const onEditGamepadLayout = React.useCallback(() => {
+    closeControlRail();
+    navigation.navigate('CustomGamepad');
+  }, [closeControlRail, navigation]);
+
+  React.useEffect(() => {
+    FullScreenManager.immersiveModeOn();
+    Orientation.lockToLandscape();
+    return () => {
+      Orientation.lockToPortrait();
+      FullScreenManager.immersiveModeOff();
+    };
+  }, []);
+
+  const sessionRef = React.useRef<PsPlusSession | null>(null);
+  const gpState = React.useRef(createGpState());
+
+  const flushGpState = React.useCallback(() => {
+    sessionRef.current?.setGamepadState(gpState.current);
+  }, []);
+
+  React.useEffect(() => {
+    const npsso = getNpsso();
+    if (!npsso) {
+      setConnectState('failed');
+      setErrorDetail('Not signed in');
+      return;
+    }
+    const session = new PsPlusSession({
+      onState: (state, detail) => {
+        setConnectState(state);
+        if (detail) {
+          setErrorDetail(friendlyStreamError(detail, t));
+        }
+      },
+      onProgress: stage => setProgressText(stage),
+      onLoginPinRequest: pinIncorrect => setPinRequest({pinIncorrect}),
+      // Chiaki's rumble is just the two continuous DualSense motor
+      // magnitudes (0-255, no duration/trigger-effect data the way xCloud's
+      // WebRTC rumble channel carries) -- the game keeps re-sending them as
+      // they change, so a short duration here is a refresh cushion between
+      // updates rather than a one-shot pulse. Same GamepadManager.vibrate
+      // "native Android rumble" path native-stream falls back to for a
+      // non-USB-DualSense controller.
+      onRumble: (left, right) => {
+        if (!getSettings().vibration) {
+          return;
+        }
+        const strong = Math.min(100, Math.round((left / 255) * 100));
+        const weak = Math.min(100, Math.round((right / 255) * 100));
+        if (strong <= 0 && weak <= 0) {
+          GamepadManager.vibrate(0, 0, 0, 0, 0, 3);
+          return;
+        }
+        GamepadManager.vibrate(120, weak, strong, 0, 0, 3);
+      },
+      onPsChord: () => openControlRail(),
+    });
+    sessionRef.current = session;
+    // The owned-entitlement fast path only means anything on the PSNOW
+    // (Kamaji resolve) branch -- cc_kamaji_resolve branches on it, but
+    // provision_once's pscloud branch never reads it at all, always using
+    // gameIdentifier directly. Sending it for a pscloud launch anyway (Pylux's
+    // own client never does -- CloudPlayFragment.kt gates this identically)
+    // only trips the one-shot noGameForEntitlement retry into a guaranteed
+    // no-op extra round-trip when a PS5 entitlement is rejected.
+    const ownedFastPath =
+      params.isOwned &&
+      params.serviceType === 'psnow' &&
+      !!params.entitlementId;
+    void session.connect({
+      npsso,
+      serviceType: params.serviceType === 'psnow' ? 'psnow' : 'pscloud',
+      gameIdentifier: params.streamIdentifier ?? params.productId ?? '',
+      gameName: params.name ?? '',
+      ownedEntitlementId: ownedFastPath ? params.entitlementId : undefined,
+      ownedPlatform: ownedFastPath ? params.platform : undefined,
+    });
+
+    return () => {
+      log.info('Closing PS Plus session');
+      session.close();
+      sessionRef.current = null;
+    };
+    // Only the initial route params matter -- this effect owns the session
+    // for the screen's whole lifetime, same as native-stream's own connect
+    // effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Long-pressing Menu opens the in-game settings rail -- same 2s-hold UX
+  // native-stream's own physical/virtual Menu button uses, for a profile
+  // whose layout doesn't have a dedicated settings button of its own.
+  const menuLongPressTimer = React.useRef<ReturnType<typeof setTimeout>>();
+  const menuLongPressTriggered = React.useRef(false);
+
+  const handlePressIn = React.useCallback(
+    (name: string) => {
+      (gpState.current as any)[name] = 1;
+      flushGpState();
+      if (name === 'Menu' && !menuLongPressTimer.current) {
+        menuLongPressTriggered.current = false;
+        menuLongPressTimer.current = setTimeout(() => {
+          menuLongPressTimer.current = undefined;
+          menuLongPressTriggered.current = true;
+          (gpState.current as any).Menu = 0;
+          flushGpState();
+          openControlRail();
+        }, 2000);
+      }
+    },
+    [flushGpState, openControlRail],
+  );
+
+  const handlePressOut = React.useCallback(
+    (name: string) => {
+      (gpState.current as any)[name] = 0;
+      flushGpState();
+      if (name === 'Menu') {
+        if (menuLongPressTimer.current) {
+          clearTimeout(menuLongPressTimer.current);
+          menuLongPressTimer.current = undefined;
+        }
+        menuLongPressTriggered.current = false;
+      }
+    },
+    [flushGpState],
+  );
+
+  const handleStickMove = React.useCallback(
+    (id: string, data: {x: number; y: number}) => {
+      if (id === 'right') {
+        gpState.current.RightThumbXAxis = data.x;
+        gpState.current.RightThumbYAxis = data.y;
+      } else {
+        gpState.current.LeftThumbXAxis = data.x;
+        gpState.current.LeftThumbYAxis = data.y;
+      }
+      flushGpState();
+    },
+    [flushGpState],
+  );
+
+  // Physical controller (USB/Bluetooth) support, mirroring native-stream's
+  // own "normal mode" gamepad wiring (not its separate USB-DualSense-native
+  // path, which needs its own low-level rumble/adaptive-trigger protocol --
+  // out of scope here) but simplified to one controller/one gpState, since
+  // PS Plus has no local-coop/split-screen concept. Feeds the exact same
+  // gpState ref and flushGpState the on-screen VirtualGamepad already uses,
+  // so both input sources compose for free.
+  React.useEffect(() => {
+    const keyMap = buildKeyMap();
+    const eventEmitter = new NativeEventEmitter();
+
+    const applyDpad = (pressedKeys: number[]) => {
+      const active = new Set(pressedKeys ?? []);
+      const mapping = getSettings().native_gamepad_maping;
+      (['DPadUp', 'DPadDown', 'DPadLeft', 'DPadRight'] as const).forEach(
+        direction => {
+          const code = mapping?.[direction];
+          const name = code !== undefined ? keyMap[code] : undefined;
+          if (name && code !== undefined) {
+            (gpState.current as any)[name] = active.has(code) ? 1 : 0;
+          }
+        },
+      );
+    };
+
+    const downSub = eventEmitter.addListener('onGamepadKeyDown', event => {
+      const name = keyMap[event.keyCode];
+      if (!name) {
+        return;
+      }
+      if (name !== 'LeftTrigger' && name !== 'RightTrigger') {
+        (gpState.current as any)[name] = 1;
+      }
+      if (
+        name === 'Menu' &&
+        !menuLongPressTimer.current &&
+        !menuLongPressTriggered.current
+      ) {
+        menuLongPressTimer.current = setTimeout(() => {
+          menuLongPressTimer.current = undefined;
+          menuLongPressTriggered.current = true;
+          gpState.current.Menu = 0;
+          flushGpState();
+          openControlRail();
+        }, 2000);
+      }
+      flushGpState();
+    });
+
+    const upSub = eventEmitter.addListener('onGamepadKeyUp', event => {
+      const name = keyMap[event.keyCode];
+      if (!name) {
+        return;
+      }
+      if (name !== 'LeftTrigger' && name !== 'RightTrigger') {
+        (gpState.current as any)[name] = 0;
+      }
+      if (name === 'Menu') {
+        if (menuLongPressTimer.current) {
+          clearTimeout(menuLongPressTimer.current);
+          menuLongPressTimer.current = undefined;
+        }
+        menuLongPressTriggered.current = false;
+      }
+      flushGpState();
+    });
+
+    const dpadDownSub = eventEmitter.addListener('onDpadKeyDown', event => {
+      const pressed = Array.isArray(event.dpadIdxList)
+        ? event.dpadIdxList
+        : event.dpadIdx >= 0
+        ? [event.dpadIdx]
+        : [];
+      applyDpad(pressed);
+      flushGpState();
+    });
+
+    const dpadUpSub = eventEmitter.addListener('onDpadKeyUp', () => {
+      applyDpad([]);
+      flushGpState();
+    });
+
+    const stickSub = eventEmitter.addListener('onStickMove', event => {
+      gpState.current.LeftThumbXAxis = normaliseAxis(event.leftStickX);
+      gpState.current.LeftThumbYAxis = normaliseAxis(event.leftStickY);
+      gpState.current.RightThumbXAxis = normaliseAxis(event.rightStickX);
+      gpState.current.RightThumbYAxis = normaliseAxis(event.rightStickY);
+      flushGpState();
+    });
+
+    const triggerSub = eventEmitter.addListener('onTrigger', event => {
+      gpState.current.LeftTrigger =
+        event.leftTrigger >= 0.05 ? event.leftTrigger : 0;
+      gpState.current.RightTrigger =
+        event.rightTrigger >= 0.05 ? event.rightTrigger : 0;
+      flushGpState();
+    });
+
+    return () => {
+      GamepadManager.setCurrentScreen('');
+      downSub.remove();
+      upSub.remove();
+      dpadDownSub.remove();
+      dpadUpSub.remove();
+      stickSub.remove();
+      triggerSub.remove();
+      if (menuLongPressTimer.current) {
+        clearTimeout(menuLongPressTimer.current);
+        menuLongPressTimer.current = undefined;
+      }
+    };
+  }, [flushGpState, openControlRail]);
+
+  // Hands D-pad/remote focus back to normal Android navigation while the
+  // rail (or the CustomGamepad screen it navigates to) is up, same as
+  // native-stream's own control rail.
+  React.useEffect(() => {
+    GamepadManager.setCurrentScreen(showControlRail ? '' : 'stream');
+  }, [showControlRail]);
+
+  // Live stream stats for the performance overlay -- only polled while both
+  // connected and actually visible, since getMetrics() is a native round
+  // trip.
+  React.useEffect(() => {
+    if (!performanceVisible || connectState !== 'connected') {
+      setMetrics(null);
+      return;
+    }
+    let cancelled = false;
+    const poll = () => {
+      sessionRef.current?.getMetrics().then(m => {
+        if (!cancelled) {
+          setMetrics(m);
+        }
+      });
+    };
+    poll();
+    const interval = setInterval(poll, 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [performanceVisible, connectState]);
+
+  const [pin, setPin] = React.useState('');
+
+  const onSubmitPin = React.useCallback(() => {
+    sessionRef.current?.setLoginPin(pin);
+    setPinRequest(null);
+    setPin('');
+  }, [pin]);
+
+  // beforeRemove fires again for the goBack() the Confirm button itself
+  // triggers -- without this guard, that second GO_BACK hits the exact same
+  // listener (connectState hasn't changed yet), which preventDefault()s it
+  // and reopens the same confirm dialog, forever: pressing back while
+  // connected became unable to actually exit at all.
+  const exitConfirmedRef = React.useRef(false);
+
+  const requestExit = React.useCallback(() => {
+    // Nothing to confirm leaving once the stream already failed/ended -- the
+    // beforeRemove listener below only intercepts GO_BACK while connected
+    // anyway, so this "Close" button asking to confirm exiting a stream
+    // that isn't running was just a confusing extra tap.
+    if (connectState !== 'connected') {
+      navigation.goBack();
+      return;
+    }
+    Alert.alert(t('Warning'), t('Exit stream?'), [
+      {text: t('Cancel'), style: 'cancel'},
+      {
+        text: t('Confirm'),
+        style: 'destructive',
+        onPress: () => {
+          exitConfirmedRef.current = true;
+          navigation.goBack();
+        },
+      },
+    ]);
+  }, [navigation, t, connectState]);
+
+  React.useEffect(() => {
+    const beforeRemove = navigation.addListener('beforeRemove', (e: any) => {
+      if (exitConfirmedRef.current) {
+        return;
+      }
+      if (e.data.action.type === 'GO_BACK' && connectState === 'connected') {
+        e.preventDefault();
+        requestExit();
+      }
+    });
+    return beforeRemove;
+  }, [navigation, connectState, requestExit]);
+
+  const onRailDisconnect = React.useCallback(() => {
+    closeControlRail();
+    requestExit();
+  }, [closeControlRail, requestExit]);
+
+  return {
+    t,
+    title: params.name ?? '',
+    connectState,
+    progressText,
+    errorDetail,
+    pinRequest,
+    pin,
+    onChangePin: setPin,
+    onSubmitPin,
+    onPressIn: handlePressIn,
+    onPressOut: handlePressOut,
+    onStickMove: handleStickMove,
+    onRequestExit: requestExit,
+    activeProfile,
+    joystickMode,
+    showControlRail,
+    onOpenControlRail: openControlRail,
+    onCloseControlRail: closeControlRail,
+    vibrationEnabled,
+    onToggleVibration,
+    performanceVisible,
+    onTogglePerformance,
+    metrics,
+    onEditGamepadLayout,
+    onRailDisconnect,
+  };
+}
+
+export type PsPlusStreamViewModel = ReturnType<typeof usePsPlusStream>;

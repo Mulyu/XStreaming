@@ -20,6 +20,7 @@ import type {LibraryTitleDetailViewModel} from '../model/useLibraryTitleDetail';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
+const PS_ACCENT = '#0070D1';
 const DIM_ICON_BG = 'rgba(140,140,150,0.16)';
 const DIM_TEXT = '#8A9A92';
 
@@ -45,6 +46,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   isFavorite,
   toggleFavorite,
   playXcloud,
+  playPsPlus,
   playGfnVariant,
   canAddShortcut,
   addXcloudShortcut,
@@ -415,6 +417,49 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             </View>
           )}
 
+          {catalogTitle.psplus && (
+            <View style={styles.providerCard}>
+              <Pressable
+                style={[
+                  styles.providerRow,
+                  !catalogTitle.psplus.isOwned && styles.dimRow,
+                ]}
+                onPress={playPsPlus}>
+                <View
+                  style={[
+                    styles.providerIcon,
+                    catalogTitle.psplus.isOwned
+                      ? styles.psplusIconBg
+                      : styles.dimIconBg,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.providerIconText,
+                      {
+                        color: catalogTitle.psplus.isOwned
+                          ? PS_ACCENT
+                          : DIM_TEXT,
+                      },
+                    ]}>
+                    PS
+                  </Text>
+                </View>
+                <View style={styles.providerText}>
+                  <Text style={styles.providerName}>PS Plus</Text>
+                  <Text style={styles.providerSub}>
+                    {catalogTitle.psplus.isOwned
+                      ? t('LibraryFilterOwned')
+                      : t('LibraryViewDetails')}
+                  </Text>
+                </View>
+                {preference?.provider === 'psplus' && (
+                  <Icon source="check-circle" size={18} color={PS_ACCENT} />
+                )}
+                <Icon source="chevron-right" size={18} color="#8A9A92" />
+              </Pressable>
+            </View>
+          )}
+
           {preference && (
             <Text style={styles.rememberedNote}>{t('RememberedChoice')}</Text>
           )}
@@ -572,6 +617,7 @@ const styles = StyleSheet.create({
   },
   xcloudIconBg: {backgroundColor: 'rgba(16,124,16,0.18)'},
   gfnIconBg: {backgroundColor: 'rgba(118,185,0,0.18)'},
+  psplusIconBg: {backgroundColor: 'rgba(0,112,209,0.18)'},
   dimIconBg: {backgroundColor: DIM_ICON_BG},
   providerIconText: {fontWeight: '800', fontSize: 13},
   providerText: {flex: 1, gap: 1},
