@@ -89,6 +89,13 @@ export type StreamMetrics = {
   rttMs: number;
   width: number;
   height: number;
+  // TEMPORARY video-decoder debug counters for the black-screen
+  // investigation (see android/chiaki/jni/video-decoder.h's own comment).
+  // Remove together with the rest of that debug plumbing once found.
+  decoderSamplesIn: number;
+  decoderBuffersOut: number;
+  decoderBuffersRendered: number;
+  decoderConfigureFailed: boolean;
 };
 
 export type ControllerStateInput = {

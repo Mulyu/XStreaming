@@ -282,6 +282,10 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 			putDouble("rttMs", metrics.rttMs)
 			putInt("width", metrics.width)
 			putInt("height", metrics.height)
+			putInt("decoderSamplesIn", metrics.decoderSamplesIn)
+			putInt("decoderBuffersOut", metrics.decoderBuffersOut)
+			putInt("decoderBuffersRendered", metrics.decoderBuffersRendered)
+			putBoolean("decoderConfigureFailed", metrics.decoderConfigureFailed)
 		})
 	}
 }

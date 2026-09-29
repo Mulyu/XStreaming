@@ -842,15 +842,21 @@ JNIEXPORT void JNICALL JNI_FCN(sessionSetSurface)(JNIEnv *env, jobject obj, jlon
 
 // Live stream metrics for the optional on-screen stats overlay. All values are
 // owned/computed by libchiaki (shared with Qt/iOS) so the client just renders
-// them. Returns a double[7]:
+// them. Returns a double[11]:
 //   [0] bitrate (Mbit/s)   [1] packet loss (0..1)   [2] dropped frames (cumulative)
 //   [3] fps                [4] rtt (ms)             [5] width   [6] height
+//   [7..10] TEMPORARY video-decoder debug counters for the black-screen
+//   investigation (see video-decoder.h's own comment): samples fed to
+//   AMediaCodec, output buffers dequeued, of those actually rendered
+//   (non-empty), and whether configure/start ever failed (0/1). [0..6] only
+//   prove compressed video is arriving over the network; these prove
+//   whether it's actually reaching the decoder and coming back out.
 // Cheap best-effort read (same as Qt's polling timer); video_receiver-derived
 // values go through locked accessors, the rest are unlocked scalar reads. Only
 // called while a session is live and the overlay is toggled on.
 JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject obj, jlong ptr)
 {
-	jdouble vals[7] = { 0 };
+	jdouble vals[11] = { 0 };
 	AndroidChiakiSession *session = (AndroidChiakiSession *)ptr;
 	if(session)
 	{
@@ -872,10 +878,16 @@ JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject o
 			vals[5] = (jdouble)session->session.connect_info.video_profile.width;
 			vals[6] = (jdouble)session->session.connect_info.video_profile.height;
 		}
+		int debug_counts[4];
+		android_chiaki_video_decoder_get_debug_counts(&session->video_decoder, debug_counts);
+		vals[7] = (jdouble)debug_counts[0];
+		vals[8] = (jdouble)debug_counts[1];
+		vals[9] = (jdouble)debug_counts[2];
+		vals[10] = (jdouble)debug_counts[3];
 	}
-	jdoubleArray arr = E->NewDoubleArray(env, 7);
+	jdoubleArray arr = E->NewDoubleArray(env, 11);
 	if(arr)
-		E->SetDoubleArrayRegion(env, arr, 0, 7, vals);
+		E->SetDoubleArrayRegion(env, arr, 0, 11, vals);
 	return arr;
 }
 
