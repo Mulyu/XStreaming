@@ -160,58 +160,105 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_unified(
 	// 2. native APOLLOROOT probe. The probe also reports the account's region
 	// (country/language) from the Kamaji session so the lib can own region detection
 	// instead of trusting only the caller-supplied locale.
+	//
+	// Unlike imagic (ps5_cloud_catalog_v6) and owned entitlements (ps5_cloud_library)
+	// below, this source previously had NO cache of its own -- every single catalog
+	// fetch re-ran the full OAuth -> session -> stores -> root-categories -> up to 16
+	// sequential category-page walk (each pair separated by a deliberate cooldown)
+	// even when the unified envelope itself was served from cache seconds earlier
+	// (e.g. the top-level cache write below was skipped because owned_complete was
+	// false that one time). That network chain is the slow part of a "fast" cached
+	// fetch, so give it the same cache/TTL treatment as the other two sources,
+	// keyed "psnow_catalog" (a name already reserved for exactly this in
+	// chiaki_cloudcatalog_invalidate_cache's key list, previously unused).
 	bool auth_error = false, native = false;
 	char fallback_region[8] = "";
 	const char *warning = "";
 	struct json_object *apollo = NULL;
 	char acct_country[8] = "", acct_language[8] = "";
 	char store_country[8] = "", store_lang[8] = "";
-
 	bool apollo_complete = true;
-	CCNativeResult nr = cc_fetch_psnow_native(log, npsso, &apollo,
-		acct_country, sizeof(acct_country), acct_language, sizeof(acct_language),
-		store_country, sizeof(store_country), store_lang, sizeof(store_lang),
-		&apollo_complete);
-	if(nr == CC_NATIVE_OK)
+
+	struct json_object *psnow_cache = force
+		? NULL : cc_cache_read(log, cache_dir, "psnow_catalog", CC_CACHE_TTL_MS);
+	if(psnow_cache)
 	{
-		native = true;
-		if(store_country[0])
+		struct json_object *g = cc_json_arr(psnow_cache, "games");
+		apollo = g ? cc_json_clone(g) : json_object_new_array();
+		native = cc_json_bool(psnow_cache, "native");
+		snprintf(fallback_region, sizeof(fallback_region), "%s", cc_json_str(psnow_cache, "fallbackRegion"));
+		snprintf(store_country, sizeof(store_country), "%s", cc_json_str(psnow_cache, "storeCountry"));
+		snprintf(store_lang, sizeof(store_lang), "%s", cc_json_str(psnow_cache, "storeLang"));
+		snprintf(acct_country, sizeof(acct_country), "%s", cc_json_str(psnow_cache, "acctCountry"));
+		snprintf(acct_language, sizeof(acct_language), "%s", cc_json_str(psnow_cache, "acctLanguage"));
+		json_object_put(psnow_cache);
+	}
+	else
+	{
+		CCNativeResult nr = cc_fetch_psnow_native(log, npsso, &apollo,
+			acct_country, sizeof(acct_country), acct_language, sizeof(acct_language),
+			store_country, sizeof(store_country), store_lang, sizeof(store_lang),
+			&apollo_complete);
+		if(nr == CC_NATIVE_OK)
 		{
-			snprintf(fallback_region, sizeof(fallback_region), "%s", store_country);
-			CHIAKI_LOGI(log, "[UNIFIED] resolvedStoreCountry=%s (native base_url)", store_country);
+			native = true;
+			if(store_country[0])
+			{
+				snprintf(fallback_region, sizeof(fallback_region), "%s", store_country);
+				CHIAKI_LOGI(log, "[UNIFIED] resolvedStoreCountry=%s (native base_url)", store_country);
+			}
 		}
-	}
-	else if(nr == CC_NATIVE_AUTH_ERROR)
-	{
-		auth_error = true;
-		warning = WARNING_EXPIRED;
-		apollo = json_object_new_array();
-		CHIAKI_LOGW(log, "[UNIFIED] native probe auth error; prompting re-login");
-	}
-	else // region unsupported / fatal -> public fallback
-	{
-		char cc[8];
-		// Prefer the account country from the Kamaji session (captured even when
-		// /user/stores 404'd); only fall back to the input locale's country.
-		if(acct_country[0])
-			snprintf(cc, sizeof(cc), "%s", acct_country);
-		else
-			account_country_from_locale(locale, cc, sizeof(cc));
-		bool fallback_complete = true;
-		apollo = cc_fetch_apollo_fallback(log, cc, &fallback_complete);
-		// Preserve the account country for modern PS4 product resolution. The
-		// cloud-session layer maps only legacy PS3 ids to the regional US/GB
-		// Classics store; using that Classics country for every title makes modern
-		// CUSA products disappear (for example HU/en products 404 in GB/en).
-		snprintf(fallback_region, sizeof(fallback_region), "%s", cc);
-		CHIAKI_LOGI(log, "[UNIFIED] resolvedStoreCountry=%s (fallback account country)", fallback_region);
-		// Only a definitive REGION_UNSUPPORTED (completed 4xx) may be cached: a FATAL
-		// (transport failure / 5xx anywhere in the native probe) means a native-capable
-		// account could be looking at the degraded fallback, so serve it for this
-		// session but leave the cache empty and re-probe on the next fetch. A fallback
-		// pagination abort likewise must not freeze a partial classics list for the TTL.
-		if(nr == CC_NATIVE_FATAL || !fallback_complete)
-			apollo_complete = false;
+		else if(nr == CC_NATIVE_AUTH_ERROR)
+		{
+			auth_error = true;
+			warning = WARNING_EXPIRED;
+			apollo = json_object_new_array();
+			CHIAKI_LOGW(log, "[UNIFIED] native probe auth error; prompting re-login");
+		}
+		else // region unsupported / fatal -> public fallback
+		{
+			char cc[8];
+			// Prefer the account country from the Kamaji session (captured even when
+			// /user/stores 404'd); only fall back to the input locale's country.
+			if(acct_country[0])
+				snprintf(cc, sizeof(cc), "%s", acct_country);
+			else
+				account_country_from_locale(locale, cc, sizeof(cc));
+			bool fallback_complete = true;
+			apollo = cc_fetch_apollo_fallback(log, cc, &fallback_complete);
+			// Preserve the account country for modern PS4 product resolution. The
+			// cloud-session layer maps only legacy PS3 ids to the regional US/GB
+			// Classics store; using that Classics country for every title makes modern
+			// CUSA products disappear (for example HU/en products 404 in GB/en).
+			snprintf(fallback_region, sizeof(fallback_region), "%s", cc);
+			CHIAKI_LOGI(log, "[UNIFIED] resolvedStoreCountry=%s (fallback account country)", fallback_region);
+			// Only a definitive REGION_UNSUPPORTED (completed 4xx) may be cached: a FATAL
+			// (transport failure / 5xx anywhere in the native probe) means a native-capable
+			// account could be looking at the degraded fallback, so serve it for this
+			// session but leave the cache empty and re-probe on the next fetch. A fallback
+			// pagination abort likewise must not freeze a partial classics list for the TTL.
+			if(nr == CC_NATIVE_FATAL || !fallback_complete)
+				apollo_complete = false;
+		}
+		if(!apollo)
+			apollo = json_object_new_array();
+
+		// Same completeness bar as the unified envelope's own cache write below: an
+		// expired/invalid session or an incomplete walk must not freeze a degraded
+		// result (or, worse, a stale auth-error prompt) into the cache for the TTL.
+		if(!auth_error && apollo_complete)
+		{
+			struct json_object *cache_env = json_object_new_object();
+			json_object_object_add(cache_env, "games", cc_json_clone(apollo));
+			json_object_object_add(cache_env, "native", json_object_new_boolean(native));
+			cc_json_set_str(cache_env, "fallbackRegion", fallback_region);
+			cc_json_set_str(cache_env, "storeCountry", store_country);
+			cc_json_set_str(cache_env, "storeLang", store_lang);
+			cc_json_set_str(cache_env, "acctCountry", acct_country);
+			cc_json_set_str(cache_env, "acctLanguage", acct_language);
+			cc_cache_write(log, cache_dir, "psnow_catalog", cache_env);
+			json_object_put(cache_env);
+		}
 	}
 	if(!apollo)
 		apollo = json_object_new_array();
