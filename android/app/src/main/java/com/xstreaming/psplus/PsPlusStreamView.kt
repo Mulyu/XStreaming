@@ -1,60 +1,53 @@
 package com.xstreaming.psplus
 
 import android.content.Context
-import android.graphics.SurfaceTexture
-import android.view.Surface
-import android.view.TextureView
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import com.facebook.react.bridge.ReactContext
 
 /**
  * Hosts the video Surface a PsPlusModule.session decodes frames into.
- * Attaches/detaches the Surface as this view's SurfaceTexture is
- * available/destroyed (e.g. backgrounding the app, screen rotation) rather
- * than once at mount, since a Session outlives any one Surface across those.
+ * Attaches/detaches the Surface as this view's SurfaceHolder is created/
+ * destroyed (e.g. backgrounding the app, screen rotation) rather than once
+ * at mount, since a Session outlives any one Surface across those.
  *
- * TextureView, not SurfaceView: a plain SurfaceView punches a transparent
- * hole in the window so the SurfaceFlinger-composited Surface shows through
- * underneath, but that hole-punch routinely fails to composite reliably
- * inside a React Native view tree (a well-known RN-specific caveat -- it's
- * why RN camera/video libraries default to TextureView), which is exactly
- * why the video stayed solid black while audio kept working even after
- * trying every SurfaceView z-order flag. TextureView instead renders as an
- * ordinary View texture, so it follows normal view draw order like any
- * other RN view -- no z-order tricks needed for the VirtualGamepad/
- * PsPlusControlRail overlays to appear above it.
+ * Back to SurfaceView (not TextureView): TextureView was tried to fix video
+ * rendering as solid black, but it introduced a launch crash that couldn't
+ * be root-caused without a device log, which nobody could provide. This
+ * exact SurfaceView-based version never crashed across this whole project,
+ * so stability wins here -- the black-video issue is worth another look,
+ * but not at the cost of every launch crashing.
  */
-class PsPlusStreamView(context: Context) :
-	TextureView(context),
-	TextureView.SurfaceTextureListener {
-
-	private var surface: Surface? = null
+class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
 
 	init {
-		surfaceTextureListener = this
+		// A plain SurfaceView punches a hole and composites on its own hardware
+		// layer *below* the normal view hierarchy by default -- without this,
+		// decoded video renders onto a Surface nothing else ever draws over
+		// (screen looks solid black/whatever the window background is) even
+		// though decoding itself is working fine, which is exactly why audio
+		// still played. MediaOverlay (not OnTop) so this still stays under the
+		// RN-rendered overlays (VirtualGamepad, PsPlusControlRail, ...), which
+		// are ordinary Views drawn after it, not other SurfaceViews.
+		setZOrderMediaOverlay(true)
+		holder.addCallback(this)
 	}
 
 	private val psPlusModule: PsPlusModule?
 		get() = (context as? ReactContext)?.getNativeModule(PsPlusModule::class.java)
 
-	override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
-		val newSurface = Surface(texture)
-		surface = newSurface
-		psPlusModule?.currentSurface = newSurface
-		psPlusModule?.session?.setSurface(newSurface)
+	override fun surfaceCreated(holder: SurfaceHolder) {
+		// Cached regardless of whether a session exists yet -- startSession()
+		// reads this back for a session created after this view already
+		// mounted, which is the common case (see PsPlusModule.currentSurface).
+		psPlusModule?.currentSurface = holder.surface
+		psPlusModule?.session?.setSurface(holder.surface)
 	}
 
-	override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) {}
+	override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
 
-	override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {}
-
-	override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
+	override fun surfaceDestroyed(holder: SurfaceHolder) {
 		psPlusModule?.currentSurface = null
 		psPlusModule?.session?.setSurface(null)
-		surface?.release()
-		surface = null
-		// We release the Surface ourselves above (ahead of the codec being
-		// told to stop using it via setSurface(null)), so it's safe to tell
-		// the system to release the underlying SurfaceTexture too.
-		return true
 	}
 }
