@@ -22,15 +22,8 @@
 #include <strings.h>
 #include <time.h>
 
-// EXPERIMENTAL: asia1 regional Gaikai pool (config.cc.asia1.prod.gaikai.com
-// is known to exist) -- trying it in place of the default "prod" pool since
-// every datacenter the default pool ever returns for this account is a US
-// city (laxb/sjcb/seaa/dfwb/ordb), regardless of the client's real location;
-// worth testing whether the regional pool offers APAC datacenters instead.
-// Revert to "cc.prod.gaikai.com" / "config.cc.prod.gaikai.com" if this
-// doesn't resolve, rejects requests, or doesn't change the datacenter list.
-#define GK_BASE        "https://cc.asia1.prod.gaikai.com/v1"
-#define GK_CONFIG_BASE "https://config.cc.asia1.prod.gaikai.com/v1"
+#define GK_BASE        "https://cc.prod.gaikai.com/v1"
+#define GK_CONFIG_BASE "https://config.cc.prod.gaikai.com/v1"
 #define ACCOUNT_BASE   "https://ca.account.sony.com"
 #define GK_UA_PSCLOUD  "PlayStation Portal/6.0.0-rel.444+6a9cea6f5"
 #define GK_UA_PSNOW    CS_PSNOW_USER_AGENT  // shared (cloudsession_internal.h)
@@ -273,7 +266,7 @@ static struct json_object *gk_build_spec(GaikaiCtx *c, const char *entitlement_i
 	S_STR("entitlementId", entitlement_id);
 	S_STR("npEnv", "np");
 	S_STR("language", lang);
-	S_STR("cloudEndpoint", "https://cc.asia1.prod.gaikai.com"); // keep in sync with GK_BASE above
+	S_STR("cloudEndpoint", "https://cc.prod.gaikai.com");
 	S_STR("redirectUri", c->redirect_uri);
 	S_STR("resolutionSetting", res_set);
 	S_INT("clientWidth", cw);
