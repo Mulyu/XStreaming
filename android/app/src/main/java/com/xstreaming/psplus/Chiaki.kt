@@ -729,6 +729,11 @@ class Session(connectInfo: ConnectInfo, logFile: String?, logVerbose: Boolean)
 
 	fun setSurface(surface: Surface?)
 	{
+		// Guard like getMetrics() below -- nativePtr is 0 once dispose() has
+		// run, and the native side dereferences it unconditionally (no
+		// null check there), so calling this after disposal is a crash.
+		if(nativePtr == 0L)
+			return
 		ChiakiNative.sessionSetSurface(nativePtr, surface)
 	}
 
