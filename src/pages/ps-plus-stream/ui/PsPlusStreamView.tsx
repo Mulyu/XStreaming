@@ -1,8 +1,10 @@
 import React from 'react';
-import {View, StyleSheet, TextInput} from 'react-native';
-import {Text, Button, ActivityIndicator} from 'react-native-paper';
+import {View, StyleSheet, TextInput, Pressable} from 'react-native';
+import {Text, Button, Icon, ActivityIndicator} from 'react-native-paper';
 import {PsPlusStreamView as NativePsPlusStreamView} from '../../../features/ps-plus-session';
 import {VirtualGamepad} from '../../../entities/gamepad';
+import {CustomVirtualGamepad} from '../../../features/controller-customization';
+import PsPlusControlRail from './PsPlusControlRail';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
 
 type Props = PsPlusStreamViewModel;
@@ -21,6 +23,18 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   onPressOut,
   onStickMove,
   onRequestExit,
+  activeProfile,
+  joystickMode,
+  showControlRail,
+  onOpenControlRail,
+  onCloseControlRail,
+  vibrationEnabled,
+  onToggleVibration,
+  performanceVisible,
+  onTogglePerformance,
+  metrics,
+  onEditGamepadLayout,
+  onRailDisconnect,
 }) => {
   return (
     <View style={styles.container}>
@@ -59,15 +73,44 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         </View>
       )}
 
-      {connectState === 'connected' && (
-        <VirtualGamepad
-          opacity={0.7}
-          joystickMode={1}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-          onStickMove={onStickMove}
-        />
+      {connectState === 'connected' && !showControlRail && (
+        <>
+          {activeProfile ? (
+            <CustomVirtualGamepad
+              title={activeProfile}
+              opacity={0.7}
+              joystickMode={joystickMode}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              onStickMove={onStickMove}
+            />
+          ) : (
+            <VirtualGamepad
+              opacity={0.7}
+              joystickMode={joystickMode}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              onStickMove={onStickMove}
+            />
+          )}
+          <Pressable style={styles.settingsBtn} onPress={onOpenControlRail}>
+            <Icon source="cog-outline" size={18} color="#fff" />
+          </Pressable>
+        </>
       )}
+
+      <PsPlusControlRail
+        t={t}
+        showControlRail={showControlRail}
+        onCloseControlRail={onCloseControlRail}
+        vibrationEnabled={vibrationEnabled}
+        onToggleVibration={onToggleVibration}
+        performanceVisible={performanceVisible}
+        onTogglePerformance={onTogglePerformance}
+        metrics={metrics}
+        onEditGamepadLayout={onEditGamepadLayout}
+        onRailDisconnect={onRailDisconnect}
+      />
 
       {!!pinRequest && (
         <View style={styles.overlay}>
@@ -96,6 +139,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  settingsBtn: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   video: {
     flex: 1,
