@@ -52,7 +52,7 @@ const log = debugFactory('PsPlusStreamScreen');
 // the raw string rather than hiding it.
 function friendlyStreamError(
   detail: string,
-  t: (key: string) => string,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
   let name = detail;
   try {
@@ -64,6 +64,23 @@ function friendlyStreamError(
     // Not JSON -- one of the bare internal codes below, or already a
     // human-readable sentence from the native layer.
   }
+  // "PING_TIMEOUT" is a misnomer carried over from the native layer -- it's
+  // not a wait-longer timeout, it's cloudsession_gaikai.c's datacenter
+  // auto-select gate: every datacenter ping failed outright
+  // ("PING_TIMEOUT:UNREACHABLE"), or the best one measured over the 80ms
+  // quality gate ("PING_TIMEOUT:<rtt>ms"). Neither is fixed by retrying with
+  // more patience, so show what was actually measured instead of "timed out".
+  if (name.startsWith('PING_TIMEOUT')) {
+    const rtt = name.split(':')[1];
+    if (rtt === 'UNREACHABLE') {
+      return t('PsPlusErrorPingUnreachable');
+    }
+    const rttMs = Number(rtt);
+    if (Number.isFinite(rttMs)) {
+      return t('PsPlusErrorPingTooHigh', {rtt: rttMs});
+    }
+    return t('PsPlusErrorPingTimeout');
+  }
   switch (name) {
     case 'noGameForEntitlementId':
       return t('PsPlusErrorNoGameForEntitlement');
@@ -71,8 +88,6 @@ function friendlyStreamError(
       return t('PsPlusErrorSubscriptionRequired');
     case 'AUTHORIZATION_FAILED':
       return t('PsPlusErrorAuthExpired');
-    case 'PING_TIMEOUT':
-      return t('PsPlusErrorPingTimeout');
     default:
       return detail;
   }

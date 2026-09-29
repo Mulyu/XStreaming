@@ -280,6 +280,10 @@ export default {
       'PlayStationのサインインが期限切れです。もう一度サインインしてください。',
     PsPlusErrorPingTimeout:
       'ストリーミング枠の確保がタイムアウトしました。もう一度お試しください。',
+    PsPlusErrorPingUnreachable:
+      'PS Plusクラウドストリーミングのサーバーに接続できませんでした。ネットワーク接続を確認してもう一度お試しください。',
+    PsPlusErrorPingTooHigh:
+      '現在の通信速度ではクラウドストリーミングをご利用いただけません(測定値{{rtt}}ms、必要な応答速度は80ms以下です)。より高速で安定したネットワークでお試しください。',
     PlayOn: 'プレイ先',
     IncludedWithGamePass: 'Game Passに含まれています',
     LibraryViewDetails: '詳細を見る',
