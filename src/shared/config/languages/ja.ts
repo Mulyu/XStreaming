@@ -250,6 +250,12 @@ export default {
     GfnAccountTitle: 'GeForce NOW アカウント',
     GfnAccountSignedOutDesc: '未サインイン — タップしてサインイン',
     GfnSignOutConfirm: 'この端末でGeForce NOWからサインアウトしますか？',
+    SectionDebug: 'デバッグ',
+    GfnCopyDebugInfoTitle: 'GFNデバッグ情報をコピー',
+    GfnCopyDebugInfoDesc:
+      'カタログの所有判定を調査するため、GFNのセッショントークンをクリップボードにコピーします。',
+    GfnDebugCopyFailed:
+      'コピーできませんでした — 再度サインインしてお試しください。',
     PsPlusSettings: 'PS Plus',
     PsPlusLogin: 'PlayStationにサインイン',
     PsPlusLoginPrompt:

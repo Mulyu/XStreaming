@@ -256,6 +256,11 @@ export default {
     GfnAccountTitle: 'GeForce NOW account',
     GfnAccountSignedOutDesc: 'Not signed in — tap to sign in',
     GfnSignOutConfirm: 'Sign out of GeForce NOW on this device?',
+    SectionDebug: 'Debug',
+    GfnCopyDebugInfoTitle: 'Copy GFN debug info',
+    GfnCopyDebugInfoDesc:
+      'Copies your GFN session token to the clipboard for investigating the catalog ownership issue.',
+    GfnDebugCopyFailed: 'Could not copy — try signing in again.',
     PsPlusSettings: 'PS Plus',
     PsPlusLogin: 'Sign in to PlayStation',
     PsPlusLoginPrompt: 'Sign in above, then tap the button below.',

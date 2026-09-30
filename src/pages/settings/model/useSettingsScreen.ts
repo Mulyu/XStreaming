@@ -1,5 +1,6 @@
 import React from 'react';
 import {Alert, ToastAndroid} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
@@ -380,6 +381,28 @@ export function useSettingsScreen(navigation: any) {
       .finally(() => setGfnCatalogLoading(false));
   };
 
+  // Debug aid for the still-unresolved GFN catalog ownership issue: copies the
+  // live GFNJWT bearer token (the same one gfnCatalog.ts sends as
+  // `Authorization: GFNJWT <token>` on its GraphQL library/browse queries) so
+  // the actual raw API response -- specifically each variant's gfn.library.status
+  // -- can be inspected directly against a real account, off-device. Only ever
+  // copies locally to the clipboard, never sent anywhere on its own.
+  const handleCopyGfnDebugInfo = () => {
+    getValidGfnJwt()
+      .then(async token => {
+        if (!token) {
+          ToastAndroid.show(t('GfnDebugCopyFailed'), ToastAndroid.SHORT);
+          return;
+        }
+        const userId = await getValidGfnUserId();
+        Clipboard.setString(JSON.stringify({gfnJwt: token, userId}));
+        ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
+      })
+      .catch(() => {
+        ToastAndroid.show(t('GfnDebugCopyFailed'), ToastAndroid.SHORT);
+      });
+  };
+
   const gfnCatalogDescription = (): string => {
     if (!gfnSignedIn) {
       return t('CatalogStatusSignInFirst');
@@ -533,6 +556,7 @@ export function useSettingsScreen(navigation: any) {
     onSignalingCloudChange: handleSignalingCloudChange,
     onItemPress: handleItemPress,
     onGfnAccountPress: handleGfnAccountPress,
+    onCopyGfnDebugInfo: handleCopyGfnDebugInfo,
     onPsPlusAccountPress: handlePsPlusAccountPress,
     onXcloudAccountPress: handleXcloudAccountPress,
     onXcloudCatalogReload: handleXcloudCatalogReload,

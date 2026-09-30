@@ -56,6 +56,7 @@ const SettingsView: React.FC<Props> = ({
   onSignalingCloudChange,
   onItemPress,
   onGfnAccountPress,
+  onCopyGfnDebugInfo,
   onPsPlusAccountPress,
   onXcloudAccountPress,
   onXcloudCatalogReload,
@@ -337,6 +338,17 @@ const SettingsView: React.FC<Props> = ({
             accent={NVIDIA_ACCENT}
             emptyLabel={t('Auto')}
           />
+
+          {gfnSignedIn && (
+            <>
+              <SectionLabel title={t('SectionDebug')} />
+              <SettingItem
+                title={t('GfnCopyDebugInfoTitle')}
+                description={t('GfnCopyDebugInfoDesc')}
+                onPress={onCopyGfnDebugInfo}
+              />
+            </>
+          )}
         </ScrollView>
       )}
 
