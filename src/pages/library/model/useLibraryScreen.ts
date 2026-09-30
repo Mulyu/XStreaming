@@ -666,7 +666,8 @@ export function useLibraryScreen() {
         providerFilterActive
           ? (filterXcloud && !!item.xcloud?.hasEntitlement) ||
             (filterGfn && !!item.gfn?.variants.some(v => v.owned)) ||
-            (filterPsPlus && !!item.psplus?.isOwned)
+            (filterPsPlus &&
+              (!!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog))
           : isCatalogTitleOwned(item),
       );
     }

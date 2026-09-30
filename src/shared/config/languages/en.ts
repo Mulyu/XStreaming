@@ -291,6 +291,7 @@ export default {
       'Your connection is too slow for cloud streaming right now (measured {{rtt}}ms, 80ms or less is required). Try a faster or more stable network.',
     PlayOn: 'Play on',
     IncludedWithGamePass: 'Included with Game Pass',
+    PsPlusIncludedDesc: 'Included with PS Plus',
     LibraryViewDetails: 'View details',
     LibraryStoreCount: '{{n}} linked stores — choose one',
     RememberedChoice: 'Remembered — tap to change',
