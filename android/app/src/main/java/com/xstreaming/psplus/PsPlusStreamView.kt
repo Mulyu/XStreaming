@@ -3,55 +3,57 @@ package com.xstreaming.psplus
 import android.content.Context
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.ViewGroup
 import com.facebook.react.bridge.ReactContext
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.roundToInt
 
 /**
- * Hosts the video Surface a PsPlusModule.session decodes frames into.
- * Attaches/detaches the Surface as this view's SurfaceHolder is created/
- * destroyed (e.g. backgrounding the app, screen rotation) rather than once
- * at mount, since a Session outlives any one Surface across those.
+ * Hosts the video Surface a PsPlusModule.session decodes frames into, and
+ * (as a ViewGroup wrapping that inner SurfaceView, rather than being one
+ * itself) letterboxes/pillarboxes it to the stream's real aspect ratio
+ * instead of stretching to fill this view's own RN-assigned bounds --
+ * mirrors com.oney.WebRTCModule.RTCFsrVideoView's onLayout() (and the
+ * patched react-native-webrtc WebRTCView.java fork it's paired with)
+ * exactly, down to the videoFormat/screenPosition prop names and values,
+ * so native-stream's Settings choices (screen_position/video_format) carry
+ * over to this stream unchanged. AMediaCodec renders directly onto
+ * whatever pixel rect this inner SurfaceView occupies (no OpenGL crop
+ * step the way WebRTC's SurfaceViewRenderer has for its own "Zoom" mode),
+ * so a larger-than-container "cover" layout relies on this ViewGroup's own
+ * default child-clipping to crop the overflow -- no extra work needed.
  *
- * Back to SurfaceView (not TextureView): TextureView was tried to fix video
- * rendering as solid black, but it introduced a launch crash that couldn't
- * be root-caused without a device log, which nobody could provide. This
- * exact SurfaceView-based version never crashed across this whole project,
- * so stability wins here -- the black-video issue is worth another look,
- * but not at the cost of every launch crashing.
+ * The inner SurfaceView attaches/detaches the native Surface as its own
+ * SurfaceHolder is created/destroyed (e.g. backgrounding the app, screen
+ * rotation) rather than once at mount, since a Session outlives any one
+ * Surface across those.
  */
-class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+class PsPlusStreamView(context: Context) : ViewGroup(context) {
 
-	// TEMPORARY, alongside PsPlusModule's own surfaceCreatedCalls -- a
-	// process-wide counter independent of the (context as? ReactContext)
-	// cast and getNativeModule() lookup below, so a getSurfaceDebugInfo()
-	// reading of 0 can be told apart from "surfaceCreated() never fired at
-	// all" vs. "it fired, but psPlusModule resolved to null every time and
-	// attachSurface() was silently never called". Static/companion so it
-	// survives even if this exact View instance can't resolve its module.
-	companion object {
-		val rawSurfaceCreatedCalls = AtomicInteger(0)
-		val rawPsPlusModuleNullCount = AtomicInteger(0)
-		// TEMPORARY: surfaceCreatedCalls=0 on the instance getSurfaceDebugInfo()
-		// answers from, vs. rawSurfaceCreatedCalls>0 with rawPsPlusModuleNullCount=0,
-		// is only possible if attachSurface() really did run 4 times (moduleNull=0
-		// means the lookup below never failed) but on a DIFFERENT PsPlusModule
-		// object than the one the JS bridge resolves -- i.e. two live instances
-		// that don't share state, not a single misbehaving one. identityHashCode
-		// of whichever instance last actually ran attachSurface(), to compare
-		// directly against getSurfaceDebugInfo()'s own `this`.
-		val lastAttachedModuleId = AtomicInteger(0)
-		// TEMPORARY: lastAttachedModuleId staying 0 despite
-		// rawSurfaceCreatedCalls>0 and rawPsPlusModuleNullCount=0 is only
-		// possible if something throws BEFORE either of those lines runs --
-		// i.e. resolving psPlusModule itself (the getNativeModule() call)
-		// throwing, not returning null. Nothing below caught that until now,
-		// so if that's really happening it was either crashing (not observed)
-		// or being swallowed somewhere upstream in Android/RN's own view
-		// mounting code. Catching it here answers which, and captures what it
-		// actually is.
-		val lastSurfaceCreatedError = AtomicReference<String?>(null)
+	private companion object {
+		const val VIDEO_FORMAT_MODE_AUTO = 0
+		const val VIDEO_FORMAT_MODE_STRETCH = 1
+		const val VIDEO_FORMAT_MODE_ZOOM = 2
+		const val VIDEO_FORMAT_MODE_FIXED_RATIO = 3
+
+		const val SCREEN_POSITION_TOP = 0
+		const val SCREEN_POSITION_CENTER = 1
+		const val SCREEN_POSITION_BOTTOM = 2
+
+		// PS5 cloud streaming's resolution presets (720p/1080p/1440p/2160p --
+		// see cloudsession_gaikai.c's res_set table) are always 16:9. Unlike
+		// WebRTC's renderer, which reads the actual decoded frame's width/
+		// height/rotation per-frame (a generic WebRTC peer's video could be
+		// any aspect or rotate), this decoder pipeline has no equivalent
+		// per-frame signal, and none is needed: hardcoding 16:9 for the AUTO
+		// case is exactly right for every resolution this app ever requests.
+		const val FRAME_ASPECT_RATIO = 16f / 9f
 	}
+
+	private val innerSurfaceView = SurfaceView(context)
+
+	private var videoFormatMode = VIDEO_FORMAT_MODE_AUTO
+	private var videoFormatAspectRatio = 0f
+	private var screenPositionMode = SCREEN_POSITION_CENTER
 
 	init {
 		// A plain SurfaceView punches a hole and composites on its own hardware
@@ -62,36 +64,130 @@ class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.C
 		// still played. MediaOverlay (not OnTop) so this still stays under the
 		// RN-rendered overlays (VirtualGamepad, PsPlusControlRail, ...), which
 		// are ordinary Views drawn after it, not other SurfaceViews.
-		setZOrderMediaOverlay(true)
-		holder.addCallback(this)
+		innerSurfaceView.setZOrderMediaOverlay(true)
+		innerSurfaceView.holder.addCallback(SurfaceCallback())
+		addView(innerSurfaceView)
 	}
 
 	private val psPlusModule: PsPlusModule?
 		get() = (context as? ReactContext)?.getNativeModule(PsPlusModule::class.java)
 
-	override fun surfaceCreated(holder: SurfaceHolder) {
-		rawSurfaceCreatedCalls.incrementAndGet()
-		try {
+	private inner class SurfaceCallback : SurfaceHolder.Callback {
+		override fun surfaceCreated(holder: SurfaceHolder) {
 			// Goes through attachSurface() (not a plain currentSurface write) so
 			// this can never race with startSession() reading currentSurface and
 			// publishing a fresh Session -- see PsPlusModule.surfaceLock.
-			val module = psPlusModule
-			if (module == null) {
-				rawPsPlusModuleNullCount.incrementAndGet()
-			} else {
-				lastAttachedModuleId.set(System.identityHashCode(module))
-				module.attachSurface(holder.surface)
-			}
-		} catch (e: Throwable) {
-			lastSurfaceCreatedError.set("${e.javaClass.simpleName}: ${e.message}")
+			psPlusModule?.attachSurface(holder.surface)
+		}
+
+		override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+
+		override fun surfaceDestroyed(holder: SurfaceHolder) {
+			psPlusModule?.attachSurface(null)
 		}
 	}
 
-	override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-		psPlusModule?.noteSurfaceChanged(width, height)
+	/** '' (auto) | "Stretch" | "Zoom" | "W:H" -- see cloudsession's video_format setting. */
+	fun setVideoFormat(format: String?) {
+		val normalized = format?.trim().orEmpty()
+		val (mode, ratio) = when (normalized) {
+			"" -> VIDEO_FORMAT_MODE_AUTO to 0f
+			"Stretch" -> VIDEO_FORMAT_MODE_STRETCH to 0f
+			"Zoom" -> VIDEO_FORMAT_MODE_ZOOM to 0f
+			else -> {
+				val parsed = parseVideoAspectRatio(normalized)
+				if (parsed > 0f) VIDEO_FORMAT_MODE_FIXED_RATIO to parsed
+				else VIDEO_FORMAT_MODE_AUTO to 0f
+			}
+		}
+		if (mode == videoFormatMode && ratio == videoFormatAspectRatio) return
+		videoFormatMode = mode
+		videoFormatAspectRatio = ratio
+		requestLayout()
 	}
 
-	override fun surfaceDestroyed(holder: SurfaceHolder) {
-		psPlusModule?.attachSurface(null)
+	/** "top" | "center" | "bottom" -- vertical anchor; horizontal is always centered. */
+	fun setScreenPosition(position: String?) {
+		val mode = when (position?.trim()) {
+			"top" -> SCREEN_POSITION_TOP
+			"bottom" -> SCREEN_POSITION_BOTTOM
+			else -> SCREEN_POSITION_CENTER
+		}
+		if (mode == screenPositionMode) return
+		screenPositionMode = mode
+		requestLayout()
+	}
+
+	private fun parseVideoAspectRatio(format: String): Float = when (format) {
+		"16:10" -> 16f / 10f
+		"18:9" -> 18f / 9f
+		"20:9" -> 20f / 9f
+		"21:9" -> 21f / 9f
+		"4:3" -> 4f / 3f
+		else -> {
+			val parts = format.split(":")
+			if (parts.size == 2) {
+				val w = parts[0].toFloatOrNull()
+				val h = parts[1].toFloatOrNull()
+				if (w != null && h != null && w > 0f && h > 0f) w / h else 0f
+			} else 0f
+		}
+	}
+
+	// No onMeasure() override, matching RTCFsrVideoView.java's own approach:
+	// onLayout() below lays the inner SurfaceView out with absolute
+	// coordinates directly, and a SurfaceView's underlying Surface tracks
+	// its view's actual layout bounds regardless of whether measure() was
+	// ever called on it.
+	override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+		val width = r - l
+		val height = b - t
+		if (width <= 0 || height <= 0) {
+			innerSurfaceView.layout(0, 0, 0, 0)
+			return
+		}
+
+		if (videoFormatMode == VIDEO_FORMAT_MODE_STRETCH) {
+			innerSurfaceView.layout(0, 0, width, height)
+			return
+		}
+
+		val targetAspectRatio =
+			if (videoFormatMode == VIDEO_FORMAT_MODE_FIXED_RATIO) videoFormatAspectRatio
+			else FRAME_ASPECT_RATIO
+		val cover = videoFormatMode == VIDEO_FORMAT_MODE_ZOOM
+		val (displayWidth, displayHeight) = computeDisplaySize(targetAspectRatio, width, height, cover)
+
+		val verticalSpace = height - displayHeight
+		val left = (width - displayWidth) / 2
+		val top = when (screenPositionMode) {
+			SCREEN_POSITION_TOP -> 0
+			SCREEN_POSITION_BOTTOM -> verticalSpace
+			else -> verticalSpace / 2
+		}
+		innerSurfaceView.layout(left, top, left + displayWidth, top + displayHeight)
+	}
+
+	// "Contain" (letterbox, cover=false) or "cover" (fill-and-crop, cover=true)
+	// fit of an aspect-ratio box within maxWidth x maxHeight -- standard
+	// CSS object-fit math (same result as WebRTC's own
+	// RendererCommon.getDisplaySize(), just computed directly since there's
+	// no equivalent helper in the NDK/AMediaCodec APIs this pipeline uses).
+	// A "cover" result can exceed maxWidth/maxHeight on one axis by design;
+	// the ViewGroup's own default child-clipping crops that overflow.
+	private fun computeDisplaySize(
+		targetAspectRatio: Float,
+		maxWidth: Int,
+		maxHeight: Int,
+		cover: Boolean,
+	): Pair<Int, Int> {
+		if (targetAspectRatio <= 0f) return maxWidth to maxHeight
+		val containerAspectRatio = maxWidth.toFloat() / maxHeight.toFloat()
+		val widthConstrained = (targetAspectRatio > containerAspectRatio) == !cover
+		return if (widthConstrained) {
+			maxWidth to (maxWidth / targetAspectRatio).roundToInt()
+		} else {
+			(maxHeight * targetAspectRatio).roundToInt() to maxHeight
+		}
 	}
 }

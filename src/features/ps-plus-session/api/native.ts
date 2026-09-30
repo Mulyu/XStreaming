@@ -89,56 +89,6 @@ export type StreamMetrics = {
   rttMs: number;
   width: number;
   height: number;
-  // TEMPORARY video-decoder debug counters for the black-screen
-  // investigation (see android/chiaki/jni/video-decoder.h's own comment).
-  // Remove together with the rest of that debug plumbing once found.
-  decoderSamplesIn: number;
-  decoderBuffersOut: number;
-  decoderBuffersRendered: number;
-  decoderConfigureFailed: boolean;
-  // TEMPORARY video-receiver debug counters (see
-  // android/chiaki/lib/include/chiaki/videoreceiver.h's own comment).
-  // Remove together with the rest of that debug plumbing once found.
-  receiverAvPackets: number;
-  receiverFlushSuccess: number;
-  receiverFlushFecFailed: number;
-  receiverFlushFailed: number;
-  // TEMPORARY, added on a second pass after decoderConfigureFailed alone
-  // didn't explain a still-reproducing decoderSamplesIn=0 -- see
-  // video-decoder.h and chiaki-jni.c's sessionGetMetrics comment for what
-  // each one narrows down. Remove together with the rest of this plumbing.
-  decoderSetSurfaceCalls: number;
-  decoderWindowCreateFailed: boolean;
-  decoderCodecCreateFailed: boolean;
-};
-
-// TEMPORARY, added after decoderSetSurfaceCalls=0 on a build with the
-// PsPlusModule.surfaceLock fix proved Session.setSurface() is never called
-// at all -- see PsPlusModule.kt's getSurfaceDebugInfo() for what each field
-// narrows down. Independent of StreamMetrics/getMetrics(): available even
-// before a native Session exists, since that's exactly the case in
-// question. Remove together with the rest of this debug plumbing.
-export type SurfaceDebugInfo = {
-  surfaceCreatedCalls: number;
-  surfaceDestroyedCalls: number;
-  surfaceChangedCalls: number;
-  lastSurfaceWidth: number;
-  lastSurfaceHeight: number;
-  hasCurrentSurface: boolean;
-  hasSession: boolean;
-  rawSurfaceCreatedCalls: number;
-  rawPsPlusModuleNullCount: number;
-  // TEMPORARY: equal means one misbehaving PsPlusModule; different means the
-  // View's getNativeModule() lookup and the JS bridge resolve to two live
-  // instances that don't share state -- see PsPlusModule.kt's comment.
-  thisModuleId: number;
-  lastAttachedModuleId: number;
-  // TEMPORARY: non-null means resolving PsPlusModule inside surfaceCreated()
-  // (the (context as? ReactContext)?.getNativeModule() call) threw instead of
-  // returning null or succeeding -- caught for the first time by this debug
-  // build, so it was either silently swallowed somewhere upstream before, or
-  // this is the very first time it's ever been observed.
-  lastSurfaceCreatedError: string | null;
 };
 
 export type ControllerStateInput = {
@@ -225,12 +175,15 @@ class PsPlusChiakiClient {
     PsPlusChiakiNative?.setLoginPin?.(pin);
   }
 
-  getMetrics(): Promise<StreamMetrics | null> {
-    return PsPlusChiakiNative.getMetrics();
+  // Per-session game-audio volume (0..1), independent of system media
+  // volume -- see audio-output.h's own comment for why this needs a real
+  // native gain stage rather than xCloud/GFN's WebRTC track._setVolume().
+  setAudioGain(gain: number): void {
+    PsPlusChiakiNative?.setAudioGain?.(gain);
   }
 
-  getSurfaceDebugInfo(): Promise<SurfaceDebugInfo | null> {
-    return PsPlusChiakiNative?.getSurfaceDebugInfo?.() ?? Promise.resolve(null);
+  getMetrics(): Promise<StreamMetrics | null> {
+    return PsPlusChiakiNative.getMetrics();
   }
 
   addSessionEventListener(

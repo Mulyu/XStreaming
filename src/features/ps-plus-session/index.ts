@@ -26,7 +26,6 @@ export type {
   CloudProvisionResult,
   StartSessionOptions,
   StreamMetrics,
-  SurfaceDebugInfo,
   ControllerStateInput,
   PsPlusSessionEvent,
   PsPlusProvisionProgress,

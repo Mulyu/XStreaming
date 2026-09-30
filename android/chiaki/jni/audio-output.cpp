@@ -9,6 +9,10 @@
 
 #include <oboe/Oboe.h>
 
+#include <algorithm>
+#include <atomic>
+#include <cmath>
+
 #define BUFFER_CHUNK_SIZE 1024
 #define BUFFER_CHUNKS_COUNT 32
 
@@ -34,6 +38,7 @@ struct AudioOutput
 	oboe::ManagedStream stream;
 	AudioOutputCallback stream_callback;
 	AudioBuffer buf;
+	std::atomic<float> gain { 1.0f };
 
 	AudioOutput() : stream_callback(this) {}
 };
@@ -89,6 +94,14 @@ extern "C" void android_chiaki_audio_output_frame(int16_t *buf, size_t samples_c
 		CHIAKI_LOGW(ao->log, "Audio Output Buffer Overflow!");
 }
 
+extern "C" void android_chiaki_audio_output_set_gain(float gain, void *audio_output)
+{
+	if(!audio_output)
+		return;
+	auto ao = reinterpret_cast<AudioOutput *>(audio_output);
+	ao->gain.store(std::max(0.0f, std::min(1.0f, gain)), std::memory_order_relaxed);
+}
+
 oboe::DataCallbackResult AudioOutputCallback::onAudioReady(oboe::AudioStream *stream, void *audio_data, int32_t num_frames)
 {
 	if(stream->getFormat() != oboe::AudioFormat::I16)
@@ -108,6 +121,23 @@ oboe::DataCallbackResult AudioOutputCallback::onAudioReady(oboe::AudioStream *st
 	{
 		CHIAKI_LOGV(audio_output->log, "Audio Output Buffer Underflow!");
 		memset(buf + buf_size_delivered, 0, buf_size_requested - buf_size_delivered);
+	}
+
+	// Applied here (not at push time in android_chiaki_audio_output_frame)
+	// so a live gain change takes effect on the very next output callback
+	// instead of only on samples pushed after the change -- this buffer
+	// typically holds a fraction of a second already queued ahead of Oboe.
+	float gain = audio_output->gain.load(std::memory_order_relaxed);
+	if(gain != 1.0f)
+	{
+		auto samples = reinterpret_cast<int16_t *>(buf);
+		size_t sample_count = buf_size_delivered / sizeof(int16_t);
+		for(size_t i = 0; i < sample_count; i++)
+		{
+			float scaled = static_cast<float>(samples[i]) * gain;
+			scaled = std::max(-32768.0f, std::min(32767.0f, scaled));
+			samples[i] = static_cast<int16_t>(scaled);
+		}
 	}
 
 	return oboe::DataCallbackResult::Continue;

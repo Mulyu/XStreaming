@@ -113,26 +113,6 @@ data class StreamMetrics(
 	val rttMs: Double,
 	val width: Int,
 	val height: Int,
-	// TEMPORARY video-decoder debug counters for the black-screen
-	// investigation -- see video-decoder.h's own comment. Remove together
-	// with the rest of that debug plumbing once the cause is found.
-	val decoderSamplesIn: Int = 0,
-	val decoderBuffersOut: Int = 0,
-	val decoderBuffersRendered: Int = 0,
-	val decoderConfigureFailed: Boolean = false,
-	// TEMPORARY video-receiver debug counters -- see videoreceiver.h's own
-	// comment. Remove together with the rest of that debug plumbing.
-	val receiverAvPackets: Int = 0,
-	val receiverFlushSuccess: Int = 0,
-	val receiverFlushFecFailed: Int = 0,
-	val receiverFlushFailed: Int = 0,
-	// TEMPORARY, added on a second pass after decoderConfigureFailed alone
-	// didn't explain a still-reproducing decoder in=0 -- see video-decoder.h
-	// and chiaki-jni.c's sessionGetMetrics comment for what each one narrows
-	// down.
-	val decoderSetSurfaceCalls: Int = 0,
-	val decoderWindowCreateFailed: Boolean = false,
-	val decoderCodecCreateFailed: Boolean = false,
 )
 {
 	companion object
@@ -145,17 +125,6 @@ data class StreamMetrics(
 			rttMs = a.getOrElse(4) { 0.0 },
 			width = a.getOrElse(5) { 0.0 }.toInt(),
 			height = a.getOrElse(6) { 0.0 }.toInt(),
-			decoderSamplesIn = a.getOrElse(7) { 0.0 }.toInt(),
-			decoderBuffersOut = a.getOrElse(8) { 0.0 }.toInt(),
-			decoderBuffersRendered = a.getOrElse(9) { 0.0 }.toInt(),
-			decoderConfigureFailed = a.getOrElse(10) { 0.0 } != 0.0,
-			receiverAvPackets = a.getOrElse(11) { 0.0 }.toInt(),
-			receiverFlushSuccess = a.getOrElse(12) { 0.0 }.toInt(),
-			receiverFlushFecFailed = a.getOrElse(13) { 0.0 }.toInt(),
-			receiverFlushFailed = a.getOrElse(14) { 0.0 }.toInt(),
-			decoderSetSurfaceCalls = a.getOrElse(15) { 0.0 }.toInt(),
-			decoderWindowCreateFailed = a.getOrElse(16) { 0.0 } != 0.0,
-			decoderCodecCreateFailed = a.getOrElse(17) { 0.0 } != 0.0,
 		)
 	}
 }
@@ -180,6 +149,7 @@ private class ChiakiNative
 		@JvmStatic external fun sessionStop(ptr: Long): Int
 		@JvmStatic external fun sessionJoin(ptr: Long): Int
 		@JvmStatic external fun sessionSetSurface(ptr: Long, surface: Surface?)
+		@JvmStatic external fun sessionSetAudioGain(ptr: Long, gain: Float)
 		@JvmStatic external fun sessionGetMetrics(ptr: Long): DoubleArray
 		@JvmStatic external fun sessionSetControllerState(ptr: Long, controllerState: ControllerState)
 		@JvmStatic external fun sessionSetPsChord(ptr: Long, enabled: Boolean, holdMs: Int)
@@ -776,6 +746,14 @@ class Session(connectInfo: ConnectInfo, logFile: String?, logVerbose: Boolean)
 		if(nativePtr == 0L)
 			return
 		ChiakiNative.sessionSetSurface(nativePtr, surface)
+	}
+
+	/** Per-session game-audio volume (0..1), independent of system media volume. */
+	fun setAudioGain(gain: Float)
+	{
+		if(nativePtr == 0L)
+			return
+		ChiakiNative.sessionSetAudioGain(nativePtr, gain)
 	}
 
 	/** Latest live stream metrics for the stats overlay, or null if the session is gone. */

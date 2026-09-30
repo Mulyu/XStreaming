@@ -26,19 +26,14 @@ import kotlin.concurrent.thread
  * unified catalog) -- both are dispatched on a background thread here, never
  * the calling (JS bridge) thread.
  *
- * THE BLACK-VIDEO ROOT CAUSE (found via PsPlusStreamView.lastSurfaceCreatedError):
- * without @ReactModule, PsPlusStreamView's own
- * `(context as? ReactContext)?.getNativeModule(PsPlusModule::class.java)` --
- * a Class-based lookup, needed since a View has no JS-side name to require()
- * by -- threw IllegalArgumentException("Could not find @ReactModule
- * annotation in ...") on every single surfaceCreated() call, silently
- * swallowed somewhere upstream (no crash was ever observed). currentSurface
- * was therefore NEVER set from the View side, for the entire life of this
- * feature -- every @Volatile/locking fix made to session/currentSurface
- * since was real but moot, because attachSurface() was never reached at
- * all. NativeModules.PsPlusChiaki (the name-based lookup every JS call in
- * this file's own bridge methods goes through) was never affected, which is
- * exactly why every other RN<->native call always worked fine.
+ * @ReactModule is required here for a reason that isn't obvious: without it,
+ * PsPlusStreamView's `(context as? ReactContext)?.getNativeModule(PsPlusModule::class.java)`
+ * -- a Class-based lookup, the only option available to a View with no
+ * JS-side name to require() by -- throws instead of returning null, on
+ * every single surfaceCreated() call. Every @ReactMethod-driven JS call in
+ * this file goes through NativeModules.PsPlusChiaki instead (a name-based
+ * lookup, unaffected), so removing this annotation would silently break
+ * video again without breaking anything else in this bridge.
  */
 @ReactModule(name = "PsPlusChiaki")
 class PsPlusModule(reactContext: ReactApplicationContext) :
@@ -54,10 +49,8 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	// stopSession() run on RN's Native Modules thread while
 	// PsPlusStreamView's surfaceCreated()/surfaceDestroyed() always run on
 	// the UI thread. Without it, a write to either field on one thread has
-	// no guaranteed visibility to a read on the other. This alone fixed one
-	// real occurrence of decoder in=0 (a stale null currentSurface read),
-	// but is not sufficient by itself -- see surfaceLock below for the
-	// remaining gap it doesn't cover.
+	// no guaranteed visibility to a read on the other -- see surfaceLock
+	// below for the remaining gap @Volatile alone doesn't cover.
 	@Volatile
 	internal var session: Session? = null
 		private set
@@ -87,65 +80,11 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	// other side's update before making its own decision.
 	private val surfaceLock = Any()
 
-	// TEMPORARY, added after decoderSetSurfaceCalls=0 on a build with the
-	// surfaceLock fix above proved Session.setSurface() was never even
-	// called with a real surface this whole time -- everything above this
-	// point in the chain (video_sample_cb, AMediaCodec, the surfaceLock
-	// race) was never reached because the problem is further upstream
-	// still. This narrows it down to one question with no device log
-	// access: does PsPlusStreamView.surfaceCreated() itself ever fire at
-	// all? Exposed via getSurfaceDebugInfo() below; remove together once
-	// answered.
-	private var surfaceCreatedCalls = 0
-	private var surfaceDestroyedCalls = 0
-	private var surfaceChangedCalls = 0
-	private var lastSurfaceWidth = 0
-	private var lastSurfaceHeight = 0
-
 	/** Called by PsPlusStreamView as its Surface is created/destroyed. */
 	internal fun attachSurface(surface: Surface?) {
 		synchronized(surfaceLock) {
-			if (surface != null) surfaceCreatedCalls++ else surfaceDestroyedCalls++
 			currentSurface = surface
 			session?.setSurface(surface)
-		}
-	}
-
-	/** Called by PsPlusStreamView's surfaceChanged -- the actual laid-out size. */
-	internal fun noteSurfaceChanged(width: Int, height: Int) {
-		synchronized(surfaceLock) {
-			surfaceChangedCalls++
-			lastSurfaceWidth = width
-			lastSurfaceHeight = height
-		}
-	}
-
-	@ReactMethod
-	fun getSurfaceDebugInfo(promise: Promise) {
-		synchronized(surfaceLock) {
-			promise.resolve(Arguments.createMap().apply {
-				putInt("surfaceCreatedCalls", surfaceCreatedCalls)
-				putInt("surfaceDestroyedCalls", surfaceDestroyedCalls)
-				putInt("surfaceChangedCalls", surfaceChangedCalls)
-				putInt("lastSurfaceWidth", lastSurfaceWidth)
-				putInt("lastSurfaceHeight", lastSurfaceHeight)
-				putBoolean("hasCurrentSurface", currentSurface != null)
-				putBoolean("hasSession", session != null)
-				putInt("rawSurfaceCreatedCalls", PsPlusStreamView.rawSurfaceCreatedCalls.get())
-				putInt("rawPsPlusModuleNullCount", PsPlusStreamView.rawPsPlusModuleNullCount.get())
-				// TEMPORARY: compare against lastAttachedModuleId -- equal means
-				// this really is one misbehaving instance (rules out the
-				// two-instances theory); different means the View's
-				// getNativeModule() lookup and the JS bridge's NativeModules.
-				// PsPlusChiaki resolve to two live PsPlusModule objects that
-				// don't share state, which would fully explain surfaceCreatedCalls
-				// staying 0 here despite rawSurfaceCreatedCalls being nonzero
-				// with rawPsPlusModuleNullCount=0 (attachSurface() really did run,
-				// just never on this object).
-				putInt("thisModuleId", System.identityHashCode(this@PsPlusModule))
-				putInt("lastAttachedModuleId", PsPlusStreamView.lastAttachedModuleId.get())
-				putString("lastSurfaceCreatedError", PsPlusStreamView.lastSurfaceCreatedError.get())
-			})
 		}
 	}
 
@@ -378,6 +317,11 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	}
 
 	@ReactMethod
+	fun setAudioGain(gain: Double) {
+		session?.setAudioGain(gain.toFloat())
+	}
+
+	@ReactMethod
 	fun getMetrics(promise: Promise) {
 		val metrics = session?.getMetrics()
 		if (metrics == null) {
@@ -392,17 +336,6 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 			putDouble("rttMs", metrics.rttMs)
 			putInt("width", metrics.width)
 			putInt("height", metrics.height)
-			putInt("decoderSamplesIn", metrics.decoderSamplesIn)
-			putInt("decoderBuffersOut", metrics.decoderBuffersOut)
-			putInt("decoderBuffersRendered", metrics.decoderBuffersRendered)
-			putBoolean("decoderConfigureFailed", metrics.decoderConfigureFailed)
-			putInt("receiverAvPackets", metrics.receiverAvPackets)
-			putInt("receiverFlushSuccess", metrics.receiverFlushSuccess)
-			putInt("receiverFlushFecFailed", metrics.receiverFlushFecFailed)
-			putInt("receiverFlushFailed", metrics.receiverFlushFailed)
-			putInt("decoderSetSurfaceCalls", metrics.decoderSetSurfaceCalls)
-			putBoolean("decoderWindowCreateFailed", metrics.decoderWindowCreateFailed)
-			putBoolean("decoderCodecCreateFailed", metrics.decoderCodecCreateFailed)
 		})
 	}
 }

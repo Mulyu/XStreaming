@@ -33,64 +33,22 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   performanceVisible,
   onTogglePerformance,
   metrics,
-  debugMetrics,
-  surfaceDebug,
+  screenPosition,
+  videoFormat,
+  audioGain,
+  onAudioGainChange,
+  onSetScreenPosition,
+  onCycleVideoFormat,
   onEditGamepadLayout,
   onRailDisconnect,
 }) => {
   return (
     <View style={styles.container}>
-      <NativePsPlusStreamView style={styles.video} />
-
-      {(connectState === 'connecting' || connectState === 'connected') && (
-        <View pointerEvents="none" style={styles.debugBadge}>
-          <Text style={styles.debugText}>
-            {debugMetrics
-              ? `DEBUG ${debugMetrics.width}x${
-                  debugMetrics.height
-                } @ ${Math.round(
-                  debugMetrics.fps,
-                )}fps · ${debugMetrics.bitrateMbps.toFixed(1)}Mbps · ${
-                  debugMetrics.rttMs
-                }ms`
-              : 'DEBUG: no metrics yet'}
-          </Text>
-          {debugMetrics && (
-            <Text style={styles.debugText}>
-              {`decoder in=${debugMetrics.decoderSamplesIn} out=${debugMetrics.decoderBuffersOut} rendered=${debugMetrics.decoderBuffersRendered} configFailed=${debugMetrics.decoderConfigureFailed}`}
-            </Text>
-          )}
-          {debugMetrics && (
-            <Text style={styles.debugText}>
-              {`receiver pkts=${debugMetrics.receiverAvPackets} flushOk=${debugMetrics.receiverFlushSuccess} fecFail=${debugMetrics.receiverFlushFecFailed} fail=${debugMetrics.receiverFlushFailed}`}
-            </Text>
-          )}
-          {debugMetrics && (
-            <Text style={styles.debugText}>
-              {`setSurface=${debugMetrics.decoderSetSurfaceCalls} winFail=${debugMetrics.decoderWindowCreateFailed} codecFail=${debugMetrics.decoderCodecCreateFailed}`}
-            </Text>
-          )}
-          {surfaceDebug && (
-            <Text style={styles.debugText}>
-              {`sfc created=${surfaceDebug.surfaceCreatedCalls}/${surfaceDebug.rawSurfaceCreatedCalls} destroyed=${surfaceDebug.surfaceDestroyedCalls} changed=${surfaceDebug.surfaceChangedCalls} (${surfaceDebug.lastSurfaceWidth}x${surfaceDebug.lastSurfaceHeight}) moduleNull=${surfaceDebug.rawPsPlusModuleNullCount} hasSurface=${surfaceDebug.hasCurrentSurface} hasSession=${surfaceDebug.hasSession}`}
-            </Text>
-          )}
-          {surfaceDebug && (
-            <Text style={styles.debugText}>
-              {`moduleId this=${surfaceDebug.thisModuleId} lastAttached=${
-                surfaceDebug.lastAttachedModuleId
-              } same=${
-                surfaceDebug.thisModuleId === surfaceDebug.lastAttachedModuleId
-              }`}
-            </Text>
-          )}
-          {surfaceDebug?.lastSurfaceCreatedError && (
-            <Text style={styles.debugText}>
-              {`sfc error: ${surfaceDebug.lastSurfaceCreatedError}`}
-            </Text>
-          )}
-        </View>
-      )}
+      <NativePsPlusStreamView
+        style={styles.video}
+        screenPosition={screenPosition}
+        videoFormat={videoFormat}
+      />
 
       {connectState !== 'connected' && (
         <View style={styles.overlay}>
@@ -160,6 +118,12 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         performanceVisible={performanceVisible}
         onTogglePerformance={onTogglePerformance}
         metrics={metrics}
+        screenPosition={screenPosition}
+        onSetScreenPosition={onSetScreenPosition}
+        videoFormat={videoFormat}
+        onCycleVideoFormat={onCycleVideoFormat}
+        audioGain={audioGain}
+        onAudioGainChange={onAudioGainChange}
         onEditGamepadLayout={onEditGamepadLayout}
         onRailDisconnect={onRailDisconnect}
       />
@@ -190,14 +154,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // TEMPORARY debug color for the black-screen investigation -- a loud,
-    // unmistakable color instead of black so we can tell apart "the
-    // SurfaceView's hole-punch isn't compositing at all" (the WHOLE screen,
-    // including where the video should be, shows this color) from "the
-    // video area itself is genuinely black" (this color only shows around
-    // the edges / behind overlay UI, with a black rectangle where the video
-    // is). Revert to '#000' once the cause is found.
-    backgroundColor: '#FF00FF',
+    backgroundColor: '#000',
   },
   settingsBtn: {
     position: 'absolute',
@@ -217,23 +174,6 @@ const styles = StyleSheet.create({
   },
   video: {
     flex: 1,
-  },
-  // TEMPORARY debug readout -- see the container style's own comment. Remove
-  // together with it once the black-screen cause is found.
-  debugBadge: {
-    position: 'absolute',
-    left: 10,
-    top: 10,
-    zIndex: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  debugText: {
-    color: '#0f0',
-    fontSize: 11,
-    fontWeight: '700',
   },
   overlay: {
     position: 'absolute',
