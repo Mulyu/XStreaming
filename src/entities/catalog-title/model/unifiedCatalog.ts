@@ -167,3 +167,26 @@ export const buildGfnCatalogTitle = (game: GfnGame): CatalogTitle | null => {
     gfn: {variants: [game]},
   };
 };
+
+// `entities` can't import the real CloudGame type from features/ps-plus-
+// session (FSD layer order) -- same reason the `psplus.raw` field on
+// CatalogTitle itself is untyped `any`. Used by the Store screen to match one
+// PS Store chart entry back to one launchable title, same single-entry role
+// buildXcloudCatalogTitle/buildGfnCatalogTitle play for their own charts.
+export const buildPsPlusCatalogTitle = (game: any): CatalogTitle | null => {
+  const title: string | undefined = game?.name?.trim();
+  if (!title) {
+    return null;
+  }
+  return {
+    key: normalizeTitle(title),
+    title,
+    imageUrl: game.imageUrl,
+    genres: [],
+    psplus: {
+      raw: game,
+      isOwned: game?.isOwned === true,
+      inPlusCatalog: game?.plusCatalog === true,
+    },
+  };
+};

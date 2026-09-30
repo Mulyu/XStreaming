@@ -7,6 +7,7 @@ export {
   isCatalogTitleOwned,
   buildXcloudCatalogTitle,
   buildGfnCatalogTitle,
+  buildPsPlusCatalogTitle,
 } from './model/unifiedCatalog';
 
 export {

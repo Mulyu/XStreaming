@@ -5,13 +5,14 @@ import {
   GfnGame,
   buildGfnCatalogTitle,
   buildXcloudCatalogTitle,
+  buildPsPlusCatalogTitle,
   CatalogTitle,
   formatPrice,
   getPrice,
   isSaleForDisplay,
   PriceInfo,
 } from '../../entities/catalog-title';
-import {SteamChartEntry} from '../../features/store-charts';
+import {SteamChartEntry, PsStoreChartEntry} from '../../features/store-charts';
 
 // One row's worth of display data. `catalogTitle` is null when the row isn't
 // launchable -- today that's only possible on the GFN/Steam side, where the
@@ -140,6 +141,39 @@ export const buildGfnStoreRows = (
     const catalogTitle = game ? buildGfnCatalogTitle(game) : null;
     return {
       id: entry.appId,
+      rank: index + 1,
+      title: entry.title,
+      imageUrl: entry.imageUrl,
+      price: entry.price,
+      originalPrice: entry.originalPrice,
+      catalogTitle,
+    };
+  });
+};
+
+// Every PS Store chart entry becomes a row -- same "show the real chart,
+// gray out what isn't cloud-playable" behavior as buildGfnStoreRows, not
+// buildXboxStoreRows's "drop unmatched entries" one, since PS Store's own
+// category API already carries full display data per entry (name/image/
+// price), independent of whether the title is also in the signed-in
+// account's PS Plus cloud-streaming catalog. Matched by `storeProductId`,
+// the PS Store product id CloudGame already carries -- the direct PS
+// equivalent of buildGfnStoreRows' Steam appId match.
+export const buildPsStoreRows = (
+  entries: PsStoreChartEntry[],
+  psPlusGames: any[],
+): StoreRow[] => {
+  const byProductId = new Map<string, any>();
+  psPlusGames.forEach(game => {
+    if (game?.storeProductId) {
+      byProductId.set(game.storeProductId, game);
+    }
+  });
+  return entries.map((entry, index) => {
+    const game = byProductId.get(entry.productId);
+    const catalogTitle = game ? buildPsPlusCatalogTitle(game) : null;
+    return {
+      id: entry.productId,
       rank: index + 1,
       title: entry.title,
       imageUrl: entry.imageUrl,

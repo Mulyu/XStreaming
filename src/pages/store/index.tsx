@@ -22,8 +22,17 @@ import {
   fetchGfnFullCatalog,
   getFreshFullCatalog,
   getCachedFullCatalog,
+  getPsStoreLocale,
 } from '../../entities/catalog-title';
 import {isSignedIn, getValidGfnJwt} from '../../entities/gfn-account';
+import {
+  isPsPlusSignedIn,
+  getNpsso,
+  fetchUnifiedCatalog,
+  CloudGame,
+  getCachedCatalogGames,
+  saveCatalogGames,
+} from '../../features/ps-plus-session';
 import {getSettings} from '../../shared/lib/settings';
 import {getSystemRegion} from '../../shared/lib/locale';
 import {
@@ -33,10 +42,14 @@ import {
   fetchSteamChart,
   getFreshSteamChart,
   SteamChartEntry,
+  fetchPsStoreChart,
+  getFreshPsStoreChart,
+  PsStoreChartEntry,
 } from '../../features/store-charts';
 import {
   buildGfnStoreRows,
   buildXboxStoreRows,
+  buildPsStoreRows,
   dedupeByKey,
   hasMorePages,
   StoreRow,
@@ -44,6 +57,7 @@ import {
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
+const PS_ACCENT = '#0070D1';
 const SALE_ACCENT = '#E67E22';
 
 // Both Xbox's and Steam's charts are live search scans, not curated top-N
@@ -61,7 +75,7 @@ const MAX_CHART_ENTRIES = 3000;
 // grows past the viewport, so it silently never fetched page 2 onward.
 const MIN_VISIBLE_ROWS = 15;
 
-type Provider = 'xcloud' | 'gfn';
+type Provider = 'xcloud' | 'gfn' | 'psstore';
 type ChartKind = 'best' | 'new';
 
 const STEAM_LANGUAGE: Record<string, string> = {
@@ -103,9 +117,20 @@ function StoreScreen() {
   const [xboxLoadingMore, setXboxLoadingMore] = React.useState(false);
   const [steamLoading, setSteamLoading] = React.useState(true);
   const [steamLoadingMore, setSteamLoadingMore] = React.useState(false);
-  const loading = provider === 'xcloud' ? xboxLoading : steamLoading;
+  const [psStoreLoading, setPsStoreLoading] = React.useState(true);
+  const [psStoreLoadingMore, setPsStoreLoadingMore] = React.useState(false);
+  const loading =
+    provider === 'xcloud'
+      ? xboxLoading
+      : provider === 'gfn'
+      ? steamLoading
+      : psStoreLoading;
   const loadingMore =
-    provider === 'xcloud' ? xboxLoadingMore : steamLoadingMore;
+    provider === 'xcloud'
+      ? xboxLoadingMore
+      : provider === 'gfn'
+      ? steamLoadingMore
+      : psStoreLoadingMore;
 
   const [xboxProductIds, setXboxProductIds] = React.useState<string[]>([]);
   const [xboxNextCT, setXboxNextCT] = React.useState<string | undefined>();
@@ -141,6 +166,21 @@ function StoreScreen() {
   const [steamLoadedKind, setSteamLoadedKind] =
     React.useState<ChartKind | null>(null);
 
+  // Same shape as Steam's own chart state above -- PS Store's category API
+  // is offset-paginated too, just numerically like Steam's `start` rather
+  // than Xbox's opaque continuation token.
+  const [psStoreEntries, setPsStoreEntries] = React.useState<
+    PsStoreChartEntry[]
+  >([]);
+  const [psStoreHasMore, setPsStoreHasMore] = React.useState(true);
+  const [psStoreNextOffset, setPsStoreNextOffset] = React.useState(0);
+  const [psStoreLoadedKind, setPsStoreLoadedKind] =
+    React.useState<ChartKind | null>(null);
+  // PS Store-only, mirroring gfnAvailableOnly: off by default, showing PS
+  // Store's full chart (including titles not in the signed-in account's PS
+  // Plus cloud-streaming catalog, with a null catalogTitle).
+  const [psPlusAvailableOnly, setPsPlusAvailableOnly] = React.useState(false);
+
   // The two catalogs a chart entry gets matched against -- the same raw
   // shapes buildUnifiedCatalog already knows how to turn into a launchable
   // CatalogTitle, just fetched here instead of merged into one grid.
@@ -152,6 +192,13 @@ function StoreScreen() {
   // out or before the first successful load.
   const [gfnFullCatalog, setGfnFullCatalog] = React.useState<GfnGame[]>(
     () => getCachedFullCatalog() || [],
+  );
+  // PS Plus's own pscloud catalog -- the ONLY source this screen matches PS
+  // Store chart entries against, same "requires a signed-in account, stays
+  // empty otherwise" shape as gfnFullCatalog above. Instant-paints from the
+  // same JS-side cache the Library screen already maintains.
+  const [psPlusGames, setPsPlusGames] = React.useState<CloudGame[]>(
+    () => getCachedCatalogGames() || [],
   );
 
   // Bumped every time *that provider's own* chart is (re)loaded, so an async
@@ -167,6 +214,7 @@ function StoreScreen() {
   // provider started its own load in the meantime.
   const xboxGenerationRef = React.useRef(0);
   const steamGenerationRef = React.useRef(0);
+  const psStoreGenerationRef = React.useRef(0);
   // Synchronous re-entrancy guard for loadMore -- React state (loadingMore)
   // only updates on the next render, so two onEndReached calls fired back to
   // back before that render (a known FlatList quirk) would otherwise both
@@ -224,6 +272,31 @@ function StoreScreen() {
     });
   }, []);
 
+  // Same idea, PS Plus's side: needs a signed-in PSN account (npsso), mirrors
+  // useLibraryScreen.ts's own loadPsPlusGames exactly (same cache, same
+  // pscloud-only filter -- PS Now/PS3/PS4 titles aren't reachable from this
+  // app's PS Plus stream page).
+  React.useEffect(() => {
+    if (!isPsPlusSignedIn()) {
+      return;
+    }
+    const npsso = getNpsso();
+    if (!npsso) {
+      return;
+    }
+    fetchUnifiedCatalog(npsso, undefined, false)
+      .then(result => {
+        const games = result.games.filter(
+          g => g.streamServiceType === 'pscloud',
+        );
+        if (games.length > 0) {
+          setPsPlusGames(games);
+          saveCatalogGames(games);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const xcloudByProductId = React.useMemo(() => {
     const map = new Map<string, any>();
     xcloudTitles.forEach(item => {
@@ -261,10 +334,18 @@ function StoreScreen() {
       generation: number,
     ) => {
       const genRef =
-        nextProvider === 'xcloud' ? xboxGenerationRef : steamGenerationRef;
+        nextProvider === 'xcloud'
+          ? xboxGenerationRef
+          : nextProvider === 'gfn'
+          ? steamGenerationRef
+          : psStoreGenerationRef;
       const stillCurrent = () => genRef.current === generation;
       const setProviderLoading =
-        nextProvider === 'xcloud' ? setXboxLoading : setSteamLoading;
+        nextProvider === 'xcloud'
+          ? setXboxLoading
+          : nextProvider === 'gfn'
+          ? setSteamLoading
+          : setPsStoreLoading;
       if (nextProvider === 'xcloud') {
         const sort: XboxBrowseSort =
           nextKind === 'best' ? 'MostPopular desc' : 'ReleaseDate desc';
@@ -309,7 +390,7 @@ function StoreScreen() {
               setProviderLoading(false);
             }
           });
-      } else {
+      } else if (nextProvider === 'gfn') {
         const kind = nextKind === 'best' ? 'topsellers' : 'new';
         setSteamHasMore(true);
         if (!force) {
@@ -350,6 +431,39 @@ function StoreScreen() {
               setProviderLoading(false);
             }
           });
+      } else {
+        const kind = nextKind === 'best' ? 'topsellers' : 'new';
+        setPsStoreHasMore(true);
+        if (!force) {
+          const fresh = getFreshPsStoreChart(kind, getPsStoreLocale());
+          if (fresh) {
+            setPsStoreEntries(dedupeByKey(fresh, e => e.productId));
+            setPsStoreNextOffset(fresh.length);
+            setProviderLoading(false);
+            return;
+          }
+        }
+        setProviderLoading(true);
+        fetchPsStoreChart(kind, 0)
+          .then(page => {
+            if (!stillCurrent()) {
+              return;
+            }
+            setPsStoreEntries(dedupeByKey(page.entries, e => e.productId));
+            setPsStoreNextOffset(page.entries.length);
+            setPsStoreHasMore(
+              hasMorePages(
+                page.entries.length,
+                page.entries.length,
+                page.totalCount,
+              ),
+            );
+          })
+          .finally(() => {
+            if (stillCurrent()) {
+              setProviderLoading(false);
+            }
+          });
       }
     },
     [xboxLocale, steamCc, steamLanguage],
@@ -370,12 +484,18 @@ function StoreScreen() {
     const alreadyLoaded =
       provider === 'xcloud'
         ? xboxLoadedKind === chartKind
-        : steamLoadedKind === chartKind;
+        : provider === 'gfn'
+        ? steamLoadedKind === chartKind
+        : psStoreLoadedKind === chartKind;
     if (alreadyLoaded) {
       return;
     }
     const genRef =
-      provider === 'xcloud' ? xboxGenerationRef : steamGenerationRef;
+      provider === 'xcloud'
+        ? xboxGenerationRef
+        : provider === 'gfn'
+        ? steamGenerationRef
+        : psStoreGenerationRef;
     genRef.current += 1;
     const generation = genRef.current;
     if (provider === 'xcloud') {
@@ -383,19 +503,35 @@ function StoreScreen() {
       setXboxNextCT(undefined);
       setXboxHasMore(true);
       setXboxLoadedKind(chartKind);
-    } else {
+    } else if (provider === 'gfn') {
       setSteamEntries([]);
       setSteamHasMore(true);
       setSteamNextStart(0);
       setSteamLoadedKind(chartKind);
+    } else {
+      setPsStoreEntries([]);
+      setPsStoreHasMore(true);
+      setPsStoreNextOffset(0);
+      setPsStoreLoadedKind(chartKind);
     }
     loadChart(provider, chartKind, false, generation);
-  }, [provider, chartKind, loadChart, xboxLoadedKind, steamLoadedKind]);
+  }, [
+    provider,
+    chartKind,
+    loadChart,
+    xboxLoadedKind,
+    steamLoadedKind,
+    psStoreLoadedKind,
+  ]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     const genRef =
-      provider === 'xcloud' ? xboxGenerationRef : steamGenerationRef;
+      provider === 'xcloud'
+        ? xboxGenerationRef
+        : provider === 'gfn'
+        ? steamGenerationRef
+        : psStoreGenerationRef;
     loadChart(provider, chartKind, true, genRef.current);
     setRefreshing(false);
   }, [provider, chartKind, loadChart]);
@@ -408,6 +544,16 @@ function StoreScreen() {
           .filter((id): id is string => !!id),
       ),
     [gfnFullCatalog],
+  );
+
+  const psPlusStoreProductIds = React.useMemo(
+    () =>
+      new Set(
+        psPlusGames
+          .map(game => game.storeProductId)
+          .filter((id): id is string => !!id),
+      ),
+    [psPlusGames],
   );
 
   // Both providers' charts can add a page that grows the raw list without
@@ -490,7 +636,7 @@ function StoreScreen() {
           setXboxLoadingMore(false);
         }
       }
-    } else {
+    } else if (provider === 'gfn') {
       const generation = steamGenerationRef.current;
       const stale = () => steamGenerationRef.current !== generation;
       if (!steamHasMore || steamNextStart >= MAX_CHART_ENTRIES) {
@@ -546,6 +692,61 @@ function StoreScreen() {
           setSteamLoadingMore(false);
         }
       }
+    } else {
+      const generation = psStoreGenerationRef.current;
+      const stale = () => psStoreGenerationRef.current !== generation;
+      if (!psStoreHasMore || psStoreNextOffset >= MAX_CHART_ENTRIES) {
+        return;
+      }
+      const kind = chartKind === 'best' ? 'topsellers' : 'new';
+      const isVisibleMatch = (entry: PsStoreChartEntry): boolean => {
+        if (
+          psPlusAvailableOnly &&
+          !psPlusStoreProductIds.has(entry.productId)
+        ) {
+          return false;
+        }
+        return saleOnly ? !!entry.originalPrice : true;
+      };
+
+      loadMoreInFlightRef.current = true;
+      setPsStoreLoadingMore(true);
+      try {
+        // Same reasoning as the Steam branch above -- the category's own
+        // "Best Selling" ranking can reshuffle between the several
+        // sequential requests one loadMore call can make.
+        const seenProductIds = new Set(psStoreEntries.map(e => e.productId));
+        let offset = psStoreNextOffset;
+        let more = true;
+        let foundVisibleRow = false;
+        while (!foundVisibleRow && more && offset < MAX_CHART_ENTRIES) {
+          const page = await fetchPsStoreChart(kind, offset);
+          if (stale()) {
+            return;
+          }
+          if (page.entries.length === 0) {
+            more = false;
+            break;
+          }
+          offset += page.entries.length;
+          more = hasMorePages(page.entries.length, offset, page.totalCount);
+          const newEntries = page.entries.filter(
+            e => !seenProductIds.has(e.productId),
+          );
+          newEntries.forEach(e => seenProductIds.add(e.productId));
+          foundVisibleRow = newEntries.some(isVisibleMatch);
+          if (newEntries.length > 0) {
+            setPsStoreEntries(prev => [...prev, ...newEntries]);
+          }
+        }
+        setPsStoreNextOffset(offset);
+        setPsStoreHasMore(more && offset < MAX_CHART_ENTRIES);
+      } finally {
+        loadMoreInFlightRef.current = false;
+        if (!stale()) {
+          setPsStoreLoadingMore(false);
+        }
+      }
     }
   }, [
     provider,
@@ -564,6 +765,11 @@ function StoreScreen() {
     saleOnly,
     gfnAvailableOnly,
     gfnSteamAppIds,
+    psStoreEntries,
+    psStoreHasMore,
+    psStoreNextOffset,
+    psPlusAvailableOnly,
+    psPlusStoreProductIds,
     loading,
   ]);
 
@@ -574,7 +780,9 @@ function StoreScreen() {
     (): StoreRow[] =>
       provider === 'xcloud'
         ? buildXboxStoreRows(xboxProductIds, xcloudByProductId, xboxPriceMap)
-        : buildGfnStoreRows(steamEntries, gfnFullCatalog),
+        : provider === 'gfn'
+        ? buildGfnStoreRows(steamEntries, gfnFullCatalog)
+        : buildPsStoreRows(psStoreEntries, psPlusGames),
     [
       provider,
       xboxProductIds,
@@ -582,6 +790,8 @@ function StoreScreen() {
       xboxPriceMap,
       steamEntries,
       gfnFullCatalog,
+      psStoreEntries,
+      psPlusGames,
     ],
   );
 
@@ -593,8 +803,11 @@ function StoreScreen() {
     if (provider === 'gfn' && gfnAvailableOnly) {
       list = list.filter(row => !!row.catalogTitle);
     }
+    if (provider === 'psstore' && psPlusAvailableOnly) {
+      list = list.filter(row => !!row.catalogTitle);
+    }
     return list;
-  }, [rows, saleOnly, provider, gfnAvailableOnly]);
+  }, [rows, saleOnly, provider, gfnAvailableOnly, psPlusAvailableOnly]);
 
   // The initial page-0 fetch above only ever tries one page, and it's common
   // for that single page to match few or zero cloud-playable titles --
@@ -618,7 +831,9 @@ function StoreScreen() {
   const catalogReady =
     provider === 'xcloud'
       ? xcloudTitles.length > 0
-      : !gfnAvailableOnly || gfnFullCatalog.length > 0;
+      : provider === 'gfn'
+      ? !gfnAvailableOnly || gfnFullCatalog.length > 0
+      : !psPlusAvailableOnly || psPlusGames.length > 0;
   React.useEffect(() => {
     if (
       loading ||
@@ -628,7 +843,13 @@ function StoreScreen() {
     ) {
       return;
     }
-    if (provider === 'xcloud' ? !xboxHasMore : !steamHasMore) {
+    const hasMore =
+      provider === 'xcloud'
+        ? xboxHasMore
+        : provider === 'gfn'
+        ? steamHasMore
+        : psStoreHasMore;
+    if (!hasMore) {
       return;
     }
     loadMore();
@@ -640,6 +861,7 @@ function StoreScreen() {
     provider,
     xboxHasMore,
     steamHasMore,
+    psStoreHasMore,
     loadMore,
   ]);
 
@@ -656,9 +878,9 @@ function StoreScreen() {
   );
 
   const renderRow = ({item}: {item: StoreRow}) => {
-    // Only possible on the GFN/Steam tab (see StoreRow's own comment) --
-    // still shown so the chart reads as the real, complete Steam ranking,
-    // just dimmed and inert since there's nothing to launch.
+    // Only possible on the GFN/Steam or PS Store tab (see StoreRow's own
+    // comment) -- still shown so the chart reads as the real, complete
+    // ranking, just dimmed and inert since there's nothing to launch.
     const unavailable = !item.catalogTitle;
     return (
       <Pressable
@@ -735,6 +957,23 @@ function StoreScreen() {
               {t('StoreTabSteam')}
             </Text>
           </Pressable>
+          <Pressable
+            style={[
+              styles.tab,
+              provider === 'psstore' && {
+                backgroundColor: PS_ACCENT,
+                borderColor: PS_ACCENT,
+              },
+            ]}
+            onPress={() => setProvider('psstore')}>
+            <Text
+              style={[
+                styles.tabText,
+                provider === 'psstore' && styles.tabTextOn,
+              ]}>
+              {t('StoreTabPsStore')}
+            </Text>
+          </Pressable>
         </View>
         <View style={styles.kindRow}>
           <Pressable
@@ -782,8 +1021,24 @@ function StoreScreen() {
               </Text>
             </Pressable>
           )}
+          {provider === 'psstore' && (
+            <Pressable
+              style={[
+                styles.kindChip,
+                psPlusAvailableOnly && styles.kindOnPsPlusAvailable,
+              ]}
+              onPress={() => setPsPlusAvailableOnly(prev => !prev)}>
+              <Text
+                style={[
+                  styles.kindText,
+                  psPlusAvailableOnly && styles.kindTextOnPsPlusAvailable,
+                ]}>
+                {t('StoreFilterPsPlusAvailableOnly')}
+              </Text>
+            </Pressable>
+          )}
         </View>
-        {(provider === 'xcloud' || gfnAvailableOnly) && (
+        {(provider === 'xcloud' || gfnAvailableOnly || psPlusAvailableOnly) && (
           <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
         )}
       </View>
@@ -845,10 +1100,12 @@ const styles = StyleSheet.create({
   kindOn: {backgroundColor: 'rgba(232,179,74,0.9)'},
   kindOnSale: {backgroundColor: SALE_ACCENT},
   kindOnGfnAvailable: {backgroundColor: NVIDIA_ACCENT},
+  kindOnPsPlusAvailable: {backgroundColor: PS_ACCENT},
   kindText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
   kindTextOn: {color: '#2B1D02'},
   kindTextOnSale: {color: '#2B1200'},
   kindTextOnGfnAvailable: {color: '#0B2B00'},
+  kindTextOnPsPlusAvailable: {color: '#EAFFF0'},
   subnote: {fontSize: 11, color: '#5C6963'},
   list: {paddingHorizontal: 14, paddingBottom: 24},
   row: {
