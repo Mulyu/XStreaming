@@ -27,6 +27,8 @@ import {
   getPrice,
   fetchSteamPrices,
   SteamPriceInfo,
+  fetchPsStorePrice,
+  PsStorePriceInfo,
 } from '../../../entities/catalog-title';
 import {
   launchWithProvider,
@@ -72,6 +74,8 @@ export function useLibraryTitleDetail() {
   const [steamPrices, setSteamPrices] = React.useState<
     Record<string, SteamPriceInfo>
   >({});
+  const [psStorePrice, setPsStorePrice] =
+    React.useState<PsStorePriceInfo | null>(null);
 
   const gameLanguage = getSettings().preferred_game_language;
   const deviceRegion = getSystemRegion();
@@ -181,6 +185,27 @@ export function useLibraryTitleDetail() {
     };
   }, [catalogTitle?.gfn, deviceRegion]);
 
+  // PS Store's purchase price for this title, confirmed live against
+  // store.playstation.com's own web GraphQL API -- no auth needed (see
+  // psStorePrice.ts). Only makes sense when the title isn't already owned or
+  // in the current PS Plus catalog, same as Steam/xCloud's price rows.
+  React.useEffect(() => {
+    const conceptId = catalogTitle?.psplus?.raw?.conceptId;
+    setPsStorePrice(null);
+    if (!conceptId) {
+      return;
+    }
+    let cancelled = false;
+    fetchPsStorePrice(conceptId).then(result => {
+      if (!cancelled) {
+        setPsStorePrice(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [catalogTitle?.psplus?.raw]);
+
   const playXcloud = () => {
     launchWithProvider(navigation, catalogTitle, {provider: 'xcloud'});
   };
@@ -268,6 +293,7 @@ export function useLibraryTitleDetail() {
     details,
     gfnDetails,
     steamPrices,
+    psStorePrice,
     preference,
     isFavorite,
     toggleFavorite,

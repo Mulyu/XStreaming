@@ -114,3 +114,11 @@ export {
 } from './api/gfnCatalog';
 
 export {getGfnLocaleSlug, getGfnGraphqlLocale} from './api/gfnLocale';
+
+export type {PsStorePriceInfo} from './api/psStorePrice';
+export {
+  fetchPsStorePrice,
+  isPsStoreSaleForDisplay,
+  getPsStoreUrl,
+} from './api/psStorePrice';
+export {getPsStoreLocale, getPsStoreUrlSlug} from './api/psStoreLocale';
