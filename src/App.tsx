@@ -18,6 +18,9 @@ import {
   adaptNavigationTheme,
 } from 'react-native-paper';
 
+// TEMPORARY diagnostic aid -- see its own file comment.
+import AnrDiagnosticsOverlay from './shared/debug/AnrDiagnosticsOverlay';
+
 import {createStackNavigator} from '@react-navigation/stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -519,6 +522,7 @@ function App() {
               </Dialog.Actions>
             </Dialog>
           </Portal>
+          <AnrDiagnosticsOverlay />
         </PaperProvider>
       </Provider>
       <SystemBars style="light" hidden={false} />
