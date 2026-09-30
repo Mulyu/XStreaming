@@ -1,5 +1,10 @@
 import React from 'react';
-import {Alert, NativeEventEmitter, NativeModules} from 'react-native';
+import {
+  Alert,
+  Dimensions,
+  NativeEventEmitter,
+  NativeModules,
+} from 'react-native';
 import Orientation from 'react-native-orientation-locker';
 import {useTranslation} from 'react-i18next';
 import {
@@ -9,7 +14,23 @@ import {
   getNpsso,
 } from '../../../features/ps-plus-session';
 import {GAMEPAD_MAPING} from '../../../entities/gamepad';
-import {getJoystickMode} from '../../../features/controller-customization';
+import {
+  getJoystickMode,
+  setJoystickMode,
+  getSwipeConfig,
+  setSwipeConfig,
+  getSensorConfig,
+  setSensorConfig,
+  getVirtualGamepadLayouts as getGamepadLayouts,
+  saveVirtualGamepadLayout as saveGamepadLayout,
+  deleteVirtualGamepadLayout as deleteGamepadProfile,
+  buildDefaultLayout,
+} from '../../../features/controller-customization';
+import type {
+  ButtonConfig,
+  SensorConfig,
+  SwipeConfig,
+} from '../../../features/controller-customization';
 import {getSettings, saveSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
 
@@ -168,18 +189,17 @@ export function usePsPlusStream(navigation: any, route: any) {
   const [activeProfile, setActiveProfile] = React.useState(
     () => getSettings().custom_virtual_gamepad || '',
   );
+  // Bumped by the in-place gamepad editor below on every profile switch/
+  // create/delete/save, so activeJoystickMode (and the on-screen layout
+  // itself, via PsPlusStreamView's refreshKey) re-reads storage even when
+  // the active profile's *name* didn't change -- e.g. editing the currently-
+  // active profile's own layout or joystick mode in place.
+  const [gamepadLayoutVersion, setGamepadLayoutVersion] = React.useState(0);
   const joystickMode = React.useMemo(
     () => getJoystickMode(activeProfile) ?? 1,
-    [activeProfile],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeProfile, gamepadLayoutVersion],
   );
-  // Picking up a layout renamed/deleted while this screen already has the
-  // rail open (via the same CustomGamepad settings screen every other
-  // provider uses) needs a re-read on return, not just at mount.
-  React.useEffect(() => {
-    if (!showControlRail) {
-      setActiveProfile(getSettings().custom_virtual_gamepad || '');
-    }
-  }, [showControlRail]);
 
   const [vibrationEnabled, setVibrationEnabled] = React.useState(
     () => getSettings().vibration,
@@ -197,10 +217,122 @@ export function usePsPlusStream(navigation: any, route: any) {
     [],
   );
 
+  // In-place gamepad-layout editor: renders the shared VirtualGamepadEditor
+  // widget as an overlay within this same stream screen (native-stream's own
+  // pattern), rather than navigating to the separate CustomGamepad screen.
+  // That screen's onSave/onCancel hardcode a return to the out-of-game
+  // Settings flow, and navigating away from this screen at all destroys (and
+  // on return, recreates) the native video Surface -- surfaceDestroyed()
+  // synchronously blocks on kill_decoder()'s AMediaCodec_stop()+thread_join
+  // on the UI thread, which is what made the app appear to freeze whenever a
+  // player opened the editor mid-game.
+  const [showGamepadEditor, setShowGamepadEditor] = React.useState(false);
+  const [editorProfile, setEditorProfile] = React.useState('');
+  const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
+
+  const refreshGamepadProfiles = React.useCallback(() => {
+    setGamepadProfiles(Object.keys(getGamepadLayouts()));
+  }, []);
+
   const onEditGamepadLayout = React.useCallback(() => {
     closeControlRail();
-    navigation.navigate('CustomGamepad');
-  }, [closeControlRail, navigation]);
+    refreshGamepadProfiles();
+    setEditorProfile(activeProfile);
+    setShowGamepadEditor(true);
+  }, [closeControlRail, refreshGamepadProfiles, activeProfile]);
+
+  const onCancelGamepadEditor = React.useCallback(() => {
+    setShowGamepadEditor(false);
+  }, []);
+
+  // Switch (or newly select) the live/active layout; '' selects the built-in
+  // Default. Mirrors native-stream's own applyActiveProfile.
+  const applyActiveProfile = React.useCallback((name: string) => {
+    saveSettings({...getSettings(), custom_virtual_gamepad: name});
+    setActiveProfile(name);
+    setEditorProfile(name);
+    setGamepadLayoutVersion(v => v + 1);
+  }, []);
+
+  const onSwitchGamepadProfile = React.useCallback(
+    (name: string) => applyActiveProfile(name),
+    [applyActiveProfile],
+  );
+
+  const onCreateGamepadProfile = React.useCallback(
+    (rawName: string, copyFrom = '') => {
+      const name = rawName.trim();
+      if (!name) {
+        return;
+      }
+      const layouts = getGamepadLayouts();
+      if (!layouts[name]) {
+        const source = copyFrom && layouts[copyFrom];
+        const seed: ButtonConfig[] = Array.isArray(source)
+          ? source.map((button: ButtonConfig) => ({...button}))
+          : (() => {
+              const {width, height} = Dimensions.get('window');
+              return buildDefaultLayout(width, height);
+            })();
+        saveGamepadLayout(name, seed);
+      }
+      refreshGamepadProfiles();
+      applyActiveProfile(name);
+    },
+    [applyActiveProfile, refreshGamepadProfiles],
+  );
+
+  const onDeleteGamepadProfile = React.useCallback(
+    (name: string) => {
+      if (!name) {
+        return;
+      }
+      deleteGamepadProfile(name);
+      refreshGamepadProfiles();
+      // Fall back to the built-in Default after removing the active profile.
+      applyActiveProfile('');
+    },
+    [applyActiveProfile, refreshGamepadProfiles],
+  );
+
+  const onSaveGamepadLayout = React.useCallback(
+    (
+      layout: ButtonConfig[],
+      swipe: SwipeConfig,
+      nextJoystickMode: number,
+      sensor: SensorConfig,
+    ) => {
+      const profileName = editorProfile || activeProfile;
+      saveGamepadLayout(profileName, layout);
+      setSwipeConfig(profileName, swipe);
+      setJoystickMode(profileName, nextJoystickMode);
+      setSensorConfig(profileName, sensor);
+      // A profile edited before anything was ever made active (e.g. the very
+      // first customization) becomes the active one.
+      const current = getSettings();
+      if (!current.custom_virtual_gamepad && profileName) {
+        saveSettings({...current, custom_virtual_gamepad: profileName});
+        setActiveProfile(profileName);
+      }
+      setGamepadLayoutVersion(v => v + 1);
+      setShowGamepadEditor(false);
+    },
+    [editorProfile, activeProfile],
+  );
+
+  // The profile the editor is (about to be) open for -- its saved swipe-aim/
+  // gyro-aim config, so opening the editor shows what's actually configured
+  // instead of resetting to defaults on every save.
+  const editorSwipeConfig = React.useMemo(
+    () => getSwipeConfig(editorProfile || activeProfile),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editorProfile, activeProfile, gamepadLayoutVersion],
+  );
+  const editorSensorConfig = React.useMemo(
+    () => getSensorConfig(editorProfile || activeProfile),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editorProfile, activeProfile, gamepadLayoutVersion],
+  );
 
   React.useEffect(() => {
     FullScreenManager.immersiveModeOn();
@@ -636,6 +768,17 @@ export function usePsPlusStream(navigation: any, route: any) {
     audioGain,
     onAudioGainChange,
     onEditGamepadLayout,
+    showGamepadEditor,
+    editorProfile,
+    gamepadProfiles,
+    editorSwipeConfig,
+    editorSensorConfig,
+    onSaveGamepadLayout,
+    onCancelGamepadEditor,
+    onSwitchGamepadProfile,
+    onCreateGamepadProfile,
+    onDeleteGamepadProfile,
+    gamepadLayoutVersion,
     onRailDisconnect,
   };
 }
