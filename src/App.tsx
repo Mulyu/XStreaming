@@ -54,7 +54,6 @@ import CustomGamepadScreen from './pages/custom-gamepad';
 import Ds5SettingsScreen from './pages/ds5-settings';
 import HistoryScreen from './pages/history';
 import PsPlusLoginScreen from './pages/ps-plus-login';
-import PsPlusLibraryScreen from './pages/ps-plus-library';
 import PsPlusStreamScreen from './pages/ps-plus-stream';
 import updater from './shared/lib/updater';
 import {
@@ -153,7 +152,6 @@ const VirtualGamepadSettingsBackgroundScreen = withPageBackground(
 );
 const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const PsPlusLoginBackgroundScreen = withPageBackground(PsPlusLoginScreen);
-const PsPlusLibraryBackgroundScreen = withPageBackground(PsPlusLibraryScreen);
 const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 
 // The two hub screens live in a bottom-tab navigator so the tab bar persists
@@ -472,11 +470,6 @@ function App() {
                   name="PsPlusLogin"
                   component={PsPlusLoginBackgroundScreen}
                   options={{title: t('PsPlusLogin')}}
-                />
-                <RootStack.Screen
-                  name="PsPlusLibrary"
-                  component={PsPlusLibraryBackgroundScreen}
-                  options={{title: t('PsPlusLibraryTitle')}}
                 />
                 <RootStack.Screen
                   name="PsPlusStream"

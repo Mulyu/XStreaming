@@ -1,6 +1,5 @@
 import React from 'react';
 import {Alert, ToastAndroid} from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
 import CookieManager from '@react-native-cookies/cookies';
@@ -24,7 +23,6 @@ import {useGfnSignIn} from '../../../features/gfn-auth';
 import {
   isPsPlusSignedIn,
   clearNpsso,
-  getNpsso,
   clearCatalogGames,
 } from '../../../features/ps-plus-session';
 import {getValidGfnJwt, getValidGfnUserId} from '../../../entities/gfn-account';
@@ -498,61 +496,11 @@ export function useSettingsScreen(navigation: any) {
     }, 1000);
   };
 
-  // Debug aid so the npsso token (and whatever datacenter pings this device
-  // has measured so far, see psplus_datacenter_pings) can be handed over
-  // temporarily for off-device investigation, without the user having to
-  // dig it out of app storage themselves. npsso is a real, live PSN session
-  // credential -- this only ever copies it locally to the clipboard, never
-  // sends it anywhere on its own.
-  const handleCopyPsPlusDebugInfo = () => {
-    const npsso = getNpsso();
-    if (!npsso) {
-      ToastAndroid.show(t('PsPlusDebugCopyFailed'), ToastAndroid.SHORT);
-      return;
-    }
-    const payload = {
-      npsso,
-      datacenterPings: getSettings().psplus_datacenter_pings || null,
-    };
-    Clipboard.setString(JSON.stringify(payload));
-    ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
-  };
-
   const gfnNoOpFlag = t('FlagGfnNoOp');
   const gfnRegionOptions = [
     {value: '', text: t('Auto')},
     ...gfnRegions.map(r => ({value: r.url, text: r.name})),
   ];
-
-  // Datacenters can't be listed ahead of a connection attempt (Gaikai's
-  // /datacenters endpoint is session-scoped), so this picker is built from
-  // whatever's been measured across prior attempts instead of a pre-fetch
-  // like gfnRegionOptions -- see settings.psplus_datacenter_pings.
-  const psPlusDatacenterOptions = (() => {
-    const options: {value: string; text: string}[] = [
-      {value: '', text: t('Auto')},
-    ];
-    try {
-      const pings = JSON.parse(settings.psplus_datacenter_pings || '[]');
-      if (Array.isArray(pings)) {
-        for (const p of pings) {
-          const name = p?.dataCenter;
-          if (!name || typeof name !== 'string') {
-            continue;
-          }
-          const rtt = typeof p?.rtt === 'number' ? p.rtt : null;
-          const text =
-            p?.measured && rtt != null && rtt < 999
-              ? `${name} (${rtt}ms)`
-              : name;
-          options.push({value: name, text});
-        }
-      }
-    } catch {
-      // No measurements yet, or a malformed stored value -- Auto-only.
-    }
-    return options;
-  })();
 
   return {
     t,
@@ -572,7 +520,6 @@ export function useSettingsScreen(navigation: any) {
     signalingCloudValue,
     gfnNoOpFlag,
     gfnRegionOptions,
-    psPlusDatacenterOptions,
     xcloudCatalogDescription: xcloudCatalogDescription(),
     gfnCatalogDescription: gfnCatalogDescription(),
     gfnPlaytimeDescription: gfnPlaytimeDescription(),
@@ -587,8 +534,6 @@ export function useSettingsScreen(navigation: any) {
     onItemPress: handleItemPress,
     onGfnAccountPress: handleGfnAccountPress,
     onPsPlusAccountPress: handlePsPlusAccountPress,
-    onNavigatePsPlusLibrary: () => navigation.navigate('PsPlusLibrary'),
-    onCopyPsPlusDebugInfo: handleCopyPsPlusDebugInfo,
     onXcloudAccountPress: handleXcloudAccountPress,
     onXcloudCatalogReload: handleXcloudCatalogReload,
     onGfnCatalogReload: handleGfnCatalogReload,

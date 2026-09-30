@@ -601,7 +601,6 @@ export function usePsPlusStream(navigation: any, route: any) {
         videoSettings.psplus_bitrate_mode === 'custom'
           ? videoSettings.psplus_bitrate_kbps
           : undefined,
-      forcedDatacenter: videoSettings.psplus_datacenter || undefined,
       priorDatacentersJson: videoSettings.psplus_datacenter_pings || undefined,
       audioGain: videoSettings.audio_gain,
     });

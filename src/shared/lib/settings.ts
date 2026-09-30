@@ -75,18 +75,11 @@ export type Settings = {
   /** Custom PS Plus bitrate in kbps, used when psplus_bitrate_mode is 'custom'. */
   psplus_bitrate_kbps: number;
   /**
-   * Forced PS Plus datacenter (Gaikai `dataCenter` name), empty = auto
-   * (lowest-measured-RTT datacenter under the 80ms auto-select quality
-   * gate). Forcing bypasses that gate entirely -- the picked datacenter is
-   * used regardless of its measured RTT.
-   */
-  psplus_datacenter: string;
-  /**
    * Every datacenter this device has measured a ping for across prior PS
    * Plus connection attempts (Gaikai's own ping-results JSON, merged run to
-   * run) -- powers the Settings datacenter picker and is fed back as
-   * cc_gaikai_allocate's priorDatacentersJson so a datacenter doesn't drop
-   * out of the list just because a later attempt didn't measure it again.
+   * run) -- fed back as cc_gaikai_allocate's priorDatacentersJson so a
+   * datacenter doesn't drop out of the auto-select pool just because a
+   * later attempt didn't measure it again.
    */
   psplus_datacenter_pings: string;
 };
@@ -141,7 +134,6 @@ const defaultSettings: Settings = {
   psplus_fps: 60,
   psplus_bitrate_mode: 'auto',
   psplus_bitrate_kbps: 15000,
-  psplus_datacenter: '',
   psplus_datacenter_pings: '',
 };
 

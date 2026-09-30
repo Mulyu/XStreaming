@@ -109,7 +109,6 @@ export default {
     CommonSettings: '共通',
     SectionAccount: 'アカウント',
     SectionVideo: '映像',
-    SectionDebug: 'デバッグ',
     SectionRegionSignaling: 'リージョン・シグナリング',
     SectionSignInLanguage: 'サインイン・言語',
     SectionControllers: 'コントローラー',
@@ -263,11 +262,7 @@ export default {
     PsPlusAccountSignedOutDesc: '未サインイン — タップしてサインイン',
     PsPlusSignOutConfirm:
       'この端末でPlayStation Networkからサインアウトしますか？',
-    PsPlusLibraryTitle: 'PS Plusライブラリ',
-    PsPlusBrowseLibraryDesc: 'クラウドストリーミング対応のPS Plusゲームを見る',
     NoResults: '検索・フィルタ条件に一致するゲームがありません',
-    PsPlusSignInPrompt:
-      'PlayStation Networkアカウントにサインインすると、クラウドストリーミング対応のPS Plusゲームを見られます。',
     SignOut: 'サインアウト',
     'Failed to connect': '接続に失敗しました',
     'Stream ended': 'ストリーミングが終了しました',
@@ -311,17 +306,6 @@ export default {
     PsPlusBitrateTitle: 'ビットレート',
     PsPlusBitrateDesc:
       'PS Plusクラウドストリーミングのビットレートを設定します(注:回線が弱い場合、ビットレートを下げると改善することがあります)。',
-    PsPlusDatacenterTitle: 'データセンター',
-    PsPlusDatacenterDesc:
-      '80ms以内の最寄りデータセンターの代わりに、特定のデータセンターを固定します。80msの自動選択の上限を完全にバイパスしますが、通信品質が悪化する可能性があります。一覧には過去の接続試行で測定済みのデータセンターのみ表示されます。起動に失敗する場合は自動に戻してみてください。',
-    PsPlusDatacenterManualTitle: 'データセンターコード(手動入力)',
-    PsPlusDatacenterManualDesc:
-      '過去の接続試行で一度も提示されていないコードでも自由に試せます。そのコードが、今回の接続でサーバー側から実際に候補として返された場合のみ機能します。候補に無ければ"not available"エラーで即座に失敗するだけで、他に副作用はないので試すのは安全です。',
-    PsPlusCopyDebugInfoTitle: 'デバッグ情報をコピー',
-    PsPlusCopyDebugInfoDesc:
-      'トラブルシューティング用に、PSNセッショントークンを含む機密情報をクリップボードにコピーします。信頼できる相手以外とは共有しないでください。',
-    PsPlusDebugCopyFailed:
-      'サインインしていないため、コピーする情報がありません',
     GfnPlaytimeTitle: '今月の残りプレイ時間',
     GfnPlaytimeSignedOutDesc:
       'サインインすると、今の請求期間内の残りプレイ時間を確認できます。',

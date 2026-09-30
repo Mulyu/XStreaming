@@ -112,7 +112,6 @@ export default {
     CommonSettings: 'Common',
     SectionAccount: 'Account',
     SectionVideo: 'Video',
-    SectionDebug: 'Debug',
     SectionRegionSignaling: 'Region & Signaling',
     SectionSignInLanguage: 'Sign-in & Language',
     SectionControllers: 'Controllers',
@@ -267,11 +266,7 @@ export default {
     PsPlusSignedIn: 'Signed in',
     PsPlusAccountSignedOutDesc: 'Not signed in — tap to sign in',
     PsPlusSignOutConfirm: 'Sign out of PlayStation Network on this device?',
-    PsPlusLibraryTitle: 'PS Plus library',
-    PsPlusBrowseLibraryDesc: 'Browse cloud-streamable PS Plus games',
     NoResults: 'No games match your search/filters',
-    PsPlusSignInPrompt:
-      'Sign in with your PlayStation Network account to browse PS Plus cloud-streaming games.',
     SignOut: 'Sign out',
     'Failed to connect': 'Failed to connect',
     'Stream ended': 'Stream ended',
@@ -314,16 +309,6 @@ export default {
     PsPlusBitrateTitle: 'Bitrate',
     PsPlusBitrateDesc:
       'Set the streaming bitrate for PS Plus cloud streaming (Note: a lower bitrate can help on weaker networks).',
-    PsPlusDatacenterTitle: 'Datacenter',
-    PsPlusDatacenterDesc:
-      'Force a specific datacenter instead of the closest one under 80ms. Bypasses the 80ms auto-select limit entirely, at the cost of possibly worse quality -- only datacenters measured on a prior connection attempt are listed. If a title fails to start, try switching back to Auto.',
-    PsPlusDatacenterManualTitle: 'Datacenter code (manual)',
-    PsPlusDatacenterManualDesc:
-      'Type any datacenter code to try, even one never offered by a prior connection attempt. It can only work if the server happens to include it for this specific attempt -- otherwise the connection fails immediately with "not available" (safe to try, no other side effect).',
-    PsPlusCopyDebugInfoTitle: 'Copy debug info',
-    PsPlusCopyDebugInfoDesc:
-      'Copies sensitive debug data (including your PSN session token) to the clipboard for troubleshooting. Only share it with someone you trust.',
-    PsPlusDebugCopyFailed: 'Not signed in, nothing to copy',
     GfnPlaytimeTitle: 'Playtime remaining this month',
     GfnPlaytimeSignedOutDesc:
       'Sign in to see how much playtime is left in your current billing period.',
