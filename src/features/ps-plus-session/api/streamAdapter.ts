@@ -52,10 +52,16 @@ export const gpStateToPsPlusInput = (gp: any): ControllerStateInput => {
     l2State: normalizeTriggerToUint8(num(gp?.LeftTrigger)),
     r2State: normalizeTriggerToUint8(num(gp?.RightTrigger)),
     leftX: normalizeAxisToInt16(num(gp?.LeftThumbXAxis)),
-    // gpState sticks are screen-down positive; DualSense wants up positive.
-    leftY: normalizeAxisToInt16(-num(gp?.LeftThumbYAxis)),
+    // Unlike XInput/Moonlight (xCloud's and GFN's streamAdapters negate this
+    // same gpState field for exactly that reason -- see Packet/index.ts and
+    // gfn-session/api/streamAdapter.ts), a real DualShock/DualSense reports
+    // its left stick Y HID axis screen-down positive already, matching
+    // gpState's own convention -- no negation here. Confirmed by an actual
+    // in-game report of inverted up/down after this file copied the negated
+    // xCloud/GFN formula verbatim without accounting for that difference.
+    leftY: normalizeAxisToInt16(num(gp?.LeftThumbYAxis)),
     rightX: normalizeAxisToInt16(num(gp?.RightThumbXAxis)),
-    rightY: normalizeAxisToInt16(-num(gp?.RightThumbYAxis)),
+    rightY: normalizeAxisToInt16(num(gp?.RightThumbYAxis)),
   };
 };
 
