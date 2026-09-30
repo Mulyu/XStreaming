@@ -288,6 +288,7 @@ export default {
       '現在の通信速度ではクラウドストリーミングをご利用いただけません(測定値{{rtt}}ms、必要な応答速度は80ms以下です)。より高速で安定したネットワークでお試しください。',
     PlayOn: 'プレイ先',
     IncludedWithGamePass: 'Game Passに含まれています',
+    PsPlusIncludedDesc: 'PS Plusに含まれています',
     LibraryViewDetails: '詳細を見る',
     LibraryStoreCount: '{{n}}件のストアが連携済み・選択してください',
     RememberedChoice: '記憶済み・タップして変更',

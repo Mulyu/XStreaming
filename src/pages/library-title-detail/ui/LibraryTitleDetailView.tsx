@@ -417,48 +417,57 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             </View>
           )}
 
-          {catalogTitle.psplus && (
-            <View style={styles.providerCard}>
-              <Pressable
-                style={[
-                  styles.providerRow,
-                  !catalogTitle.psplus.isOwned && styles.dimRow,
-                ]}
-                onPress={playPsPlus}>
-                <View
-                  style={[
-                    styles.providerIcon,
-                    catalogTitle.psplus.isOwned
-                      ? styles.psplusIconBg
-                      : styles.dimIconBg,
-                  ]}>
-                  <Text
+          {catalogTitle.psplus &&
+            (() => {
+              // "Owned" (a real purchase/entitlement) and "in the Plus
+              // catalog" (streamable at no extra cost purely from the active
+              // subscription tier, independent of ever having bought it) are
+              // both "playable right now" for this card's purposes -- only
+              // neither means the title still needs the user to act
+              // (subscribe/buy) before it can stream.
+              const psplusAvailable =
+                catalogTitle.psplus.isOwned ||
+                catalogTitle.psplus.inPlusCatalog;
+              const subtitle = catalogTitle.psplus.isOwned
+                ? t('LibraryFilterOwned')
+                : catalogTitle.psplus.inPlusCatalog
+                ? t('PsPlusIncludedDesc')
+                : t('LibraryViewDetails');
+              return (
+                <View style={styles.providerCard}>
+                  <Pressable
                     style={[
-                      styles.providerIconText,
-                      {
-                        color: catalogTitle.psplus.isOwned
-                          ? PS_ACCENT
-                          : DIM_TEXT,
-                      },
-                    ]}>
-                    PS
-                  </Text>
+                      styles.providerRow,
+                      !psplusAvailable && styles.dimRow,
+                    ]}
+                    onPress={playPsPlus}>
+                    <View
+                      style={[
+                        styles.providerIcon,
+                        psplusAvailable
+                          ? styles.psplusIconBg
+                          : styles.dimIconBg,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.providerIconText,
+                          {color: psplusAvailable ? PS_ACCENT : DIM_TEXT},
+                        ]}>
+                        PS
+                      </Text>
+                    </View>
+                    <View style={styles.providerText}>
+                      <Text style={styles.providerName}>PS Plus</Text>
+                      <Text style={styles.providerSub}>{subtitle}</Text>
+                    </View>
+                    {preference?.provider === 'psplus' && (
+                      <Icon source="check-circle" size={18} color={PS_ACCENT} />
+                    )}
+                    <Icon source="chevron-right" size={18} color="#8A9A92" />
+                  </Pressable>
                 </View>
-                <View style={styles.providerText}>
-                  <Text style={styles.providerName}>PS Plus</Text>
-                  <Text style={styles.providerSub}>
-                    {catalogTitle.psplus.isOwned
-                      ? t('LibraryFilterOwned')
-                      : t('LibraryViewDetails')}
-                  </Text>
-                </View>
-                {preference?.provider === 'psplus' && (
-                  <Icon source="check-circle" size={18} color={PS_ACCENT} />
-                )}
-                <Icon source="chevron-right" size={18} color="#8A9A92" />
-              </Pressable>
-            </View>
-          )}
+              );
+            })()}
 
           {preference && (
             <Text style={styles.rememberedNote}>{t('RememberedChoice')}</Text>

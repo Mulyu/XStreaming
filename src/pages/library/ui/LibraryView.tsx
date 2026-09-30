@@ -74,7 +74,7 @@ const LibraryView: React.FC<Props> = ({
     // only light up that one, not every service it merely appears under.
     const xcloudOwned = !!item.xcloud?.hasEntitlement;
     const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
-    const psplusOwned = !!item.psplus?.isOwned;
+    const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
     const discount = saleDiscount(item);
     const isFocused = focusedKey === item.key;
 

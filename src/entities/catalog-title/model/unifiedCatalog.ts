@@ -35,6 +35,12 @@ export type CatalogTitle = {
     // catalog row is one launchable game.
     raw: any;
     isOwned: boolean;
+    // True when this title is in the signed-in account's PS Plus Extra/
+    // Premium subscription catalog (libchiaki's own CloudGame.plusCatalog) --
+    // i.e. streamable/playable at no extra cost purely from the active Plus
+    // tier, independent of `isOwned` (an actual purchase/entitlement). A
+    // title can be both (owned AND currently in the Plus catalog).
+    inPlusCatalog: boolean;
   };
 };
 
@@ -109,7 +115,11 @@ export const buildUnifiedCatalog = (
       genres: [],
     };
     entry.imageUrl = entry.imageUrl ?? game.imageUrl;
-    entry.psplus = {raw: game, isOwned: game?.isOwned === true};
+    entry.psplus = {
+      raw: game,
+      isOwned: game?.isOwned === true,
+      inPlusCatalog: game?.plusCatalog === true,
+    };
     byKey.set(key, entry);
   }
 
@@ -118,12 +128,13 @@ export const buildUnifiedCatalog = (
 
 // Whether a title is actually playable right now via at least one of its
 // listed services -- Game Pass entitlement on xCloud, an owned store variant
-// on GFN, or an owned/entitled game on PS Plus -- as opposed to merely being
-// present in the catalog.
+// on GFN, or an owned/entitled game OR a currently-in-catalog (no extra cost)
+// game on PS Plus -- as opposed to merely being present in the catalog.
 export const isCatalogTitleOwned = (item: CatalogTitle): boolean =>
   !!item.xcloud?.hasEntitlement ||
   !!item.gfn?.variants.some(v => v.owned) ||
-  !!item.psplus?.isOwned;
+  !!item.psplus?.isOwned ||
+  !!item.psplus?.inPlusCatalog;
 
 // Single-service CatalogTitle builders -- same field construction
 // buildUnifiedCatalog does per source, exposed standalone for callers (the
