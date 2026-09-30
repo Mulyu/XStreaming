@@ -56,8 +56,6 @@ public class MainApplication extends Application implements ReactApplication {
             packages.add(new ShortcutManagerPackage());
             packages.add(new CoverDisplayPackage());
             packages.add(new PsPlusPackage());
-            // TEMPORARY diagnostic package -- see AnrWatchdog's own comment.
-            packages.add(new AnrDiagnosticsPackage());
           return packages;
         }
 
@@ -86,9 +84,6 @@ public class MainApplication extends Application implements ReactApplication {
   public void onCreate() {
     super.onCreate();
     SoLoader.init(this, /* native exopackage */ false);
-
-    // TEMPORARY diagnostic aid -- see AnrWatchdog's own comment.
-    new AnrWatchdog(this).start();
 
     // webrtc
     WebRTCModuleOptions options = WebRTCModuleOptions.getInstance();
