@@ -11,6 +11,20 @@
 #include <string.h>
 
 #define INPUT_BUFFER_TIMEOUT_MS 10
+// A bounded poll instead of an infinite wait, so the output thread always
+// wakes up on its own to notice decoder->shutdown_output -- see kill_decoder()
+// and the output thread loop below. AMediaCodec_stop() is not documented (and
+// not reliable in practice on every Android version) to actually unblock a
+// concurrent AMediaCodec_dequeueOutputBuffer() call already parked with an
+// infinite timeout, which previously made kill_decoder()'s chiaki_thread_join()
+// of this thread a potential permanent hang -- exactly the same hazard class
+// already fixed for the surface-teardown path, but reachable here any time the
+// PS5 simply stops sending frames (e.g. the streamed game itself ends) and
+// something later calls android_chiaki_video_decoder_fini(). A short timeout
+// costs nothing while frames are actively arriving -- dequeueOutputBuffer()
+// still returns immediately the instant a buffer is ready either way -- and
+// only matters during genuine idle periods.
+#define OUTPUT_BUFFER_TIMEOUT_MS 100
 
 static void *android_chiaki_video_decoder_output_thread_func(void *user);
 
@@ -207,7 +221,7 @@ static void *android_chiaki_video_decoder_output_thread_func(void *user)
 	while(1)
 	{
 		AMediaCodecBufferInfo info;
-		ssize_t status = AMediaCodec_dequeueOutputBuffer(decoder->codec, &info, -1);
+		ssize_t status = AMediaCodec_dequeueOutputBuffer(decoder->codec, &info, OUTPUT_BUFFER_TIMEOUT_MS * 1000);
 		if(status >= 0)
 		{
 			AMediaCodec_releaseOutputBuffer(decoder->codec, (size_t)status, info.size != 0);
