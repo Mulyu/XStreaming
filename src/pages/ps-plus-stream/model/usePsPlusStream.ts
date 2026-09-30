@@ -6,8 +6,6 @@ import {
   PsPlusSession,
   PsPlusConnectionState,
   StreamMetrics,
-  SurfaceDebugInfo,
-  psPlusChiaki,
   getNpsso,
 } from '../../../features/ps-plus-session';
 import {GAMEPAD_MAPING} from '../../../entities/gamepad';
@@ -16,6 +14,22 @@ import {getSettings, saveSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
 
 const {FullScreenManager, GamepadManager} = NativeModules;
+
+// Exactly native-stream's own VIDEO_FORMAT_OPTIONS -- '' is "Auto" (native
+// aspect, 16:9 for every PS Plus resolution preset), then a fill-exact
+// stretch, a fill-and-crop zoom, then fixed target aspect ratios (each
+// letterboxed/pillarboxed, never cropped). See PsPlusStreamView.kt's
+// onLayout() for how each of these is actually applied.
+const VIDEO_FORMAT_OPTIONS = [
+  '',
+  'Stretch',
+  'Zoom',
+  '16:10',
+  '18:9',
+  '20:9',
+  '21:9',
+  '4:3',
+];
 
 // keyCode -> button name, same convention native-stream's own gpMaping uses:
 // the user's saved custom mapping (shared across every streaming provider,
@@ -204,6 +218,49 @@ export function usePsPlusStream(navigation: any, route: any) {
     sessionRef.current?.setGamepadState(gpState.current);
   }, []);
 
+  // Screen position / aspect ratio / volume: shared with native-stream's own
+  // settings.screen_position/video_format/audio_gain (see that screen's
+  // handleSetScreenPosition/handleCycleVideoFormat/handleAudioGainChange) --
+  // same keys, same behavior, so a preference set on one provider's stream
+  // carries over to this one. Calibration-like (tied to the device/display,
+  // not the session), so persisted immediately rather than only on exit.
+  const [screenPosition, setScreenPositionState] = React.useState(
+    () => getSettings().screen_position || 'center',
+  );
+  const onSetScreenPosition = React.useCallback((position: string) => {
+    saveSettings({...getSettings(), screen_position: position});
+    setScreenPositionState(position);
+  }, []);
+
+  const [videoFormat, setVideoFormatState] = React.useState(
+    () => getSettings().video_format || '',
+  );
+  const onCycleVideoFormat = React.useCallback(() => {
+    const currentIndex = VIDEO_FORMAT_OPTIONS.indexOf(
+      getSettings().video_format,
+    );
+    const nextFormat =
+      VIDEO_FORMAT_OPTIONS[
+        (currentIndex + 1 + VIDEO_FORMAT_OPTIONS.length) %
+          VIDEO_FORMAT_OPTIONS.length
+      ];
+    saveSettings({...getSettings(), video_format: nextFormat});
+    setVideoFormatState(nextFormat);
+  }, []);
+
+  // Real per-session gain applied natively (see audio-output.h's own
+  // comment) -- unlike screen position/video format this also needs a live
+  // native call, not just a persisted setting the next connect() reads.
+  const [audioGain, setAudioGainState] = React.useState(
+    () => getSettings().audio_gain ?? 1,
+  );
+  const onAudioGainChange = React.useCallback((value: number) => {
+    const nextGain = Math.max(0, Math.min(1, Math.round(value * 10) / 10));
+    saveSettings({...getSettings(), audio_gain: nextGain});
+    setAudioGainState(nextGain);
+    sessionRef.current?.setAudioGain(nextGain);
+  }, []);
+
   React.useEffect(() => {
     const npsso = getNpsso();
     if (!npsso) {
@@ -282,6 +339,7 @@ export function usePsPlusStream(navigation: any, route: any) {
           : undefined,
       forcedDatacenter: videoSettings.psplus_datacenter || undefined,
       priorDatacentersJson: videoSettings.psplus_datacenter_pings || undefined,
+      audioGain: videoSettings.audio_gain,
     });
 
     return () => {
@@ -492,63 +550,6 @@ export function usePsPlusStream(navigation: any, route: any) {
     };
   }, [performanceVisible, connectState]);
 
-  // TEMPORARY debug aid for the black-screen investigation -- shows live
-  // decoder metrics right on screen with no rail tap and no adb/logcat
-  // needed, so a stuck decoder (fps/dimensions stay at 0) can be told apart
-  // from a pure compositing problem (metrics look healthy, nothing paints).
-  // Independent of performanceVisible/showControlRail on purpose. Remove
-  // once the black-screen cause is found.
-  const [debugMetrics, setDebugMetrics] = React.useState<StreamMetrics | null>(
-    null,
-  );
-  React.useEffect(() => {
-    if (connectState !== 'connected') {
-      setDebugMetrics(null);
-      return;
-    }
-    let cancelled = false;
-    const poll = () => {
-      sessionRef.current?.getMetrics().then(m => {
-        if (!cancelled) {
-          setDebugMetrics(m);
-        }
-      });
-    };
-    poll();
-    const interval = setInterval(poll, 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [connectState]);
-
-  // TEMPORARY, alongside debugMetrics above -- see PsPlusModule.kt's
-  // getSurfaceDebugInfo() comment. Unlike debugMetrics this polls a plain
-  // Kotlin-side counter with no native Session involved, so it's meaningful
-  // during 'connecting' too (exactly when surfaceCreated() firing -- or not
-  // -- actually matters), not gated to 'connected' like the metrics above.
-  const [surfaceDebug, setSurfaceDebug] =
-    React.useState<SurfaceDebugInfo | null>(null);
-  React.useEffect(() => {
-    if (connectState !== 'connecting' && connectState !== 'connected') {
-      return;
-    }
-    let cancelled = false;
-    const poll = () => {
-      psPlusChiaki.getSurfaceDebugInfo().then(info => {
-        if (!cancelled) {
-          setSurfaceDebug(info);
-        }
-      });
-    };
-    poll();
-    const interval = setInterval(poll, 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [connectState]);
-
   const [pin, setPin] = React.useState('');
 
   const onSubmitPin = React.useCallback(() => {
@@ -628,8 +629,12 @@ export function usePsPlusStream(navigation: any, route: any) {
     performanceVisible,
     onTogglePerformance,
     metrics,
-    debugMetrics,
-    surfaceDebug,
+    screenPosition,
+    onSetScreenPosition,
+    videoFormat,
+    onCycleVideoFormat,
+    audioGain,
+    onAudioGainChange,
     onEditGamepadLayout,
     onRailDisconnect,
   };

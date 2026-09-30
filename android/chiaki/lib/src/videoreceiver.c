@@ -52,19 +52,6 @@ CHIAKI_EXPORT void chiaki_video_receiver_init(ChiakiVideoReceiver *video_receive
 	video_receiver->cumulative_frames_lost = 0;
 	memset(video_receiver->reference_frames, -1, sizeof(video_receiver->reference_frames));
 	chiaki_bitstream_init(&video_receiver->bitstream, video_receiver->log, video_receiver->session->connect_info.video_profile.codec);
-
-	atomic_init(&video_receiver->debug_av_packets, 0);
-	atomic_init(&video_receiver->debug_flush_success, 0);
-	atomic_init(&video_receiver->debug_flush_fec_failed, 0);
-	atomic_init(&video_receiver->debug_flush_failed, 0);
-}
-
-CHIAKI_EXPORT void chiaki_video_receiver_get_debug_counts(ChiakiVideoReceiver *video_receiver, int out[4])
-{
-	out[0] = atomic_load(&video_receiver->debug_av_packets);
-	out[1] = atomic_load(&video_receiver->debug_flush_success);
-	out[2] = atomic_load(&video_receiver->debug_flush_fec_failed);
-	out[3] = atomic_load(&video_receiver->debug_flush_failed);
 }
 
 CHIAKI_EXPORT void chiaki_video_receiver_fini(ChiakiVideoReceiver *video_receiver)
@@ -96,8 +83,6 @@ CHIAKI_EXPORT void chiaki_video_receiver_stream_info(ChiakiVideoReceiver *video_
 
 CHIAKI_EXPORT void chiaki_video_receiver_av_packet(ChiakiVideoReceiver *video_receiver, ChiakiTakionAVPacket *packet)
 {
-	atomic_fetch_add(&video_receiver->debug_av_packets, 1);
-
 	// old frame?
 	ChiakiSeqNum16 frame_index = packet->frame_index;
 	ChiakiErrorCode err = CHIAKI_ERR_SUCCESS;
@@ -181,7 +166,6 @@ static ChiakiErrorCode chiaki_video_receiver_flush_frame(ChiakiVideoReceiver *vi
 
 	if(flush_result == CHIAKI_FRAME_PROCESSOR_FLUSH_RESULT_FEC_FAILED)
 	{
-		atomic_fetch_add(&video_receiver->debug_flush_fec_failed, 1);
 		ChiakiSeqNum16 next_frame_expected = (ChiakiSeqNum16)(video_receiver->frame_index_prev_complete + 1);
 		stream_connection_send_corrupt_frame(&video_receiver->session->stream_connection, next_frame_expected, video_receiver->frame_index_cur);
 		video_receiver->frames_lost += video_receiver->frame_index_cur - next_frame_expected + 1;
@@ -193,12 +177,9 @@ static ChiakiErrorCode chiaki_video_receiver_flush_frame(ChiakiVideoReceiver *vi
 
 	if(flush_result == CHIAKI_FRAME_PROCESSOR_FLUSH_RESULT_FAILED)
 	{
-		atomic_fetch_add(&video_receiver->debug_flush_failed, 1);
 		CHIAKI_LOGW(video_receiver->log, "Failed to complete frame %d", (int)video_receiver->frame_index_cur);
 		return CHIAKI_ERR_UNKNOWN;
 	}
-
-	atomic_fetch_add(&video_receiver->debug_flush_success, 1);
 
 	bool succ = flush_result != CHIAKI_FRAME_PROCESSOR_FLUSH_RESULT_FEC_FAILED;
 	bool recovered = false;

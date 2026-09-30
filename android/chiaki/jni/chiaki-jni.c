@@ -840,36 +840,27 @@ JNIEXPORT void JNICALL JNI_FCN(sessionSetSurface)(JNIEnv *env, jobject obj, jlon
 	android_chiaki_video_decoder_set_surface(&session->video_decoder, env, surface);
 }
 
+// Per-session game-audio volume (0..1), independent of the system media
+// volume -- see audio-output.h's own comment for why this lives in the
+// audio sink rather than at the JS/WebRTC layer xCloud/GFN use.
+JNIEXPORT void JNICALL JNI_FCN(sessionSetAudioGain)(JNIEnv *env, jobject obj, jlong ptr, jfloat gain)
+{
+	AndroidChiakiSession *session = (AndroidChiakiSession *)ptr;
+	if(!session)
+		return;
+	android_chiaki_audio_output_set_gain(gain, session->audio_output);
+}
+
 // Live stream metrics for the optional on-screen stats overlay. All values are
 // owned/computed by libchiaki (shared with Qt/iOS) so the client just renders
-// them. Returns a double[18]:
+// them. Returns a double[7]:
 //   [0] bitrate (Mbit/s)   [1] packet loss (0..1)   [2] dropped frames (cumulative)
 //   [3] fps                [4] rtt (ms)             [5] width   [6] height
-//   [7..10] TEMPORARY video-decoder debug counters for the black-screen
-//   investigation (see video-decoder.h's own comment): samples fed to
-//   AMediaCodec, output buffers dequeued, of those actually rendered
-//   (non-empty), and whether configure/start ever failed (0/1).
-//   [11..14] TEMPORARY video-receiver debug counters (see
-//   videoreceiver.h's own comment): AV packets received, and how the
-//   resulting frame flushes split across success / FEC-failed / other-
-//   failed -- narrows down whether packets are arriving at all vs.
-//   arriving but never reassembling into a decodable frame. [0..6] only
-//   prove compressed video is arriving over the network; [7..14] prove
-//   whether it's actually reaching the decoder and coming back out.
-//   [15..17] TEMPORARY, added after [7..10] alone didn't explain a
-//   decoder-in=0 report on a build that already had the currentSurface
-//   @Volatile fix: set_surface() calls with a real surface, whether
-//   ANativeWindow_fromSurface() failed, and whether
-//   AMediaCodec_createDecoderByType() failed -- both of the latter leave
-//   the codec NULL (same visible symptom as set_surface() never being
-//   called at all) WITHOUT setting [10]/configure_failed, since that only
-//   covers the later configure()/start() calls.
-// Cheap best-effort read (same as Qt's polling timer); video_receiver-derived
-// values go through locked accessors, the rest are unlocked scalar reads. Only
-// called while a session is live and the overlay is toggled on.
+// Cheap best-effort read (same as Qt's polling timer), unlocked scalar reads.
+// Only called while a session is live and the overlay is toggled on.
 JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject obj, jlong ptr)
 {
-	jdouble vals[18] = { 0 };
+	jdouble vals[7] = { 0 };
 	AndroidChiakiSession *session = (AndroidChiakiSession *)ptr;
 	if(session)
 	{
@@ -891,28 +882,10 @@ JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject o
 			vals[5] = (jdouble)session->session.connect_info.video_profile.width;
 			vals[6] = (jdouble)session->session.connect_info.video_profile.height;
 		}
-		int debug_counts[7];
-		android_chiaki_video_decoder_get_debug_counts(&session->video_decoder, debug_counts);
-		vals[7] = (jdouble)debug_counts[0];
-		vals[8] = (jdouble)debug_counts[1];
-		vals[9] = (jdouble)debug_counts[2];
-		vals[10] = (jdouble)debug_counts[3];
-		vals[15] = (jdouble)debug_counts[4];
-		vals[16] = (jdouble)debug_counts[5];
-		vals[17] = (jdouble)debug_counts[6];
-		if(sc->video_receiver) // not yet created before the stream info packet, on a still-connecting session
-		{
-			int vr_debug_counts[4];
-			chiaki_video_receiver_get_debug_counts(sc->video_receiver, vr_debug_counts);
-			vals[11] = (jdouble)vr_debug_counts[0];
-			vals[12] = (jdouble)vr_debug_counts[1];
-			vals[13] = (jdouble)vr_debug_counts[2];
-			vals[14] = (jdouble)vr_debug_counts[3];
-		}
 	}
-	jdoubleArray arr = E->NewDoubleArray(env, 18);
+	jdoubleArray arr = E->NewDoubleArray(env, 7);
 	if(arr)
-		E->SetDoubleArrayRegion(env, arr, 0, 18, vals);
+		E->SetDoubleArrayRegion(env, arr, 0, 7, vals);
 	return arr;
 }
 

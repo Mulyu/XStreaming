@@ -86,6 +86,8 @@ export type PsPlusLaunchOptions = {
    * JSON), merged into this run's picker so a datacenter that isn't probed
    * this time doesn't disappear from it. */
   priorDatacentersJson?: string;
+  /** Initial per-session volume (0..1) -- see native.ts's setAudioGain(). */
+  audioGain?: number;
 };
 
 export type PsPlusConnectionState =
@@ -205,6 +207,14 @@ export class PsPlusSession {
 
     try {
       await psPlusChiaki.startSession(startOptions);
+      // Safe as soon as the native Session exists (before this even
+      // resolves, technically): the AudioOutput struct is created in
+      // sessionCreate(), well before the Oboe stream itself is opened, and
+      // set_gain() is just an atomic store applied on the next output
+      // callback -- see audio-output.h's own comment.
+      if (options.audioGain != null) {
+        psPlusChiaki.setAudioGain(options.audioGain);
+      }
     } catch (e: any) {
       if (!this.disposed) {
         this.handlers.onState?.(
@@ -265,6 +275,10 @@ export class PsPlusSession {
 
   setLoginPin(pin: string): void {
     psPlusChiaki.setLoginPin(pin);
+  }
+
+  setAudioGain(gain: number): void {
+    psPlusChiaki.setAudioGain(gain);
   }
 
   getMetrics() {

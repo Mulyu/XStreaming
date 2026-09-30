@@ -14,6 +14,14 @@ void *android_chiaki_audio_output_new(ChiakiLog *log);
 void android_chiaki_audio_output_free(void *audio_output);
 void android_chiaki_audio_output_settings(uint32_t channels, uint32_t rate, void *audio_output);
 void android_chiaki_audio_output_frame(int16_t *buf, size_t samples_count, void *audio_output);
+// Per-session game-audio volume, applied to every I16 sample right before
+// handing it to Oboe -- independent of the Android system media volume, same
+// concept as xCloud/GFN's WebRTC MediaStreamTrack._setVolume() gain (JS-side
+// there since WebRTC exposes a hook for it; this pipeline has no such hook,
+// so it lives here instead, the one point both the Opus and MediaCodec-audio
+// decode paths already funnel through). 0..1, clamped; not persisted here --
+// callers re-apply after a decoder/session restart same as they set channels/rate.
+void android_chiaki_audio_output_set_gain(float gain, void *audio_output);
 
 #ifdef __cplusplus
 }

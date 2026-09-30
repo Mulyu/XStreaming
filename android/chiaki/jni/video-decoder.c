@@ -23,25 +23,7 @@ ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *dec
 	decoder->target_height = target_height;
 	decoder->target_codec = codec;
 	decoder->shutdown_output = false;
-	atomic_init(&decoder->debug_samples_in, 0);
-	atomic_init(&decoder->debug_buffers_out, 0);
-	atomic_init(&decoder->debug_buffers_rendered, 0);
-	atomic_init(&decoder->debug_configure_failed, 0);
-	atomic_init(&decoder->debug_set_surface_calls, 0);
-	atomic_init(&decoder->debug_window_create_failed, 0);
-	atomic_init(&decoder->debug_codec_create_failed, 0);
 	return chiaki_mutex_init(&decoder->codec_mutex, false);
-}
-
-void android_chiaki_video_decoder_get_debug_counts(AndroidChiakiVideoDecoder *decoder, int out[7])
-{
-	out[0] = atomic_load(&decoder->debug_samples_in);
-	out[1] = atomic_load(&decoder->debug_buffers_out);
-	out[2] = atomic_load(&decoder->debug_buffers_rendered);
-	out[3] = atomic_load(&decoder->debug_configure_failed);
-	out[4] = atomic_load(&decoder->debug_set_surface_calls);
-	out[5] = atomic_load(&decoder->debug_window_create_failed);
-	out[6] = atomic_load(&decoder->debug_codec_create_failed);
 }
 
 static void kill_decoder(AndroidChiakiVideoDecoder *decoder)
@@ -86,22 +68,9 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 			kill_decoder(decoder);
 			CHIAKI_LOGI(decoder->log, "Decoder shut down after surface was removed");
 		}
-		// Was a bare `return;` here, leaving codec_mutex locked forever --
-		// every later chiaki_mutex_lock() on this decoder (every video_sample
-		// call, any later set_surface call) would then block forever, since
-		// this is a plain non-recursive pthread mutex. Any surfaceDestroyed()
-		// firing on a live session (e.g. the app briefly losing the window,
-		// a SurfaceView surface-recreate churn) would silently kill video for
-		// the rest of that session with no crash and no error -- worth fixing
-		// even though it doesn't look like the currently-reported black-video
-		// case, where decoder in=0 with 1000+ successful flushes proves
-		// video_sample_cb kept returning promptly (a truly poisoned mutex
-		// would have frozen that count at whatever it was mid-flush).
 		chiaki_mutex_unlock(&decoder->codec_mutex);
 		return;
 	}
-
-	atomic_fetch_add(&decoder->debug_set_surface_calls, 1);
 
 	if(decoder->codec)
 	{
@@ -121,7 +90,6 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 	if(!decoder->window)
 	{
 		CHIAKI_LOGE(decoder->log, "ANativeWindow_fromSurface() returned NULL");
-		atomic_store(&decoder->debug_window_create_failed, 1);
 		goto beach;
 	}
 
@@ -132,7 +100,6 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 	if(!decoder->codec)
 	{
 		CHIAKI_LOGE(decoder->log, "Failed to create AMediaCodec for mime type %s", mime);
-		atomic_store(&decoder->debug_codec_create_failed, 1);
 		goto error_surface;
 	}
 
@@ -146,7 +113,6 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 	{
 		CHIAKI_LOGE(decoder->log, "AMediaCodec_configure() failed: %d", (int)r);
 		AMediaFormat_delete(format);
-		atomic_store(&decoder->debug_configure_failed, 1);
 		goto error_codec;
 	}
 
@@ -155,7 +121,6 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 	if(r != AMEDIA_OK)
 	{
 		CHIAKI_LOGE(decoder->log, "AMediaCodec_start() failed: %d", (int)r);
-		atomic_store(&decoder->debug_configure_failed, 1);
 		goto error_codec;
 	}
 
@@ -195,8 +160,6 @@ bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, in
 		CHIAKI_LOGE(decoder->log, "Received video data, but decoder is not initialized!");
 		goto beach;
 	}
-
-	atomic_fetch_add(&decoder->debug_samples_in, 1);
 
 	while(buf_size > 0)
 	{
@@ -247,9 +210,6 @@ static void *android_chiaki_video_decoder_output_thread_func(void *user)
 		ssize_t status = AMediaCodec_dequeueOutputBuffer(decoder->codec, &info, -1);
 		if(status >= 0)
 		{
-			atomic_fetch_add(&decoder->debug_buffers_out, 1);
-			if(info.size != 0)
-				atomic_fetch_add(&decoder->debug_buffers_rendered, 1);
 			AMediaCodec_releaseOutputBuffer(decoder->codec, (size_t)status, info.size != 0);
 			if(info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM)
 			{
