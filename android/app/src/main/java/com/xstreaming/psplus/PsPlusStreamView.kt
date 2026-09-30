@@ -5,6 +5,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.facebook.react.bridge.ReactContext
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Hosts the video Surface a PsPlusModule.session decodes frames into.
@@ -40,6 +41,16 @@ class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.C
 		// of whichever instance last actually ran attachSurface(), to compare
 		// directly against getSurfaceDebugInfo()'s own `this`.
 		val lastAttachedModuleId = AtomicInteger(0)
+		// TEMPORARY: lastAttachedModuleId staying 0 despite
+		// rawSurfaceCreatedCalls>0 and rawPsPlusModuleNullCount=0 is only
+		// possible if something throws BEFORE either of those lines runs --
+		// i.e. resolving psPlusModule itself (the getNativeModule() call)
+		// throwing, not returning null. Nothing below caught that until now,
+		// so if that's really happening it was either crashing (not observed)
+		// or being swallowed somewhere upstream in Android/RN's own view
+		// mounting code. Catching it here answers which, and captures what it
+		// actually is.
+		val lastSurfaceCreatedError = AtomicReference<String?>(null)
 	}
 
 	init {
@@ -60,15 +71,19 @@ class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.C
 
 	override fun surfaceCreated(holder: SurfaceHolder) {
 		rawSurfaceCreatedCalls.incrementAndGet()
-		// Goes through attachSurface() (not a plain currentSurface write) so
-		// this can never race with startSession() reading currentSurface and
-		// publishing a fresh Session -- see PsPlusModule.surfaceLock.
-		val module = psPlusModule
-		if (module == null) {
-			rawPsPlusModuleNullCount.incrementAndGet()
-		} else {
-			lastAttachedModuleId.set(System.identityHashCode(module))
-			module.attachSurface(holder.surface)
+		try {
+			// Goes through attachSurface() (not a plain currentSurface write) so
+			// this can never race with startSession() reading currentSurface and
+			// publishing a fresh Session -- see PsPlusModule.surfaceLock.
+			val module = psPlusModule
+			if (module == null) {
+				rawPsPlusModuleNullCount.incrementAndGet()
+			} else {
+				lastAttachedModuleId.set(System.identityHashCode(module))
+				module.attachSurface(holder.surface)
+			}
+		} catch (e: Throwable) {
+			lastSurfaceCreatedError.set("${e.javaClass.simpleName}: ${e.message}")
 		}
 	}
 

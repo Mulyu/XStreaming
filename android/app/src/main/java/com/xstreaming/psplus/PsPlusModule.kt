@@ -128,6 +128,7 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 				// just never on this object).
 				putInt("thisModuleId", System.identityHashCode(this@PsPlusModule))
 				putInt("lastAttachedModuleId", PsPlusStreamView.lastAttachedModuleId.get())
+				putString("lastSurfaceCreatedError", PsPlusStreamView.lastSurfaceCreatedError.get())
 			})
 		}
 	}
