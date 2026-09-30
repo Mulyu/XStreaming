@@ -25,6 +25,7 @@ import {
   isPsPlusSignedIn,
   clearNpsso,
   getNpsso,
+  clearCatalogGames,
 } from '../../../features/ps-plus-session';
 import {getValidGfnJwt, getValidGfnUserId} from '../../../entities/gfn-account';
 import {
@@ -291,6 +292,7 @@ export function useSettingsScreen(navigation: any) {
           style: 'default',
           onPress: () => {
             clearNpsso();
+            clearCatalogGames();
             setPsPlusSignedIn(false);
           },
         },

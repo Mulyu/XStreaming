@@ -6,6 +6,12 @@
 export {getNpsso, setNpsso, clearNpsso, isPsPlusSignedIn} from './api/auth';
 export {fetchUnifiedCatalog, CloudCategory} from './api/catalog';
 export type {CloudGame, UnifiedCatalogResult} from './api/catalog';
+export {
+  saveCatalogGames,
+  getFreshCatalogGames,
+  getCachedCatalogGames,
+  clearCatalogGames,
+} from './api/catalogCache';
 export {PsPlusSession, gpStateToPsPlusInput} from './api/streamAdapter';
 export {default as PsPlusStreamView} from './ui/PsPlusStreamView';
 export type {
