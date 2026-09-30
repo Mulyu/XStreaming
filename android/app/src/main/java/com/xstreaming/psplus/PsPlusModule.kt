@@ -71,11 +71,53 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	// other side's update before making its own decision.
 	private val surfaceLock = Any()
 
+	// TEMPORARY, added after decoderSetSurfaceCalls=0 on a build with the
+	// surfaceLock fix above proved Session.setSurface() was never even
+	// called with a real surface this whole time -- everything above this
+	// point in the chain (video_sample_cb, AMediaCodec, the surfaceLock
+	// race) was never reached because the problem is further upstream
+	// still. This narrows it down to one question with no device log
+	// access: does PsPlusStreamView.surfaceCreated() itself ever fire at
+	// all? Exposed via getSurfaceDebugInfo() below; remove together once
+	// answered.
+	private var surfaceCreatedCalls = 0
+	private var surfaceDestroyedCalls = 0
+	private var surfaceChangedCalls = 0
+	private var lastSurfaceWidth = 0
+	private var lastSurfaceHeight = 0
+
 	/** Called by PsPlusStreamView as its Surface is created/destroyed. */
 	internal fun attachSurface(surface: Surface?) {
 		synchronized(surfaceLock) {
+			if (surface != null) surfaceCreatedCalls++ else surfaceDestroyedCalls++
 			currentSurface = surface
 			session?.setSurface(surface)
+		}
+	}
+
+	/** Called by PsPlusStreamView's surfaceChanged -- the actual laid-out size. */
+	internal fun noteSurfaceChanged(width: Int, height: Int) {
+		synchronized(surfaceLock) {
+			surfaceChangedCalls++
+			lastSurfaceWidth = width
+			lastSurfaceHeight = height
+		}
+	}
+
+	@ReactMethod
+	fun getSurfaceDebugInfo(promise: Promise) {
+		synchronized(surfaceLock) {
+			promise.resolve(Arguments.createMap().apply {
+				putInt("surfaceCreatedCalls", surfaceCreatedCalls)
+				putInt("surfaceDestroyedCalls", surfaceDestroyedCalls)
+				putInt("surfaceChangedCalls", surfaceChangedCalls)
+				putInt("lastSurfaceWidth", lastSurfaceWidth)
+				putInt("lastSurfaceHeight", lastSurfaceHeight)
+				putBoolean("hasCurrentSurface", currentSurface != null)
+				putBoolean("hasSession", session != null)
+				putInt("rawSurfaceCreatedCalls", PsPlusStreamView.rawSurfaceCreatedCalls.get())
+				putInt("rawPsPlusModuleNullCount", PsPlusStreamView.rawPsPlusModuleNullCount.get())
+			})
 		}
 	}
 

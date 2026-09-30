@@ -34,6 +34,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   onTogglePerformance,
   metrics,
   debugMetrics,
+  surfaceDebug,
   onEditGamepadLayout,
   onRailDisconnect,
 }) => {
@@ -41,7 +42,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
     <View style={styles.container}>
       <NativePsPlusStreamView style={styles.video} />
 
-      {connectState === 'connected' && (
+      {(connectState === 'connecting' || connectState === 'connected') && (
         <View pointerEvents="none" style={styles.debugBadge}>
           <Text style={styles.debugText}>
             {debugMetrics
@@ -67,6 +68,11 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
           {debugMetrics && (
             <Text style={styles.debugText}>
               {`setSurface=${debugMetrics.decoderSetSurfaceCalls} winFail=${debugMetrics.decoderWindowCreateFailed} codecFail=${debugMetrics.decoderCodecCreateFailed}`}
+            </Text>
+          )}
+          {surfaceDebug && (
+            <Text style={styles.debugText}>
+              {`sfc created=${surfaceDebug.surfaceCreatedCalls}/${surfaceDebug.rawSurfaceCreatedCalls} destroyed=${surfaceDebug.surfaceDestroyedCalls} changed=${surfaceDebug.surfaceChangedCalls} (${surfaceDebug.lastSurfaceWidth}x${surfaceDebug.lastSurfaceHeight}) moduleNull=${surfaceDebug.rawPsPlusModuleNullCount} hasSurface=${surfaceDebug.hasCurrentSurface} hasSession=${surfaceDebug.hasSession}`}
             </Text>
           )}
         </View>
