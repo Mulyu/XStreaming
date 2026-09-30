@@ -2,6 +2,7 @@ import {
   normalizeTitle,
   mergeOwnedGames,
   isConfirmedPlayable,
+  toBrowseGames,
 } from '../gfnCatalog';
 import {GfnGame} from '../gfnPublicGames';
 
@@ -88,6 +89,36 @@ describe('isConfirmedPlayable', () => {
         gfn: {playabilityState: 'AVAILABLE', playType: 'STANDARD'},
       }),
     ).toBe(false);
+  });
+});
+
+describe('toBrowseGames', () => {
+  const appWithStatus = (status: string) => ({
+    title: 'Some Game',
+    variants: [{id: '123', appStore: 'STEAM', gfn: {library: {status}}}],
+  });
+
+  it('is owned when library.status is one of the known owned values', () => {
+    for (const status of ['MANUAL', 'PLATFORM_SYNC', 'IN_LIBRARY']) {
+      expect(toBrowseGames(appWithStatus(status))[0].owned).toBe(true);
+    }
+  });
+
+  it('is not owned when library.status is NOT_OWNED', () => {
+    expect(toBrowseGames(appWithStatus('NOT_OWNED'))[0].owned).toBe(false);
+  });
+
+  // Regression: the ownership check used to be a denylist (`!== 'NOT_OWNED'`
+  // means owned), so any library.status value GFN's API returns other than
+  // the exact string "NOT_OWNED" -- not just the three real owned states --
+  // was wrongly treated as owned. Confirmed against OpenNOW's own
+  // app_to_game(), which checks library.status against an allowlist
+  // (MANUAL/PLATFORM_SYNC/IN_LIBRARY) instead; anything else, including an
+  // unrecognized status this test stands in for, must read as not owned.
+  it('is not owned for an unrecognized library.status value', () => {
+    expect(toBrowseGames(appWithStatus('SOME_OTHER_STATUS'))[0].owned).toBe(
+      false,
+    );
   });
 });
 

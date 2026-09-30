@@ -194,6 +194,22 @@ export type RawApp = {
 export const isConfirmedPlayable = (app: RawApp): boolean =>
   !!app.gfn?.playType?.toUpperCase().includes('FREE');
 
+// The known "this variant is actually owned" values for a variant's own
+// gfn.library.status -- confirmed against OpenNOW's own app_to_game(),
+// which checks library.status against exactly this allowlist
+// (MANUAL/PLATFORM_SYNC/IN_LIBRARY -- a manually-added, platform-store-
+// synced, or otherwise in-library entry) rather than an "anything but
+// NOT_OWNED" denylist. A denylist wrongly treated any other status GFN's
+// API can return (not just NOT_OWNED) as owned; live-confirmed to be
+// exactly what made the whole browse catalog look owned.
+const OWNED_LIBRARY_STATUSES = new Set([
+  'MANUAL',
+  'PLATFORM_SYNC',
+  'IN_LIBRARY',
+]);
+const isOwnedLibraryStatus = (status: string): boolean =>
+  OWNED_LIBRARY_STATUSES.has(status);
+
 const optimizeImage = (url: string, width = 460): string =>
   url.includes('img.nvidiagrid.net') ? `${url};f=webp;w=${width}` : url;
 
@@ -358,7 +374,7 @@ export const clearOwnedGames = (): void => {
 // per variant from gfn.library.status (present whenever the caller is signed
 // in) instead of being hardcoded true, unless isConfirmedPlayable already
 // says the whole app is playable regardless (free-to-play).
-const toBrowseGames = (app: RawApp): GfnGame[] => {
+export const toBrowseGames = (app: RawApp): GfnGame[] => {
   const title = app.title?.trim();
   if (!title) {
     return [];
@@ -407,7 +423,7 @@ const toBrowseGames = (app: RawApp): GfnGame[] => {
       owned:
         confirmedPlayable ||
         (variant.gfn?.library?.status
-          ? variant.gfn.library.status !== 'NOT_OWNED'
+          ? isOwnedLibraryStatus(variant.gfn.library.status)
           : undefined),
       appId,
       steamAppId:
