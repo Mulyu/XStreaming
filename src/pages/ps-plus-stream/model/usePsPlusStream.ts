@@ -953,6 +953,24 @@ export function usePsPlusStream(navigation: any, route: any) {
     ]);
   }, [navigation, t, connectState]);
 
+  // A natural session end (the PS5 game itself quitting, not the player
+  // disconnecting from here) previously left this screen sitting on the
+  // "Stream ended" overlay below, with a Close button that needed D-pad/
+  // remote focus to reach -- for a controller-only player there was often no
+  // way back at all, exactly matching a report of the game screen staying up
+  // with no way to return. native-stream's own equivalent (finishStreamExit)
+  // never waits for interaction on a natural disconnect; it navigates away
+  // immediately. Mirrors that here via requestExit's own connectState !==
+  // 'connected' branch (a plain goBack(), no confirmation). Deliberately NOT
+  // applied to 'failed' -- a connection failure's error detail (wrong PIN,
+  // subscription required, ping too high, ...) is worth letting the player
+  // actually read before leaving.
+  React.useEffect(() => {
+    if (connectState === 'closed') {
+      requestExit();
+    }
+  }, [connectState, requestExit]);
+
   React.useEffect(() => {
     const beforeRemove = navigation.addListener('beforeRemove', (e: any) => {
       if (exitConfirmedRef.current) {
