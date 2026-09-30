@@ -9,6 +9,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.facebook.react.module.annotations.ReactModule
 import java.io.File
 import kotlin.concurrent.thread
 
@@ -24,7 +25,22 @@ import kotlin.concurrent.thread
  * native calls (the whole Kamaji/Gaikai HTTP flow, or the cached/fetched
  * unified catalog) -- both are dispatched on a background thread here, never
  * the calling (JS bridge) thread.
+ *
+ * THE BLACK-VIDEO ROOT CAUSE (found via PsPlusStreamView.lastSurfaceCreatedError):
+ * without @ReactModule, PsPlusStreamView's own
+ * `(context as? ReactContext)?.getNativeModule(PsPlusModule::class.java)` --
+ * a Class-based lookup, needed since a View has no JS-side name to require()
+ * by -- threw IllegalArgumentException("Could not find @ReactModule
+ * annotation in ...") on every single surfaceCreated() call, silently
+ * swallowed somewhere upstream (no crash was ever observed). currentSurface
+ * was therefore NEVER set from the View side, for the entire life of this
+ * feature -- every @Volatile/locking fix made to session/currentSurface
+ * since was real but moot, because attachSurface() was never reached at
+ * all. NativeModules.PsPlusChiaki (the name-based lookup every JS call in
+ * this file's own bridge methods goes through) was never affected, which is
+ * exactly why every other RN<->native call always worked fine.
  */
+@ReactModule(name = "PsPlusChiaki")
 class PsPlusModule(reactContext: ReactApplicationContext) :
 	ReactContextBaseJavaModule(reactContext) {
 
