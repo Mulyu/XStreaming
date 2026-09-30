@@ -18,3 +18,14 @@ export type {
   SteamChartEntry,
   SteamChartPage,
 } from './api/steamCharts';
+
+export {
+  fetchPsStoreChart,
+  getFreshPsStoreChart,
+  PS_STORE_CHART_PAGE_SIZE,
+} from './api/psStoreCharts';
+export type {
+  PsStoreChartKind,
+  PsStoreChartEntry,
+  PsStoreChartPage,
+} from './api/psStoreCharts';

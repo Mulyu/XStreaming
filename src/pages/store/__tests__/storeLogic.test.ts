@@ -1,11 +1,15 @@
 import {
   buildGfnStoreRows,
   buildXboxStoreRows,
+  buildPsStoreRows,
   dedupeByKey,
   hasMorePages,
 } from '../storeLogic';
 import {GfnGame, PriceInfo} from '../../../entities/catalog-title';
-import {SteamChartEntry} from '../../../features/store-charts';
+import {
+  SteamChartEntry,
+  PsStoreChartEntry,
+} from '../../../features/store-charts';
 
 describe('hasMorePages', () => {
   it('returns false once a page comes back empty', () => {
@@ -175,5 +179,48 @@ describe('buildGfnStoreRows', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].title).toBe('Unmatched');
     expect(rows[0].catalogTitle).toBeNull();
+  });
+});
+
+describe('buildPsStoreRows', () => {
+  const cloudGame = (storeProductId: string, name: string) => ({
+    productId: storeProductId,
+    name,
+    storeProductId,
+    isOwned: false,
+    plusCatalog: true,
+  });
+
+  const entry = (productId: string, title: string): PsStoreChartEntry => ({
+    productId,
+    title,
+  });
+
+  it('keeps every chart entry, including ones with no PS Plus match', () => {
+    const rows = buildPsStoreRows(
+      [entry('UP1', 'Game A'), entry('UP2', 'Game B'), entry('UP3', 'Game C')],
+      [cloudGame('UP1', 'Game A'), cloudGame('UP3', 'Game C')],
+    );
+    expect(rows.map(r => r.id)).toEqual(['UP1', 'UP2', 'UP3']);
+    expect(rows.map(r => r.rank)).toEqual([1, 2, 3]);
+    expect(rows.map(r => !!r.catalogTitle)).toEqual([true, false, true]);
+  });
+
+  it('still shows an entry with no storeProductId match at all, with a null catalogTitle', () => {
+    const rows = buildPsStoreRows(
+      [entry('UP999', 'Unmatched')],
+      [cloudGame('UP1', 'Game A')],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe('Unmatched');
+    expect(rows[0].catalogTitle).toBeNull();
+  });
+
+  it('marks the matched row as in the PS Plus catalog', () => {
+    const rows = buildPsStoreRows(
+      [entry('UP1', 'Game A')],
+      [cloudGame('UP1', 'Game A')],
+    );
+    expect(rows[0].catalogTitle?.psplus?.inPlusCatalog).toBe(true);
   });
 });
