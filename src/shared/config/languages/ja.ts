@@ -314,6 +314,9 @@ export default {
     PsPlusDatacenterTitle: 'データセンター',
     PsPlusDatacenterDesc:
       '80ms以内の最寄りデータセンターの代わりに、特定のデータセンターを固定します。80msの自動選択の上限を完全にバイパスしますが、通信品質が悪化する可能性があります。一覧には過去の接続試行で測定済みのデータセンターのみ表示されます。起動に失敗する場合は自動に戻してみてください。',
+    PsPlusDatacenterManualTitle: 'データセンターコード(手動入力)',
+    PsPlusDatacenterManualDesc:
+      '過去の接続試行で一度も提示されていないコードでも自由に試せます。そのコードが、今回の接続でサーバー側から実際に候補として返された場合のみ機能します。候補に無ければ"not available"エラーで即座に失敗するだけで、他に副作用はないので試すのは安全です。',
     PsPlusCopyDebugInfoTitle: 'デバッグ情報をコピー',
     PsPlusCopyDebugInfoDesc:
       'トラブルシューティング用に、PSNセッショントークンを含む機密情報をクリップボードにコピーします。信頼できる相手以外とは共有しないでください。',

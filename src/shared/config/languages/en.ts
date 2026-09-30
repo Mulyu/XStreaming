@@ -317,6 +317,9 @@ export default {
     PsPlusDatacenterTitle: 'Datacenter',
     PsPlusDatacenterDesc:
       'Force a specific datacenter instead of the closest one under 80ms. Bypasses the 80ms auto-select limit entirely, at the cost of possibly worse quality -- only datacenters measured on a prior connection attempt are listed. If a title fails to start, try switching back to Auto.',
+    PsPlusDatacenterManualTitle: 'Datacenter code (manual)',
+    PsPlusDatacenterManualDesc:
+      'Type any datacenter code to try, even one never offered by a prior connection attempt. It can only work if the server happens to include it for this specific attempt -- otherwise the connection fails immediately with "not available" (safe to try, no other side effect).',
     PsPlusCopyDebugInfoTitle: 'Copy debug info',
     PsPlusCopyDebugInfoDesc:
       'Copies sensitive debug data (including your PSN session token) to the clipboard for troubleshooting. Only share it with someone you trust.',
