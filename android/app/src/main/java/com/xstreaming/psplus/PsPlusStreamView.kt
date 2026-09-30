@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.facebook.react.bridge.ReactContext
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Hosts the video Surface a PsPlusModule.session decodes frames into.
@@ -19,6 +20,18 @@ import com.facebook.react.bridge.ReactContext
  * but not at the cost of every launch crashing.
  */
 class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+
+	// TEMPORARY, alongside PsPlusModule's own surfaceCreatedCalls -- a
+	// process-wide counter independent of the (context as? ReactContext)
+	// cast and getNativeModule() lookup below, so a getSurfaceDebugInfo()
+	// reading of 0 can be told apart from "surfaceCreated() never fired at
+	// all" vs. "it fired, but psPlusModule resolved to null every time and
+	// attachSurface() was silently never called". Static/companion so it
+	// survives even if this exact View instance can't resolve its module.
+	companion object {
+		val rawSurfaceCreatedCalls = AtomicInteger(0)
+		val rawPsPlusModuleNullCount = AtomicInteger(0)
+	}
 
 	init {
 		// A plain SurfaceView punches a hole and composites on its own hardware
@@ -37,13 +50,21 @@ class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.C
 		get() = (context as? ReactContext)?.getNativeModule(PsPlusModule::class.java)
 
 	override fun surfaceCreated(holder: SurfaceHolder) {
+		rawSurfaceCreatedCalls.incrementAndGet()
 		// Goes through attachSurface() (not a plain currentSurface write) so
 		// this can never race with startSession() reading currentSurface and
 		// publishing a fresh Session -- see PsPlusModule.surfaceLock.
-		psPlusModule?.attachSurface(holder.surface)
+		val module = psPlusModule
+		if (module == null) {
+			rawPsPlusModuleNullCount.incrementAndGet()
+		} else {
+			module.attachSurface(holder.surface)
+		}
 	}
 
-	override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+	override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+		psPlusModule?.noteSurfaceChanged(width, height)
+	}
 
 	override fun surfaceDestroyed(holder: SurfaceHolder) {
 		psPlusModule?.attachSurface(null)

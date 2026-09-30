@@ -112,6 +112,24 @@ export type StreamMetrics = {
   decoderCodecCreateFailed: boolean;
 };
 
+// TEMPORARY, added after decoderSetSurfaceCalls=0 on a build with the
+// PsPlusModule.surfaceLock fix proved Session.setSurface() is never called
+// at all -- see PsPlusModule.kt's getSurfaceDebugInfo() for what each field
+// narrows down. Independent of StreamMetrics/getMetrics(): available even
+// before a native Session exists, since that's exactly the case in
+// question. Remove together with the rest of this debug plumbing.
+export type SurfaceDebugInfo = {
+  surfaceCreatedCalls: number;
+  surfaceDestroyedCalls: number;
+  surfaceChangedCalls: number;
+  lastSurfaceWidth: number;
+  lastSurfaceHeight: number;
+  hasCurrentSurface: boolean;
+  hasSession: boolean;
+  rawSurfaceCreatedCalls: number;
+  rawPsPlusModuleNullCount: number;
+};
+
 export type ControllerStateInput = {
   buttons?: number;
   l2State?: number;
@@ -198,6 +216,10 @@ class PsPlusChiakiClient {
 
   getMetrics(): Promise<StreamMetrics | null> {
     return PsPlusChiakiNative.getMetrics();
+  }
+
+  getSurfaceDebugInfo(): Promise<SurfaceDebugInfo | null> {
+    return PsPlusChiakiNative?.getSurfaceDebugInfo?.() ?? Promise.resolve(null);
   }
 
   addSessionEventListener(

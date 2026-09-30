@@ -6,6 +6,8 @@ import {
   PsPlusSession,
   PsPlusConnectionState,
   StreamMetrics,
+  SurfaceDebugInfo,
+  psPlusChiaki,
   getNpsso,
 } from '../../../features/ps-plus-session';
 import {GAMEPAD_MAPING} from '../../../entities/gamepad';
@@ -513,6 +515,33 @@ export function usePsPlusStream(navigation: any, route: any) {
     };
   }, [connectState]);
 
+  // TEMPORARY, alongside debugMetrics above -- see PsPlusModule.kt's
+  // getSurfaceDebugInfo() comment. Unlike debugMetrics this polls a plain
+  // Kotlin-side counter with no native Session involved, so it's meaningful
+  // during 'connecting' too (exactly when surfaceCreated() firing -- or not
+  // -- actually matters), not gated to 'connected' like the metrics above.
+  const [surfaceDebug, setSurfaceDebug] =
+    React.useState<SurfaceDebugInfo | null>(null);
+  React.useEffect(() => {
+    if (connectState !== 'connecting' && connectState !== 'connected') {
+      return;
+    }
+    let cancelled = false;
+    const poll = () => {
+      psPlusChiaki.getSurfaceDebugInfo().then(info => {
+        if (!cancelled) {
+          setSurfaceDebug(info);
+        }
+      });
+    };
+    poll();
+    const interval = setInterval(poll, 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [connectState]);
+
   const [pin, setPin] = React.useState('');
 
   const onSubmitPin = React.useCallback(() => {
@@ -593,6 +622,7 @@ export function usePsPlusStream(navigation: any, route: any) {
     onTogglePerformance,
     metrics,
     debugMetrics,
+    surfaceDebug,
     onEditGamepadLayout,
     onRailDisconnect,
   };
