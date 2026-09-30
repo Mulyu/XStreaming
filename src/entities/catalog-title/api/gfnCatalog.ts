@@ -181,18 +181,18 @@ export type RawApp = {
 // (Apex Legends, Fortnite, ...) needs no linked store account, so every
 // variant's own gfn.library.status still reports NOT_OWNED (there's nothing
 // to own) even though the game streams fine. GFN's own API exposes this at
-// the app level via playType ("...FREE...") and playabilityState
-// ("PLAYABLE"/"AVAILABLE"), independent of per-variant ownership -- mirrors
-// OpenNOW (github.com/OpenCloudGaming/OpenNOW)'s own priority order: trust
-// this signal when it says the title is playable, and only fall back to
-// per-variant ownership when it doesn't.
-export const isConfirmedPlayable = (app: RawApp): boolean => {
-  const state = app.gfn?.playabilityState?.toUpperCase();
-  if (state === 'PLAYABLE' || state === 'AVAILABLE') {
-    return true;
-  }
-  return !!app.gfn?.playType?.toUpperCase().includes('FREE');
-};
+// the app level via playType ("...FREE_TO_PLAY..." etc.), independent of
+// per-variant ownership.
+//
+// This used to also trust playabilityState ("PLAYABLE"/"AVAILABLE"), mirroring
+// OpenNOW's own priority order -- but confirmed live, that field is set for
+// essentially every regularly-purchasable, non-owned title too (it answers
+// "is this app currently live/streamable on GFN at all", not "playable
+// without owning it"), which made almost the entire browse catalog show as
+// owned the moment any one of its titles matched. playType's free-to-play
+// signal is the only field that's actually about purchase requirement.
+export const isConfirmedPlayable = (app: RawApp): boolean =>
+  !!app.gfn?.playType?.toUpperCase().includes('FREE');
 
 const optimizeImage = (url: string, width = 460): string =>
   url.includes('img.nvidiagrid.net') ? `${url};f=webp;w=${width}` : url;
