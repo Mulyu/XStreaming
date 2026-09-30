@@ -38,17 +38,10 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	// stopSession() run on RN's Native Modules thread while
 	// PsPlusStreamView's surfaceCreated()/surfaceDestroyed() always run on
 	// the UI thread. Without it, a write to either field on one thread has
-	// no guaranteed visibility to a read on the other -- the debug counters
-	// added while investigating the black-screen bug confirmed the actual
-	// failure mode this caused: chiaki_video_receiver_flush_frame()
-	// successfully reassembled frames the whole time (flushOk in the
-	// thousands), but android_chiaki_video_decoder_video_sample() bailed
-	// out on every single one via its "decoder is not initialized" branch,
-	// because startSession() was reading a stale null currentSurface and
-	// so never called Session.setSurface() at all -- AMediaCodec was never
-	// even created. Exactly matches every symptom seen throughout this
-	// investigation: audio (unaffected by any of this) always worked,
-	// video never did.
+	// no guaranteed visibility to a read on the other. This alone fixed one
+	// real occurrence of decoder in=0 (a stale null currentSurface read),
+	// but is not sufficient by itself -- see surfaceLock below for the
+	// remaining gap it doesn't cover.
 	@Volatile
 	internal var session: Session? = null
 		private set
@@ -62,6 +55,29 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	// backgrounding or rotation).
 	@Volatile
 	internal var currentSurface: Surface? = null
+		private set
+
+	// @Volatile makes individual reads/writes of session/currentSurface
+	// visible across threads, but startSession() still does "read
+	// currentSurface, then later assign session" as two separate steps --
+	// if surfaceCreated()/surfaceDestroyed() lands on the UI thread in the
+	// gap between those two steps, its update is visible but never acted on:
+	// it either updates currentSurface after startSession() already read the
+	// old value (too late for this session), or fires while session is still
+	// null (its own `session?.setSurface(...)` is then a same-old no-op),
+	// and nothing ever re-checks currentSurface afterward. Routing every
+	// read-then-act-on(currentSurface, session) pair through this lock
+	// closes that gap: whichever side loses the race still observes the
+	// other side's update before making its own decision.
+	private val surfaceLock = Any()
+
+	/** Called by PsPlusStreamView as its Surface is created/destroyed. */
+	internal fun attachSurface(surface: Surface?) {
+		synchronized(surfaceLock) {
+			currentSurface = surface
+			session?.setSurface(surface)
+		}
+	}
 
 	private fun emit(name: String, params: WritableMap?) {
 		reactApplicationContext
@@ -205,9 +221,15 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 			newSession.eventCallback = { event -> handleSessionEvent(event) }
 			// The stream view's SurfaceView almost always mounted (and already
 			// fired surfaceCreated) before this session existed -- see
-			// currentSurface's own comment.
-			currentSurface?.let { newSession.setSurface(it) }
-			session = newSession
+			// currentSurface's own comment. Reading currentSurface and
+			// publishing `session` happen under surfaceLock together so a
+			// surfaceCreated/surfaceDestroyed racing with this can't be missed
+			// (see surfaceLock's own comment) -- attachSurface() takes the
+			// same lock on the UI-thread side.
+			synchronized(surfaceLock) {
+				currentSurface?.let { newSession.setSurface(it) }
+				session = newSession
+			}
 
 			val startErr = newSession.start()
 			if (!startErr.isSuccess) {
@@ -308,6 +330,9 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 			putInt("receiverFlushSuccess", metrics.receiverFlushSuccess)
 			putInt("receiverFlushFecFailed", metrics.receiverFlushFecFailed)
 			putInt("receiverFlushFailed", metrics.receiverFlushFailed)
+			putInt("decoderSetSurfaceCalls", metrics.decoderSetSurfaceCalls)
+			putBoolean("decoderWindowCreateFailed", metrics.decoderWindowCreateFailed)
+			putBoolean("decoderCodecCreateFailed", metrics.decoderCodecCreateFailed)
 		})
 	}
 }

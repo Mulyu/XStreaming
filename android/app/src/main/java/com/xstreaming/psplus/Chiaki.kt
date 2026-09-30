@@ -126,6 +126,13 @@ data class StreamMetrics(
 	val receiverFlushSuccess: Int = 0,
 	val receiverFlushFecFailed: Int = 0,
 	val receiverFlushFailed: Int = 0,
+	// TEMPORARY, added on a second pass after decoderConfigureFailed alone
+	// didn't explain a still-reproducing decoder in=0 -- see video-decoder.h
+	// and chiaki-jni.c's sessionGetMetrics comment for what each one narrows
+	// down.
+	val decoderSetSurfaceCalls: Int = 0,
+	val decoderWindowCreateFailed: Boolean = false,
+	val decoderCodecCreateFailed: Boolean = false,
 )
 {
 	companion object
@@ -146,6 +153,9 @@ data class StreamMetrics(
 			receiverFlushSuccess = a.getOrElse(12) { 0.0 }.toInt(),
 			receiverFlushFecFailed = a.getOrElse(13) { 0.0 }.toInt(),
 			receiverFlushFailed = a.getOrElse(14) { 0.0 }.toInt(),
+			decoderSetSurfaceCalls = a.getOrElse(15) { 0.0 }.toInt(),
+			decoderWindowCreateFailed = a.getOrElse(16) { 0.0 } != 0.0,
+			decoderCodecCreateFailed = a.getOrElse(17) { 0.0 } != 0.0,
 		)
 	}
 }
