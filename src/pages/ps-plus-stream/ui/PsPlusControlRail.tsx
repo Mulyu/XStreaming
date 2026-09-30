@@ -32,6 +32,9 @@ type Props = Pick<
   | 'audioGain'
   | 'onAudioGainChange'
   | 'onEditGamepadLayout'
+  | 'coverAvailable'
+  | 'coverPresented'
+  | 'onToggleCoverControls'
   | 'onRailDisconnect'
 >;
 
@@ -105,6 +108,9 @@ const PsPlusControlRail: React.FC<Props> = ({
   audioGain,
   onAudioGainChange,
   onEditGamepadLayout,
+  coverAvailable,
+  coverPresented,
+  onToggleCoverControls,
   onRailDisconnect,
 }) => {
   const videoFormatLabel =
@@ -216,6 +222,14 @@ const PsPlusControlRail: React.FC<Props> = ({
               {metrics.droppedFrames} dropped
             </Text>
           </View>
+        )}
+        {coverAvailable && (
+          <RailButton
+            icon="image-outline"
+            label={t('Cover controls')}
+            active={coverPresented}
+            onPress={onToggleCoverControls}
+          />
         )}
       </View>
 
