@@ -36,17 +36,6 @@ const psplus = [
       {value: 'custom', text: t('Custom')},
     ],
   },
-  {
-    name: 'psplus_datacenter',
-    type: 'radio',
-    title: t('PsPlusDatacenterTitle'),
-    description: t('PsPlusDatacenterDesc'),
-    // Populated at runtime from settings.psplus_datacenter_pings (measured
-    // across prior connection attempts, since there's no way to list
-    // datacenters before one) -- see SettingsView.tsx, same pattern as
-    // GFN's own region picker.
-    data: [],
-  },
 ];
 
 export default psplus;
