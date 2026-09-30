@@ -546,12 +546,18 @@ function StoreScreen() {
     [gfnFullCatalog],
   );
 
+  // Both productId and storeProductId, not storeProductId alone -- see
+  // storeLogic.ts's buildPsStoreRows for why (storeProductId is only
+  // populated for owned/purchaseable rows, never a "streamable" PS Plus
+  // catalog title, per libchiaki's own JSON contract).
   const psPlusStoreProductIds = React.useMemo(
     () =>
       new Set(
-        psPlusGames
-          .map(game => game.storeProductId)
-          .filter((id): id is string => !!id),
+        psPlusGames.flatMap(game =>
+          [game.productId, game.storeProductId].filter(
+            (id): id is string => !!id,
+          ),
+        ),
       ),
     [psPlusGames],
   );

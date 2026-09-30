@@ -223,4 +223,22 @@ describe('buildPsStoreRows', () => {
     );
     expect(rows[0].catalogTitle?.psplus?.inPlusCatalog).toBe(true);
   });
+
+  // Regression: libchiaki's own JSON contract (cloudcatalog.h) documents
+  // storeProductId as populated only for "owned"/"purchaseable" rows -- a
+  // "streamable" row (in the account's current PS Plus catalog, not owned)
+  // carries none, only productId. Matching on storeProductId alone silently
+  // dropped every genuine Plus-catalog title from this filter.
+  it('matches a streamable PS Plus catalog title that has no storeProductId', () => {
+    const streamableGame = {
+      productId: 'UP1',
+      name: 'Game A',
+      storeProductId: '',
+      isOwned: false,
+      plusCatalog: true,
+    };
+    const rows = buildPsStoreRows([entry('UP1', 'Game A')], [streamableGame]);
+    expect(rows[0].catalogTitle).not.toBeNull();
+    expect(rows[0].catalogTitle?.psplus?.inPlusCatalog).toBe(true);
+  });
 });
