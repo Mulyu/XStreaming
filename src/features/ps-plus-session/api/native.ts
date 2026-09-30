@@ -128,6 +128,11 @@ export type SurfaceDebugInfo = {
   hasSession: boolean;
   rawSurfaceCreatedCalls: number;
   rawPsPlusModuleNullCount: number;
+  // TEMPORARY: equal means one misbehaving PsPlusModule; different means the
+  // View's getNativeModule() lookup and the JS bridge resolve to two live
+  // instances that don't share state -- see PsPlusModule.kt's comment.
+  thisModuleId: number;
+  lastAttachedModuleId: number;
 };
 
 export type ControllerStateInput = {

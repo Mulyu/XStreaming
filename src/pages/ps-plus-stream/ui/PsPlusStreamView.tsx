@@ -75,6 +75,15 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
               {`sfc created=${surfaceDebug.surfaceCreatedCalls}/${surfaceDebug.rawSurfaceCreatedCalls} destroyed=${surfaceDebug.surfaceDestroyedCalls} changed=${surfaceDebug.surfaceChangedCalls} (${surfaceDebug.lastSurfaceWidth}x${surfaceDebug.lastSurfaceHeight}) moduleNull=${surfaceDebug.rawPsPlusModuleNullCount} hasSurface=${surfaceDebug.hasCurrentSurface} hasSession=${surfaceDebug.hasSession}`}
             </Text>
           )}
+          {surfaceDebug && (
+            <Text style={styles.debugText}>
+              {`moduleId this=${surfaceDebug.thisModuleId} lastAttached=${
+                surfaceDebug.lastAttachedModuleId
+              } same=${
+                surfaceDebug.thisModuleId === surfaceDebug.lastAttachedModuleId
+              }`}
+            </Text>
+          )}
         </View>
       )}
 
