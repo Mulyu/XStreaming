@@ -117,6 +117,17 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 				putBoolean("hasSession", session != null)
 				putInt("rawSurfaceCreatedCalls", PsPlusStreamView.rawSurfaceCreatedCalls.get())
 				putInt("rawPsPlusModuleNullCount", PsPlusStreamView.rawPsPlusModuleNullCount.get())
+				// TEMPORARY: compare against lastAttachedModuleId -- equal means
+				// this really is one misbehaving instance (rules out the
+				// two-instances theory); different means the View's
+				// getNativeModule() lookup and the JS bridge's NativeModules.
+				// PsPlusChiaki resolve to two live PsPlusModule objects that
+				// don't share state, which would fully explain surfaceCreatedCalls
+				// staying 0 here despite rawSurfaceCreatedCalls being nonzero
+				// with rawPsPlusModuleNullCount=0 (attachSurface() really did run,
+				// just never on this object).
+				putInt("thisModuleId", System.identityHashCode(this@PsPlusModule))
+				putInt("lastAttachedModuleId", PsPlusStreamView.lastAttachedModuleId.get())
 			})
 		}
 	}

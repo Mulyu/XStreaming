@@ -31,6 +31,15 @@ class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.C
 	companion object {
 		val rawSurfaceCreatedCalls = AtomicInteger(0)
 		val rawPsPlusModuleNullCount = AtomicInteger(0)
+		// TEMPORARY: surfaceCreatedCalls=0 on the instance getSurfaceDebugInfo()
+		// answers from, vs. rawSurfaceCreatedCalls>0 with rawPsPlusModuleNullCount=0,
+		// is only possible if attachSurface() really did run 4 times (moduleNull=0
+		// means the lookup below never failed) but on a DIFFERENT PsPlusModule
+		// object than the one the JS bridge resolves -- i.e. two live instances
+		// that don't share state, not a single misbehaving one. identityHashCode
+		// of whichever instance last actually ran attachSurface(), to compare
+		// directly against getSurfaceDebugInfo()'s own `this`.
+		val lastAttachedModuleId = AtomicInteger(0)
 	}
 
 	init {
@@ -58,6 +67,7 @@ class PsPlusStreamView(context: Context) : SurfaceView(context), SurfaceHolder.C
 		if (module == null) {
 			rawPsPlusModuleNullCount.incrementAndGet()
 		} else {
+			lastAttachedModuleId.set(System.identityHashCode(module))
 			module.attachSurface(holder.surface)
 		}
 	}
