@@ -910,13 +910,22 @@ export const mergeOwnedGames = (
     return publicGames;
   }
   const ownedById = new Map(ownedGames.map(g => [g.id, g]));
-  const ownedByTitle = new Map(
-    ownedGames.map(g => [normalizeTitle(g.title), g]),
+  // Fallback for when the same app's variant id differs between the owned-
+  // library and browse-catalog responses -- keyed by store too, not title
+  // alone: a title cross-listed on more than one store (Steam + Epic + GOG,
+  // say) must only match the specific store variant actually owned, not
+  // every other store's separate (unowned) listing of the same title. A
+  // title-only key previously let owning e.g. the Steam copy mark that same
+  // title's Epic/GOG entries owned too, even though GFN ownership is
+  // per-linked-store-account, not per-title.
+  const ownedByStoreTitle = new Map(
+    ownedGames.map(g => [`${g.store}:${normalizeTitle(g.title)}`, g]),
   );
 
   const merged = publicGames.map(g => {
     const owned =
-      ownedById.get(g.id) ?? ownedByTitle.get(normalizeTitle(g.title));
+      ownedById.get(g.id) ??
+      ownedByStoreTitle.get(`${g.store}:${normalizeTitle(g.title)}`);
     if (!owned) {
       return g;
     }

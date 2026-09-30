@@ -149,4 +149,23 @@ describe('mergeOwnedGames', () => {
       'モンスターハンターワイルズ',
     ]);
   });
+
+  // Regression: a title cross-listed on more than one store (Steam + Epic,
+  // say) previously had ownership spread across every store's listing the
+  // moment any one of them matched the owned library by title -- e.g. owning
+  // the Steam copy also marked the separate, actually-unowned Epic listing
+  // of the same title as owned. GFN ownership is per-linked-store-account,
+  // so only the specific owned store variant should ever be marked owned.
+  it("does not mark a different store's listing of the same title owned", () => {
+    const base = [
+      {...baseGame('101', 'Diablo IV'), store: 'Steam'},
+      {...baseGame('202', 'Diablo IV'), store: 'Epic'},
+    ];
+    const owned = [{...ownedGame('101', 'Diablo IV'), store: 'Steam'}];
+    const merged = mergeOwnedGames(base, owned);
+    const steamEntry = merged.find(g => g.store === 'Steam');
+    const epicEntry = merged.find(g => g.store === 'Epic');
+    expect(steamEntry?.owned).toBe(true);
+    expect(epicEntry?.owned).toBeFalsy();
+  });
 });
