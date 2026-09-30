@@ -133,6 +133,12 @@ export type SurfaceDebugInfo = {
   // instances that don't share state -- see PsPlusModule.kt's comment.
   thisModuleId: number;
   lastAttachedModuleId: number;
+  // TEMPORARY: non-null means resolving PsPlusModule inside surfaceCreated()
+  // (the (context as? ReactContext)?.getNativeModule() call) threw instead of
+  // returning null or succeeding -- caught for the first time by this debug
+  // build, so it was either silently swallowed somewhere upstream before, or
+  // this is the very first time it's ever been observed.
+  lastSurfaceCreatedError: string | null;
 };
 
 export type ControllerStateInput = {

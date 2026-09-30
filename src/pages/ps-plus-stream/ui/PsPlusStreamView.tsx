@@ -84,6 +84,11 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
               }`}
             </Text>
           )}
+          {surfaceDebug?.lastSurfaceCreatedError && (
+            <Text style={styles.debugText}>
+              {`sfc error: ${surfaceDebug.lastSurfaceCreatedError}`}
+            </Text>
+          )}
         </View>
       )}
 
