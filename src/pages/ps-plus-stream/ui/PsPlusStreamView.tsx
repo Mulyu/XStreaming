@@ -52,8 +52,27 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   onCreateGamepadProfile,
   onDeleteGamepadProfile,
   gamepadLayoutVersion,
+  swipeAimEnabled,
+  swipeAimSensitivity,
+  swipeAimAcceleration,
+  swipeAimRect,
+  onSwipeAim,
+  onSwipeAimEnd,
+  swipeAimIsActive,
+  coverAvailable,
+  coverPresented,
+  onToggleCoverControls,
   onRailDisconnect,
 }) => {
+  const swipeAimProps = {
+    swipeAimEnabled,
+    swipeAimSensitivity,
+    swipeAimAcceleration,
+    swipeAimRect,
+    onSwipeAim,
+    onSwipeAimEnd,
+    swipeAimIsActive,
+  };
   return (
     <View style={styles.container}>
       <NativePsPlusStreamView
@@ -106,6 +125,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
               onPressIn={onPressIn}
               onPressOut={onPressOut}
               onStickMove={onStickMove}
+              {...swipeAimProps}
             />
           ) : (
             <VirtualGamepad
@@ -114,6 +134,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
               onPressIn={onPressIn}
               onPressOut={onPressOut}
               onStickMove={onStickMove}
+              {...swipeAimProps}
             />
           )}
           <Pressable style={styles.settingsBtn} onPress={onOpenControlRail}>
@@ -138,6 +159,9 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         audioGain={audioGain}
         onAudioGainChange={onAudioGainChange}
         onEditGamepadLayout={onEditGamepadLayout}
+        coverAvailable={coverAvailable}
+        coverPresented={coverPresented}
+        onToggleCoverControls={onToggleCoverControls}
         onRailDisconnect={onRailDisconnect}
       />
 

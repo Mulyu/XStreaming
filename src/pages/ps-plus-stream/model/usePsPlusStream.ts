@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Alert,
+  DeviceEventEmitter,
   Dimensions,
   NativeEventEmitter,
   NativeModules,
@@ -25,6 +26,11 @@ import {
   saveVirtualGamepadLayout as saveGamepadLayout,
   deleteVirtualGamepadLayout as deleteGamepadProfile,
   buildDefaultLayout,
+  createDefaultSwipePad,
+  SWIPE_AIM_NAME,
+  getCoverEnabled,
+  getCoverLayout,
+  coverGamepadBus,
 } from '../../../features/controller-customization';
 import type {
   ButtonConfig,
@@ -34,7 +40,7 @@ import type {
 import {getSettings, saveSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
 
-const {FullScreenManager, GamepadManager} = NativeModules;
+const {FullScreenManager, GamepadManager, CoverDisplayManager} = NativeModules;
 
 // Exactly native-stream's own VIDEO_FORMAT_OPTIONS -- '' is "Auto" (native
 // aspect, 16:9 for every PS Plus resolution preset), then a fill-exact
@@ -77,6 +83,24 @@ const normaliseAxis = (value: number): number => {
   }
   const sign = Math.sign(value);
   return (value - sign * deadZone) / (1 - deadZone);
+};
+
+// Below this magnitude a game's own analog-stick dead zone (commonly 10-15%)
+// swallows the input entirely, so a slow, deliberate small swipe can end up
+// doing nothing even though some movement was reported. Once a swipe
+// produces any output at all, floor it above that dead zone and scale the
+// rest of the range up to fill the gap -- exactly native-stream's own
+// shapeSwipeAim.
+const SWIPE_AIM_DEADZONE_FLOOR = 0.2;
+const shapeSwipeAim = (v: number): number => {
+  const clamped = Math.max(-1, Math.min(1, v));
+  if (clamped === 0) {
+    return 0;
+  }
+  const magnitude =
+    SWIPE_AIM_DEADZONE_FLOOR +
+    (1 - SWIPE_AIM_DEADZONE_FLOOR) * Math.abs(clamped);
+  return Math.sign(clamped) * magnitude;
 };
 
 const log = debugFactory('PsPlusStreamScreen');
@@ -252,6 +276,8 @@ export function usePsPlusStream(navigation: any, route: any) {
     setActiveProfile(name);
     setEditorProfile(name);
     setGamepadLayoutVersion(v => v + 1);
+    // Cover buttons follow the active touch-controller profile too.
+    coverGamepadBus.setLayout(getCoverLayout(name || ''));
   }, []);
 
   const onSwitchGamepadProfile = React.useCallback(
@@ -349,6 +375,112 @@ export function usePsPlusStream(navigation: any, route: any) {
   const flushGpState = React.useCallback(() => {
     sessionRef.current?.setGamepadState(gpState.current);
   }, []);
+
+  // Swipe-to-aim: shared with native-stream's own implementation -- a
+  // trackpad rectangle (placed/sized per-profile in the shared gamepad
+  // editor) that translates a finger drag into right-stick (camera)
+  // velocity, gated by the profile's own activation scheme (always, or only
+  // while the left trigger/bumper is held).
+  const activeSwipe = React.useMemo(
+    () => getSwipeConfig(activeProfile),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeProfile, gamepadLayoutVersion],
+  );
+
+  // The swipe-aim trackpad rectangle for the active profile (from its
+  // layout; a sensible default when the profile has no SwipeAim element or
+  // is Default).
+  const activeSwipeRect = React.useMemo(() => {
+    const {width, height} = Dimensions.get('window');
+    const fallback = createDefaultSwipePad(width, height);
+    if (activeProfile) {
+      const layout = getGamepadLayouts()[activeProfile];
+      const pad = Array.isArray(layout)
+        ? layout.find((b: ButtonConfig) => b?.name === SWIPE_AIM_NAME)
+        : null;
+      if (pad) {
+        return pad;
+      }
+    }
+    return fallback;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile, gamepadLayoutVersion]);
+
+  // Whether swipe-aim should actually claim/apply a touch right now, per its
+  // activation scheme (same scheme as gyro-aim's SensorConfig.activation):
+  // always, or only while the configured trigger/bumper is held. Read live
+  // off gpState -- not memoized -- so the per-move output gate further
+  // below, the swipeAimActive React state synced to it, and SwipeAimZone's
+  // own isActive prop all agree with the current button state.
+  const isSwipeAimActive = React.useCallback(() => {
+    const activation = activeSwipe.activation;
+    const deadZone = getSettings().dead_zone || 0;
+    if (activation === 4) {
+      return true;
+    }
+    if (activation === 1) {
+      return gpState.current.LeftTrigger >= deadZone;
+    }
+    if (activation === 2) {
+      return gpState.current.LeftShoulder > 0;
+    }
+    return (
+      gpState.current.LeftTrigger >= deadZone ||
+      gpState.current.LeftShoulder > 0
+    );
+  }, [activeSwipe.activation]);
+
+  // Mirrors isSwipeAimActive() as React state, kept in sync from the
+  // trigger/bumper handlers below -- the trackpad is unmounted outright
+  // while inactive (see swipeAimEnabled further down), matching
+  // native-stream's own reasoning: a PanResponder that merely declines to
+  // become responder didn't reliably let the touch fall through to whatever
+  // is underneath it in practice.
+  const [swipeAimActive, setSwipeAimActive] = React.useState(false);
+
+  // Re-sync whenever the activation scheme itself changes (e.g. switching
+  // profiles, or picking a different activation option in the editor),
+  // rather than waiting for the next trigger/bumper press to notice.
+  React.useEffect(() => {
+    setSwipeAimActive(isSwipeAimActive());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSwipe.activation]);
+
+  const swipeAimResetTimer = React.useRef<ReturnType<typeof setTimeout>>();
+
+  const clearSwipeAim = React.useCallback(() => {
+    if (swipeAimResetTimer.current) {
+      clearTimeout(swipeAimResetTimer.current);
+      swipeAimResetTimer.current = undefined;
+    }
+    gpState.current.RightThumbXAxis = 0;
+    gpState.current.RightThumbYAxis = 0;
+    flushGpState();
+  }, [flushGpState]);
+
+  const handleSwipeAim = React.useCallback(
+    (dx: number, dy: number) => {
+      // The touch-capture gate below (SwipeAimZone's isActive prop) already
+      // keeps an inactive swipe-aim from claiming a touch at all; this
+      // repeats the same check so releasing the trigger mid-swipe stops
+      // applying movement immediately too, since a granted gesture keeps
+      // delivering move events regardless of activation state.
+      if (!isSwipeAimActive()) {
+        return;
+      }
+      const invertY = activeSwipe.invertY;
+      gpState.current.RightThumbXAxis = shapeSwipeAim(dx);
+      // Screen y is down-positive; a right stick pushed up (look up) is
+      // positive, so negate by default. Invert flips it back.
+      gpState.current.RightThumbYAxis = shapeSwipeAim(invertY ? dy : -dy);
+      flushGpState();
+      if (swipeAimResetTimer.current) {
+        clearTimeout(swipeAimResetTimer.current);
+      }
+      swipeAimResetTimer.current = setTimeout(clearSwipeAim, 60);
+    },
+    [isSwipeAimActive, activeSwipe.invertY, flushGpState, clearSwipeAim],
+  );
 
   // Screen position / aspect ratio / volume: shared with native-stream's own
   // settings.screen_position/video_format/audio_gain (see that screen's
@@ -495,6 +627,9 @@ export function usePsPlusStream(navigation: any, route: any) {
     (name: string) => {
       (gpState.current as any)[name] = 1;
       flushGpState();
+      if (name === 'LeftTrigger' || name === 'LeftShoulder') {
+        setSwipeAimActive(isSwipeAimActive());
+      }
       if (name === 'Menu' && !menuLongPressTimer.current) {
         menuLongPressTriggered.current = false;
         menuLongPressTimer.current = setTimeout(() => {
@@ -506,13 +641,16 @@ export function usePsPlusStream(navigation: any, route: any) {
         }, 2000);
       }
     },
-    [flushGpState, openControlRail],
+    [flushGpState, openControlRail, isSwipeAimActive],
   );
 
   const handlePressOut = React.useCallback(
     (name: string) => {
       (gpState.current as any)[name] = 0;
       flushGpState();
+      if (name === 'LeftTrigger' || name === 'LeftShoulder') {
+        setSwipeAimActive(isSwipeAimActive());
+      }
       if (name === 'Menu') {
         if (menuLongPressTimer.current) {
           clearTimeout(menuLongPressTimer.current);
@@ -521,7 +659,7 @@ export function usePsPlusStream(navigation: any, route: any) {
         menuLongPressTriggered.current = false;
       }
     },
-    [flushGpState],
+    [flushGpState, isSwipeAimActive],
   );
 
   const handleStickMove = React.useCallback(
@@ -571,6 +709,9 @@ export function usePsPlusStream(navigation: any, route: any) {
       if (name !== 'LeftTrigger' && name !== 'RightTrigger') {
         (gpState.current as any)[name] = 1;
       }
+      if (name === 'LeftShoulder') {
+        setSwipeAimActive(isSwipeAimActive());
+      }
       if (
         name === 'Menu' &&
         !menuLongPressTimer.current &&
@@ -594,6 +735,9 @@ export function usePsPlusStream(navigation: any, route: any) {
       }
       if (name !== 'LeftTrigger' && name !== 'RightTrigger') {
         (gpState.current as any)[name] = 0;
+      }
+      if (name === 'LeftShoulder') {
+        setSwipeAimActive(isSwipeAimActive());
       }
       if (name === 'Menu') {
         if (menuLongPressTimer.current) {
@@ -634,6 +778,7 @@ export function usePsPlusStream(navigation: any, route: any) {
       gpState.current.RightTrigger =
         event.rightTrigger >= 0.05 ? event.rightTrigger : 0;
       flushGpState();
+      setSwipeAimActive(isSwipeAimActive());
     });
 
     return () => {
@@ -649,7 +794,96 @@ export function usePsPlusStream(navigation: any, route: any) {
         menuLongPressTimer.current = undefined;
       }
     };
-  }, [flushGpState, openControlRail]);
+  }, [flushGpState, openControlRail, isSwipeAimActive]);
+
+  // Foldable cover-display support, shared with native-stream's own
+  // implementation: while connected, expose gamepad input to the outer
+  // cover surface (a second ReactRootView on this same JS instance, see
+  // pages/cover-screen) via the coverGamepadBus singleton, and auto-present
+  // it when the device is unfolded during a game.
+  const [coverAvailable, setCoverAvailable] = React.useState(false);
+  const [coverPresented, setCoverPresented] = React.useState(false);
+  const coverPressInRef = React.useRef<(name: string) => void>(() => {});
+  const coverPressOutRef = React.useRef<(name: string) => void>(() => {});
+  // Set once a manual "Hide" wins over auto-present until re-enabled or the
+  // device is re-opened -- mirrors native-stream's own coverHiddenRef.
+  const coverHiddenRef = React.useRef(false);
+  const connectStateRef = React.useRef(connectState);
+
+  coverPressInRef.current = handlePressIn;
+  coverPressOutRef.current = handlePressOut;
+  connectStateRef.current = connectState;
+
+  // React to cover present-capability changes (device opened/closed): keep
+  // the availability + presented flags in sync and auto-present the cover
+  // controls when the device is unfolded during a game, so no manual step is
+  // needed.
+  const handleCoverStatus = React.useCallback((s: string) => {
+    setCoverAvailable(s === 'AVAILABLE' || s === 'ACTIVE');
+    setCoverPresented(s === 'ACTIVE');
+    if (
+      s === 'AVAILABLE' &&
+      connectStateRef.current === 'connected' &&
+      !coverHiddenRef.current &&
+      getCoverEnabled(getSettings().custom_virtual_gamepad || '')
+    ) {
+      CoverDisplayManager?.present?.('XCoverScreen')?.catch?.(() => {});
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(
+      'CoverDisplayStatus',
+      handleCoverStatus,
+    );
+    return () => sub.remove();
+  }, [handleCoverStatus]);
+
+  // While a stream is connected, expose the gamepad input to the foldable
+  // cover-display surface and tell it a game is live; auto-present if the
+  // device is already unfolded. Tear down on disconnect.
+  React.useEffect(() => {
+    if (connectState !== 'connected') {
+      return;
+    }
+    coverHiddenRef.current = false;
+    coverGamepadBus.setHandlers({
+      onPressIn: name => coverPressInRef.current(name),
+      onPressOut: name => coverPressOutRef.current(name),
+    });
+    // Cover buttons follow the active touch-controller profile.
+    coverGamepadBus.setLayout(
+      getCoverLayout(getSettings().custom_virtual_gamepad || ''),
+    );
+    coverGamepadBus.setActive(true);
+    CoverDisplayManager?.getStatus?.()
+      .then(handleCoverStatus)
+      .catch(() => {});
+    return () => {
+      coverGamepadBus.clearHandlers();
+      coverGamepadBus.setActive(false);
+      CoverDisplayManager?.dismiss?.();
+      setCoverPresented(false);
+    };
+  }, [connectState, handleCoverStatus]);
+
+  const onToggleCoverControls = React.useCallback(async () => {
+    if (coverPresented) {
+      // Manual hide: remember it so the auto-present doesn't turn it back on
+      // until the user re-enables or the device is re-opened.
+      coverHiddenRef.current = true;
+      CoverDisplayManager?.dismiss?.();
+      setCoverPresented(false);
+    } else {
+      coverHiddenRef.current = false;
+      try {
+        await CoverDisplayManager?.present?.('XCoverScreen');
+        setCoverPresented(true);
+      } catch (e) {
+        log.warn('present cover failed:', e);
+      }
+    }
+  }, [coverPresented]);
 
   // Hands D-pad/remote focus back to normal Android navigation while the
   // rail (or the CustomGamepad screen it navigates to) is up, same as
@@ -737,6 +971,25 @@ export function usePsPlusStream(navigation: any, route: any) {
     requestExit();
   }, [closeControlRail, requestExit]);
 
+  // CustomVirtualGamepad/VirtualGamepad's swipeAim* props -- see
+  // native-stream's own identical derivation.
+  const swipeAimSensitivityRaw = Number(activeSwipe.sensitivity) || 0;
+  const swipeAimAccelerationRaw = Number(activeSwipe.acceleration) || 0;
+  // swipeAimActive (activation gate) folds into this so the trackpad is
+  // unmounted outright while inactive, rather than merely declining to
+  // become the touch responder.
+  const swipeAimEnabled =
+    connectState === 'connected' &&
+    swipeAimSensitivityRaw > 0 &&
+    activeSwipeRect.show !== false &&
+    swipeAimActive;
+  const swipeAimRect = {
+    x: activeSwipeRect.x,
+    y: activeSwipeRect.y,
+    width: activeSwipeRect.width ?? 300,
+    height: activeSwipeRect.height ?? 260,
+  };
+
   return {
     t,
     title: params.name ?? '',
@@ -779,6 +1032,16 @@ export function usePsPlusStream(navigation: any, route: any) {
     onCreateGamepadProfile,
     onDeleteGamepadProfile,
     gamepadLayoutVersion,
+    swipeAimEnabled,
+    swipeAimSensitivity: swipeAimSensitivityRaw * 0.0025,
+    swipeAimAcceleration: swipeAimAccelerationRaw * 0.0003,
+    swipeAimRect,
+    onSwipeAim: handleSwipeAim,
+    onSwipeAimEnd: clearSwipeAim,
+    swipeAimIsActive: isSwipeAimActive,
+    coverAvailable,
+    coverPresented,
+    onToggleCoverControls,
     onRailDisconnect,
   };
 }
