@@ -842,7 +842,7 @@ JNIEXPORT void JNICALL JNI_FCN(sessionSetSurface)(JNIEnv *env, jobject obj, jlon
 
 // Live stream metrics for the optional on-screen stats overlay. All values are
 // owned/computed by libchiaki (shared with Qt/iOS) so the client just renders
-// them. Returns a double[15]:
+// them. Returns a double[18]:
 //   [0] bitrate (Mbit/s)   [1] packet loss (0..1)   [2] dropped frames (cumulative)
 //   [3] fps                [4] rtt (ms)             [5] width   [6] height
 //   [7..10] TEMPORARY video-decoder debug counters for the black-screen
@@ -856,12 +856,20 @@ JNIEXPORT void JNICALL JNI_FCN(sessionSetSurface)(JNIEnv *env, jobject obj, jlon
 //   arriving but never reassembling into a decodable frame. [0..6] only
 //   prove compressed video is arriving over the network; [7..14] prove
 //   whether it's actually reaching the decoder and coming back out.
+//   [15..17] TEMPORARY, added after [7..10] alone didn't explain a
+//   decoder-in=0 report on a build that already had the currentSurface
+//   @Volatile fix: set_surface() calls with a real surface, whether
+//   ANativeWindow_fromSurface() failed, and whether
+//   AMediaCodec_createDecoderByType() failed -- both of the latter leave
+//   the codec NULL (same visible symptom as set_surface() never being
+//   called at all) WITHOUT setting [10]/configure_failed, since that only
+//   covers the later configure()/start() calls.
 // Cheap best-effort read (same as Qt's polling timer); video_receiver-derived
 // values go through locked accessors, the rest are unlocked scalar reads. Only
 // called while a session is live and the overlay is toggled on.
 JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject obj, jlong ptr)
 {
-	jdouble vals[15] = { 0 };
+	jdouble vals[18] = { 0 };
 	AndroidChiakiSession *session = (AndroidChiakiSession *)ptr;
 	if(session)
 	{
@@ -883,12 +891,15 @@ JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject o
 			vals[5] = (jdouble)session->session.connect_info.video_profile.width;
 			vals[6] = (jdouble)session->session.connect_info.video_profile.height;
 		}
-		int debug_counts[4];
+		int debug_counts[7];
 		android_chiaki_video_decoder_get_debug_counts(&session->video_decoder, debug_counts);
 		vals[7] = (jdouble)debug_counts[0];
 		vals[8] = (jdouble)debug_counts[1];
 		vals[9] = (jdouble)debug_counts[2];
 		vals[10] = (jdouble)debug_counts[3];
+		vals[15] = (jdouble)debug_counts[4];
+		vals[16] = (jdouble)debug_counts[5];
+		vals[17] = (jdouble)debug_counts[6];
 		if(sc->video_receiver) // not yet created before the stream info packet, on a still-connecting session
 		{
 			int vr_debug_counts[4];
@@ -899,9 +910,9 @@ JNIEXPORT jdoubleArray JNICALL JNI_FCN(sessionGetMetrics)(JNIEnv *env, jobject o
 			vals[14] = (jdouble)vr_debug_counts[3];
 		}
 	}
-	jdoubleArray arr = E->NewDoubleArray(env, 15);
+	jdoubleArray arr = E->NewDoubleArray(env, 18);
 	if(arr)
-		E->SetDoubleArrayRegion(env, arr, 0, 15, vals);
+		E->SetDoubleArrayRegion(env, arr, 0, 18, vals);
 	return arr;
 }
 

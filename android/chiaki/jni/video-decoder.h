@@ -34,13 +34,26 @@ typedef struct android_chiaki_video_decoder_t
 	atomic_int debug_buffers_out;     // AMediaCodec_dequeueOutputBuffer successes
 	atomic_int debug_buffers_rendered; // ...of those, released with render=true (info.size != 0)
 	atomic_int debug_configure_failed; // AMediaCodec_configure/_start failed at least once
+	// Added on a second pass after the @Volatile currentSurface fix (see
+	// PsPlusModule.kt) did NOT resolve decoder in=0: that fix only guarantees
+	// set_surface() gets *called* with a real surface, not that everything
+	// inside it succeeds. debug_configure_failed only covers the
+	// configure()/start() calls -- ANativeWindow_fromSurface() and
+	// AMediaCodec_createDecoderByType() failing earlier in the same function
+	// both fall through to decoder->codec staying NULL WITHOUT setting that
+	// flag, which is indistinguishable from set_surface() never having been
+	// called at all from the existing counters alone. These narrow it down.
+	atomic_int debug_set_surface_calls;      // set_surface() called with a non-NULL surface
+	atomic_int debug_window_create_failed;   // ANativeWindow_fromSurface() returned NULL
+	atomic_int debug_codec_create_failed;    // AMediaCodec_createDecoderByType() returned NULL
 } AndroidChiakiVideoDecoder;
 
 ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *decoder, ChiakiLog *log, int32_t target_width, int32_t target_height, ChiakiCodec codec);
 void android_chiaki_video_decoder_fini(AndroidChiakiVideoDecoder *decoder);
 void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder, JNIEnv *env, jobject surface);
 bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, void *user);
-// out[0]=samples_in, out[1]=buffers_out, out[2]=buffers_rendered, out[3]=configure_failed (0/1).
-void android_chiaki_video_decoder_get_debug_counts(AndroidChiakiVideoDecoder *decoder, int out[4]);
+// out[0]=samples_in, out[1]=buffers_out, out[2]=buffers_rendered, out[3]=configure_failed (0/1),
+// out[4]=set_surface_calls, out[5]=window_create_failed (0/1), out[6]=codec_create_failed (0/1).
+void android_chiaki_video_decoder_get_debug_counts(AndroidChiakiVideoDecoder *decoder, int out[7]);
 
 #endif

@@ -103,6 +103,13 @@ export type StreamMetrics = {
   receiverFlushSuccess: number;
   receiverFlushFecFailed: number;
   receiverFlushFailed: number;
+  // TEMPORARY, added on a second pass after decoderConfigureFailed alone
+  // didn't explain a still-reproducing decoderSamplesIn=0 -- see
+  // video-decoder.h and chiaki-jni.c's sessionGetMetrics comment for what
+  // each one narrows down. Remove together with the rest of this plumbing.
+  decoderSetSurfaceCalls: number;
+  decoderWindowCreateFailed: boolean;
+  decoderCodecCreateFailed: boolean;
 };
 
 export type ControllerStateInput = {
