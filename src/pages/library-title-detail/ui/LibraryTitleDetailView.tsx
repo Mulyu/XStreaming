@@ -9,6 +9,8 @@ import {
   isSaleForDisplay,
   getStoreUrl,
   isSteamSaleForDisplay,
+  getPsStoreUrl,
+  isPsStoreSaleForDisplay,
 } from '../../../entities/catalog-title';
 import {
   CAP_META,
@@ -42,6 +44,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   details,
   gfnDetails,
   steamPrices,
+  psStorePrice,
   preference,
   isFavorite,
   toggleFavorite,
@@ -98,6 +101,16 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const xcloudDiscount =
     price && isSaleForDisplay(price) ? discountPercent(price) : 0;
   const xcloudProductId = getTitleProductId(catalogTitle.xcloud?.raw);
+
+  const psPlusGame = catalogTitle.psplus?.raw;
+  const psStoreUrl = catalogTitle.psplus
+    ? getPsStoreUrl(psPlusGame?.conceptId, psPlusGame?.storeProductId)
+    : null;
+  const psStoreShowSale =
+    !!catalogTitle.psplus &&
+    !catalogTitle.psplus.isOwned &&
+    !catalogTitle.psplus.inPlusCatalog &&
+    isPsStoreSaleForDisplay(psStorePrice);
 
   return (
     <ScrollView
@@ -459,9 +472,33 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     <View style={styles.providerText}>
                       <Text style={styles.providerName}>PS Plus</Text>
                       <Text style={styles.providerSub}>{subtitle}</Text>
+                      {!psplusAvailable && psStorePrice && (
+                        <View style={styles.priceRow}>
+                          <Text
+                            style={[
+                              styles.priceNow,
+                              psStoreShowSale && styles.priceNowSale,
+                            ]}>
+                            {psStorePrice.discountedPrice}
+                          </Text>
+                          {psStoreShowSale && (
+                            <Text style={styles.priceWas}>
+                              {psStorePrice.basePrice}
+                            </Text>
+                          )}
+                        </View>
+                      )}
                     </View>
                     {preference?.provider === 'psplus' && (
                       <Icon source="check-circle" size={18} color={PS_ACCENT} />
+                    )}
+                    {psStoreUrl && (
+                      <Pressable
+                        style={styles.storeLinkBtn}
+                        hitSlop={8}
+                        onPress={() => openStore(psStoreUrl)}>
+                        <Icon source="open-in-new" size={16} color="#8A9A92" />
+                      </Pressable>
                     )}
                     <Icon source="chevron-right" size={18} color="#8A9A92" />
                   </Pressable>
