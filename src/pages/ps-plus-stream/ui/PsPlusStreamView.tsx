@@ -4,6 +4,7 @@ import {Text, Button, Icon, ActivityIndicator} from 'react-native-paper';
 import {PsPlusStreamView as NativePsPlusStreamView} from '../../../features/ps-plus-session';
 import {VirtualGamepad} from '../../../entities/gamepad';
 import {CustomVirtualGamepad} from '../../../features/controller-customization';
+import {VirtualGamepadEditor} from '../../../widgets/virtual-gamepad-editor';
 import PsPlusControlRail from './PsPlusControlRail';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
 
@@ -40,6 +41,17 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   onSetScreenPosition,
   onCycleVideoFormat,
   onEditGamepadLayout,
+  showGamepadEditor,
+  editorProfile,
+  gamepadProfiles,
+  editorSwipeConfig,
+  editorSensorConfig,
+  onSaveGamepadLayout,
+  onCancelGamepadEditor,
+  onSwitchGamepadProfile,
+  onCreateGamepadProfile,
+  onDeleteGamepadProfile,
+  gamepadLayoutVersion,
   onRailDisconnect,
 }) => {
   return (
@@ -90,6 +102,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
               title={activeProfile}
               opacity={0.7}
               joystickMode={joystickMode}
+              refreshKey={gamepadLayoutVersion}
               onPressIn={onPressIn}
               onPressOut={onPressOut}
               onStickMove={onStickMove}
@@ -126,6 +139,24 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         onAudioGainChange={onAudioGainChange}
         onEditGamepadLayout={onEditGamepadLayout}
         onRailDisconnect={onRailDisconnect}
+      />
+
+      <VirtualGamepadEditor
+        visible={showGamepadEditor}
+        profileName={editorProfile || activeProfile}
+        profiles={gamepadProfiles}
+        activeProfile={activeProfile}
+        swipeSensitivity={editorSwipeConfig.sensitivity}
+        swipeInvertY={editorSwipeConfig.invertY}
+        swipeActivation={editorSwipeConfig.activation}
+        swipeAcceleration={editorSwipeConfig.acceleration}
+        joystickMode={joystickMode}
+        sensorConfig={editorSensorConfig}
+        onSave={onSaveGamepadLayout}
+        onCancel={onCancelGamepadEditor}
+        onSwitchProfile={onSwitchGamepadProfile}
+        onCreateProfile={onCreateGamepadProfile}
+        onDeleteProfile={onDeleteGamepadProfile}
       />
 
       {!!pinRequest && (

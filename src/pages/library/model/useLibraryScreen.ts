@@ -644,7 +644,22 @@ export function useLibraryScreen() {
       list = list.filter(item => favoriteKeys.has(item.key));
     }
     if (filterOwnedOnly) {
-      list = list.filter(isCatalogTitleOwned);
+      // Plain "Owned" (no provider filter) means playable via any service --
+      // isCatalogTitleOwned's OR-across-providers is right there. But
+      // combined with a provider filter (e.g. "PS Plus" + "Owned"), the user
+      // means "owned on that service", not "present under that service and
+      // owned on some other one" -- the OR check let a PS Plus title merely
+      // present in the catalog (not actually owned) pass as long as it
+      // happened to be owned via xCloud/GFN. Mirrors ps-plus-library's own
+      // filter, which checks only that service's isOwned.
+      const providerFilterActive = filterXcloud || filterGfn || filterPsPlus;
+      list = list.filter(item =>
+        providerFilterActive
+          ? (filterXcloud && !!item.xcloud?.hasEntitlement) ||
+            (filterGfn && !!item.gfn?.variants.some(v => v.owned)) ||
+            (filterPsPlus && !!item.psplus?.isOwned)
+          : isCatalogTitleOwned(item),
+      );
     }
     if (filterOnSale) {
       list = list.filter(item => saleDiscount(item) > 0);

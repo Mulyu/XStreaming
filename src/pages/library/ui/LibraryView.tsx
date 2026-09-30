@@ -20,6 +20,10 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const PS_ACCENT = '#0070D1';
 const SALE_ACCENT = '#E67E22';
+// Same dim treatment library-title-detail's own per-provider rows use for a
+// service a title isn't actually owned on.
+const DIM_BADGE_BG = 'rgba(140,140,150,0.3)';
+const DIM_BADGE_TEXT = '#8A9A92';
 
 type Props = LibraryScreenViewModel;
 
@@ -63,9 +67,14 @@ const LibraryView: React.FC<Props> = ({
   const renderCard = ({item}: {item: CatalogTitle}) => {
     // Cover art itself grays out when the title isn't playable via any of
     // its listed services today (no Game Pass entitlement, no owned GFN
-    // store variant) -- the X/N badges stay their normal color regardless,
-    // since they answer "which service" rather than "playable right now".
+    // store variant, no owned PS Plus game).
     const isPlayable = isCatalogTitleOwned(item);
+    // Each badge answers "owned on this service" individually -- a title
+    // supported by all three but owned on only one (e.g. Xbox/xCloud) must
+    // only light up that one, not every service it merely appears under.
+    const xcloudOwned = !!item.xcloud?.hasEntitlement;
+    const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
+    const psplusOwned = !!item.psplus?.isOwned;
     const discount = saleDiscount(item);
     const isFocused = focusedKey === item.key;
 
@@ -104,18 +113,48 @@ const LibraryView: React.FC<Props> = ({
 
           <View style={styles.availOverlay}>
             {item.xcloud && (
-              <View style={[styles.availDot, {backgroundColor: XBOX_ACCENT}]}>
-                <Text style={styles.availDotText}>X</Text>
+              <View
+                style={[
+                  styles.availDot,
+                  {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
+                  style={[
+                    styles.availDotText,
+                    !xcloudOwned && {color: DIM_BADGE_TEXT},
+                  ]}>
+                  X
+                </Text>
               </View>
             )}
             {item.gfn && (
-              <View style={[styles.availDot, {backgroundColor: NVIDIA_ACCENT}]}>
-                <Text style={styles.availDotText}>N</Text>
+              <View
+                style={[
+                  styles.availDot,
+                  {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
+                  style={[
+                    styles.availDotText,
+                    !gfnOwned && {color: DIM_BADGE_TEXT},
+                  ]}>
+                  N
+                </Text>
               </View>
             )}
             {item.psplus && (
-              <View style={[styles.availDot, {backgroundColor: PS_ACCENT}]}>
-                <Text style={styles.availDotText}>PS</Text>
+              <View
+                style={[
+                  styles.availDot,
+                  {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
+                  style={[
+                    styles.availDotText,
+                    !psplusOwned && {color: DIM_BADGE_TEXT},
+                  ]}>
+                  PS
+                </Text>
               </View>
             )}
           </View>
