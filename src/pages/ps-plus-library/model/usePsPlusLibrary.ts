@@ -6,6 +6,9 @@ import {
   isPsPlusSignedIn,
   clearNpsso,
   CloudGame,
+  getCachedCatalogGames,
+  saveCatalogGames,
+  clearCatalogGames,
 } from '../../../features/ps-plus-session';
 import {debugFactory} from '../../../shared/lib/debug';
 
@@ -16,7 +19,13 @@ export type PsPlusPlatformFilter = 'ps5' | 'ps4' | 'ps3';
 export function usePsPlusLibrary(navigation: any) {
   const {t} = useTranslation();
   const [signedIn, setSignedIn] = React.useState(isPsPlusSignedIn());
-  const [games, setGames] = React.useState<CloudGame[]>([]);
+  // Instant-paints from the same JS-side cache the main Library screen uses
+  // (features/ps-plus-session's getCachedCatalogGames), rather than starting
+  // empty and waiting on the native fetch's own round trip every time this
+  // screen is opened.
+  const [games, setGames] = React.useState<CloudGame[]>(
+    () => getCachedCatalogGames() || [],
+  );
   const [loading, setLoading] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -68,7 +77,11 @@ export function usePsPlusLibrary(navigation: any) {
         // Sony's whole PS5 store, not just what's streamable, so showing the
         // full catalog here (not just owned) is what makes a "which games can
         // I cloud-stream" browser actually useful.
-        setGames(result.games.filter(g => g.streamServiceType === 'pscloud'));
+        const pscloudGames = result.games.filter(
+          g => g.streamServiceType === 'pscloud',
+        );
+        setGames(pscloudGames);
+        saveCatalogGames(pscloudGames);
         if (result.warning) {
           log.warn('Catalog warning:', result.warning);
         }
@@ -101,6 +114,7 @@ export function usePsPlusLibrary(navigation: any) {
 
   const onSignOut = React.useCallback(() => {
     clearNpsso();
+    clearCatalogGames();
     setSignedIn(false);
     setGames([]);
   }, []);

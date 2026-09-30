@@ -58,6 +58,8 @@ import {
   getNpsso,
   fetchUnifiedCatalog,
   CloudGame,
+  getCachedCatalogGames,
+  saveCatalogGames,
 } from '../../../features/ps-plus-session';
 import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
@@ -107,9 +109,14 @@ export function useLibraryScreen() {
   // pages/ps-plus-library shows, and for the same reason (that's Sony's own
   // "PS5 Game Cloud Streaming" catalog, not the separate/less-reliable PS
   // Now side -- see that screen's own model comment). The native fetch
-  // already disk-caches this for 24h, so there's no need for a second cache
-  // layer here the way GFN's full catalog has one.
-  const [psPlusGames, setPsPlusGames] = React.useState<CloudGame[]>([]);
+  // disk-caches this for 24h too, but that's still a JNI round trip the JS
+  // side has to await on every single mount -- unlike xCloud/GFN above,
+  // which read a synchronous JS-side cache first. This instant-paints from
+  // that same kind of cache (features/ps-plus-session's own
+  // getCachedCatalogGames) instead of starting empty every time.
+  const [psPlusGames, setPsPlusGames] = React.useState<CloudGame[]>(
+    () => getCachedCatalogGames() || [],
+  );
   const [keyword, setKeyword] = React.useState('');
   const [sortMode, setSortMode] = React.useState<SortMode>('recent');
   const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
@@ -375,11 +382,13 @@ export function useLibraryScreen() {
       return;
     }
     fetchUnifiedCatalog(npsso, undefined, force)
-      .then(result =>
-        setPsPlusGames(
-          result.games.filter(g => g.streamServiceType === 'pscloud'),
-        ),
-      )
+      .then(result => {
+        const games = result.games.filter(
+          g => g.streamServiceType === 'pscloud',
+        );
+        setPsPlusGames(games);
+        saveCatalogGames(games);
+      })
       .catch(() => {});
   }, []);
 
