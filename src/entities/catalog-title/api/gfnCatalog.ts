@@ -467,10 +467,19 @@ const BROWSE_QUERY = `query GetStoreBrowseApps(
   }
 }`;
 
+// Bumped once (v1 -> v2) because this cache stores each item's `owned` flag
+// already baked in by toBrowseGames() at fetch time, not recomputed on read --
+// live-confirmed the OWNED_LIBRARY_STATUSES allowlist fix above (denylist ->
+// allowlist) left every device's existing 24h-cached catalog exactly as wrong
+// as before, since mergeOwnedGames() only ever *adds* ownership for a fresh
+// match and passes an already-true `owned` through unchanged otherwise (see
+// its own comment) -- there was no path back to false without a fresh fetch.
+// Changing the key forces exactly one such fetch per affected device.
+const FULL_CATALOG_CACHE_VERSION = 2;
 const fullCatalogCacheKey = (): string =>
-  `gfn.fullCatalog.${getGfnLocaleSlug()}`;
+  `gfn.fullCatalog.v${FULL_CATALOG_CACHE_VERSION}.${getGfnLocaleSlug()}`;
 const fullCatalogStatusKey = (): string =>
-  `gfn.fullCatalog.status.${getGfnLocaleSlug()}`;
+  `gfn.fullCatalog.status.v${FULL_CATALOG_CACHE_VERSION}.${getGfnLocaleSlug()}`;
 // 24h -- unlike the other caches above, a full paginated fetch here is dozens
 // of sequential requests, not one, so it's worth holding onto longer.
 const FULL_CATALOG_TTL_MS = 24 * 60 * 60 * 1000;
