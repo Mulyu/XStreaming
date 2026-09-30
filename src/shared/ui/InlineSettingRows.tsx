@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, StyleSheet, Pressable, ScrollView} from 'react-native';
+import {View, StyleSheet, Pressable, ScrollView, TextInput} from 'react-native';
 import {Text, Switch, Menu, Divider} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 
@@ -195,6 +195,82 @@ export const DropdownRow: React.FC<{
   );
 };
 
+// Free-text override for a value that can't be fully pre-listed (e.g. a
+// datacenter code the server has never happened to offer this device yet).
+// `suggestions` are tap-to-fill chips -- unlike SegmentedRow's, none of them
+// need to already be `value` to render; tapping one both fills the field and
+// commits immediately, same as picking a DropdownRow option.
+export const TextInputRow: React.FC<{
+  title: string;
+  desc?: string;
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+  suggestions?: SettingOption[];
+  flag?: string;
+  accent?: string;
+}> = ({
+  title,
+  desc,
+  value,
+  placeholder,
+  onChange,
+  suggestions,
+  flag,
+  accent = XBOX_ACCENT,
+}) => {
+  const [text, setText] = React.useState(value);
+  React.useEffect(() => setText(value), [value]);
+  const commit = () => onChange(text.trim());
+  return (
+    <RowShell
+      title={title}
+      desc={desc}
+      flag={flag}
+      tail={
+        <TextInput
+          style={styles.textInputPill}
+          value={text}
+          placeholder={placeholder}
+          placeholderTextColor="rgba(140,140,150,0.5)"
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setText}
+          onBlur={commit}
+          onSubmitEditing={commit}
+        />
+      }>
+      {!!suggestions?.length && (
+        <View style={styles.segmented}>
+          {suggestions.map((s, idx) => (
+            <Pressable
+              key={idx}
+              onPress={() => {
+                setText(s.value);
+                onChange(s.value);
+              }}
+              style={[
+                styles.chip,
+                s.value === value && {
+                  backgroundColor: accent,
+                  borderColor: accent,
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  s.value === value && styles.chipTextOn,
+                ]}>
+                {s.text}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </RowShell>
+  );
+};
+
 export const SliderRow: React.FC<{
   title: string;
   desc?: string;
@@ -337,6 +413,20 @@ const styles = StyleSheet.create({
   },
   dropdownPillText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
   dropdownCaret: {fontSize: 9},
+  textInputPill: {
+    minWidth: 90,
+    maxWidth: 150,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(140,140,150,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(140,140,150,0.24)',
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#0B0F0C',
+    textAlign: 'right',
+  },
   dropdownMenuContent: {maxHeight: 320},
   dropdownMenuScroll: {maxHeight: 320},
   dropdownOptText: {fontSize: 13, color: '#8A9A92'},

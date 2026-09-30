@@ -7,6 +7,7 @@ import {
   SwitchRow,
   SegmentedRow,
   DropdownRow,
+  TextInputRow,
   SliderRow,
   InfoRow,
   XBOX_ACCENT,
@@ -20,6 +21,27 @@ import type {Lane, SettingsScreenViewModel} from '../model/useSettingsScreen';
 import pkg from '../../../../package.json';
 
 type Props = SettingsScreenViewModel;
+
+// Tokyo-region guesses for the manual datacenter override below, since the
+// account's own /datacenters response has never offered anything outside
+// the US (see psPlusDatacenterOptions -- it's a picker over the actually-
+// measured pool, not a directory). "tyoa" is the one entry here with real
+// evidence behind it: it's a literal hostname (vpn.tyoa.prod.gaikai.com,
+// alongside titan's iad/lax/lon/tyo-prod1 city codes) found while surveying
+// gaikai.com's Cert Transparency history -- not proven to be a live,
+// client-reachable *datacenter* code (that vpn.* host is a much older,
+// separate subdomain tree), just the strongest lead found. The rest follow
+// the observed live pattern (3-letter airport code + a/b, e.g. laxb/sjcb/
+// seaa/dfwb/ordb) applied to Tokyo's two major airports -- pure pattern
+// guesses, no evidence either way.
+const PS_PLUS_TOKYO_DATACENTER_GUESSES = [
+  'tyoa',
+  'tyob',
+  'nrta',
+  'nrtb',
+  'hnda',
+  'hndb',
+];
 
 function SectionLabel({title}: {title: string}) {
   return <Text style={styles.sectionLabel}>{title}</Text>;
@@ -408,6 +430,18 @@ const SettingsView: React.FC<Props> = ({
             onChange={v => updateSetting('psplus_datacenter', v)}
             accent={PS_ACCENT}
             emptyLabel={t('Auto')}
+          />
+          <TextInputRow
+            title={t('PsPlusDatacenterManualTitle')}
+            desc={t('PsPlusDatacenterManualDesc')}
+            value={settings.psplus_datacenter}
+            placeholder={t('Auto')}
+            onChange={v => updateSetting('psplus_datacenter', v)}
+            suggestions={PS_PLUS_TOKYO_DATACENTER_GUESSES.map(code => ({
+              value: code,
+              text: code,
+            }))}
+            accent={PS_ACCENT}
           />
 
           {psPlusSignedIn && (
