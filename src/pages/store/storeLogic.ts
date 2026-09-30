@@ -156,15 +156,28 @@ export const buildGfnStoreRows = (
 // buildXboxStoreRows's "drop unmatched entries" one, since PS Store's own
 // category API already carries full display data per entry (name/image/
 // price), independent of whether the title is also in the signed-in
-// account's PS Plus cloud-streaming catalog. Matched by `storeProductId`,
-// the PS Store product id CloudGame already carries -- the direct PS
-// equivalent of buildGfnStoreRows' Steam appId match.
+// account's PS Plus cloud-streaming catalog.
+//
+// Matched against BOTH `productId` and `storeProductId`, not storeProductId
+// alone: libchiaki's own JSON contract (cloudcatalog.h) documents
+// storeProductId as populated only for "owned"/"purchaseable" rows -- a
+// "streamable" row (in the account's current PS Plus Extra/Premium catalog,
+// not owned) carries none, so matching on it alone silently dropped every
+// genuine Plus-catalog title from the filter while still matching ordinary
+// purchaseable listings that aren't actually free to stream. libchiaki's own
+// native cross-referencing (cloudcatalog_merge.c's streamability_is_streamable)
+// tries productId first for exactly this reason -- productId is the one
+// field every row's schema guarantees ("canonical catalog id; unique in this
+// array"), with storeProductId only as a supplementary commerce-specific id.
 export const buildPsStoreRows = (
   entries: PsStoreChartEntry[],
   psPlusGames: any[],
 ): StoreRow[] => {
   const byProductId = new Map<string, any>();
   psPlusGames.forEach(game => {
+    if (game?.productId) {
+      byProductId.set(game.productId, game);
+    }
     if (game?.storeProductId) {
       byProductId.set(game.storeProductId, game);
     }
