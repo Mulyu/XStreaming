@@ -44,7 +44,11 @@ static void kill_decoder(AndroidChiakiVideoDecoder *decoder)
 {
 	chiaki_mutex_lock(&decoder->codec_mutex);
 	decoder->shutdown_output = true;
-	ssize_t codec_buf_index = AMediaCodec_dequeueInputBuffer(decoder->codec, 1000);
+	// 1000ms, not 1000us (see the *1000 ms->us convention used everywhere else in this
+	// file) -- too short here made the codec_buf_index<0 branch below common, which skips
+	// chiaki_thread_join() and deletes decoder->codec while the output thread could still
+	// be mid-call on it.
+	ssize_t codec_buf_index = AMediaCodec_dequeueInputBuffer(decoder->codec, 1000 * 1000);
 	if(codec_buf_index >= 0)
 	{
 		CHIAKI_LOGI(decoder->log, "Video Decoder sending EOS buffer");
@@ -73,18 +77,25 @@ void android_chiaki_video_decoder_fini(AndroidChiakiVideoDecoder *decoder)
 
 void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder, JNIEnv *env, jobject surface)
 {
-	chiaki_mutex_lock(&decoder->codec_mutex);
-
 	if(!surface)
 	{
-		if(decoder->codec)
+		// kill_decoder() locks codec_mutex itself (see android_chiaki_video_decoder_fini(),
+		// which calls it the same way) -- pre-locking here before calling it deadlocked
+		// this exact thread every time the surface was torn down mid-stream (e.g. the
+		// SurfaceView's surfaceDestroyed(), called synchronously on the UI thread), which
+		// is what made the whole PS Plus stream freeze solid.
+		chiaki_mutex_lock(&decoder->codec_mutex);
+		bool has_codec = decoder->codec != NULL;
+		chiaki_mutex_unlock(&decoder->codec_mutex);
+		if(has_codec)
 		{
 			kill_decoder(decoder);
 			CHIAKI_LOGI(decoder->log, "Decoder shut down after surface was removed");
 		}
-		chiaki_mutex_unlock(&decoder->codec_mutex);
 		return;
 	}
+
+	chiaki_mutex_lock(&decoder->codec_mutex);
 
 	if(decoder->codec)
 	{
