@@ -51,41 +51,43 @@ describe('normalizeTitle', () => {
 // Regression: Apex Legends (and other free-to-play titles) stream fine on
 // GFN with no linked store purchase, but every variant's own
 // gfn.library.status still reports NOT_OWNED -- there's nothing to own.
-// isConfirmedPlayable is the app-level override that catches this via
-// GFN's own playType/playabilityState fields, independent of any variant's
-// ownership.
+// isConfirmedPlayable is the app-level override that catches this via GFN's
+// own playType field, independent of any variant's ownership.
 describe('isConfirmedPlayable', () => {
-  it('is false for an app with neither field set', () => {
+  it('is false for an app with no playType set', () => {
     expect(isConfirmedPlayable({})).toBe(false);
-  });
-
-  it('is true when playabilityState says the app is playable', () => {
-    expect(isConfirmedPlayable({gfn: {playabilityState: 'PLAYABLE'}})).toBe(
-      true,
-    );
-    expect(isConfirmedPlayable({gfn: {playabilityState: 'AVAILABLE'}})).toBe(
-      true,
-    );
-  });
-
-  it('is case-insensitive on playabilityState', () => {
-    expect(isConfirmedPlayable({gfn: {playabilityState: 'playable'}})).toBe(
-      true,
-    );
-  });
-
-  it('is false when playabilityState says the app is not playable yet', () => {
-    expect(isConfirmedPlayable({gfn: {playabilityState: 'COMING_SOON'}})).toBe(
-      false,
-    );
   });
 
   it('is true when playType marks the app free-to-play', () => {
     expect(isConfirmedPlayable({gfn: {playType: 'FREE_TO_PLAY'}})).toBe(true);
   });
 
-  it('is false for a normal paid app with neither signal set to playable', () => {
+  it('is case-insensitive on playType', () => {
+    expect(isConfirmedPlayable({gfn: {playType: 'free_to_play'}})).toBe(true);
+  });
+
+  it('is false for a normal paid app', () => {
     expect(isConfirmedPlayable({gfn: {playType: 'STANDARD'}})).toBe(false);
+  });
+
+  // Regression: playabilityState ("PLAYABLE"/"AVAILABLE") used to also count
+  // as confirmed-playable, mirroring OpenNOW -- but confirmed live, GFN sets
+  // it for essentially every regularly-purchasable, non-owned title too (it
+  // answers "is this app live on GFN at all", not "free to play"), which
+  // made almost the entire browse catalog show as owned. It must no longer
+  // affect the result at all.
+  it('ignores playabilityState entirely, even for a normal paid app', () => {
+    expect(isConfirmedPlayable({gfn: {playabilityState: 'PLAYABLE'}})).toBe(
+      false,
+    );
+    expect(isConfirmedPlayable({gfn: {playabilityState: 'AVAILABLE'}})).toBe(
+      false,
+    );
+    expect(
+      isConfirmedPlayable({
+        gfn: {playabilityState: 'AVAILABLE', playType: 'STANDARD'},
+      }),
+    ).toBe(false);
   });
 });
 
