@@ -267,6 +267,13 @@ export function usePsPlusStream(navigation: any, route: any) {
       gameName: params.name ?? '',
       ownedEntitlementId: ownedFastPath ? params.entitlementId : undefined,
       ownedPlatform: ownedFastPath ? params.platform : undefined,
+      // Was never passed at all, so every session ran on the native
+      // default ("en") regardless of this setting -- the same shared
+      // preferred_game_language xCloud already exposes in Settings (BCP-47,
+      // e.g. "ja-JP"). chiaki_cloud_gaikai_language() (cloudcatalog_consts.c)
+      // already takes that exact format and extracts the leading language
+      // code itself, so no reformatting is needed here.
+      gameLanguage: videoSettings.preferred_game_language || undefined,
       resolution: videoSettings.psplus_resolution,
       fpsPreset: videoSettings.psplus_fps,
       bitrateKbps:
