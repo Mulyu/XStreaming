@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import type {LoadingPhase} from '../../../shared/lib/loadingPhase';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
@@ -148,6 +149,7 @@ const StreamHandshakeOverlay: React.FC<StreamHandshakeOverlayProps> = ({
   onCancel,
 }) => {
   const {t} = useTranslation();
+  const cancelFocus = useTVFocus();
   const isGfn = streamType === 'gfn';
   const accent = isGfn ? NVIDIA_ACCENT : XBOX_ACCENT;
   const badgeLetter = isGfn ? 'N' : 'X';
@@ -235,8 +237,10 @@ const StreamHandshakeOverlay: React.FC<StreamHandshakeOverlayProps> = ({
           <Text style={styles.chipLabel}>{providerLabel}</Text>
         </View>
         <Pressable
-          style={styles.cancelBtn}
+          style={[styles.cancelBtn, cancelFocus.focused && tvFocusRing]}
           onPress={onCancel}
+          onFocus={cancelFocus.onFocus}
+          onBlur={cancelFocus.onBlur}
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
           <Text style={styles.cancelText}>{`✕ ${t('Cancel')}`}</Text>
         </Pressable>

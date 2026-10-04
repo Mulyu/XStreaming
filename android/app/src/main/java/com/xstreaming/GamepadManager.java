@@ -287,6 +287,22 @@ public class GamepadManager extends ReactContextBaseJavaModule {
         currentScreen = value;
     }
 
+    // Synchronous-ish initial read for whether a physical controller is already
+    // attached when a screen mounts -- onGamepadConnectionChanged (emitted from
+    // ControllerHandler) only fires on a *change*, so a controller plugged in
+    // before the JS listener attaches needs this to learn the starting state.
+    @ReactMethod
+    public void hasPhysicalController(Promise promise) {
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice dev = InputDevice.getDevice(id);
+            if (isGameControllerDevice(dev)) {
+                promise.resolve(true);
+                return;
+            }
+        }
+        promise.resolve(false);
+    }
+
     public static String getCurrentScreen() {
         return currentScreen;
     }

@@ -69,6 +69,7 @@ import {SystemBars} from 'react-native-edge-to-edge';
 
 import './i18n';
 import {HubTabBar} from './widgets/hub-tab-bar';
+import {useTVFocus, tvFocusRing} from './shared/ui/tvFocus';
 
 const RootStack = createStackNavigator();
 const MainTab = createBottomTabNavigator();
@@ -179,6 +180,7 @@ function MainTabs() {
 function App() {
   const {t} = useTranslation();
   const settings = getSettings();
+  const updateHideFocus = useTVFocus();
   const updateCheckedRef = React.useRef(false);
   const pendingTitleShortcutRef = React.useRef<any>(null);
   const [updateProgressVisible, setUpdateProgressVisible] =
@@ -515,7 +517,11 @@ function App() {
                 />
               </Dialog.Content>
               <Dialog.Actions>
-                <Button onPress={() => setUpdateProgressVisible(false)}>
+                <Button
+                  onPress={() => setUpdateProgressVisible(false)}
+                  onFocus={updateHideFocus.onFocus}
+                  onBlur={updateHideFocus.onBlur}
+                  style={updateHideFocus.focused && tvFocusRing}>
                   {t('Hide')}
                 </Button>
               </Dialog.Actions>

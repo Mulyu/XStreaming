@@ -7,6 +7,7 @@ import {CustomVirtualGamepad} from '../../../features/controller-customization';
 import {VirtualGamepadEditor} from '../../../widgets/virtual-gamepad-editor';
 import PsPlusControlRail from './PsPlusControlRail';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 type Props = PsPlusStreamViewModel;
 
@@ -29,6 +30,8 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   showControlRail,
   onOpenControlRail,
   onCloseControlRail,
+  showVirtualGamepad,
+  onToggleVirtualGamepad,
   vibrationEnabled,
   onToggleVibration,
   performanceVisible,
@@ -64,6 +67,11 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   onToggleCoverControls,
   onRailDisconnect,
 }) => {
+  const failedCloseFocus = useTVFocus();
+  const closedCloseFocus = useTVFocus();
+  const settingsBtnFocus = useTVFocus();
+  const confirmPinFocus = useTVFocus();
+
   const swipeAimProps = {
     swipeAimEnabled,
     swipeAimSensitivity,
@@ -98,7 +106,12 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
               {!!errorDetail && (
                 <Text style={styles.overlaySubText}>{errorDetail}</Text>
               )}
-              <Button mode="contained" onPress={onRequestExit}>
+              <Button
+                mode="contained"
+                onPress={onRequestExit}
+                onFocus={failedCloseFocus.onFocus}
+                onBlur={failedCloseFocus.onBlur}
+                style={failedCloseFocus.focused && tvFocusRing}>
                 {t('Close')}
               </Button>
             </>
@@ -106,7 +119,12 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
           {connectState === 'closed' && (
             <>
               <Text style={styles.overlayText}>{t('Stream ended')}</Text>
-              <Button mode="contained" onPress={onRequestExit}>
+              <Button
+                mode="contained"
+                onPress={onRequestExit}
+                onFocus={closedCloseFocus.onFocus}
+                onBlur={closedCloseFocus.onBlur}
+                style={closedCloseFocus.focused && tvFocusRing}>
                 {t('Close')}
               </Button>
             </>
@@ -116,28 +134,36 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
 
       {connectState === 'connected' && !showControlRail && (
         <>
-          {activeProfile ? (
-            <CustomVirtualGamepad
-              title={activeProfile}
-              opacity={0.7}
-              joystickMode={joystickMode}
-              refreshKey={gamepadLayoutVersion}
-              onPressIn={onPressIn}
-              onPressOut={onPressOut}
-              onStickMove={onStickMove}
-              {...swipeAimProps}
-            />
-          ) : (
-            <VirtualGamepad
-              opacity={0.7}
-              joystickMode={joystickMode}
-              onPressIn={onPressIn}
-              onPressOut={onPressOut}
-              onStickMove={onStickMove}
-              {...swipeAimProps}
-            />
-          )}
-          <Pressable style={styles.settingsBtn} onPress={onOpenControlRail}>
+          {showVirtualGamepad &&
+            (activeProfile ? (
+              <CustomVirtualGamepad
+                title={activeProfile}
+                opacity={0.7}
+                joystickMode={joystickMode}
+                refreshKey={gamepadLayoutVersion}
+                onPressIn={onPressIn}
+                onPressOut={onPressOut}
+                onStickMove={onStickMove}
+                {...swipeAimProps}
+              />
+            ) : (
+              <VirtualGamepad
+                opacity={0.7}
+                joystickMode={joystickMode}
+                onPressIn={onPressIn}
+                onPressOut={onPressOut}
+                onStickMove={onStickMove}
+                {...swipeAimProps}
+              />
+            ))}
+          <Pressable
+            style={[
+              styles.settingsBtn,
+              settingsBtnFocus.focused && tvFocusRing,
+            ]}
+            onPress={onOpenControlRail}
+            onFocus={settingsBtnFocus.onFocus}
+            onBlur={settingsBtnFocus.onBlur}>
             <Icon source="cog-outline" size={18} color="#fff" />
           </Pressable>
         </>
@@ -159,6 +185,8 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         audioGain={audioGain}
         onAudioGainChange={onAudioGainChange}
         onEditGamepadLayout={onEditGamepadLayout}
+        showVirtualGamepad={showVirtualGamepad}
+        onToggleVirtualGamepad={onToggleVirtualGamepad}
         coverAvailable={coverAvailable}
         coverPresented={coverPresented}
         onToggleCoverControls={onToggleCoverControls}
@@ -197,7 +225,12 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
             keyboardType="number-pad"
             autoFocus
           />
-          <Button mode="contained" onPress={onSubmitPin}>
+          <Button
+            mode="contained"
+            onPress={onSubmitPin}
+            onFocus={confirmPinFocus.onFocus}
+            onBlur={confirmPinFocus.onBlur}
+            style={confirmPinFocus.focused && tvFocusRing}>
             {t('Confirm')}
           </Button>
         </View>

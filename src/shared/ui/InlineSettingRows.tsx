@@ -2,6 +2,7 @@ import React from 'react';
 import {View, StyleSheet, Pressable, ScrollView, TextInput} from 'react-native';
 import {Text, Switch, Menu, Divider} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
+import {useTVFocus, tvFocusRing} from './tvFocus';
 
 // Xbox/GeForce NOW accent colors, matching Library.tsx's own tone -- reused
 // here so the "on" state of a switch/segmented/dropdown reads as the same
@@ -55,6 +56,56 @@ const RowShell: React.FC<RowShellProps> = ({
       </Wrapper>
       <Divider style={styles.divider} />
     </>
+  );
+};
+
+// A single chip within a row's `options.map`/`suggestions.map` (SegmentedRow,
+// TextInputRow) -- each chip needs its own focus state since several of
+// these render side by side from one map, not just one per row.
+const FocusableChip: React.FC<{
+  label: string;
+  active: boolean;
+  accent: string;
+  onPress: () => void;
+}> = ({label, active, accent, onPress}) => {
+  const {focused, onFocus, onBlur} = useTVFocus();
+  return (
+    <Pressable
+      onPress={onPress}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      style={[
+        styles.chip,
+        active && {backgroundColor: accent, borderColor: accent},
+        focused && tvFocusRing,
+      ]}>
+      <Text style={[styles.chipText, active && styles.chipTextOn]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+};
+
+// A single swatch within SwatchRow's `colors.map` -- same reasoning as
+// FocusableChip above: one focus state per swatch, not per row.
+const SwatchOption: React.FC<{
+  color: string;
+  active: boolean;
+  onPress: () => void;
+}> = ({color, active, onPress}) => {
+  const {focused, onFocus, onBlur} = useTVFocus();
+  return (
+    <Pressable
+      onPress={onPress}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      style={[
+        styles.swatchOpt,
+        {backgroundColor: color},
+        active && styles.swatchOptActive,
+        focused && tvFocusRing,
+      ]}
+    />
   );
 };
 
@@ -112,17 +163,13 @@ export const SegmentedRow: React.FC<{
         {options.map((opt, idx) => {
           const active = opt.value === value;
           return (
-            <Pressable
+            <FocusableChip
               key={idx}
+              label={opt.text}
+              active={active}
+              accent={accent}
               onPress={() => onChange(opt.value)}
-              style={[
-                styles.chip,
-                active && {backgroundColor: accent, borderColor: accent},
-              ]}>
-              <Text style={[styles.chipText, active && styles.chipTextOn]}>
-                {opt.text}
-              </Text>
-            </Pressable>
+            />
           );
         })}
       </View>
@@ -150,6 +197,7 @@ export const DropdownRow: React.FC<{
   emptyLabel,
 }) => {
   const [open, setOpen] = React.useState(false);
+  const {focused, onFocus, onBlur} = useTVFocus();
   const current = options.find(o => o.value === value);
   const currentLabel = current?.text ?? emptyLabel ?? String(value ?? '');
   return (
@@ -164,7 +212,9 @@ export const DropdownRow: React.FC<{
           anchor={
             <Pressable
               onPress={() => setOpen(true)}
-              style={styles.dropdownPill}>
+              onFocus={onFocus}
+              onBlur={onBlur}
+              style={[styles.dropdownPill, focused && tvFocusRing]}>
               <Text style={styles.dropdownPillText} numberOfLines={1}>
                 {currentLabel}
               </Text>
@@ -243,27 +293,16 @@ export const TextInputRow: React.FC<{
       {!!suggestions?.length && (
         <View style={styles.segmented}>
           {suggestions.map((s, idx) => (
-            <Pressable
+            <FocusableChip
               key={idx}
+              label={s.text}
+              active={s.value === value}
+              accent={accent}
               onPress={() => {
                 setText(s.value);
                 onChange(s.value);
               }}
-              style={[
-                styles.chip,
-                s.value === value && {
-                  backgroundColor: accent,
-                  borderColor: accent,
-                },
-              ]}>
-              <Text
-                style={[
-                  styles.chipText,
-                  s.value === value && styles.chipTextOn,
-                ]}>
-                {s.text}
-              </Text>
-            </Pressable>
+            />
           ))}
         </View>
       )}
@@ -343,17 +382,14 @@ export const SwatchRow: React.FC<{
           style={styles.swatchStrip}
           contentContainerStyle={styles.swatchStripContent}>
           {colors.map(c => (
-            <Pressable
+            <SwatchOption
               key={c}
+              color={c}
+              active={c === value}
               onPress={() => {
                 onChange(c);
                 setOpen(false);
               }}
-              style={[
-                styles.swatchOpt,
-                {backgroundColor: c},
-                c === value && styles.swatchOptActive,
-              ]}
             />
           ))}
         </ScrollView>

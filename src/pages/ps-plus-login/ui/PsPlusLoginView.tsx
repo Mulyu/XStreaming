@@ -4,6 +4,7 @@ import {WebView} from 'react-native-webview';
 import {Text, Button} from 'react-native-paper';
 import Spinner from '../../../shared/ui/Spinner';
 import type {PsPlusLoginViewModel} from '../model/usePsPlusLogin';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 type Props = PsPlusLoginViewModel;
 
@@ -18,6 +19,9 @@ const PsPlusLoginView: React.FC<Props> = ({
   onLoadEnd,
   onRetry,
 }) => {
+  const signedInFocus = useTVFocus();
+  const retryFocus = useTVFocus();
+
   return (
     <View style={styles.container}>
       <WebView
@@ -33,7 +37,12 @@ const PsPlusLoginView: React.FC<Props> = ({
       {!checkingLogin && !error && (
         <View style={styles.bar}>
           <Text style={styles.barText}>{t('PsPlusLoginPrompt')}</Text>
-          <Button mode="contained" onPress={onPressSignedIn}>
+          <Button
+            mode="contained"
+            onPress={onPressSignedIn}
+            onFocus={signedInFocus.onFocus}
+            onBlur={signedInFocus.onBlur}
+            style={signedInFocus.focused && tvFocusRing}>
             {t('PsPlusSignedInButton')}
           </Button>
         </View>
@@ -41,7 +50,12 @@ const PsPlusLoginView: React.FC<Props> = ({
       {error && (
         <View style={styles.bar}>
           <Text style={styles.barText}>{t('PsPlusLoginFailedDesc')}</Text>
-          <Button mode="contained" onPress={onRetry}>
+          <Button
+            mode="contained"
+            onPress={onRetry}
+            onFocus={retryFocus.onFocus}
+            onBlur={retryFocus.onBlur}
+            style={retryFocus.focused && tvFocusRing}>
             {t('Retry')}
           </Button>
         </View>

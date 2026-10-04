@@ -3,6 +3,7 @@ import {StyleSheet, View, Modal, Linking, Pressable} from 'react-native';
 import {Text, Icon, ActivityIndicator, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {GfnDeviceChallenge} from '../model/auth';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 const NVIDIA_ACCENT = '#76B900';
 
@@ -27,6 +28,9 @@ function GfnSignInModal({
 }: Props) {
   const {t} = useTranslation();
   const theme = useTheme();
+  const retryFocus = useTVFocus();
+  const openFocus = useTVFocus();
+  const cancelFocus = useTVFocus();
 
   return (
     <Modal
@@ -55,7 +59,13 @@ function GfnSignInModal({
               <Text style={styles.modalMsg}>{t('GfnLoginFailed')}</Text>
               <Pressable
                 onPress={onRetry}
-                style={[styles.modalBtn, styles.modalBtnPrimary]}>
+                onFocus={retryFocus.onFocus}
+                onBlur={retryFocus.onBlur}
+                style={[
+                  styles.modalBtn,
+                  styles.modalBtnPrimary,
+                  retryFocus.focused && tvFocusRing,
+                ]}>
                 <Text style={styles.modalBtnTextPrimary}>{t('Retry')}</Text>
               </Pressable>
             </View>
@@ -72,7 +82,13 @@ function GfnSignInModal({
                   challenge &&
                   Linking.openURL(challenge.verificationUriComplete)
                 }
-                style={[styles.modalBtn, styles.modalBtnPrimary]}>
+                onFocus={openFocus.onFocus}
+                onBlur={openFocus.onBlur}
+                style={[
+                  styles.modalBtn,
+                  styles.modalBtnPrimary,
+                  openFocus.focused && tvFocusRing,
+                ]}>
                 <Icon source="open-in-new" size={16} color="#0B0F0C" />
                 <Text style={styles.modalBtnTextPrimary}>
                   {t('GfnLoginOpen')}
@@ -85,7 +101,11 @@ function GfnSignInModal({
             </>
           )}
 
-          <Pressable onPress={onCancel} style={styles.modalBtn}>
+          <Pressable
+            onPress={onCancel}
+            onFocus={cancelFocus.onFocus}
+            onBlur={cancelFocus.onBlur}
+            style={[styles.modalBtn, cancelFocus.focused && tvFocusRing]}>
             <Text style={styles.modalBtnText}>{t('Cancel')}</Text>
           </Pressable>
         </View>

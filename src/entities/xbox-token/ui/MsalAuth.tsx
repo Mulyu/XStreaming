@@ -6,6 +6,7 @@ import QRCode from 'react-native-qrcode-svg';
 import RNRestart from 'react-native-restart';
 import LinkText from '../../../shared/ui/LinkText';
 import Clipboard from '@react-native-clipboard/clipboard';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 type Props = {
   data: any;
@@ -22,6 +23,9 @@ const MsalAuth: React.FC<Props> = ({data}) => {
   const theme = useTheme();
   const [countdown, setCountdown] = React.useState(data.expires_in);
   const [msalBtnLoading, setMsalBtnLoading] = React.useState(false);
+  const copyCodeFocus = useTVFocus();
+  const completedFocus = useTVFocus();
+  const refreshFocus = useTVFocus();
 
   React.useEffect(() => {
     if (countdown <= 0) {
@@ -53,12 +57,14 @@ const MsalAuth: React.FC<Props> = ({data}) => {
 
       {countdown > 0 && (
         <Button
-          style={styles.mt10}
+          style={[styles.mt10, copyCodeFocus.focused && tvFocusRing]}
           mode="text"
           onPress={() => {
             Clipboard.setString(data.user_code);
             ToastAndroid.show(t('Copied'), ToastAndroid.SHORT);
-          }}>
+          }}
+          onFocus={copyCodeFocus.onFocus}
+          onBlur={copyCodeFocus.onBlur}>
           {data.user_code}
         </Button>
       )}
@@ -69,10 +75,12 @@ const MsalAuth: React.FC<Props> = ({data}) => {
             {formatSeconds(countdown)}
           </Text>
           <Button
-            style={styles.mt10}
+            style={[styles.mt10, completedFocus.focused && tvFocusRing]}
             mode="outlined"
             loading={msalBtnLoading}
-            onPress={() => setMsalBtnLoading(true)}>
+            onPress={() => setMsalBtnLoading(true)}
+            onFocus={completedFocus.onFocus}
+            onBlur={completedFocus.onBlur}>
             &nbsp;{t('Completed')}&nbsp;
           </Button>
         </View>
@@ -82,9 +90,11 @@ const MsalAuth: React.FC<Props> = ({data}) => {
             {t('MsalAuthTimeout')}
           </Text>
           <Button
-            style={styles.mt10}
+            style={[styles.mt10, refreshFocus.focused && tvFocusRing]}
             mode="text"
-            onPress={() => RNRestart.restart()}>
+            onPress={() => RNRestart.restart()}
+            onFocus={refreshFocus.onFocus}
+            onBlur={refreshFocus.onBlur}>
             &nbsp;{t('Refresh')}&nbsp;
           </Button>
         </View>

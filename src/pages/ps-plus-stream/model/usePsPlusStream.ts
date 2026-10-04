@@ -214,6 +214,19 @@ export function usePsPlusStream(navigation: any, route: any) {
     [],
   );
 
+  // Whether the on-screen virtual gamepad overlay is shown -- mirrors native-
+  // stream's own showVirtualGamepad concept, but (unlike native-stream, which
+  // only toggles this manually) also auto-follows physical-controller
+  // presence: see the GamepadManager.hasPhysicalController()/
+  // onGamepadConnectionChanged effect below. PS Plus has no touch/mouse input
+  // mode to fall back on (it's gamepad-only, see PsPlusControlRail.tsx), so
+  // hiding this just means "trust the physical controller that's plugged in."
+  const [showVirtualGamepad, setShowVirtualGamepad] = React.useState(true);
+  const onToggleVirtualGamepad = React.useCallback(
+    () => setShowVirtualGamepad(prev => !prev),
+    [],
+  );
+
   // The saved on-screen gamepad profile/layout and its joystick mode --
   // shared with every other streaming provider (native-stream reads the
   // exact same setting), so a profile made for xCloud/GFN carries straight
@@ -886,6 +899,37 @@ export function usePsPlusStream(navigation: any, route: any) {
     };
   }, [flushGpState, openControlRail, isSwipeAimActive]);
 
+  // Auto-switch away from the virtual gamepad overlay when a physical
+  // controller is connected (and back when it disconnects), same as the
+  // user picking up a controller should "just work" without hunting for a
+  // settings toggle first. onGamepadConnectionChanged (emitted from
+  // ControllerHandler.java) only fires on a *change*, so hasPhysicalController()
+  // covers the case where a controller was already attached before this
+  // screen mounted.
+  React.useEffect(() => {
+    let cancelled = false;
+    GamepadManager.hasPhysicalController()
+      .then((connected: boolean) => {
+        if (!cancelled && connected) {
+          setShowVirtualGamepad(false);
+        }
+      })
+      .catch(() => {});
+
+    const eventEmitter = new NativeEventEmitter();
+    const sub = eventEmitter.addListener(
+      'onGamepadConnectionChanged',
+      event => {
+        setShowVirtualGamepad(!event?.connected);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, []);
+
   // Foldable cover-display support, shared with native-stream's own
   // implementation: while connected, expose gamepad input to the outer
   // cover surface (a second ReactRootView on this same JS instance, see
@@ -1176,6 +1220,8 @@ export function usePsPlusStream(navigation: any, route: any) {
     showControlRail,
     onOpenControlRail: openControlRail,
     onCloseControlRail: closeControlRail,
+    showVirtualGamepad,
+    onToggleVirtualGamepad,
     vibrationEnabled,
     onToggleVibration,
     performanceVisible,

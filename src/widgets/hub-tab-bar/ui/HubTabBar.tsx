@@ -3,6 +3,7 @@ import {View, Pressable, StyleSheet} from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
+import {tvFocusRing} from '../../../shared/ui/tvFocus';
 
 const ACCENT = '#2FD24B';
 
@@ -23,6 +24,9 @@ function HubTabBar({state, navigation}: any) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const inactiveColor = theme.dark ? '#8A9A92' : '#6b7770';
+  // Only a handful of tabs ever render -- a focused-key is simpler here than
+  // extracting a per-tab sub-component (see tvFocus.ts's own doc comment).
+  const [focusedKey, setFocusedKey] = React.useState<string | null>(null);
 
   return (
     <View
@@ -59,8 +63,12 @@ function HubTabBar({state, navigation}: any) {
           <Pressable
             key={route.key}
             onPress={onPress}
+            onFocus={() => setFocusedKey(route.key)}
+            onBlur={() =>
+              setFocusedKey(prev => (prev === route.key ? null : prev))
+            }
             android_ripple={{color: 'rgba(150,150,150,0.15)', borderless: true}}
-            style={styles.tab}
+            style={[styles.tab, focusedKey === route.key && tvFocusRing]}
             accessibilityRole="button"
             accessibilityState={isActive ? {selected: true} : {}}
             accessibilityLabel={t(meta.labelKey)}>

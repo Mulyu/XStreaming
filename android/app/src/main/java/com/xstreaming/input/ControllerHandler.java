@@ -135,7 +135,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     @Override
     public void onInputDeviceAdded(int deviceId) {
-        // Nothing happening here yet
+        refreshHasGameControllerAndNotify();
     }
 
     @Override
@@ -146,6 +146,40 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
             releaseControllerNumber(context);
             context.destroy();
             inputDeviceContexts.remove(deviceId);
+        }
+        refreshHasGameControllerAndNotify();
+    }
+
+    // Recomputes hasGameController from scratch (same criteria as the constructor's
+    // initial scan) and, if it actually changed, emits onGamepadConnectionChanged so
+    // JS can auto-switch away from (or back to) its on-screen virtual gamepad -- see
+    // native-stream/ps-plus-stream's own NativeEventEmitter listeners for this event.
+    private void refreshHasGameControllerAndNotify() {
+        boolean nowHasGameController = false;
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice dev = InputDevice.getDevice(id);
+            if (dev == null) {
+                continue;
+            }
+            if ((dev.getSources() & InputDevice.SOURCE_JOYSTICK) != 0 ||
+                    (dev.getSources() & InputDevice.SOURCE_GAMEPAD) != 0) {
+                if (getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_X) != null &&
+                        getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_Y) != null) {
+                    nowHasGameController = true;
+                    break;
+                }
+            }
+        }
+
+        if (nowHasGameController == hasGameController) {
+            return;
+        }
+        hasGameController = nowHasGameController;
+
+        if (activityContext != null) {
+            WritableMap params = Arguments.createMap();
+            params.putBoolean("connected", hasGameController);
+            activityContext.sendEvent("onGamepadConnectionChanged", params);
         }
     }
 

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {Text, Icon, ActivityIndicator} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
+import {useTVFocus, tvFocusRing} from '../../shared/ui/tvFocus';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import {
@@ -883,16 +884,29 @@ function StoreScreen() {
     [navigation],
   );
 
+  // One focused row id shared across the whole chart instead of a hook per
+  // row -- renderRow is called per FlatList item, not fixed JSX, so a hook
+  // can't be called inside it (see tvFocus.ts's own comment on useTVFocus).
+  // Same focused-key pattern as LibraryView's renderCard.
+  const [focusedRowId, setFocusedRowId] = React.useState<string | null>(null);
+
   const renderRow = ({item}: {item: StoreRow}) => {
     // Only possible on the GFN/Steam or PS Store tab (see StoreRow's own
     // comment) -- still shown so the chart reads as the real, complete
     // ranking, just dimmed and inert since there's nothing to launch.
     const unavailable = !item.catalogTitle;
+    const isFocused = focusedRowId === item.id;
     return (
       <Pressable
-        style={[styles.row, unavailable && styles.rowUnavailable]}
+        style={[
+          styles.row,
+          unavailable && styles.rowUnavailable,
+          isFocused && tvFocusRing,
+        ]}
         disabled={unavailable}
         onPress={() => openRow(item)}
+        onFocus={() => setFocusedRowId(item.id)}
+        onBlur={() => setFocusedRowId(prev => (prev === item.id ? null : prev))}
         android_ripple={{color: 'rgba(150,150,150,0.12)'}}>
         <Text style={styles.rank}>#{item.rank}</Text>
         {item.imageUrl ? (
@@ -920,6 +934,17 @@ function StoreScreen() {
     );
   };
 
+  // Each of these is written once in fixed JSX below (never mapped), so one
+  // useTVFocus() call per element is fine -- no focused-key pattern needed.
+  const xcloudTabFocus = useTVFocus();
+  const gfnTabFocus = useTVFocus();
+  const psstoreTabFocus = useTVFocus();
+  const bestKindFocus = useTVFocus();
+  const newKindFocus = useTVFocus();
+  const saleKindFocus = useTVFocus();
+  const gfnAvailableFocus = useTVFocus();
+  const psPlusAvailableFocus = useTVFocus();
+
   const renderFooter = () =>
     loadingMore ? (
       <View style={styles.footer}>
@@ -939,8 +964,11 @@ function StoreScreen() {
                 backgroundColor: XBOX_ACCENT,
                 borderColor: XBOX_ACCENT,
               },
+              xcloudTabFocus.focused && tvFocusRing,
             ]}
-            onPress={() => setProvider('xcloud')}>
+            onPress={() => setProvider('xcloud')}
+            onFocus={xcloudTabFocus.onFocus}
+            onBlur={xcloudTabFocus.onBlur}>
             <Text
               style={[
                 styles.tabText,
@@ -956,8 +984,11 @@ function StoreScreen() {
                 backgroundColor: NVIDIA_ACCENT,
                 borderColor: NVIDIA_ACCENT,
               },
+              gfnTabFocus.focused && tvFocusRing,
             ]}
-            onPress={() => setProvider('gfn')}>
+            onPress={() => setProvider('gfn')}
+            onFocus={gfnTabFocus.onFocus}
+            onBlur={gfnTabFocus.onBlur}>
             <Text
               style={[styles.tabText, provider === 'gfn' && styles.tabTextOn]}>
               {t('StoreTabSteam')}
@@ -970,8 +1001,11 @@ function StoreScreen() {
                 backgroundColor: PS_ACCENT,
                 borderColor: PS_ACCENT,
               },
+              psstoreTabFocus.focused && tvFocusRing,
             ]}
-            onPress={() => setProvider('psstore')}>
+            onPress={() => setProvider('psstore')}
+            onFocus={psstoreTabFocus.onFocus}
+            onBlur={psstoreTabFocus.onBlur}>
             <Text
               style={[
                 styles.tabText,
@@ -983,8 +1017,14 @@ function StoreScreen() {
         </View>
         <View style={styles.kindRow}>
           <Pressable
-            style={[styles.kindChip, chartKind === 'best' && styles.kindOn]}
-            onPress={() => setChartKind('best')}>
+            style={[
+              styles.kindChip,
+              chartKind === 'best' && styles.kindOn,
+              bestKindFocus.focused && tvFocusRing,
+            ]}
+            onPress={() => setChartKind('best')}
+            onFocus={bestKindFocus.onFocus}
+            onBlur={bestKindFocus.onBlur}>
             <Text
               style={[
                 styles.kindText,
@@ -994,8 +1034,14 @@ function StoreScreen() {
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.kindChip, chartKind === 'new' && styles.kindOn]}
-            onPress={() => setChartKind('new')}>
+            style={[
+              styles.kindChip,
+              chartKind === 'new' && styles.kindOn,
+              newKindFocus.focused && tvFocusRing,
+            ]}
+            onPress={() => setChartKind('new')}
+            onFocus={newKindFocus.onFocus}
+            onBlur={newKindFocus.onBlur}>
             <Text
               style={[
                 styles.kindText,
@@ -1005,8 +1051,14 @@ function StoreScreen() {
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.kindChip, saleOnly && styles.kindOnSale]}
-            onPress={() => setSaleOnly(prev => !prev)}>
+            style={[
+              styles.kindChip,
+              saleOnly && styles.kindOnSale,
+              saleKindFocus.focused && tvFocusRing,
+            ]}
+            onPress={() => setSaleOnly(prev => !prev)}
+            onFocus={saleKindFocus.onFocus}
+            onBlur={saleKindFocus.onBlur}>
             <Text style={[styles.kindText, saleOnly && styles.kindTextOnSale]}>
               {t('LibraryFilterOnSale')}
             </Text>
@@ -1016,8 +1068,11 @@ function StoreScreen() {
               style={[
                 styles.kindChip,
                 gfnAvailableOnly && styles.kindOnGfnAvailable,
+                gfnAvailableFocus.focused && tvFocusRing,
               ]}
-              onPress={() => setGfnAvailableOnly(prev => !prev)}>
+              onPress={() => setGfnAvailableOnly(prev => !prev)}
+              onFocus={gfnAvailableFocus.onFocus}
+              onBlur={gfnAvailableFocus.onBlur}>
               <Text
                 style={[
                   styles.kindText,
@@ -1032,8 +1087,11 @@ function StoreScreen() {
               style={[
                 styles.kindChip,
                 psPlusAvailableOnly && styles.kindOnPsPlusAvailable,
+                psPlusAvailableFocus.focused && tvFocusRing,
               ]}
-              onPress={() => setPsPlusAvailableOnly(prev => !prev)}>
+              onPress={() => setPsPlusAvailableOnly(prev => !prev)}
+              onFocus={psPlusAvailableFocus.onFocus}
+              onBlur={psPlusAvailableFocus.onBlur}>
               <Text
                 style={[
                   styles.kindText,

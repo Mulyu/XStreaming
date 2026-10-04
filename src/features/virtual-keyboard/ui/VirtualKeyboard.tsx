@@ -202,6 +202,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
   modifiers,
 }) => {
   const {t} = useTranslation();
+  const [closeFocused, setCloseFocused] = React.useState(false);
   // Non-modifier keys currently physically held on THIS panel, tracked only
   // so a hide/unmount mid-press can release them instead of leaving a key
   // stuck down on the remote OS. Modifier latch state itself lives in the
@@ -267,8 +268,10 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
       <View style={styles.header}>
         <Text style={styles.title}>{t('Keyboard')}</Text>
         <Pressable
-          style={styles.closeBtn}
+          style={[styles.closeBtn, closeFocused && styles.keyFocused]}
           onPress={onClose}
+          onFocus={() => setCloseFocused(true)}
+          onBlur={() => setCloseFocused(false)}
           android_ripple={{color: 'rgba(255,255,255,0.15)'}}>
           <Icon source="close" size={14} color="#8a9a92" />
         </Pressable>

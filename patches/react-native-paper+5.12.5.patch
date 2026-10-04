@@ -10,3 +10,166 @@ index 92623d2..fa41ada 100644
 +    paddingHorizontal: 6,
    },
  });
+--- a/node_modules/react-native-paper/src/components/Button/Button.tsx
++++ b/node_modules/react-native-paper/src/components/Button/Button.tsx
+@@ -196,6 +196,8 @@
+     background,
+     maxFontSizeMultiplier,
+     touchableRef,
++    onFocus,
++    onBlur,
+     ...rest
+   }: Props,
+   ref: React.ForwardedRef<View>
+@@ -342,6 +344,8 @@
+         onLongPress={onLongPress}
+         onPressIn={hasPassedTouchHandler ? handlePressIn : undefined}
+         onPressOut={hasPassedTouchHandler ? handlePressOut : undefined}
++        onFocus={onFocus}
++        onBlur={onBlur}
+         delayLongPress={delayLongPress}
+         accessibilityLabel={accessibilityLabel}
+         accessibilityHint={accessibilityHint}
+--- a/node_modules/react-native-paper/src/components/Chip/Chip.tsx
++++ b/node_modules/react-native-paper/src/components/Chip/Chip.tsx
+@@ -202,6 +202,8 @@
+   compact,
+   elevated = false,
+   maxFontSizeMultiplier,
++  onFocus,
++  onBlur,
+   ...rest
+ }: Props) => {
+   const theme = useInternalTheme(themeOverrides);
+@@ -320,6 +322,8 @@
+         onLongPress={onLongPress}
+         onPressIn={hasPassedTouchHandler ? handlePressIn : undefined}
+         onPressOut={hasPassedTouchHandler ? handlePressOut : undefined}
++        onFocus={onFocus}
++        onBlur={onBlur}
+         delayLongPress={delayLongPress}
+         rippleColor={rippleColor}
+         disabled={disabled}
+--- a/node_modules/react-native-paper/src/components/Checkbox/CheckboxItem.tsx
++++ b/node_modules/react-native-paper/src/components/Checkbox/CheckboxItem.tsx
+@@ -2,6 +2,8 @@
+ import {
+   ColorValue,
+   GestureResponderEvent,
++  NativeSyntheticEvent,
++  TargetedEvent,
+   PressableAndroidRippleConfig,
+   StyleProp,
+   StyleSheet,
+@@ -40,6 +42,14 @@
+    */
+   onLongPress?: (e: GestureResponderEvent) => void;
+   /**
++   * Function to execute on focus (e.g. Android TV/Google TV D-pad focus).
++   */
++  onFocus?: (e: NativeSyntheticEvent<TargetedEvent>) => void;
++  /**
++   * Function to execute on blur.
++   */
++  onBlur?: (e: NativeSyntheticEvent<TargetedEvent>) => void;
++  /**
+    * Type of background drawabale to display the feedback (Android).
+    * https://reactnative.dev/docs/pressable#rippleconfig
+    */
+@@ -133,6 +143,8 @@
+   label,
+   onPress,
+   onLongPress,
++  onFocus,
++  onBlur,
+   labelStyle,
+   theme: themeOverrides,
+   testID,
+@@ -180,6 +192,8 @@
+       }}
+       onPress={onPress}
+       onLongPress={onLongPress}
++      onFocus={onFocus}
++      onBlur={onBlur}
+       testID={testID}
+       disabled={disabled}
+       rippleColor={rippleColor}
+--- a/node_modules/react-native-paper/src/components/RadioButton/RadioButtonItem.tsx
++++ b/node_modules/react-native-paper/src/components/RadioButton/RadioButtonItem.tsx
+@@ -2,6 +2,8 @@
+ import {
+   ColorValue,
+   GestureResponderEvent,
++  NativeSyntheticEvent,
++  TargetedEvent,
+   PressableAndroidRippleConfig,
+   StyleProp,
+   StyleSheet,
+@@ -47,6 +49,14 @@
+    */
+   onLongPress?: (e: GestureResponderEvent) => void;
+   /**
++   * Function to execute on focus (e.g. Android TV/Google TV D-pad focus).
++   */
++  onFocus?: (e: NativeSyntheticEvent<TargetedEvent>) => void;
++  /**
++   * Function to execute on blur.
++   */
++  onBlur?: (e: NativeSyntheticEvent<TargetedEvent>) => void;
++  /**
+    * Accessibility label for the touchable. This is read by the screen reader when the user taps the touchable.
+    */
+   accessibilityLabel?: string;
+@@ -143,6 +153,8 @@
+   labelStyle,
+   onPress,
+   onLongPress,
++  onFocus,
++  onBlur,
+   disabled,
+   color,
+   uncheckedColor,
+@@ -208,6 +220,8 @@
+               })
+             }
+             onLongPress={onLongPress}
++            onFocus={onFocus}
++            onBlur={onBlur}
+             accessibilityLabel={accessibilityLabel}
+             accessibilityRole="radio"
+             accessibilityState={{
+--- a/node_modules/react-native-paper/src/components/Card/Card.tsx
++++ b/node_modules/react-native-paper/src/components/Card/Card.tsx
+@@ -73,6 +73,14 @@
+    */
+   onPressOut?: (e: GestureResponderEvent) => void;
+   /**
++   * Function to execute on focus (e.g. Android TV/Google TV D-pad focus).
++   */
++  onFocus?: (e: GestureResponderEvent) => void;
++  /**
++   * Function to execute on blur.
++   */
++  onBlur?: (e: GestureResponderEvent) => void;
++  /**
+    * The number of milliseconds a user must touch the element before executing `onLongPress`.
+    */
+   delayLongPress?: number;
+@@ -147,6 +155,8 @@
+     testID = 'card',
+     accessible,
+     disabled,
++    onFocus,
++    onBlur,
+     ...rest
+   }: (OutlinedCardProps | ElevatedCardProps | ContainedCardProps) & Props,
+   ref: React.ForwardedRef<View>
+@@ -320,6 +330,8 @@
+           onPress={onPress}
+           onPressIn={handlePressIn}
+           onPressOut={handlePressOut}
++          onFocus={onFocus}
++          onBlur={onBlur}
+         >
+           {content}
+         </Pressable>

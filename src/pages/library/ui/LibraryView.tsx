@@ -15,6 +15,7 @@ import {
   isCatalogTitleOwned,
 } from '../../../entities/catalog-title';
 import type {LibraryScreenViewModel} from '../model/useLibraryScreen';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
@@ -64,6 +65,17 @@ const LibraryView: React.FC<Props> = ({
   openTitleDetail,
   saleDiscount,
 }) => {
+  const xcloudChipFocus = useTVFocus();
+  const gfnChipFocus = useTVFocus();
+  const psPlusChipFocus = useTVFocus();
+  const favoriteChipFocus = useTVFocus();
+  const ownedOnlyChipFocus = useTVFocus();
+  const onSaleChipFocus = useTVFocus();
+  const sortChipFocus = useTVFocus();
+  const [focusedSortOption, setFocusedSortOption] = React.useState<
+    string | null
+  >(null);
+
   const renderCard = ({item}: {item: CatalogTitle}) => {
     // Cover art itself grays out when the title isn't playable via any of
     // its listed services today (no Game Pass entitlement, no owned GFN
@@ -200,8 +212,14 @@ const LibraryView: React.FC<Props> = ({
         <View style={styles.filterRow}>
           <View style={styles.chipsRow}>
             <Pressable
-              style={[styles.filterChip, filterXcloud && styles.filterChipOn]}
-              onPress={() => setFilterXcloud(v => !v)}>
+              style={[
+                styles.filterChip,
+                filterXcloud && styles.filterChipOn,
+                xcloudChipFocus.focused && tvFocusRing,
+              ]}
+              onPress={() => setFilterXcloud(v => !v)}
+              onFocus={xcloudChipFocus.onFocus}
+              onBlur={xcloudChipFocus.onBlur}>
               <Text
                 style={[
                   styles.filterChipText,
@@ -211,8 +229,14 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterChip, filterGfn && styles.filterChipOn]}
-              onPress={() => setFilterGfn(v => !v)}>
+              style={[
+                styles.filterChip,
+                filterGfn && styles.filterChipOn,
+                gfnChipFocus.focused && tvFocusRing,
+              ]}
+              onPress={() => setFilterGfn(v => !v)}
+              onFocus={gfnChipFocus.onFocus}
+              onBlur={gfnChipFocus.onBlur}>
               <Text
                 style={[
                   styles.filterChipText,
@@ -222,8 +246,14 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterChip, filterPsPlus && styles.filterChipOn]}
-              onPress={() => setFilterPsPlus(v => !v)}>
+              style={[
+                styles.filterChip,
+                filterPsPlus && styles.filterChipOn,
+                psPlusChipFocus.focused && tvFocusRing,
+              ]}
+              onPress={() => setFilterPsPlus(v => !v)}
+              onFocus={psPlusChipFocus.onFocus}
+              onBlur={psPlusChipFocus.onBlur}>
               <Text
                 style={[
                   styles.filterChipText,
@@ -233,8 +263,14 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterChip, filterFavorite && styles.filterChipOn]}
-              onPress={() => setFilterFavorite(v => !v)}>
+              style={[
+                styles.filterChip,
+                filterFavorite && styles.filterChipOn,
+                favoriteChipFocus.focused && tvFocusRing,
+              ]}
+              onPress={() => setFilterFavorite(v => !v)}
+              onFocus={favoriteChipFocus.onFocus}
+              onBlur={favoriteChipFocus.onBlur}>
               <Text
                 style={[
                   styles.filterChipText,
@@ -247,8 +283,11 @@ const LibraryView: React.FC<Props> = ({
               style={[
                 styles.filterChip,
                 filterOwnedOnly && styles.filterChipOn,
+                ownedOnlyChipFocus.focused && tvFocusRing,
               ]}
-              onPress={() => setFilterOwnedOnly(v => !v)}>
+              onPress={() => setFilterOwnedOnly(v => !v)}
+              onFocus={ownedOnlyChipFocus.onFocus}
+              onBlur={ownedOnlyChipFocus.onBlur}>
               <Text
                 style={[
                   styles.filterChipText,
@@ -258,8 +297,14 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterChip, filterOnSale && styles.filterChipOn]}
-              onPress={() => setFilterOnSale(v => !v)}>
+              style={[
+                styles.filterChip,
+                filterOnSale && styles.filterChipOn,
+                onSaleChipFocus.focused && tvFocusRing,
+              ]}
+              onPress={() => setFilterOnSale(v => !v)}
+              onFocus={onSaleChipFocus.onFocus}
+              onBlur={onSaleChipFocus.onBlur}>
               <Text
                 style={[
                   styles.filterChipText,
@@ -273,8 +318,11 @@ const LibraryView: React.FC<Props> = ({
               style={[
                 styles.sortChip,
                 sortMode !== 'recent' && styles.sortChipOn,
+                sortChipFocus.focused && tvFocusRing,
               ]}
-              onPress={() => setSortMenuOpen(v => !v)}>
+              onPress={() => setSortMenuOpen(v => !v)}
+              onFocus={sortChipFocus.onFocus}
+              onBlur={sortChipFocus.onBlur}>
               <Text
                 style={[
                   styles.sortChipText,
@@ -301,11 +349,20 @@ const LibraryView: React.FC<Props> = ({
               {sortOptions.map(option => (
                 <Pressable
                   key={option.value}
-                  style={styles.sortItem}
+                  style={[
+                    styles.sortItem,
+                    focusedSortOption === option.value && tvFocusRing,
+                  ]}
                   onPress={() => {
                     setSortMode(option.value);
                     setSortMenuOpen(false);
-                  }}>
+                  }}
+                  onFocus={() => setFocusedSortOption(option.value)}
+                  onBlur={() =>
+                    setFocusedSortOption(prev =>
+                      prev === option.value ? null : prev,
+                    )
+                  }>
                   <View style={styles.sortItemLabelRow}>
                     {sortMode === option.value && (
                       <Icon source="check" size={13} color={NVIDIA_ACCENT} />
