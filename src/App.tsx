@@ -38,6 +38,7 @@ import {
   findTitleByProductId,
   getTitleStreamingId,
 } from './features/launch-title';
+import {normalizeTitle, recordTitlePlayed} from './entities/catalog-title';
 
 import customDarkTheme from './shared/config/theme';
 
@@ -229,6 +230,9 @@ function App() {
         // GFN never needed a saved snapshot to relaunch -- the shortcut's own
         // Intent extras already carry everything NativeStream needs to start
         // streaming (see features/launch-title's TitleShortcutSnapshot).
+        if (shortcut.titleName) {
+          recordTitlePlayed(normalizeTitle(shortcut.titleName));
+        }
         navigationRef.navigate('NativeStream', {
           streamType: 'gfn',
           appId: shortcut.gfnAppId,
@@ -251,6 +255,9 @@ function App() {
       const postUrl = titleItem.Image_Poster?.URL
         ? `https:${titleItem.Image_Poster.URL}`
         : '';
+      if (titleItem.ProductTitle) {
+        recordTitlePlayed(normalizeTitle(titleItem.ProductTitle));
+      }
       navigationRef.navigate({
         name: getSettings().native_portrait_mode
           ? 'NativePortraitStream'

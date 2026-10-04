@@ -57,7 +57,6 @@ const LibraryView: React.FC<Props> = ({
   gfnFullCatalogLoading,
   sortOptions,
   activeSortLabel,
-  xcloudRecentPending,
   numColumns,
   refreshing,
   onRefresh,
@@ -330,12 +329,6 @@ const LibraryView: React.FC<Props> = ({
                 ]}>
                 {`${t('Sort')}: ${activeSortLabel}`}
               </Text>
-              {xcloudRecentPending && (
-                <ActivityIndicator
-                  size={10}
-                  color={sortMode !== 'recent' ? '#0B0F0C' : '#8A9A92'}
-                />
-              )}
               <Icon
                 source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
                 size={14}

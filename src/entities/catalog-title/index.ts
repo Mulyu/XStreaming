@@ -20,6 +20,12 @@ export type {CatalogPreference} from './model/preferences';
 export {getCatalogPreference, setCatalogPreference} from './model/preferences';
 
 export {
+  getPlayHistory,
+  getLastPlayedAt,
+  recordTitlePlayed,
+} from './model/playHistory';
+
+export {
   saveXcloudData,
   getXcloudData,
   clearXcloudData,

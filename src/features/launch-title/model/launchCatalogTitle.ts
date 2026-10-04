@@ -1,6 +1,7 @@
 import {
   CatalogPreference,
   setCatalogPreference,
+  recordTitlePlayed,
   CatalogTitle,
 } from '../../../entities/catalog-title';
 import {getTitleStreamingId} from './shortcut';
@@ -28,6 +29,7 @@ export const launchWithProvider = (
     const postUrl = raw.Image_Poster?.URL
       ? `https:${raw.Image_Poster.URL}`
       : '';
+    recordTitlePlayed(catalogTitle.key);
     navigation.navigate({
       name: getSettings().native_portrait_mode
         ? 'NativePortraitStream'
@@ -51,6 +53,7 @@ export const launchWithProvider = (
     // features/ps-plus-session), not NativeStream's WebRTC/xCloud-shaped
     // stream screen, so it gets its own route -- same params
     // ps-plus-library's own onSelectGame already builds for this screen.
+    recordTitlePlayed(catalogTitle.key);
     navigation.navigate('PsPlusStream', {
       productId: game.productId,
       name: game.name,
@@ -63,6 +66,7 @@ export const launchWithProvider = (
     return;
   }
 
+  recordTitlePlayed(catalogTitle.key);
   navigation.navigate('NativeStream', {
     streamType: 'gfn',
     appId: preference.gfnId,
