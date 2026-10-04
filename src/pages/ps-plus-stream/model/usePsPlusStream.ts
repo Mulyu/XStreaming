@@ -135,10 +135,12 @@ function friendlyStreamError(
   }
   // "PING_TIMEOUT" is a misnomer carried over from the native layer -- it's
   // not a wait-longer timeout, it's cloudsession_gaikai.c's datacenter
-  // auto-select gate: every datacenter ping failed outright
-  // ("PING_TIMEOUT:UNREACHABLE"), or the best one measured over the 80ms
-  // quality gate ("PING_TIMEOUT:<rtt>ms"). Neither is fixed by retrying with
-  // more patience, so show what was actually measured instead of "timed out".
+  // auto-select step reporting every datacenter ping failed outright
+  // ("PING_TIMEOUT:UNREACHABLE"). The RTT quality gate that used to also
+  // report here ("PING_TIMEOUT:<rtt>ms" for a best measured RTT over 80ms)
+  // was removed -- auto-select now always takes the lowest-RTT datacenter
+  // that actually responded -- but the numeric-RTT branch below is kept for
+  // compatibility with an older native build.
   if (name.startsWith('PING_TIMEOUT')) {
     const rtt = name.split(':')[1];
     if (rtt === 'UNREACHABLE') {

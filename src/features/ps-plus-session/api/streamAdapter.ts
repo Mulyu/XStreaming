@@ -78,9 +78,9 @@ export type PsPlusLaunchOptions = {
   resolution?: number;
   fpsPreset?: number;
   bitrateKbps?: number;
-  /** Forces a specific Gaikai datacenter, bypassing the 80ms auto-select
-   * ping gate entirely (see cloudsession_gaikai.c's gk_step11/12) -- empty/
-   * unset picks the lowest-measured-RTT datacenter under that gate. */
+  /** Forces a specific Gaikai datacenter instead of auto-selecting one (see
+   * cloudsession_gaikai.c's gk_step11/12) -- empty/unset picks whichever
+   * datacenter measured the lowest RTT, with no RTT quality gate. */
   forcedDatacenter?: string;
   /** Prior run(s)' measured datacenter pings (Gaikai's own ping-results
    * JSON), merged into this run's picker so a datacenter that isn't probed
