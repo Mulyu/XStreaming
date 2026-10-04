@@ -63,8 +63,8 @@ typedef struct
 	struct json_object *selected_ping; // borrowed ref into ping_results
 	char selected_datacenter[128];
 	int selected_dc_port;
-	int ping_timeout_rtt;       // 0 = unset, -1 = every datacenter ping was unreachable,
-	                            // >0 = best measured RTT (ms) that exceeded the auto-select gate (>80ms)
+	int ping_timeout_rtt;       // 0 = unset, -1 = every datacenter ping was unreachable
+	                            // (no RTT quality gate any more -- see gk_step12_select)
 	bool forced_dc_unavailable; // settings-forced datacenter not in this title's list
 } GaikaiCtx;
 
@@ -947,20 +947,19 @@ static ChiakiErrorCode gk_step12_select(GaikaiCtx *c)
 	{
 		c->selected_ping = json_object_array_get_idx(c->ping_results, 0); // lowest RTT
 		bool measured = cc_json_bool(c->selected_ping, "measured");
-		int rtt_ms = cc_json_int(c->selected_ping, "rtt");
 		if(!measured)
 		{
 			// Rows are RTT-sorted, so an unmeasured best row means no ping succeeded.
 			CHIAKI_LOGE(c->log, "[GAIKAI] all datacenter pings failed");
 			c->ping_timeout_rtt = -1;
-			return CHIAKI_ERR_UNKNOWN; // ping-too-high / unreachable
+			return CHIAKI_ERR_UNKNOWN; // unreachable
 		}
-		if(rtt_ms > 80)
-		{
-			CHIAKI_LOGE(c->log, "[GAIKAI] best datacenter RTT %dms > 80ms", rtt_ms);
-			c->ping_timeout_rtt = rtt_ms;
-			return CHIAKI_ERR_UNKNOWN; // ping-too-high
-		}
+		// No longer gated on RTT <= 80ms: on connections that never measure
+		// under that (e.g. most PS Plus players outside the datacenter's own
+		// region), the gate rejected every real session instead of just the
+		// genuinely unreachable ones. Auto-select now always takes the lowest-
+		// RTT datacenter that actually responded, same as forced-DC mode
+		// already did unconditionally.
 	}
 	snprintf(c->selected_datacenter, sizeof(c->selected_datacenter), "%s", cc_json_str(c->selected_ping, "dataCenter"));
 	int port = cc_json_int(c->selected_ping, "port");
@@ -1181,16 +1180,13 @@ ChiakiErrorCode cc_gaikai_allocate(ChiakiLog *log,
 		out->error_message = strdup("PS_PLUS_SUBSCRIPTION_REQUIRED");
 	if(c.ping_timeout_rtt != 0 && !out->error_message)
 	{
-		// Carries the measured RTT (or "unreachable") so the client can show
-		// what actually happened instead of a generic "timed out" -- this
-		// isn't a wait-longer timeout at all, it's the >80ms auto-select
-		// quality gate in gk_step12_select, or every datacenter being
-		// unreachable outright.
+		// "PING_TIMEOUT" is a misnomer kept for client-side compatibility --
+		// this isn't a wait-longer timeout, it fires only when every
+		// datacenter ping in gk_step12_select was unreachable outright (no
+		// RTT quality gate any more, so a merely slow-but-reachable
+		// datacenter is never rejected here).
 		char m[32];
-		if(c.ping_timeout_rtt < 0)
-			snprintf(m, sizeof(m), "PING_TIMEOUT:UNREACHABLE");
-		else
-			snprintf(m, sizeof(m), "PING_TIMEOUT:%d", c.ping_timeout_rtt);
+		snprintf(m, sizeof(m), "PING_TIMEOUT:UNREACHABLE");
 		out->error_message = strdup(m);
 	}
 	if(c.forced_dc_unavailable && !out->error_message)
