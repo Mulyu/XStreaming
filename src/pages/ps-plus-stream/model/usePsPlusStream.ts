@@ -1,10 +1,13 @@
 import React from 'react';
 import {
   Alert,
+  AppState,
   DeviceEventEmitter,
   Dimensions,
   NativeEventEmitter,
   NativeModules,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import Orientation from 'react-native-orientation-locker';
 import {useTranslation} from 'react-i18next';
@@ -40,7 +43,12 @@ import type {
 import {getSettings, saveSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
 
-const {FullScreenManager, GamepadManager, CoverDisplayManager} = NativeModules;
+const {
+  FullScreenManager,
+  GamepadManager,
+  CoverDisplayManager,
+  StreamKeepAliveManager,
+} = NativeModules;
 
 // Exactly native-stream's own VIDEO_FORMAT_OPTIONS -- '' is "Auto" (native
 // aspect, 16:9 for every PS Plus resolution preset), then a fill-exact
@@ -372,6 +380,18 @@ export function usePsPlusStream(navigation: any, route: any) {
   const sessionRef = React.useRef<PsPlusSession | null>(null);
   const gpState = React.useRef(createGpState());
 
+  // Background keep-alive notification -- mirrors native-stream's own
+  // StreamKeepAliveManager wiring verbatim (same native service/notification,
+  // same i18n keys) so backgrounding mid-game survives (foreground service +
+  // an ongoing "tap to return" notification with a Disconnect action)
+  // instead of the session silently dying, and backgrounding during the
+  // initial connect still lets the player know once it's ready.
+  const currentAppStateRef = React.useRef(AppState.currentState);
+  const backgroundMutedRef = React.useRef(false);
+  const hasConnectedRef = React.useRef(false);
+  const batteryOptPromptRef = React.useRef(false);
+  const audioGainRef = React.useRef(getSettings().audio_gain ?? 1);
+
   const flushGpState = React.useCallback(() => {
     sessionRef.current?.setGamepadState(gpState.current);
   }, []);
@@ -524,6 +544,9 @@ export function usePsPlusStream(navigation: any, route: any) {
     setAudioGainState(nextGain);
     sessionRef.current?.setAudioGain(nextGain);
   }, []);
+  React.useEffect(() => {
+    audioGainRef.current = audioGain;
+  }, [audioGain]);
 
   React.useEffect(() => {
     const npsso = getNpsso();
@@ -532,11 +555,68 @@ export function usePsPlusStream(navigation: any, route: any) {
       setErrorDetail('Not signed in');
       return;
     }
+    const title = params.name ?? '';
     const session = new PsPlusSession({
       onState: (state, detail) => {
         setConnectState(state);
         if (detail) {
           setErrorDetail(friendlyStreamError(detail, t));
+        }
+        if (state === 'closed' || state === 'failed') {
+          StreamKeepAliveManager?.stop?.();
+          return;
+        }
+        if (state !== 'connected' || hasConnectedRef.current) {
+          return;
+        }
+        hasConnectedRef.current = true;
+        // Drop the connecting-phase keep-alive started below -- the
+        // in-stream one needs a clean slate to arm() onto.
+        StreamKeepAliveManager?.stop?.();
+        // If the user backgrounded the app while this was still connecting,
+        // let them know it's ready, same as native-stream's own
+        // StreamReadyNotifyBody notification.
+        if (currentAppStateRef.current !== 'active') {
+          StreamKeepAliveManager?.notifyReady?.(
+            String(title || t('Connecting...')),
+            t('StreamReadyNotifyBody'),
+          );
+        }
+        // Get the keep-alive service running now, while definitely still in
+        // the foreground, so a later backgrounding can reliably promote it
+        // to show the notification.
+        StreamKeepAliveManager?.arm?.();
+        if (
+          Platform.OS === 'android' &&
+          typeof Platform.Version === 'number' &&
+          Platform.Version >= 33
+        ) {
+          PermissionsAndroid.request(
+            'android.permission.POST_NOTIFICATIONS' as any,
+          ).catch(() => {});
+        }
+        // Many OEMs suspend background execution within a few minutes and
+        // cut the stream even with a foreground service; offer to whitelist
+        // the app from battery optimization (once per session, only if
+        // needed) -- same prompt native-stream's own connect handler shows.
+        if (!batteryOptPromptRef.current) {
+          batteryOptPromptRef.current = true;
+          StreamKeepAliveManager?.isIgnoringBatteryOptimizations?.()
+            .then((ignoring: boolean) => {
+              if (!ignoring) {
+                Alert.alert(t('Warning'), t('BatteryOptimizationPrompt'), [
+                  {text: t('Cancel'), style: 'cancel'},
+                  {
+                    text: t('Confirm'),
+                    style: 'default',
+                    onPress: () => {
+                      StreamKeepAliveManager?.requestDisableBatteryOptimization?.();
+                    },
+                  },
+                ]);
+              }
+            })
+            .catch(() => {});
         }
       },
       onProgress: stage => setProgressText(stage),
@@ -569,6 +649,16 @@ export function usePsPlusStream(navigation: any, route: any) {
       },
     });
     sessionRef.current = session;
+    // Survives backgrounding during the connect/handshake wait itself (a PS5
+    // cloud session can take a while to provision) -- started here, while
+    // definitely still foreground, so a later background can reliably
+    // promote/notify; stopped once connected (or on failure/close) above.
+    StreamKeepAliveManager?.start?.(
+      String(title || t('Connecting...')),
+      t('Connecting...'),
+      t('Disconnect'),
+      0,
+    );
     // The owned-entitlement fast path only means anything on the PSNOW
     // (Kamaji resolve) branch -- cc_kamaji_resolve branches on it, but
     // provision_once's pscloud branch never reads it at all, always using
@@ -609,6 +699,7 @@ export function usePsPlusStream(navigation: any, route: any) {
       log.info('Closing PS Plus session');
       session.close();
       sessionRef.current = null;
+      StreamKeepAliveManager?.stop?.();
     };
     // Only the initial route params matter -- this effect owns the session
     // for the screen's whole lifetime, same as native-stream's own connect
@@ -951,6 +1042,65 @@ export function usePsPlusStream(navigation: any, route: any) {
       },
     ]);
   }, [navigation, t, connectState]);
+
+  // The background keep-alive notification's "Disconnect" action -- the
+  // player already made the decision by tapping it, so this exits directly
+  // with no confirmation dialog, same as native-stream's own
+  // StreamKeepAliveDisconnect handler.
+  const forceExit = React.useCallback(() => {
+    exitConfirmedRef.current = true;
+    navigation.goBack();
+  }, [navigation]);
+
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(
+      'StreamKeepAliveDisconnect',
+      forceExit,
+    );
+    return () => sub.remove();
+  }, [forceExit]);
+
+  // Background keep-alive: while backgrounded mid-game, mute the game audio
+  // (independent of the Android system volume -- the session keeps running
+  // via the native foreground service) and promote the keep-alive
+  // notification from "armed" to visible/ongoing; on return to the
+  // foreground, hide it again (demote, not stop, so the next backgrounding
+  // can promote it reliably) and restore audio. Exactly native-stream's own
+  // AppState effect, minus its WebRTC-specific anti-idle nudge (PS Plus's
+  // cloud session has no client-driven AFK timer to spoof).
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      currentAppStateRef.current = state;
+      if (state === 'active') {
+        if (hasConnectedRef.current) {
+          StreamKeepAliveManager?.demote?.();
+        }
+        if (backgroundMutedRef.current) {
+          backgroundMutedRef.current = false;
+          sessionRef.current?.setAudioGain(audioGainRef.current);
+        }
+        return;
+      }
+      if (state !== 'background' || connectStateRef.current !== 'connected') {
+        return;
+      }
+      if (getSettings().background_mute !== false) {
+        backgroundMutedRef.current = true;
+        sessionRef.current?.setAudioGain(0);
+      }
+      // promote() (not start()) -- the service was already armed while
+      // connected, and Android may otherwise refuse to start a brand new
+      // foreground service now that the app has already left the
+      // foreground.
+      StreamKeepAliveManager?.promote?.(
+        t('Streaming in background'),
+        t('BackgroundKeepAliveNotification'),
+        t('Disconnect'),
+        0,
+      );
+    });
+    return () => subscription.remove();
+  }, [t]);
 
   // A natural session end (the PS5 game itself quitting, not the player
   // disconnecting from here) previously left this screen sitting on the
