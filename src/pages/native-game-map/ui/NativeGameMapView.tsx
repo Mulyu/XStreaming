@@ -3,6 +3,7 @@ import {View, StyleSheet, FlatList} from 'react-native';
 import {Button} from 'react-native-paper';
 import {MapItem} from '../../../entities/gamepad';
 import type {NativeGameMapViewModel} from '../model/useNativeGameMap';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 type Props = NativeGameMapViewModel;
 
@@ -13,6 +14,9 @@ const NativeGameMapView: React.FC<Props> = ({
   onSave,
   onReset,
 }) => {
+  const saveFocus = useTVFocus();
+  const resetFocus = useTVFocus();
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -29,10 +33,20 @@ const NativeGameMapView: React.FC<Props> = ({
       />
 
       <View style={styles.buttonWrap}>
-        <Button mode="contained" style={styles.button} onPress={onSave}>
+        <Button
+          mode="contained"
+          style={[styles.button, saveFocus.focused && tvFocusRing]}
+          onPress={onSave}
+          onFocus={saveFocus.onFocus}
+          onBlur={saveFocus.onBlur}>
           {t('Save Maping')}
         </Button>
-        <Button mode="outlined" style={styles.button} onPress={onReset}>
+        <Button
+          mode="outlined"
+          style={[styles.button, resetFocus.focused && tvFocusRing]}
+          onPress={onReset}
+          onFocus={resetFocus.onFocus}
+          onBlur={resetFocus.onBlur}>
           {t('Reset')}
         </Button>
       </View>

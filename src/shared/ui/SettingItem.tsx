@@ -1,6 +1,7 @@
 import React from 'react';
 import {List, Divider} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import {useTVFocus, tvFocusRing} from './tvFocus';
 
 type Props = {
   title: string;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 const SettingItem: React.FC<Props> = ({title, description, onPress}) => {
+  const {focused, onFocus, onBlur} = useTVFocus();
   const handlePress = () => {
     onPress && onPress();
   };
@@ -23,6 +25,9 @@ const SettingItem: React.FC<Props> = ({title, description, onPress}) => {
           <Ionicons name={'chevron-forward-outline'} size={20} color="#fff" />
         )}
         onPress={handlePress}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        style={focused && tvFocusRing}
       />
       <Divider />
     </>

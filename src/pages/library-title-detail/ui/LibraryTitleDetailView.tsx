@@ -18,6 +18,7 @@ import {
   renderStars,
 } from '../../../entities/title-capabilities';
 import {getTitleProductId} from '../../../features/launch-title';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 import type {LibraryTitleDetailViewModel} from '../model/useLibraryTitleDetail';
 
 const XBOX_ACCENT = '#107C10';
@@ -56,6 +57,23 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   addGfnShortcut,
   openStore,
 }) => {
+  // One useTVFocus() per always-rendered-at-most-once Pressable below (the
+  // per-provider rows and their nested buttons don't repeat -- only the
+  // per-store GFN variant list does, so that one uses the focused-key
+  // pattern instead, same as LibraryView's title grid).
+  const favoriteFocus = useTVFocus();
+  const xcloudRowFocus = useTVFocus();
+  const xcloudStoreLinkFocus = useTVFocus();
+  const xcloudShortcutFocus = useTVFocus();
+  const gfnRowFocus = useTVFocus();
+  const gfnStoreLinkFocus = useTVFocus();
+  const gfnShortcutFocus = useTVFocus();
+  const psplusRowFocus = useTVFocus();
+  const psplusStoreLinkFocus = useTVFocus();
+  const [focusedVariantKey, setFocusedVariantKey] = React.useState<
+    string | null
+  >(null);
+
   if (!catalogTitle) {
     return null;
   }
@@ -125,8 +143,10 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           />
         ) : null}
         <Pressable
-          style={styles.favoriteBtn}
+          style={[styles.favoriteBtn, favoriteFocus.focused && tvFocusRing]}
           onPress={toggleFavorite}
+          onFocus={favoriteFocus.onFocus}
+          onBlur={favoriteFocus.onBlur}
           accessibilityLabel={t('LibraryFilterFavorite')}>
           <Ionicons
             name={isFavorite ? 'heart' : 'heart-outline'}
@@ -178,8 +198,14 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           {catalogTitle.xcloud && (
             <View style={[styles.providerCard, styles.providerCardSpaced]}>
               <Pressable
-                style={[styles.providerRow, !xcloudEntitled && styles.dimRow]}
-                onPress={playXcloud}>
+                style={[
+                  styles.providerRow,
+                  !xcloudEntitled && styles.dimRow,
+                  xcloudRowFocus.focused && tvFocusRing,
+                ]}
+                onPress={playXcloud}
+                onFocus={xcloudRowFocus.onFocus}
+                onBlur={xcloudRowFocus.onBlur}>
                 <View
                   style={[
                     styles.providerIcon,
@@ -222,18 +248,28 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 )}
                 {xcloudProductId && (
                   <Pressable
-                    style={styles.storeLinkBtn}
+                    style={[
+                      styles.storeLinkBtn,
+                      xcloudStoreLinkFocus.focused && tvFocusRing,
+                    ]}
                     hitSlop={8}
-                    onPress={() => openStore(getStoreUrl(xcloudProductId))}>
+                    onPress={() => openStore(getStoreUrl(xcloudProductId))}
+                    onFocus={xcloudStoreLinkFocus.onFocus}
+                    onBlur={xcloudStoreLinkFocus.onBlur}>
                     <Icon source="open-in-new" size={16} color="#8A9A92" />
                   </Pressable>
                 )}
                 {canAddShortcut && (
                   <Pressable
-                    style={styles.storeLinkBtn}
+                    style={[
+                      styles.storeLinkBtn,
+                      xcloudShortcutFocus.focused && tvFocusRing,
+                    ]}
                     hitSlop={8}
                     accessibilityLabel={t('Add to desktop')}
-                    onPress={addXcloudShortcut}>
+                    onPress={addXcloudShortcut}
+                    onFocus={xcloudShortcutFocus.onFocus}
+                    onBlur={xcloudShortcutFocus.onBlur}>
                     <Icon source="plus-box-outline" size={16} color="#8A9A92" />
                   </Pressable>
                 )}
@@ -245,12 +281,18 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           {catalogTitle.gfn && (
             <View style={styles.providerCard}>
               <Pressable
-                style={[styles.providerRow, !gfnAnyOwned && styles.dimRow]}
+                style={[
+                  styles.providerRow,
+                  !gfnAnyOwned && styles.dimRow,
+                  gfnRowFocus.focused && tvFocusRing,
+                ]}
                 onPress={() =>
                   gfnVariants.length > 1
                     ? onToggleGfnExpanded()
                     : playGfnVariant(gfnVariants[0])
-                }>
+                }
+                onFocus={gfnRowFocus.onFocus}
+                onBlur={gfnRowFocus.onBlur}>
                 <View
                   style={[
                     styles.providerIcon,
@@ -301,22 +343,32 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 )}
                 {soleGfnVariant?.steamAppId && (
                   <Pressable
-                    style={styles.storeLinkBtn}
+                    style={[
+                      styles.storeLinkBtn,
+                      gfnStoreLinkFocus.focused && tvFocusRing,
+                    ]}
                     hitSlop={8}
                     onPress={() =>
                       openStore(
                         `https://store.steampowered.com/app/${soleGfnVariant.steamAppId}`,
                       )
-                    }>
+                    }
+                    onFocus={gfnStoreLinkFocus.onFocus}
+                    onBlur={gfnStoreLinkFocus.onBlur}>
                     <Icon source="open-in-new" size={16} color="#8A9A92" />
                   </Pressable>
                 )}
                 {canAddShortcut && soleGfnVariant && (
                   <Pressable
-                    style={styles.storeLinkBtn}
+                    style={[
+                      styles.storeLinkBtn,
+                      gfnShortcutFocus.focused && tvFocusRing,
+                    ]}
                     hitSlop={8}
                     accessibilityLabel={t('Add to desktop')}
-                    onPress={() => addGfnShortcut(soleGfnVariant)}>
+                    onPress={() => addGfnShortcut(soleGfnVariant)}
+                    onFocus={gfnShortcutFocus.onFocus}
+                    onBlur={gfnShortcutFocus.onBlur}>
                     <Icon source="plus-box-outline" size={16} color="#8A9A92" />
                   </Pressable>
                 )}
@@ -341,14 +393,25 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                       : undefined;
                     const showSale =
                       !variant.owned && isSteamSaleForDisplay(steamPrice);
+                    const variantKey = `${variant.store}:${variant.id}`;
+                    const rowKey = `${variantKey}:row`;
+                    const storeLinkKey = `${variantKey}:store`;
+                    const shortcutKey = `${variantKey}:shortcut`;
                     return (
                       <Pressable
-                        key={`${variant.store}:${variant.id}`}
+                        key={variantKey}
                         style={[
                           styles.storeRow,
                           !variant.owned && styles.dimRow,
+                          focusedVariantKey === rowKey && tvFocusRing,
                         ]}
-                        onPress={() => playGfnVariant(variant)}>
+                        onPress={() => playGfnVariant(variant)}
+                        onFocus={() => setFocusedVariantKey(rowKey)}
+                        onBlur={() =>
+                          setFocusedVariantKey(prev =>
+                            prev === rowKey ? null : prev,
+                          )
+                        }>
                         <View style={styles.storeMark}>
                           <Text style={styles.storeMarkText}>
                             {variant.store.slice(0, 2).toUpperCase()}
@@ -387,11 +450,21 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                           )}
                           {variant.steamAppId && (
                             <Pressable
-                              style={styles.storeLinkBtn}
+                              style={[
+                                styles.storeLinkBtn,
+                                focusedVariantKey === storeLinkKey &&
+                                  tvFocusRing,
+                              ]}
                               hitSlop={8}
                               onPress={() =>
                                 openStore(
                                   `https://store.steampowered.com/app/${variant.steamAppId}`,
+                                )
+                              }
+                              onFocus={() => setFocusedVariantKey(storeLinkKey)}
+                              onBlur={() =>
+                                setFocusedVariantKey(prev =>
+                                  prev === storeLinkKey ? null : prev,
                                 )
                               }>
                               <Icon
@@ -403,10 +476,20 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                           )}
                           {canAddShortcut && (
                             <Pressable
-                              style={styles.storeLinkBtn}
+                              style={[
+                                styles.storeLinkBtn,
+                                focusedVariantKey === shortcutKey &&
+                                  tvFocusRing,
+                              ]}
                               hitSlop={8}
                               accessibilityLabel={t('Add to desktop')}
-                              onPress={() => addGfnShortcut(variant)}>
+                              onPress={() => addGfnShortcut(variant)}
+                              onFocus={() => setFocusedVariantKey(shortcutKey)}
+                              onBlur={() =>
+                                setFocusedVariantKey(prev =>
+                                  prev === shortcutKey ? null : prev,
+                                )
+                              }>
                               <Icon
                                 source="plus-box-outline"
                                 size={14}
@@ -452,8 +535,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     style={[
                       styles.providerRow,
                       !psplusAvailable && styles.dimRow,
+                      psplusRowFocus.focused && tvFocusRing,
                     ]}
-                    onPress={playPsPlus}>
+                    onPress={playPsPlus}
+                    onFocus={psplusRowFocus.onFocus}
+                    onBlur={psplusRowFocus.onBlur}>
                     <View
                       style={[
                         styles.providerIcon,
@@ -494,9 +580,14 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     )}
                     {psStoreUrl && (
                       <Pressable
-                        style={styles.storeLinkBtn}
+                        style={[
+                          styles.storeLinkBtn,
+                          psplusStoreLinkFocus.focused && tvFocusRing,
+                        ]}
                         hitSlop={8}
-                        onPress={() => openStore(psStoreUrl)}>
+                        onPress={() => openStore(psStoreUrl)}
+                        onFocus={psplusStoreLinkFocus.onFocus}
+                        onBlur={psplusStoreLinkFocus.onBlur}>
                         <Icon source="open-in-new" size={16} color="#8A9A92" />
                       </Pressable>
                     )}

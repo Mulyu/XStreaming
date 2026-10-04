@@ -5,6 +5,7 @@ import Draggable from 'react-native-draggable';
 import {useTranslation} from 'react-i18next';
 import PreviewButton from './GamepadButtonPreview';
 import {getButtonBaseSize} from '../lib/gamepadLayout';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 export type PortraitGamepadControl = {
   name: string;
@@ -221,6 +222,12 @@ const PortraitVirtualGamepad: React.FC<Props> = ({
   const theme = useTheme();
   const [size, setSize] = React.useState({width: 0, height: 0});
   const [reloadKey, setReloadKey] = React.useState(0);
+  const [focusedDeleteKey, setFocusedDeleteKey] = React.useState<string | null>(
+    null,
+  );
+  const resetFocus = useTVFocus();
+  const saveFocus = useTVFocus();
+  const editFocus = useTVFocus();
   const [stickVisuals, setStickVisuals] = React.useState({
     left: {x: 0, y: 0},
     right: {x: 0, y: 0},
@@ -506,8 +513,15 @@ const PortraitVirtualGamepad: React.FC<Props> = ({
             icon="close"
             size={14}
             accessibilityLabel={t('Delete')}
-            style={styles.deleteButton}
+            style={[
+              styles.deleteButton,
+              focusedDeleteKey === item.name && tvFocusRing,
+            ]}
             onPress={() => updateControl(item.name, {show: false})}
+            onFocus={() => setFocusedDeleteKey(item.name)}
+            onBlur={() =>
+              setFocusedDeleteKey(prev => (prev === item.name ? null : prev))
+            }
           />
         </View>
       </Draggable>
@@ -548,16 +562,22 @@ const PortraitVirtualGamepad: React.FC<Props> = ({
                   icon="restore"
                   size={22}
                   accessibilityLabel={t('Reset')}
+                  style={resetFocus.focused && tvFocusRing}
                   onPress={() => {
                     onResetDefault();
                     setReloadKey(Date.now());
                   }}
+                  onFocus={resetFocus.onFocus}
+                  onBlur={resetFocus.onBlur}
                 />
                 <IconButton
                   icon="check"
                   size={22}
                   accessibilityLabel={t('Save')}
+                  style={saveFocus.focused && tvFocusRing}
                   onPress={() => onEditingChange(false)}
+                  onFocus={saveFocus.onFocus}
+                  onBlur={saveFocus.onBlur}
                 />
               </View>
             ) : (
@@ -565,8 +585,10 @@ const PortraitVirtualGamepad: React.FC<Props> = ({
                 icon="pencil"
                 size={22}
                 accessibilityLabel={t('Edit')}
-                style={styles.editButton}
+                style={[styles.editButton, editFocus.focused && tvFocusRing]}
                 onPress={() => onEditingChange(true)}
+                onFocus={editFocus.onFocus}
+                onBlur={editFocus.onBlur}
               />
             )}
           </View>

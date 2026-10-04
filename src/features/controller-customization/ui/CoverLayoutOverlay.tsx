@@ -29,6 +29,7 @@ import {
   defaultCoverLayout,
   CoverButton,
 } from '../model/coverLayout';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 const {CoverDisplayManager} = NativeModules;
 
@@ -58,6 +59,10 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
   const [showModal, setShowModal] = React.useState(false);
   const [enabled, setEnabled] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
+  const resetFocus = useTVFocus();
+  const saveFocus = useTVFocus();
+  const backFocus = useTVFocus();
+  const closeFocus = useTVFocus();
 
   React.useEffect(() => {
     const initial = getCoverLayout(profileName);
@@ -146,21 +151,27 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
               compact
               mode="outlined"
               onPress={handleReset}
-              style={styles.tbtn}>
+              onFocus={resetFocus.onFocus}
+              onBlur={resetFocus.onBlur}
+              style={[styles.tbtn, resetFocus.focused && tvFocusRing]}>
               {t('Reset')}
             </Button>
             <Button
               compact
               mode="contained"
               onPress={handleSave}
-              style={styles.tbtn}>
+              onFocus={saveFocus.onFocus}
+              onBlur={saveFocus.onBlur}
+              style={[styles.tbtn, saveFocus.focused && tvFocusRing]}>
               {t('Save')}
             </Button>
             <Button
               compact
               mode="text"
               onPress={handleBack}
-              style={styles.tbtn}>
+              onFocus={backFocus.onFocus}
+              onBlur={backFocus.onBlur}
+              style={[styles.tbtn, backFocus.focused && tvFocusRing]}>
               {t('Back')}
             </Button>
           </View>
@@ -226,7 +237,12 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
                   <RadioButton.Item label={t('Show')} value="true" />
                   <RadioButton.Item label={t('Hide')} value="false" />
                 </RadioButton.Group>
-                <Button mode="text" onPress={() => setShowModal(false)}>
+                <Button
+                  mode="text"
+                  onPress={() => setShowModal(false)}
+                  onFocus={closeFocus.onFocus}
+                  onBlur={closeFocus.onBlur}
+                  style={closeFocus.focused && tvFocusRing}>
                   {t('Close')}
                 </Button>
               </Card.Content>

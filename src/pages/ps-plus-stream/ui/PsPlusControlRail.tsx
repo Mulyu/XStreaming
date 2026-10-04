@@ -32,6 +32,8 @@ type Props = Pick<
   | 'audioGain'
   | 'onAudioGainChange'
   | 'onEditGamepadLayout'
+  | 'showVirtualGamepad'
+  | 'onToggleVirtualGamepad'
   | 'coverAvailable'
   | 'coverPresented'
   | 'onToggleCoverControls'
@@ -108,6 +110,8 @@ const PsPlusControlRail: React.FC<Props> = ({
   audioGain,
   onAudioGainChange,
   onEditGamepadLayout,
+  showVirtualGamepad,
+  onToggleVirtualGamepad,
   coverAvailable,
   coverPresented,
   onToggleCoverControls,
@@ -123,6 +127,7 @@ const PsPlusControlRail: React.FC<Props> = ({
       : videoFormat;
   const [liveVolume, setLiveVolume] = React.useState(audioGain);
   React.useEffect(() => setLiveVolume(audioGain), [audioGain]);
+  const [closeFocused, setCloseFocused] = React.useState(false);
   const slideIn = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -158,14 +163,24 @@ const PsPlusControlRail: React.FC<Props> = ({
         },
       ]}>
       <Pressable
-        style={styles.closeBtn}
+        style={[styles.closeBtn, closeFocused && styles.closeBtnFocused]}
         onPress={onCloseControlRail}
+        onFocus={() => setCloseFocused(true)}
+        onBlur={() => setCloseFocused(false)}
         android_ripple={{color: 'rgba(255,255,255,0.15)'}}>
         <Icon source="close" size={16} color="#8a9a92" />
       </Pressable>
 
       <View style={styles.group}>
         <Text style={styles.groupLabel}>{t('Input')}</Text>
+        <RailButton
+          icon={
+            showVirtualGamepad ? 'gamepad-variant' : 'gamepad-variant-outline'
+          }
+          label={t('Virtual gamepad')}
+          active={showVirtualGamepad}
+          onPress={onToggleVirtualGamepad}
+        />
         <RailButton
           icon="pencil-outline"
           label={t('Edit Virtual Gamepad')}
@@ -298,6 +313,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  closeBtnFocused: {
+    borderWidth: 2,
+    borderColor: FOCUS_COLOR,
   },
   group: {
     gap: 6,

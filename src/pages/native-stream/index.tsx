@@ -27,6 +27,7 @@ import {
   PointerWireData,
 } from '../../features/xcloud-session';
 import {getSettings, saveSettings} from '../../shared/lib/settings';
+import {tvFocusRing} from '../../shared/ui/tvFocus';
 import {
   saveVirtualGamepadLayout as saveGamepadLayout,
   getVirtualGamepadLayouts as getGamepadLayouts,
@@ -272,6 +273,7 @@ export function NativeStreamScreenBase({
   const [isExiting, setIsExiting] = React.useState(false);
   const [showControlRail, setShowControlRail] = React.useState(false);
   const [showVirtualGamepad, setShowVirtualGamepad] = React.useState(false);
+  const [menuBtnFocused, setMenuBtnFocused] = React.useState(false);
   // GFN-only: a trackpad-style overlay for mouse-driven (Steam) titles,
   // mutually exclusive with the virtual gamepad -- see renderMouseTrackpad().
   const [showMouseTrackpad, setShowMouseTrackpad] = React.useState(false);
@@ -3437,6 +3439,9 @@ export function NativeStreamScreenBase({
             onPress={() => {
               setShowControlRail(true);
             }}
+            onFocus={() => setMenuBtnFocused(true)}
+            onBlur={() => setMenuBtnFocused(false)}
+            style={menuBtnFocused && tvFocusRing}
           />
         </View>
       );

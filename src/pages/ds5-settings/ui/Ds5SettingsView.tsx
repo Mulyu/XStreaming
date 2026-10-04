@@ -3,6 +3,7 @@ import {StyleSheet, View, ScrollView} from 'react-native';
 import {Button, RadioButton, Text, Divider} from 'react-native-paper';
 import Slider from '@react-native-community/slider';
 import type {Ds5SettingsViewModel} from '../model/useDs5Settings';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 type Props = Ds5SettingsViewModel;
 
@@ -24,6 +25,9 @@ const Ds5SettingsView: React.FC<Props> = ({
   onSave,
   onBack,
 }) => {
+  const saveFocus = useTVFocus();
+  const backFocus = useTVFocus();
+
   const renderOptions = () => {
     return (
       <>
@@ -124,10 +128,20 @@ const Ds5SettingsView: React.FC<Props> = ({
       </ScrollView>
 
       <View style={styles.buttonWrap}>
-        <Button mode="contained" style={styles.button} onPress={onSave}>
+        <Button
+          mode="contained"
+          style={[styles.button, saveFocus.focused && tvFocusRing]}
+          onPress={onSave}
+          onFocus={saveFocus.onFocus}
+          onBlur={saveFocus.onBlur}>
           {t('Save')}
         </Button>
-        <Button mode="outlined" style={styles.button} onPress={onBack}>
+        <Button
+          mode="outlined"
+          style={[styles.button, backFocus.focused && tvFocusRing]}
+          onPress={onBack}
+          onFocus={backFocus.onFocus}
+          onBlur={backFocus.onBlur}>
           {t('Back')}
         </Button>
       </View>

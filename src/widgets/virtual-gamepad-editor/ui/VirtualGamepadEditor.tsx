@@ -26,6 +26,7 @@ import {
 import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
 import GridBackground from '../../../shared/ui/GridBackground';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 import {KeyPicker, PickableKey} from '../../../features/virtual-keyboard';
 import {
   GamepadButtonPreview as GamepadButton,
@@ -98,6 +99,89 @@ const buildDefaultButtons = (): ButtonConfig[] => {
   return buildDefaultLayout(width, height);
 };
 
+// One useTVFocus() per rendered row -- these back the macroSteps.map() and
+// VIRTUAL_MACRO_ALLOWED_BUTTONS.map() lists below, extracted into their own
+// components because hooks can't be called from inside a .map() callback.
+const MacroStepRow: React.FC<{
+  step: VirtualMacroStep;
+  title: string;
+  description: string;
+  onEdit: () => void;
+}> = ({step, title, description, onEdit}) => {
+  const row = useTVFocus();
+  const editIcon = useTVFocus();
+  return (
+    <List.Item
+      title={title}
+      description={description}
+      onPress={onEdit}
+      onFocus={row.onFocus}
+      onBlur={row.onBlur}
+      style={[row.focused && tvFocusRing]}
+      left={props => (
+        <List.Icon
+          {...props}
+          icon={
+            step.type === 'stick'
+              ? 'gamepad-variant-outline'
+              : 'gesture-tap-button'
+          }
+        />
+      )}
+      right={props => (
+        <IconButton
+          {...props}
+          icon="pencil-outline"
+          onPress={onEdit}
+          onFocus={editIcon.onFocus}
+          onBlur={editIcon.onBlur}
+          style={[editIcon.focused && tvFocusRing]}
+        />
+      )}
+    />
+  );
+};
+
+const MacroButtonCheckboxItem: React.FC<{
+  button: string;
+  selected: boolean;
+  onToggle: () => void;
+}> = ({button, selected, onToggle}) => {
+  const {focused, onFocus, onBlur} = useTVFocus();
+  return (
+    <Checkbox.Item
+      label={button}
+      status={selected ? 'checked' : 'unchecked'}
+      onPress={onToggle}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      style={[focused && tvFocusRing]}
+    />
+  );
+};
+
+// Backs both the standalone "Default" chip and the profiles.map() chips in
+// the profile modal's "Copy from" row.
+const CopyFromChip: React.FC<{
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}> = ({label, selected, onPress}) => {
+  const {focused, onFocus, onBlur} = useTVFocus();
+  return (
+    <Chip
+      compact
+      selected={selected}
+      showSelectedCheck
+      onPress={onPress}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      style={[styles.copyChip, focused && tvFocusRing]}>
+      {label}
+    </Chip>
+  );
+};
+
 const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   visible,
   profileName,
@@ -168,6 +252,33 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     'new' | 'existing'
   >('new');
   const currentButtonObj = buttons.find(b => b.name === currentButton);
+
+  // One useTVFocus() per standalone focusable element below -- list rows get
+  // their own hook via the extracted row components above instead.
+  const closeSwipeModalFocus = useTVFocus();
+  const closeGyroModalFocus = useTVFocus();
+  const changeKeyFocus = useTVFocus();
+  const removeKeyFocus = useTVFocus();
+  const addMacroStepFocus = useTVFocus();
+  const macroTypeButtonsFocus = useTVFocus();
+  const macroTypeStickFocus = useTVFocus();
+  const stickLeftFocus = useTVFocus();
+  const stickRightFocus = useTVFocus();
+  const deleteMacroStepFocus = useTVFocus();
+  const cancelMacroStepFocus = useTVFocus();
+  const confirmMacroStepFocus = useTVFocus();
+  const addProfileFocus = useTVFocus();
+  const deleteProfileFocus = useTVFocus();
+  const closeProfileModalFocus = useTVFocus();
+  const profileChipToggleFocus = useTVFocus();
+  const toggleGridFocus = useTVFocus();
+  const openSwipeModalToolbarFocus = useTVFocus();
+  const openGyroModalToolbarFocus = useTVFocus();
+  const coverModeFocus = useTVFocus();
+  const keyboardPickerToolbarFocus = useTVFocus();
+  const resetFocus = useTVFocus();
+  const saveFocus = useTVFocus();
+  const cancelFocus = useTVFocus();
 
   React.useEffect(() => {
     if (!visible) {
@@ -521,7 +632,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               <Button
                 mode="text"
                 onPress={() => setShowSwipeModal(false)}
-                style={styles.profileAction}>
+                onFocus={closeSwipeModalFocus.onFocus}
+                onBlur={closeSwipeModalFocus.onBlur}
+                style={[
+                  styles.profileAction,
+                  closeSwipeModalFocus.focused && tvFocusRing,
+                ]}>
                 {t('Close')}
               </Button>
             </ScrollView>
@@ -648,7 +764,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               <Button
                 mode="text"
                 onPress={() => setShowGyroModal(false)}
-                style={styles.profileAction}>
+                onFocus={closeGyroModalFocus.onFocus}
+                onBlur={closeGyroModalFocus.onBlur}
+                style={[
+                  styles.profileAction,
+                  closeGyroModalFocus.focused && tvFocusRing,
+                ]}>
                 {t('Close')}
               </Button>
             </ScrollView>
@@ -729,11 +850,17 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                       setKeyPickerTarget('existing');
                       setShowKeyPicker(true);
                     }}
+                    onFocus={changeKeyFocus.onFocus}
+                    onBlur={changeKeyFocus.onBlur}
+                    style={[changeKeyFocus.focused && tvFocusRing]}
                   />
                   <Button
                     mode="text"
                     textColor="#D32F2F"
-                    onPress={handleRemoveKey}>
+                    onPress={handleRemoveKey}
+                    onFocus={removeKeyFocus.onFocus}
+                    onBlur={removeKeyFocus.onBlur}
+                    style={[removeKeyFocus.focused && tvFocusRing]}>
                     {t('Remove key')}
                   </Button>
                 </>
@@ -766,6 +893,9 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     <IconButton
                       icon="plus-circle-outline"
                       onPress={openAddMacroStep}
+                      onFocus={addMacroStepFocus.onFocus}
+                      onBlur={addMacroStepFocus.onBlur}
+                      style={[addMacroStepFocus.focused && tvFocusRing]}
                     />
                   </View>
                   <Divider />
@@ -776,28 +906,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                   ) : (
                     <ScrollView style={styles.macroStepsScroll}>
                       {macroSteps.map((step, index) => (
-                        <List.Item
+                        <MacroStepRow
                           key={`macro-step-${index}`}
+                          step={step}
                           title={getMacroStepTitle(step, index)}
                           description={getMacroStepDescription(step)}
-                          left={props => (
-                            <List.Icon
-                              {...props}
-                              icon={
-                                step.type === 'stick'
-                                  ? 'gamepad-variant-outline'
-                                  : 'gesture-tap-button'
-                              }
-                            />
-                          )}
-                          right={props => (
-                            <IconButton
-                              {...props}
-                              icon="pencil-outline"
-                              onPress={() => openEditMacroStep(index)}
-                            />
-                          )}
-                          onPress={() => openEditMacroStep(index)}
+                          onEdit={() => openEditMacroStep(index)}
                         />
                       ))}
                     </ScrollView>
@@ -858,7 +972,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     ? 'outlined'
                     : 'contained'
                 }
-                style={styles.macroTypeButton}
+                style={[
+                  styles.macroTypeButton,
+                  macroTypeButtonsFocus.focused && tvFocusRing,
+                ]}
+                onFocus={macroTypeButtonsFocus.onFocus}
+                onBlur={macroTypeButtonsFocus.onBlur}
                 onPress={() =>
                   editingMacroStep &&
                   setEditingMacroStep({
@@ -874,7 +993,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     ? 'contained'
                     : 'outlined'
                 }
-                style={styles.macroTypeButton}
+                style={[
+                  styles.macroTypeButton,
+                  macroTypeStickFocus.focused && tvFocusRing,
+                ]}
+                onFocus={macroTypeStickFocus.onFocus}
+                onBlur={macroTypeStickFocus.onBlur}
                 onPress={() =>
                   editingMacroStep &&
                   setEditingMacroStep({
@@ -903,7 +1027,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                         ? 'outlined'
                         : 'contained'
                     }
-                    style={styles.macroTypeButton}
+                    style={[
+                      styles.macroTypeButton,
+                      stickLeftFocus.focused && tvFocusRing,
+                    ]}
+                    onFocus={stickLeftFocus.onFocus}
+                    onBlur={stickLeftFocus.onBlur}
                     onPress={() =>
                       editingMacroStep &&
                       setEditingMacroStep({
@@ -919,7 +1048,12 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                         ? 'contained'
                         : 'outlined'
                     }
-                    style={styles.macroTypeButton}
+                    style={[
+                      styles.macroTypeButton,
+                      stickRightFocus.focused && tvFocusRing,
+                    ]}
+                    onFocus={stickRightFocus.onFocus}
+                    onBlur={stickRightFocus.onBlur}
                     onPress={() =>
                       editingMacroStep &&
                       setEditingMacroStep({
@@ -984,11 +1118,11 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     const selected =
                       editingMacroStep?.step.buttons?.includes(button);
                     return (
-                      <Checkbox.Item
+                      <MacroButtonCheckboxItem
                         key={button}
-                        label={button}
-                        status={selected ? 'checked' : 'unchecked'}
-                        onPress={() => {
+                        button={button}
+                        selected={!!selected}
+                        onToggle={() => {
                           if (!editingMacroStep) {
                             return;
                           }
@@ -1066,14 +1200,27 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 <Button
                   mode="text"
                   textColor="#D32F2F"
-                  onPress={deleteMacroStep}>
+                  onPress={deleteMacroStep}
+                  onFocus={deleteMacroStepFocus.onFocus}
+                  onBlur={deleteMacroStepFocus.onBlur}
+                  style={[deleteMacroStepFocus.focused && tvFocusRing]}>
                   {t('Delete')}
                 </Button>
               )}
-              <Button mode="outlined" onPress={() => setEditingMacroStep(null)}>
+              <Button
+                mode="outlined"
+                onPress={() => setEditingMacroStep(null)}
+                onFocus={cancelMacroStepFocus.onFocus}
+                onBlur={cancelMacroStepFocus.onBlur}
+                style={[cancelMacroStepFocus.focused && tvFocusRing]}>
                 {t('Cancel')}
               </Button>
-              <Button mode="contained" onPress={saveMacroStep}>
+              <Button
+                mode="contained"
+                onPress={saveMacroStep}
+                onFocus={confirmMacroStepFocus.onFocus}
+                onBlur={confirmMacroStepFocus.onBlur}
+                style={[confirmMacroStepFocus.focused && tvFocusRing]}>
                 {t('Confirm')}
               </Button>
             </View>
@@ -1188,31 +1335,30 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.copyFromRow}>
-              <Chip
-                compact
+              <CopyFromChip
+                label={t('Default')}
                 selected={copyFrom === ''}
-                showSelectedCheck
                 onPress={() => setCopyFrom('')}
-                style={styles.copyChip}>
-                {t('Default')}
-              </Chip>
+              />
               {profiles.map(name => (
-                <Chip
+                <CopyFromChip
                   key={name}
-                  compact
+                  label={name}
                   selected={copyFrom === name}
-                  showSelectedCheck
                   onPress={() => setCopyFrom(name)}
-                  style={styles.copyChip}>
-                  {name}
-                </Chip>
+                />
               ))}
             </ScrollView>
             <Button
               mode="contained"
               disabled={!newProfileName.trim()}
               onPress={handleAddProfile}
-              style={styles.profileAction}>
+              onFocus={addProfileFocus.onFocus}
+              onBlur={addProfileFocus.onBlur}
+              style={[
+                styles.profileAction,
+                addProfileFocus.focused && tvFocusRing,
+              ]}>
               {t('Add')}
             </Button>
             {activeProfile !== '' && (
@@ -1220,14 +1366,24 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 mode="outlined"
                 onPress={handleDeleteProfile}
                 textColor={theme.colors.error}
-                style={styles.profileAction}>
+                onFocus={deleteProfileFocus.onFocus}
+                onBlur={deleteProfileFocus.onBlur}
+                style={[
+                  styles.profileAction,
+                  deleteProfileFocus.focused && tvFocusRing,
+                ]}>
                 {t('Delete current profile')}
               </Button>
             )}
             <Button
               mode="text"
               onPress={() => setShowProfileModal(false)}
-              style={styles.profileAction}>
+              onFocus={closeProfileModalFocus.onFocus}
+              onBlur={closeProfileModalFocus.onBlur}
+              style={[
+                styles.profileAction,
+                closeProfileModalFocus.focused && tvFocusRing,
+              ]}>
               {t('Close')}
             </Button>
           </Card.Content>
@@ -1387,8 +1543,13 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
           <View style={styles.toolbarInner}>
             {canManageProfiles ? (
               <TouchableOpacity
-                style={styles.profileChip}
-                onPress={openProfileModal}>
+                style={[
+                  styles.profileChip,
+                  profileChipToggleFocus.focused && tvFocusRing,
+                ]}
+                onPress={openProfileModal}
+                onFocus={profileChipToggleFocus.onFocus}
+                onBlur={profileChipToggleFocus.onBlur}>
                 <IconButton
                   icon="controller-classic"
                   size={18}
@@ -1413,25 +1574,45 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               icon={showGrid ? 'grid' : 'grid-off'}
               size={20}
               onPress={() => setShowGrid(!showGrid)}
-              style={styles.toolbarIcon}
+              onFocus={toggleGridFocus.onFocus}
+              onBlur={toggleGridFocus.onBlur}
+              style={[
+                styles.toolbarIcon,
+                toggleGridFocus.focused && tvFocusRing,
+              ]}
             />
             <IconButton
               icon="crosshairs-gps"
               size={20}
               onPress={() => setShowSwipeModal(true)}
-              style={styles.toolbarIcon}
+              onFocus={openSwipeModalToolbarFocus.onFocus}
+              onBlur={openSwipeModalToolbarFocus.onBlur}
+              style={[
+                styles.toolbarIcon,
+                openSwipeModalToolbarFocus.focused && tvFocusRing,
+              ]}
             />
             <IconButton
               icon="rotate-3d-variant"
               size={20}
               onPress={() => setShowGyroModal(true)}
-              style={styles.toolbarIcon}
+              onFocus={openGyroModalToolbarFocus.onFocus}
+              onBlur={openGyroModalToolbarFocus.onBlur}
+              style={[
+                styles.toolbarIcon,
+                openGyroModalToolbarFocus.focused && tvFocusRing,
+              ]}
             />
             <IconButton
               icon="monitor-cellphone"
               size={20}
               onPress={() => setCoverMode(true)}
-              style={styles.toolbarIcon}
+              onFocus={coverModeFocus.onFocus}
+              onBlur={coverModeFocus.onBlur}
+              style={[
+                styles.toolbarIcon,
+                coverModeFocus.focused && tvFocusRing,
+              ]}
             />
             <IconButton
               icon="keyboard-outline"
@@ -1440,27 +1621,41 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 setKeyPickerTarget('new');
                 setShowKeyPicker(true);
               }}
-              style={styles.toolbarIcon}
+              onFocus={keyboardPickerToolbarFocus.onFocus}
+              onBlur={keyboardPickerToolbarFocus.onBlur}
+              style={[
+                styles.toolbarIcon,
+                keyboardPickerToolbarFocus.focused && tvFocusRing,
+              ]}
             />
             <Button
               compact
               mode="outlined"
               onPress={handleReset}
-              style={styles.toolbarButton}>
+              onFocus={resetFocus.onFocus}
+              onBlur={resetFocus.onBlur}
+              style={[styles.toolbarButton, resetFocus.focused && tvFocusRing]}>
               {t('Reset')}
             </Button>
             <Button
               compact
               mode="contained"
               onPress={handleSave}
-              style={styles.toolbarButton}>
+              onFocus={saveFocus.onFocus}
+              onBlur={saveFocus.onBlur}
+              style={[styles.toolbarButton, saveFocus.focused && tvFocusRing]}>
               {t('Save')}
             </Button>
             <Button
               compact
               mode="text"
               onPress={onCancel}
-              style={styles.toolbarButton}>
+              onFocus={cancelFocus.onFocus}
+              onBlur={cancelFocus.onBlur}
+              style={[
+                styles.toolbarButton,
+                cancelFocus.focused && tvFocusRing,
+              ]}>
               {t('Cancel')}
             </Button>
           </View>

@@ -4,6 +4,7 @@ import {Button, Text, Portal, Modal, Card} from 'react-native-paper';
 import Spinner from '../../../shared/ui/Spinner';
 import {MsalAuth} from '../../../entities/xbox-token';
 import type {HomeScreenViewModel} from '../model/useHomeScreen';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 type Props = HomeScreenViewModel;
 
@@ -27,6 +28,13 @@ const HomeView: React.FC<Props> = ({
   onMsalLogin,
   onNavigateSettings,
 }) => {
+  const disableHarmonyFocus = useTVFocus();
+  const installHarmonyFocus = useTVFocus();
+  const loginFocus = useTVFocus();
+  const loginSettingsFocus = useTVFocus();
+  const msalLoginFocus = useTVFocus();
+  const msalSettingsFocus = useTVFocus();
+
   const renderHarmonyModal = () => {
     if (!showHarmonyModal) {
       return null;
@@ -44,10 +52,20 @@ const HomeView: React.FC<Props> = ({
                 5以上，您可以安装原生版本以获得更好的串流体验(点击立即下载或应用商店搜索"XStreaming"进行安装)。
               </Text>
 
-              <Button mode="text" onPress={onDisableHarmonyModal}>
+              <Button
+                mode="text"
+                onPress={onDisableHarmonyModal}
+                onFocus={disableHarmonyFocus.onFocus}
+                onBlur={disableHarmonyFocus.onBlur}
+                style={disableHarmonyFocus.focused && tvFocusRing}>
                 不再提示
               </Button>
-              <Button mode="elevated" onPress={onInstallHarmony}>
+              <Button
+                mode="elevated"
+                onPress={onInstallHarmony}
+                onFocus={installHarmonyFocus.onFocus}
+                onBlur={installHarmonyFocus.onBlur}
+                style={installHarmonyFocus.focused && tvFocusRing}>
                 去安装
               </Button>
             </Card.Content>
@@ -61,11 +79,21 @@ const HomeView: React.FC<Props> = ({
     return (
       <View>
         <Text style={styles.title}>{t('NoLogin')}</Text>
-        <Button mode="outlined" onPress={onLogin}>
+        <Button
+          mode="outlined"
+          onPress={onLogin}
+          onFocus={loginFocus.onFocus}
+          onBlur={loginFocus.onBlur}
+          style={loginFocus.focused && tvFocusRing}>
           &nbsp;{t('Login')}&nbsp;
         </Button>
 
-        <Button style={styles.mt10} mode="text" onPress={onNavigateSettings}>
+        <Button
+          style={[styles.mt10, loginSettingsFocus.focused && tvFocusRing]}
+          mode="text"
+          onPress={onNavigateSettings}
+          onFocus={loginSettingsFocus.onFocus}
+          onBlur={loginSettingsFocus.onBlur}>
           &nbsp;{t('Settings')}&nbsp;
         </Button>
       </View>
@@ -75,11 +103,22 @@ const HomeView: React.FC<Props> = ({
   const renderMsalLogin = () => {
     return (
       <View>
-        <Button mode="outlined" loading={msalBtnLoading} onPress={onMsalLogin}>
+        <Button
+          mode="outlined"
+          loading={msalBtnLoading}
+          onPress={onMsalLogin}
+          onFocus={msalLoginFocus.onFocus}
+          onBlur={msalLoginFocus.onBlur}
+          style={msalLoginFocus.focused && tvFocusRing}>
           &nbsp;{t('AuthLogin')}&nbsp;
         </Button>
 
-        <Button style={styles.mt10} mode="text" onPress={onNavigateSettings}>
+        <Button
+          style={[styles.mt10, msalSettingsFocus.focused && tvFocusRing]}
+          mode="text"
+          onPress={onNavigateSettings}
+          onFocus={msalSettingsFocus.onFocus}
+          onBlur={msalSettingsFocus.onBlur}>
           &nbsp;{t('Settings')}&nbsp;
         </Button>
       </View>

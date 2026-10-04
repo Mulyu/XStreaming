@@ -3,6 +3,7 @@ import {View, StyleSheet, Pressable, Text, ScrollView} from 'react-native';
 import {Portal, Modal, Card, Icon} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {KEY_CATEGORIES, PickableKey} from '../lib/virtualKeys';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 const ACCENT = '#76B900';
 
@@ -20,6 +21,9 @@ const KeyPicker: React.FC<KeyPickerProps> = ({
   const {t} = useTranslation();
   const [categoryIndex, setCategoryIndex] = React.useState(0);
   const category = KEY_CATEGORIES[categoryIndex];
+  const closeFocus = useTVFocus();
+  const [focusedTab, setFocusedTab] = React.useState<string | null>(null);
+  const [focusedKey, setFocusedKey] = React.useState<string | null>(null);
 
   return (
     <Portal>
@@ -31,7 +35,11 @@ const KeyPicker: React.FC<KeyPickerProps> = ({
           <Card.Content>
             <View style={styles.header}>
               <Text style={styles.title}>{t('Add a key')}</Text>
-              <Pressable style={styles.closeBtn} onPress={onDismiss}>
+              <Pressable
+                style={[styles.closeBtn, closeFocus.focused && tvFocusRing]}
+                onPress={onDismiss}
+                onFocus={closeFocus.onFocus}
+                onBlur={closeFocus.onBlur}>
                 <Icon source="close" size={14} color="#8a9a92" />
               </Pressable>
             </View>
@@ -46,8 +54,13 @@ const KeyPicker: React.FC<KeyPickerProps> = ({
                   style={[
                     styles.tab,
                     index === categoryIndex && styles.tabActive,
+                    focusedTab === cat.name && tvFocusRing,
                   ]}
-                  onPress={() => setCategoryIndex(index)}>
+                  onPress={() => setCategoryIndex(index)}
+                  onFocus={() => setFocusedTab(cat.name)}
+                  onBlur={() =>
+                    setFocusedTab(prev => (prev === cat.name ? null : prev))
+                  }>
                   <Text
                     style={[
                       styles.tabLabel,
@@ -61,16 +74,26 @@ const KeyPicker: React.FC<KeyPickerProps> = ({
 
             <ScrollView style={styles.grid}>
               <View style={styles.gridInner}>
-                {category.keys.map(k => (
-                  <Pressable
-                    key={`${k.vk}-${k.label}`}
-                    style={styles.keyCell}
-                    onPress={() => onSelect(k)}>
-                    <Text style={styles.keyLabel} numberOfLines={1}>
-                      {k.label}
-                    </Text>
-                  </Pressable>
-                ))}
+                {category.keys.map(k => {
+                  const keyId = `${k.vk}-${k.label}`;
+                  return (
+                    <Pressable
+                      key={keyId}
+                      style={[
+                        styles.keyCell,
+                        focusedKey === keyId && tvFocusRing,
+                      ]}
+                      onPress={() => onSelect(k)}
+                      onFocus={() => setFocusedKey(keyId)}
+                      onBlur={() =>
+                        setFocusedKey(prev => (prev === keyId ? null : prev))
+                      }>
+                      <Text style={styles.keyLabel} numberOfLines={1}>
+                        {k.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </ScrollView>
           </Card.Content>

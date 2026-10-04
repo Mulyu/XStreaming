@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native-paper';
 import type {VirtualGamepadSettingsViewModel} from '../model/useVirtualGamepadSettings';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 
 type Props = VirtualGamepadSettingsViewModel;
 
@@ -33,6 +34,11 @@ const VirtualGamepadSettingsView: React.FC<Props> = ({
   onDismissAddModal,
   onConfirmAddModal,
 }) => {
+  const confirmFocus = useTVFocus();
+  const selectFocus = useTVFocus();
+  const editFocus = useTVFocus();
+  const backFocus = useTVFocus();
+
   return (
     <View style={styles.container}>
       <Portal>
@@ -49,8 +55,13 @@ const VirtualGamepadSettingsView: React.FC<Props> = ({
 
               <Button
                 mode="contained"
-                style={{marginTop: 20}}
-                onPress={onConfirmAddModal}>
+                style={[
+                  {marginTop: 20},
+                  confirmFocus.focused && tvFocusRing,
+                ]}
+                onPress={onConfirmAddModal}
+                onFocus={confirmFocus.onFocus}
+                onBlur={confirmFocus.onBlur}>
                 {t('Confirm')}
               </Button>
             </Card.Content>
@@ -81,15 +92,30 @@ const VirtualGamepadSettingsView: React.FC<Props> = ({
       </ScrollView>
 
       <View style={styles.buttonWrap}>
-        <Button mode="elevated" style={styles.button} onPress={onSave}>
+        <Button
+          mode="elevated"
+          style={[styles.button, selectFocus.focused && tvFocusRing]}
+          onPress={onSave}
+          onFocus={selectFocus.onFocus}
+          onBlur={selectFocus.onBlur}>
           {t('Select')}
         </Button>
         {value !== '' && (
-          <Button mode="outlined" style={styles.button} onPress={onEdit}>
+          <Button
+            mode="outlined"
+            style={[styles.button, editFocus.focused && tvFocusRing]}
+            onPress={onEdit}
+            onFocus={editFocus.onFocus}
+            onBlur={editFocus.onBlur}>
             {t('Edit')}
           </Button>
         )}
-        <Button mode="text" style={styles.button} onPress={onBack}>
+        <Button
+          mode="text"
+          style={[styles.button, backFocus.focused && tvFocusRing]}
+          onPress={onBack}
+          onFocus={backFocus.onFocus}
+          onBlur={backFocus.onBlur}>
           {t('Back')}
         </Button>
       </View>
