@@ -25,6 +25,7 @@ import {
   CatalogTitle,
   getCatalogPreference,
   getFavoriteKeys,
+  getPlayHistory,
   getXcloudData,
   saveXcloudData,
   getFreshPriceCache,
@@ -152,9 +153,6 @@ export function useLibraryScreen() {
     React.useState<Record<string, number>>(EMPTY_RANK);
   const [gfnNewestRank, setGfnNewestRank] =
     React.useState<Record<string, number>>(EMPTY_RANK);
-  // xCloud's own "recently played" order (MRU), for the Recently Played sort.
-  const [xcloudRecentRank, setXcloudRecentRank] =
-    React.useState<Record<string, number>>(EMPTY_RANK);
 
   // Filter chips: provider (OR between active ones; neither active = all)
   // plus Favorite/Owned/On Sale, each an independent AND filter. Owned
@@ -173,9 +171,19 @@ export function useLibraryScreen() {
   const [favoriteKeys, setFavoriteKeys] = React.useState<Set<string>>(
     () => new Set(getFavoriteKeys()),
   );
+  // Local play-history timestamps for "Recently played" (see
+  // entities/catalog-title/model/playHistory.ts) -- recorded on-device at
+  // launch time instead of read from a provider API, since PS Plus has no
+  // such API at all and xCloud/GFN's each only expose an ordinal position,
+  // not an actual timestamp. Reloaded on focus for the same reason as
+  // favorites: launching a title happens on a separate screen instance.
+  const [playHistory, setPlayHistory] = React.useState<Record<string, number>>(
+    () => getPlayHistory(),
+  );
   useFocusEffect(
     React.useCallback(() => {
       setFavoriteKeys(new Set(getFavoriteKeys()));
+      setPlayHistory(getPlayHistory());
     }, []),
   );
 
@@ -297,28 +305,6 @@ export function useLibraryScreen() {
     // as a result of this effect and must not restart it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xcloudTitles]);
-
-  // xCloud's own recently-played order (MRU, up to 25), for "Recently
-  // played". Not cached -- MRU should reflect genuinely recent activity, not
-  // a stale snapshot.
-  React.useEffect(() => {
-    if (!streamingTokens?.xCloudToken) {
-      return;
-    }
-    const api = new XcloudCatalogApi(
-      streamingTokens.xCloudToken.getDefaultRegion().baseUri,
-      streamingTokens.xCloudToken.data.gsToken,
-    );
-    api.getRecentTitles().then((res: any) => {
-      const ids = (res?.results ?? [])
-        .map((item: any) => item?.details?.productId)
-        .filter(Boolean)
-        .map((id: string) => id.toUpperCase());
-      if (ids.length > 0) {
-        setXcloudRecentRank(buildPopularRank(ids));
-      }
-    });
-  }, [streamingTokens?.xCloudToken]);
 
   // GFN: the signed-in user's owned library, merged onto the full catalog
   // below (mergeOwnedGames also appends any owned title the catalog fetch
@@ -457,21 +443,6 @@ export function useLibraryScreen() {
             }
           }),
         );
-        const api = new XcloudCatalogApi(
-          streamingTokens.xCloudToken.getDefaultRegion().baseUri,
-          streamingTokens.xCloudToken.data.gsToken,
-        );
-        tasks.push(
-          api.getRecentTitles().then((res: any) => {
-            const ids = (res?.results ?? [])
-              .map((item: any) => item?.details?.productId)
-              .filter(Boolean)
-              .map((id: string) => id.toUpperCase());
-            if (ids.length > 0) {
-              setXcloudRecentRank(buildPopularRank(ids));
-            }
-          }),
-        );
       }
 
       if (isSignedIn()) {
@@ -510,6 +481,7 @@ export function useLibraryScreen() {
       loadPsPlusGames(true);
 
       setFavoriteKeys(new Set(getFavoriteKeys()));
+      setPlayHistory(getPlayHistory());
 
       await Promise.all(tasks);
     } finally {
@@ -572,14 +544,6 @@ export function useLibraryScreen() {
       });
     });
   }, [gfnGames, deviceRegion]);
-
-  // gfnOwnedGames arrives in the server's own lastPlayed/added order (see
-  // entities/catalog-title/api/gfnCatalog.ts) -- turn that position into a rank map the same way
-  // xCloud's own recent/popular orders already are.
-  const gfnRecentRank = React.useMemo(
-    () => buildPopularRank(gfnOwnedGames.map(g => g.id)),
-    [gfnOwnedGames],
-  );
 
   // xCloud release dates, turned into an ordinal rank (0 = newest known
   // date) so they combine fairly with GFN's ordinal "last added" rank --
@@ -751,10 +715,15 @@ export function useLibraryScreen() {
           a.title.localeCompare(b.title),
       );
     } else if (sortMode === 'recent') {
+      // Local play history, not a provider API -- see
+      // entities/catalog-title/model/playHistory.ts. Keyed directly by the
+      // unified catalog key, so it ranks xCloud/GFN/PS Plus titles alike
+      // (unlike mergedRankOf's xCloud/GFN-only provider ranks above, PS
+      // Plus never had an equivalent API to source one from). A title never
+      // launched from this device sorts last.
       list.sort(
         (a, b) =>
-          mergedRankOf(a, xcloudRecentRank, gfnRecentRank, true) -
-            mergedRankOf(b, xcloudRecentRank, gfnRecentRank, true) ||
+          (playHistory[b.key] ?? 0) - (playHistory[a.key] ?? 0) ||
           a.title.localeCompare(b.title),
       );
     }
@@ -767,8 +736,7 @@ export function useLibraryScreen() {
     gfnNewestRank,
     popularRank,
     gfnPopularRank,
-    xcloudRecentRank,
-    gfnRecentRank,
+    playHistory,
   ]);
 
   // 'reco' was never an actual recommendation ranking -- it's just the
@@ -784,20 +752,6 @@ export function useLibraryScreen() {
   ];
   const activeSortLabel =
     sortOptions.find(o => o.value === sortMode)?.label || t('SortRecent');
-
-  // True only during the brief window right after launch where this device
-  // has a known xCloud account (a cached catalog from a previous load) but
-  // this session's token hasn't come back from the background sign-in check
-  // yet (see Home.tsx: reaching Library no longer waits on it) -- once it
-  // does, the "recent" effect above refetches and this screen's own sort
-  // re-applies on its own. Only surfaced while sortMode is actually 'recent',
-  // since that's the only sort this affects, and only when xcloudTitles is
-  // already non-empty, since an empty cache means either no xCloud account at
-  // all or genuinely zero entitlements -- nothing is still "on its way" then.
-  const xcloudRecentPending =
-    sortMode === 'recent' &&
-    !streamingTokens?.xCloudToken &&
-    xcloudTitles.length > 0;
 
   // Square-tile grid. A denser 110/150 target read as too small for
   // browsing comfortably (was 260/300 before that pass) -- back up to a
@@ -867,7 +821,6 @@ export function useLibraryScreen() {
     gfnFullCatalogLoading,
     sortOptions,
     activeSortLabel,
-    xcloudRecentPending,
     numColumns,
     refreshing,
     onRefresh,
