@@ -757,15 +757,22 @@ export function useLibraryScreen() {
   // browsing comfortably (was 260/300 before that pass) -- back up to a
   // size that lands around 2 columns on a phone in portrait.
   //
-  // TV gets its own (larger) target and a lower column cap: a TV screen's
-  // dp width is much wider than a phone's, so the same per-column target
-  // used for landscape phones/tablets would scale up toward 7-8 columns --
-  // that many more simultaneously-visible *and* FlatList-windowed image
-  // tiles, on hardware that's typically far weaker (CPU/RAM) than a modern
-  // phone, is what makes the grid feel heavy on Google TV specifically.
+  // TV gets its own target and a lower column cap. Android TV keeps its
+  // logical (dp) width roughly constant across 1080p and 4K panels alike --
+  // the OS scales density up with the panel's physical resolution so a
+  // "10-foot UI" stays the same size regardless of sharpness -- so this is
+  // sized for that ~960dp baseline, not for how many physical pixels a 4K
+  // panel actually has. A too-large target previously landed on just 2
+  // columns there even on a 4K screen, looking sparse/oversized next to
+  // comparable big-screen apps (Netflix/Play Games/Stadia are usually
+  // 4-6 per row); 220 lands on 4 at that baseline and 5 (the cap) on wider/
+  // denser TV configs. The cap itself stays low -- a TV is typically far
+  // weaker (CPU/RAM) than a modern phone, so still limiting how many
+  // simultaneously-visible *and* FlatList-windowed image tiles it has to
+  // decode at once, same reasoning as before.
   const isLandscape = screenWidth > screenHeight;
   const numColumns = React.useMemo(() => {
-    const target = Platform.isTV ? 340 : isLandscape ? 260 : 190;
+    const target = Platform.isTV ? 220 : isLandscape ? 260 : 190;
     const maxColumns = Platform.isTV ? 5 : 8;
     return Math.max(2, Math.min(maxColumns, Math.floor(screenWidth / target)));
   }, [isLandscape, screenWidth]);
