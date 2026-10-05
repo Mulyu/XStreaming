@@ -50,6 +50,27 @@ CHIAKI_EXPORT void chiaki_video_receiver_stream_info(ChiakiVideoReceiver *video_
 
 CHIAKI_EXPORT void chiaki_video_receiver_av_packet(ChiakiVideoReceiver *video_receiver, ChiakiTakionAVPacket *packet);
 
+/**
+ * Returns the current profile's codec header (SPS/PPS/VPS), the same bytes
+ * originally pushed to video_sample_cb exactly once at chiaki_video_receiver_stream_info()
+ * time (or on an actual adaptive-stream profile switch -- see chiaki_video_receiver_av_packet()).
+ * A client-side video sink that gets torn down and recreated independently of the session
+ * (e.g. Android's own AndroidChiakiVideoDecoder across a backgrounded app, where the whole
+ * AMediaCodec instance -- and the CSD it was configured with -- is destroyed and later rebuilt
+ * from scratch) has no other way to learn these bytes again: ordinary mid-stream frames never
+ * carry them inline (see chiaki_bitstream_slice(), which only ever expects slice NAL units).
+ * Call this and feed the result into the sink yourself immediately after recreating it; no
+ * callback is invoked here, so this is safe even if the sink can't currently distinguish a
+ * header buffer from a frame buffer, and does not need to go through whatever gating/recovery
+ * state (e.g. "the next frame is being discarded to request a fresh keyframe") the sink layers
+ * on top of video_sample_cb -- a header is config, not a frame, so it shouldn't be subject to it.
+ *
+ * @param header_sz_out set to the header's size, or 0 if there is no current profile yet
+ * @return pointer to the header bytes (owned by video_receiver, valid for the life of the
+ *         session), or NULL if no profile has been selected yet
+ */
+CHIAKI_EXPORT const uint8_t *chiaki_video_receiver_current_header(ChiakiVideoReceiver *video_receiver, size_t *header_sz_out);
+
 static inline ChiakiVideoReceiver *chiaki_video_receiver_new(struct chiaki_session_t *session, ChiakiPacketStats *packet_stats)
 {
 	ChiakiVideoReceiver *video_receiver = CHIAKI_NEW(ChiakiVideoReceiver);
