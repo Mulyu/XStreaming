@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import Orientation from 'react-native-orientation-locker';
+import BackgroundTimer from 'react-native-background-timer';
 import {useTranslation} from 'react-i18next';
 import {
   PsPlusSession,
@@ -403,6 +404,15 @@ export function usePsPlusStream(navigation: any, route: any) {
   // initial connect still lets the player know once it's ready.
   const currentAppStateRef = React.useRef(AppState.currentState);
   const backgroundMutedRef = React.useRef(false);
+  // Unlike xCloud's own anti-idle (a repeating camera nudge that spoofs
+  // activity against xCloud's *server-side* AFK timer, see native-stream's
+  // own AppState effect), chiaki's cloud session has no server-side AFK
+  // disconnect to spoof around at all -- nothing here ever times the
+  // session out on its own while backgrounded. So the same
+  // anti_idle_max_minutes setting is honored for PS Plus as a single
+  // explicit client-initiated disconnect once that many minutes of
+  // backgrounding elapse, rather than a repeating nudge.
+  const antiIdleTimerRef = React.useRef<number | null>(null);
   const hasConnectedRef = React.useRef(false);
   const batteryOptPromptRef = React.useRef(false);
   const audioGainRef = React.useRef(getSettings().audio_gain ?? 1);
@@ -1106,14 +1116,22 @@ export function usePsPlusStream(navigation: any, route: any) {
     return () => sub.remove();
   }, [forceExit]);
 
+  const clearAntiIdleTimer = React.useCallback(() => {
+    if (antiIdleTimerRef.current != null) {
+      BackgroundTimer.clearTimeout(antiIdleTimerRef.current);
+      antiIdleTimerRef.current = null;
+    }
+  }, []);
+
   // Background keep-alive: while backgrounded mid-game, mute the game audio
   // (independent of the Android system volume -- the session keeps running
   // via the native foreground service) and promote the keep-alive
   // notification from "armed" to visible/ongoing; on return to the
   // foreground, hide it again (demote, not stop, so the next backgrounding
   // can promote it reliably) and restore audio. Exactly native-stream's own
-  // AppState effect, minus its WebRTC-specific anti-idle nudge (PS Plus's
-  // cloud session has no client-driven AFK timer to spoof).
+  // AppState effect, except its anti-idle setting is enforced as a single
+  // explicit disconnect deadline instead of a repeating camera nudge (see
+  // antiIdleTimerRef's own comment for why).
   React.useEffect(() => {
     const subscription = AppState.addEventListener('change', state => {
       currentAppStateRef.current = state;
@@ -1121,6 +1139,7 @@ export function usePsPlusStream(navigation: any, route: any) {
         if (hasConnectedRef.current) {
           StreamKeepAliveManager?.demote?.();
         }
+        clearAntiIdleTimer();
         if (backgroundMutedRef.current) {
           backgroundMutedRef.current = false;
           sessionRef.current?.setAudioGain(audioGainRef.current);
@@ -1134,19 +1153,40 @@ export function usePsPlusStream(navigation: any, route: any) {
         backgroundMutedRef.current = true;
         sessionRef.current?.setAudioGain(0);
       }
+      // Anti-idle is controlled solely by the max-duration slider: 0 = off.
+      // Same setting/semantics as native-stream's own, just enforced here as
+      // a single disconnect deadline (see antiIdleTimerRef's comment).
+      const antiIdleMinutes = Number(getSettings().anti_idle_max_minutes) || 0;
+      const antiIdleDeadline =
+        antiIdleMinutes > 0 ? Date.now() + antiIdleMinutes * 60 * 1000 : 0;
       // promote() (not start()) -- the service was already armed while
       // connected, and Android may otherwise refuse to start a brand new
       // foreground service now that the app has already left the
       // foreground.
       StreamKeepAliveManager?.promote?.(
         t('Streaming in background'),
-        t('BackgroundKeepAliveNotification'),
+        antiIdleDeadline > 0
+          ? t('BackgroundKeepAliveAntiIdle')
+          : t('BackgroundKeepAliveNotification'),
         t('Disconnect'),
-        0,
+        antiIdleDeadline,
       );
+      if (antiIdleDeadline > 0) {
+        clearAntiIdleTimer();
+        antiIdleTimerRef.current = BackgroundTimer.setTimeout(() => {
+          antiIdleTimerRef.current = null;
+          forceExit();
+        }, antiIdleMinutes * 60 * 1000);
+      }
     });
     return () => subscription.remove();
-  }, [t]);
+  }, [t, forceExit, clearAntiIdleTimer]);
+
+  // Clears the pending auto-disconnect if the hook unmounts while
+  // backgrounded (e.g. the session ended some other way first) -- otherwise
+  // BackgroundTimer would still fire forceExit on an already-torn-down
+  // session.
+  React.useEffect(() => clearAntiIdleTimer, [clearAntiIdleTimer]);
 
   // A natural session end (the PS5 game itself quitting, not the player
   // disconnecting from here) previously left this screen sitting on the

@@ -327,7 +327,7 @@ export default {
     'Anti-idle max duration (minutes)':
       'Anti-idle: keep awake for (minutes, 0 = off)',
     AntiIdleMaxDesc:
-      'While backgrounded, send a tiny camera nudge so the session is not disconnected for inactivity, for at most this many minutes; then it stops and the session is allowed to disconnect. Set to 0 to turn anti-idle off. Note: the nudge moves the camera, so it can affect the game.',
+      "While backgrounded, keep the session connected for at most this many minutes, then let it disconnect. On Xbox Cloud/GeForce NOW this works by sending a tiny camera nudge so the session isn't kicked for inactivity (note: this moves the camera, so it can affect the game) -- PS Plus has no such inactivity timeout to spoof, so it disconnects outright once the time is up instead. Set to 0 to turn this off (the session may then stay connected indefinitely while backgrounded).",
     'Native portrait mode': 'Native portrait mode',
     NativePortraitModeDesc:
       'After enabling this, native streaming uses a portrait page with video on top and virtual buttons below.',
