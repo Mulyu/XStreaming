@@ -30,6 +30,9 @@ import android.os.IBinder;
 import android.app.Service;
 import android.content.ServiceConnection;
 import android.view.WindowManager;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 
 import com.xstreaming.input.UsbDriverService;
 import com.xstreaming.input.ControllerHandler;
@@ -117,6 +120,92 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
   private final SparseIntArray controllerIndexByDeviceId = new SparseIntArray();
   private final SparseBooleanArray usedControllerIndices = new SparseBooleanArray();
   private InputManager inputManager;
+
+  // Analog-stick -> D-pad focus navigation for non-streaming screens (Library/Store/Settings).
+  // The OS only turns a controller's hat-switch D-pad into view-focus movement on its own;
+  // true analog-stick AXIS_X/AXIS_Y motion never does, so without this a controller's left
+  // stick does nothing on these screens and the user can't tell what's focused. We synthesize
+  // KEYCODE_DPAD_* key events and feed them through the normal dispatchKeyEvent() pipeline --
+  // the same entry point real D-pad/remote key events already use -- so it drives focus exactly
+  // like a real D-pad press would, with a hysteresis band to avoid flapping near the threshold
+  // and an auto-repeat while the stick stays deflected.
+  private static final float STICK_FOCUS_ENGAGE_THRESHOLD = 0.5f;
+  private static final float STICK_FOCUS_RELEASE_THRESHOLD = 0.3f;
+  private static final long STICK_FOCUS_REPEAT_DELAY_MS = 400;
+  private static final long STICK_FOCUS_REPEAT_INTERVAL_MS = 150;
+  private final Handler stickFocusHandler = new Handler(Looper.getMainLooper());
+  private int stickFocusXDir = 0; // -1 (left), 0 (neutral), 1 (right)
+  private int stickFocusYDir = 0; // -1 (up), 0 (neutral), 1 (down)
+  private final Runnable stickFocusXRepeat = new Runnable() {
+    @Override
+    public void run() {
+      if (stickFocusXDir != 0) {
+        dispatchSyntheticDpadPress(stickFocusXDir < 0 ? KeyEvent.KEYCODE_DPAD_LEFT : KeyEvent.KEYCODE_DPAD_RIGHT);
+        stickFocusHandler.postDelayed(this, STICK_FOCUS_REPEAT_INTERVAL_MS);
+      }
+    }
+  };
+  private final Runnable stickFocusYRepeat = new Runnable() {
+    @Override
+    public void run() {
+      if (stickFocusYDir != 0) {
+        dispatchSyntheticDpadPress(stickFocusYDir < 0 ? KeyEvent.KEYCODE_DPAD_UP : KeyEvent.KEYCODE_DPAD_DOWN);
+        stickFocusHandler.postDelayed(this, STICK_FOCUS_REPEAT_INTERVAL_MS);
+      }
+    }
+  };
+
+  private void dispatchSyntheticDpadPress(int keyCode) {
+    long now = SystemClock.uptimeMillis();
+    dispatchKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0));
+    dispatchKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0));
+  }
+
+  private void resetStickFocusNavigation() {
+    stickFocusHandler.removeCallbacks(stickFocusXRepeat);
+    stickFocusHandler.removeCallbacks(stickFocusYRepeat);
+    stickFocusXDir = 0;
+    stickFocusYDir = 0;
+  }
+
+  private void handleStickFocusNavigation(MotionEvent event) {
+    if ((event.getSource() & InputDevice.SOURCE_JOYSTICK) != InputDevice.SOURCE_JOYSTICK
+            || event.getAction() != MotionEvent.ACTION_MOVE) {
+      return;
+    }
+
+    float x = event.getAxisValue(MotionEvent.AXIS_X);
+    float y = event.getAxisValue(MotionEvent.AXIS_Y);
+
+    int newXDir = x > STICK_FOCUS_ENGAGE_THRESHOLD ? 1 : x < -STICK_FOCUS_ENGAGE_THRESHOLD ? -1 : 0;
+    int newYDir = y > STICK_FOCUS_ENGAGE_THRESHOLD ? 1 : y < -STICK_FOCUS_ENGAGE_THRESHOLD ? -1 : 0;
+
+    // Hysteresis: once engaged, keep the direction until the stick settles back near center,
+    // so a slightly noisy axis near the engage threshold doesn't flap the direction back and forth.
+    if (newXDir == 0 && Math.abs(x) > STICK_FOCUS_RELEASE_THRESHOLD) {
+      newXDir = stickFocusXDir;
+    }
+    if (newYDir == 0 && Math.abs(y) > STICK_FOCUS_RELEASE_THRESHOLD) {
+      newYDir = stickFocusYDir;
+    }
+
+    if (newXDir != stickFocusXDir) {
+      stickFocusHandler.removeCallbacks(stickFocusXRepeat);
+      stickFocusXDir = newXDir;
+      if (stickFocusXDir != 0) {
+        dispatchSyntheticDpadPress(stickFocusXDir < 0 ? KeyEvent.KEYCODE_DPAD_LEFT : KeyEvent.KEYCODE_DPAD_RIGHT);
+        stickFocusHandler.postDelayed(stickFocusXRepeat, STICK_FOCUS_REPEAT_DELAY_MS);
+      }
+    }
+    if (newYDir != stickFocusYDir) {
+      stickFocusHandler.removeCallbacks(stickFocusYRepeat);
+      stickFocusYDir = newYDir;
+      if (stickFocusYDir != 0) {
+        dispatchSyntheticDpadPress(stickFocusYDir < 0 ? KeyEvent.KEYCODE_DPAD_UP : KeyEvent.KEYCODE_DPAD_DOWN);
+        stickFocusHandler.postDelayed(stickFocusYRepeat, STICK_FOCUS_REPEAT_DELAY_MS);
+      }
+    }
+  }
 
   /**
    * Returns the name of the main component registered from JavaScript. This is used to schedule
@@ -373,6 +462,7 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     String currentScreen = GamepadManager.getCurrentScreen();
 
     if (!currentScreen.equals("stream")) {
+      handleStickFocusNavigation(event);
       return super.onGenericMotionEvent(event);
     }
     if (SdlGamepadManager.isActive() && SdlGamepadManager.handleMotionEvent(event)) {
@@ -668,6 +758,7 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     if (inputManager != null) {
       inputManager.unregisterInputDeviceListener(this);
     }
+    resetStickFocusNavigation();
     super.onPause();
   }
 
@@ -682,6 +773,7 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
   @Override
   public void onInputDeviceRemoved(int deviceId) {
     releaseControllerIndex(deviceId);
+    resetStickFocusNavigation();
   }
 
   @Override
