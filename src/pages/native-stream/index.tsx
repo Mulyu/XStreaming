@@ -1045,11 +1045,40 @@ export function NativeStreamScreenBase({
           // console.log('gpMaping:', gpMaping);
           // console.log('usb keyCode:', keyCode);
           // Button
+          let keys: string[] = [];
           if (keyCode !== 0) {
-            const keys = getPressedButtons(keyCode);
+            keys = getPressedButtons(keyCode);
             setGpState(keys);
           } else {
             resetButtonState();
+          }
+
+          // Long-press Menu/Start opens the in-game control rail, same as
+          // normal (non-USB) mode's onGamepadKeyDown/onGamepadKeyUp handling
+          // above -- USB-wired controllers report button state as a polled
+          // bitmask instead of discrete key events, so the press/hold/release
+          // has to be derived here instead.
+          if (!portraitMode && !isInPictureInPicture) {
+            if (keys.includes('Menu')) {
+              if (!menuLongPressTimer.current) {
+                menuLongPressTriggered.current = false;
+                menuLongPressTimer.current = setTimeout(() => {
+                  menuLongPressTimer.current = undefined;
+                  menuLongPressTriggered.current = true;
+                  gpState.Menu = 0;
+                  setShowControlRail(true);
+                }, 2000);
+              }
+            } else {
+              if (menuLongPressTimer.current) {
+                clearTimeout(menuLongPressTimer.current);
+                menuLongPressTimer.current = undefined;
+              }
+              if (menuLongPressTriggered.current) {
+                gpState.Menu = 0;
+                menuLongPressTriggered.current = false;
+              }
+            }
           }
 
           // Trigger
