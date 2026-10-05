@@ -81,6 +81,20 @@ CHIAKI_EXPORT void chiaki_video_receiver_stream_info(ChiakiVideoReceiver *video_
 	}
 }
 
+CHIAKI_EXPORT const uint8_t *chiaki_video_receiver_current_header(ChiakiVideoReceiver *video_receiver, size_t *header_sz_out)
+{
+	if(video_receiver->profile_cur < 0)
+	{
+		if(header_sz_out)
+			*header_sz_out = 0;
+		return NULL;
+	}
+	ChiakiVideoProfile *profile = &video_receiver->profiles[video_receiver->profile_cur];
+	if(header_sz_out)
+		*header_sz_out = profile->header_sz;
+	return profile->header;
+}
+
 CHIAKI_EXPORT void chiaki_video_receiver_av_packet(ChiakiVideoReceiver *video_receiver, ChiakiTakionAVPacket *packet)
 {
 	// old frame?

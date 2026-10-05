@@ -28,6 +28,50 @@
 
 static void *android_chiaki_video_decoder_output_thread_func(void *user);
 
+// Shared by android_chiaki_video_decoder_video_sample() (real frame data) and
+// android_chiaki_video_decoder_set_surface()'s fresh-decoder path (replaying
+// the cached codec header -- see its header_buf parameter) -- both already
+// hold decoder->codec_mutex and have confirmed decoder->codec is non-NULL
+// before calling this.
+static bool queue_samples_locked(AndroidChiakiVideoDecoder *decoder, const uint8_t *buf, size_t buf_size)
+{
+	bool r = true;
+	while(buf_size > 0)
+	{
+		ssize_t codec_buf_index = -1;
+		for(int attempt = 0; attempt < 3; attempt++)
+		{
+			codec_buf_index = AMediaCodec_dequeueInputBuffer(decoder->codec, INPUT_BUFFER_TIMEOUT_MS * 1000);
+			if(codec_buf_index >= 0)
+				break;
+		}
+		if(codec_buf_index < 0)
+		{
+			CHIAKI_LOGE(decoder->log, "Failed to get input buffer");
+			r = false;
+			break;
+		}
+
+		size_t codec_buf_size;
+		uint8_t *codec_buf = AMediaCodec_getInputBuffer(decoder->codec, (size_t)codec_buf_index, &codec_buf_size);
+		size_t codec_sample_size = buf_size;
+		if(codec_sample_size > codec_buf_size)
+		{
+			//CHIAKI_LOGD(decoder->log, "Sample is bigger than buffer, splitting");
+			codec_sample_size = codec_buf_size;
+		}
+		memcpy(codec_buf, buf, codec_sample_size);
+		media_status_t status = AMediaCodec_queueInputBuffer(decoder->codec, (size_t)codec_buf_index, 0, codec_sample_size, decoder->timestamp_cur++, 0); // timestamp just raised by 1 for maximum realtime
+		if(status != AMEDIA_OK)
+		{
+			CHIAKI_LOGE(decoder->log, "AMediaCodec_queueInputBuffer() failed: %d", (int)status);
+		}
+		buf += codec_sample_size;
+		buf_size -= codec_sample_size;
+	}
+	return r;
+}
+
 ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *decoder, ChiakiLog *log, int32_t target_width, int32_t target_height, ChiakiCodec codec)
 {
 	decoder->log = log;
@@ -79,7 +123,7 @@ void android_chiaki_video_decoder_fini(AndroidChiakiVideoDecoder *decoder)
 	chiaki_mutex_fini(&decoder->codec_mutex);
 }
 
-void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder, JNIEnv *env, jobject surface)
+void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder, JNIEnv *env, jobject surface, const uint8_t *header_buf, size_t header_buf_size)
 {
 	if(!surface)
 	{
@@ -160,6 +204,19 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 		goto error_codec;
 	}
 
+	// This decoder was just configured with no CSD at all (AMediaFormat above
+	// only ever sets MIME/width/height) -- the only place SPS/PPS/VPS data
+	// exists for this client is the caller-provided header_buf (see this
+	// function's own doc comment in video-decoder.h). Feed it now, still
+	// holding codec_mutex, so this is strictly ordered before any concurrent
+	// android_chiaki_video_decoder_video_sample() call can queue a real frame
+	// into this same fresh codec first.
+	if(header_buf && header_buf_size > 0)
+	{
+		CHIAKI_LOGI(decoder->log, "Feeding cached codec header (%zu bytes) into freshly created decoder", header_buf_size);
+		queue_samples_locked(decoder, header_buf, header_buf_size);
+	}
+
 	goto beach;
 
 error_codec:
@@ -187,6 +244,15 @@ bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, in
 	if(!decoder->codec)
 	{
 		CHIAKI_LOGE(decoder->log, "Received video data, but decoder is not initialized!");
+		// This is reached for every frame the receiver thread keeps getting
+		// fed while backgrounded (the connection and chiaki's own video
+		// receiver keep running normally the whole time -- only the local
+		// AMediaCodec is gone). Previously left r at its initial `true`,
+		// so every one of those was reported as a *successful* decode --
+		// frame_index_prev_complete and the fake reference_frames list kept
+		// advancing throughout the entire backgrounded period as if nothing
+		// had happened.
+		r = false;
 		goto beach;
 	}
 
@@ -205,39 +271,7 @@ bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, in
 		goto beach;
 	}
 
-	while(buf_size > 0)
-	{
-		ssize_t codec_buf_index = -1;
-		for(int attempt = 0; attempt < 3; attempt++)
-		{
-			codec_buf_index = AMediaCodec_dequeueInputBuffer(decoder->codec, INPUT_BUFFER_TIMEOUT_MS * 1000);
-			if(codec_buf_index >= 0)
-				break;
-		}
-		if(codec_buf_index < 0)
-		{
-			CHIAKI_LOGE(decoder->log, "Failed to get input buffer");
-			r = false;
-			break;
-		}
-
-		size_t codec_buf_size;
-		uint8_t *codec_buf = AMediaCodec_getInputBuffer(decoder->codec, (size_t)codec_buf_index, &codec_buf_size);
-		size_t codec_sample_size = buf_size;
-		if(codec_sample_size > codec_buf_size)
-		{
-			//CHIAKI_LOGD(decoder->log, "Sample is bigger than buffer, splitting");
-			codec_sample_size = codec_buf_size;
-		}
-		memcpy(codec_buf, buf, codec_sample_size);
-		media_status_t status = AMediaCodec_queueInputBuffer(decoder->codec, (size_t)codec_buf_index, 0, codec_sample_size, decoder->timestamp_cur++, 0); // timestamp just raised by 1 for maximum realtime
-		if(status != AMEDIA_OK)
-		{
-			CHIAKI_LOGE(decoder->log, "AMediaCodec_queueInputBuffer() failed: %d", (int)status);
-		}
-		buf += codec_sample_size;
-		buf_size -= codec_sample_size;
-	}
+	r = queue_samples_locked(decoder, buf, buf_size);
 
 beach:
 	chiaki_mutex_unlock(&decoder->codec_mutex);

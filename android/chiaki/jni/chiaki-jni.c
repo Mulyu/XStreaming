@@ -837,7 +837,18 @@ JNIEXPORT jint JNICALL JNI_FCN(sessionJoin)(JNIEnv *env, jobject obj, jlong ptr)
 JNIEXPORT void JNICALL JNI_FCN(sessionSetSurface)(JNIEnv *env, jobject obj, jlong ptr, jobject surface)
 {
 	AndroidChiakiSession *session = (AndroidChiakiSession *)ptr;
-	android_chiaki_video_decoder_set_surface(&session->video_decoder, env, surface);
+	// The decoder has no way to ask for this itself -- see
+	// android_chiaki_video_decoder_set_surface()'s own header_buf doc comment
+	// for why a freshly (re-)created decoder needs this fed back in.
+	// video_receiver can be NULL this early (surface attached before the
+	// session has gotten past STREAMINFO at all); current_header() itself
+	// also returns NULL until a profile has actually been selected.
+	const uint8_t *header_buf = NULL;
+	size_t header_buf_size = 0;
+	ChiakiVideoReceiver *video_receiver = session->session.stream_connection.video_receiver;
+	if(video_receiver)
+		header_buf = chiaki_video_receiver_current_header(video_receiver, &header_buf_size);
+	android_chiaki_video_decoder_set_surface(&session->video_decoder, env, surface, header_buf, header_buf_size);
 }
 
 // Per-session game-audio volume (0..1), independent of the system media
