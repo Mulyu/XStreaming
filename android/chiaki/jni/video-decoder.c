@@ -37,6 +37,7 @@ ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *dec
 	decoder->target_height = target_height;
 	decoder->target_codec = codec;
 	decoder->shutdown_output = false;
+	decoder->needs_keyframe = false;
 	return chiaki_mutex_init(&decoder->codec_mutex, false);
 }
 
@@ -66,6 +67,9 @@ static void kill_decoder(AndroidChiakiVideoDecoder *decoder)
 	AMediaCodec_delete(decoder->codec);
 	decoder->codec = NULL;
 	decoder->shutdown_output = false;
+	// The next decoder set_surface() creates from scratch starts with no
+	// reference-frame history -- see this flag's own comment in the header.
+	decoder->needs_keyframe = true;
 }
 
 void android_chiaki_video_decoder_fini(AndroidChiakiVideoDecoder *decoder)
@@ -183,6 +187,21 @@ bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, in
 	if(!decoder->codec)
 	{
 		CHIAKI_LOGE(decoder->log, "Received video data, but decoder is not initialized!");
+		goto beach;
+	}
+
+	if(decoder->needs_keyframe)
+	{
+		// This decoder was just (re-)created from scratch (e.g. after the app
+		// backgrounded and foregrounded again) and has no reference-frame
+		// history, so this sample -- almost certainly a P/B-frame the PS5 sent
+		// assuming decode continuity -- can't be decoded correctly. Discard it
+		// and report failure instead of queuing it: see video-decoder.h's own
+		// comment on this flag for why that's enough to make chiaki-lib
+		// request a fresh keyframe from the PS5 on its own.
+		decoder->needs_keyframe = false;
+		CHIAKI_LOGI(decoder->log, "Discarding first sample after decoder restart, requesting keyframe");
+		r = false;
 		goto beach;
 	}
 

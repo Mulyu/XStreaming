@@ -23,6 +23,19 @@ typedef struct android_chiaki_video_decoder_t
 	int32_t target_width;
 	int32_t target_height;
 	ChiakiCodec target_codec;
+	// Set by kill_decoder() (surface torn down, e.g. the app backgrounded) so
+	// the *next* decoder created from scratch (set_surface()'s "no existing
+	// codec" branch -- never the live AMediaCodec_setOutputSurface() hot-swap
+	// just above it) knows it has no prior reference-frame state. A fresh
+	// AMediaCodec can't decode a P/B-frame referencing frames it never saw,
+	// so android_chiaki_video_decoder_video_sample() discards exactly one
+	// sample and reports failure instead of queuing it -- see its own
+	// comment and chiaki/session.h's video_sample_cb doc ("On false, a
+	// corrupt frame will be reported to get a new keyframe"), which is the
+	// existing, already-wired mechanism this reuses to make the PS5 resync
+	// with a fresh keyframe, rather than leaving the picture black forever
+	// waiting for a keyframe that was never requested.
+	bool needs_keyframe;
 } AndroidChiakiVideoDecoder;
 
 ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *decoder, ChiakiLog *log, int32_t target_width, int32_t target_height, ChiakiCodec codec);
