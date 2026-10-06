@@ -1,5 +1,6 @@
 import React from 'react';
-import {View, PanResponder, StyleSheet} from 'react-native';
+import {View, StyleSheet} from 'react-native';
+import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 
 export interface SwipeAimRect {
   x: number;
@@ -61,44 +62,52 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   isActive,
 }) => {
   const last = React.useRef<{x: number; y: number} | null>(null);
-  // The identifier of the one finger that actually started this swipe.
-  // Once more than one finger is down anywhere on screen (e.g. the other
-  // hand working the free left stick), nativeEvent's top-level pageX/pageY
-  // can reflect whichever touch last changed rather than ours -- so a
-  // second, unrelated finger's movement must never be read as a continuation
-  // of this gesture.
-  const touchId = React.useRef<string | null>(null);
+  // The identifier of the one finger that actually started this swipe. Once
+  // a second finger is down elsewhere (e.g. the other hand working the free
+  // left stick), its movement must never be read as a continuation of this
+  // gesture.
+  const touchId = React.useRef<number | null>(null);
 
-  const responder = React.useMemo(() => {
+  // Built on react-native-gesture-handler's raw per-touch callbacks rather
+  // than RN's built-in PanResponder. PanResponder depends on RN's Android
+  // JSTouchDispatcher, which hit-tests only the FIRST finger of a multi-touch
+  // sequence and reuses that same target view for every later finger -- so
+  // if the free left stick (a native view, which bypasses this entirely) is
+  // touched first, a second finger landing inside this zone never gets its
+  // own touchStart and this responder is never granted. RNGH's handlers are
+  // hit-tested per pointer at the native layer, which doesn't have that
+  // limitation. We deliberately never rely on the gesture's own
+  // activation/state machine (onStart/onUpdate/onEnd) -- just the touch
+  // callbacks, which fire regardless of activation -- and track/compute
+  // everything ourselves exactly as the previous PanResponder version did.
+  const gesture = React.useMemo(() => {
     const shouldCapture = () => enabled && (!isActive || isActive());
-    return PanResponder.create({
-      onStartShouldSetPanResponder: shouldCapture,
-      onMoveShouldSetPanResponder: shouldCapture,
-      onPanResponderGrant: evt => {
-        const t = evt.nativeEvent;
-        const touch = t.changedTouches?.[0] ?? t.touches?.[0];
-        touchId.current = touch ? touch.identifier : null;
-        last.current = {x: t.pageX, y: t.pageY};
-      },
-      onPanResponderMove: evt => {
-        const t = evt.nativeEvent;
+    return Gesture.Pan()
+      .onTouchesDown(e => {
+        if (touchId.current != null || !shouldCapture()) {
+          return;
+        }
+        const touch = e.changedTouches[0];
+        if (!touch) {
+          return;
+        }
+        touchId.current = touch.id;
+        last.current = {x: touch.absoluteX, y: touch.absoluteY};
+      })
+      .onTouchesMove(e => {
+        if (touchId.current == null) {
+          return;
+        }
         // Find our own finger among whatever touches are currently active,
         // and ignore the event entirely if it isn't one of them -- it's some
         // other finger moving, not this swipe.
-        const ownTouch = (t.touches || []).find(
-          touch => touch.identifier === touchId.current,
-        );
-        if (touchId.current != null && !ownTouch) {
+        const ownTouch = e.allTouches.find(t => t.id === touchId.current);
+        if (!ownTouch || !last.current) {
           return;
         }
-        const point = ownTouch ?? t;
-        if (!last.current) {
-          last.current = {x: point.pageX, y: point.pageY};
-          return;
-        }
-        const dx = point.pageX - last.current.x;
-        const dy = point.pageY - last.current.y;
-        last.current = {x: point.pageX, y: point.pageY};
+        const dx = ownTouch.absoluteX - last.current.x;
+        const dy = ownTouch.absoluteY - last.current.y;
+        last.current = {x: ownTouch.absoluteX, y: ownTouch.absoluteY};
         // Boost grows with how far the finger moved this one event (a proxy
         // for swipe speed): a slow drag has boost ~= 1 (acceleration barely
         // contributes), a fast flick's larger per-event distance multiplies
@@ -106,18 +115,24 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
         const boost =
           acceleration > 0 ? 1 + acceleration * Math.hypot(dx, dy) : 1;
         onAim(dx * sensitivity * boost, dy * sensitivity * boost);
-      },
-      onPanResponderRelease: () => {
+      })
+      .onTouchesUp(e => {
+        const ownTouch = e.changedTouches.find(t => t.id === touchId.current);
+        if (touchId.current == null || !ownTouch) {
+          return;
+        }
         last.current = null;
         touchId.current = null;
         onEnd();
-      },
-      onPanResponderTerminate: () => {
+      })
+      .onTouchesCancelled(() => {
+        if (touchId.current == null) {
+          return;
+        }
         last.current = null;
         touchId.current = null;
         onEnd();
-      },
-    });
+      });
   }, [enabled, sensitivity, acceleration, onAim, onEnd, isActive]);
 
   if (!enabled) {
@@ -125,19 +140,20 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   }
 
   return (
-    <View
-      style={[
-        styles.zone,
-        {
-          left: rect.x,
-          top: rect.y,
-          width: rect.width,
-          height: rect.height,
-          zIndex,
-        },
-      ]}
-      {...responder.panHandlers}
-    />
+    <GestureDetector gesture={gesture}>
+      <View
+        style={[
+          styles.zone,
+          {
+            left: rect.x,
+            top: rect.y,
+            width: rect.width,
+            height: rect.height,
+            zIndex,
+          },
+        ]}
+      />
+    </GestureDetector>
   );
 };
 
