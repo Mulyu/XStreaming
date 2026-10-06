@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import androidx.core.content.ContextCompat;
 
@@ -28,6 +29,7 @@ public class AnalogStickView extends CustomView {
     private TouchTracker touchTracker;
     private Vector center;
     private Vector handlePosition = new Vector(0f, 0f);
+    private GestureDetector doubleTapDetector;
 
     public interface StateChangedCallback {
         void onStateChanged(Vector state);
@@ -67,6 +69,7 @@ public class AnalogStickView extends CustomView {
         }
 
         initTouchTracker();
+        initDoubleTapDetector(context);
     }
 
     private void setDefaultDrawables() {
@@ -98,6 +101,21 @@ public class AnalogStickView extends CustomView {
             @Override
             public void onPositionChanged(Vector position) {
                 updateState(position);
+            }
+        });
+    }
+
+    // Double-tapping the stick (free or fixed -- this is the same underlying
+    // native view either way, see AnalogStick.jsx's two callers) clicks it in,
+    // the same as the dedicated L3/R3 button. GestureDetector already requires
+    // both taps to stay within its slop distance/time of each other, so a real
+    // drag of the handle is never mistaken for a double-tap.
+    private void initDoubleTapDetector(Context context) {
+        doubleTapDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                sendPressEventToReactNative();
+                return true;
             }
         });
     }
@@ -148,6 +166,17 @@ public class AnalogStickView extends CustomView {
                     getId(),
                     "onAnalogStickChange",
                     event
+            );
+        }
+    }
+
+    private void sendPressEventToReactNative() {
+        if (getContext() instanceof ReactContext) {
+            ReactContext reactContext = (ReactContext) getContext();
+            reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
+                    getId(),
+                    "onAnalogStickPress",
+                    Arguments.createMap()
             );
         }
     }
@@ -225,6 +254,9 @@ public class AnalogStickView extends CustomView {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (doubleTapDetector != null) {
+            doubleTapDetector.onTouchEvent(event);
+        }
         touchTracker.touchEvent(event);
         return true;
     }

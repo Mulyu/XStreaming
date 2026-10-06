@@ -53,6 +53,14 @@ const VirtualGamepad: React.FC<Props> = ({
     onStickMove && onStickMove(id, data);
   };
 
+  // Double-tapping a stick clicks it in, same as the dedicated L3/R3 button
+  // (control_button_left/right_joystick_down above) -- a quick press+release
+  // so turbo/hold-toggle/vibration on that button name all still apply.
+  const handleStickPress = (name: string) => {
+    handlePressIn(name);
+    setTimeout(() => handlePressOut(name), 50);
+  };
+
   const {width, height} = Dimensions.get('window');
 
   const nexusLeft = width * 0.5 - 20;
@@ -200,6 +208,7 @@ const VirtualGamepad: React.FC<Props> = ({
             radius={140}
             handleRadius={80}
             onStickChange={(data: any) => handleStickMove('left', data)}
+            onStickPress={() => handleStickPress('LeftThumb')}
           />
         </View>
       ) : null}
@@ -214,6 +223,7 @@ const VirtualGamepad: React.FC<Props> = ({
             radius={150}
             handleRadius={100}
             onStickChange={(data: any) => handleStickMove('right', data)}
+            onStickPress={() => handleStickPress('RightThumb')}
           />
         </View>
       ) : null}
@@ -225,6 +235,7 @@ const VirtualGamepad: React.FC<Props> = ({
             radius={140}
             handleRadius={80}
             onStickChange={(data: any) => handleStickMove('left', data)}
+            onStickPress={() => handleStickPress('LeftThumb')}
           />
         </View>
       ) : null}
@@ -236,6 +247,7 @@ const VirtualGamepad: React.FC<Props> = ({
             radius={150}
             handleRadius={100}
             onStickChange={(data: any) => handleStickMove('right', data)}
+            onStickPress={() => handleStickPress('RightThumb')}
           />
         </View>
       ) : null}

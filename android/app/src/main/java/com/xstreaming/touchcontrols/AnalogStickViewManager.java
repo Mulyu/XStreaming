@@ -47,6 +47,12 @@ public class AnalogStickViewManager extends SimpleViewManager<AnalogStickView> {
                                 MapBuilder.of("bubbled", "onAnalogStickChange")
                         )
                 )
+                .put("onAnalogStickPress",
+                        MapBuilder.of(
+                                "phasedRegistrationNames",
+                                MapBuilder.of("bubbled", "onAnalogStickPress")
+                        )
+                )
                 .build();
     }
 }
