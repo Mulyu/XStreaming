@@ -44,6 +44,14 @@ typedef struct android_chiaki_video_decoder_t
 	// the whole time the app is backgrounded (no surface/codec), which could
 	// otherwise be thousands of log lines for a multi-minute background.
 	bool logged_no_codec;
+	// Logs the first few AMediaCodec_dequeueOutputBuffer() successes after
+	// each decoder (re)creation, then goes quiet (see .c file). The per-
+	// sample logs above only prove the codec is accepting *input* after a
+	// resume; this is the only way to tell from a log capture alone whether
+	// it's actually producing decoded *output* frames too, or silently
+	// stuck -- which would mean the problem is downstream (the Surface/
+	// window it's rendering to), not in decode itself.
+	int32_t output_frames_since_reset;
 } AndroidChiakiVideoDecoder;
 
 ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *decoder, ChiakiLog *log, int32_t target_width, int32_t target_height, ChiakiCodec codec);
