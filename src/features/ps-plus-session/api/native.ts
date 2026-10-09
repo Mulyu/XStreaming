@@ -22,7 +22,7 @@ export type CloudProvisionOptions = {
   forcedDatacenter?: string;
   priorDatacentersJson?: string;
   catalogIsForeign?: boolean;
-  /** VideoResolutionPreset value (1=360p, 2=540p, 3=720p, 4=1080p). */
+  /** VideoResolutionPreset value (1=360p, 2=540p, 3=720p, 4=1080p, 5=1440p, 6=2160p/4K). */
   resolution?: number;
   bitrateKbps?: number;
 };
@@ -50,6 +50,8 @@ export const VideoResolutionPreset = {
   RES_540P: 2,
   RES_720P: 3,
   RES_1080P: 4,
+  RES_1440P: 5,
+  RES_2160P: 6,
 } as const;
 
 // VideoFPSPreset.

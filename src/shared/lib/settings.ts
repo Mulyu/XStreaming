@@ -67,7 +67,7 @@ export type Settings = {
   /** Multiplier applied to MouseTrackpadZone's per-move finger delta before
    * it's sent -- see entities/gfn-input's MouseTrackpadZone.tsx. */
   gfn_mouse_trackpad_sensitivity: number;
-  /** PS Plus cloud streaming resolution (VideoResolutionPreset value: 1=360p, 2=540p, 3=720p, 4=1080p). */
+  /** PS Plus cloud streaming resolution (VideoResolutionPreset value: 1=360p, 2=540p, 3=720p, 4=1080p, 5=1440p, 6=2160p/4K). */
   psplus_resolution: number;
   /** PS Plus cloud streaming frame rate (30 or 60). */
   psplus_fps: number;

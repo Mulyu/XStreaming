@@ -118,6 +118,7 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 		thread(name = "PsPlusProvision") {
 			try {
 				var cancelled = false
+				val resolutionOrdinal = if (options.hasKey("resolution")) options.getInt("resolution") else VideoResolutionPreset.RES_1080P.value
 				val result = cloudProvisionSession(
 					serviceType = options.getString("serviceType") ?: "pscloud",
 					gameIdentifier = options.getString("gameIdentifier") ?: "",
@@ -131,7 +132,18 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 					forcedDatacenter = options.getString("forcedDatacenter") ?: "",
 					priorDatacentersJson = options.getString("priorDatacentersJson") ?: "",
 					catalogIsForeign = options.hasKey("catalogIsForeign") && options.getBoolean("catalogIsForeign"),
-					resolution = if (options.hasKey("resolution")) options.getInt("resolution") else VideoResolutionPreset.RES_1080P.value,
+					// cloudsession_gaikai.c's resolutionSetting request only recognizes
+					// the literal pixel-height values 720/1080/1440/2160 (cfg->resolution,
+					// see cloudsession.h's own doc comment); anything else falls through to
+					// its default (1080). RES_1440P/RES_2160P's ordinals (5/6) need
+					// translating to those literals so the datacenter is actually asked for
+					// 1440p/4K -- 360P/540P/720P/1080P's ordinals are passed through
+					// unchanged (pre-existing behavior, left alone here).
+					resolution = when (resolutionOrdinal) {
+						VideoResolutionPreset.RES_1440P.value -> 1440
+						VideoResolutionPreset.RES_2160P.value -> 2160
+						else -> resolutionOrdinal
+					},
 					bitrateKbps = if (options.hasKey("bitrateKbps")) options.getInt("bitrateKbps") else 15000,
 					onProgress = { stage ->
 						emit("PsPlusProvisionProgress", Arguments.createMap().apply { putString("stage", stage) })
