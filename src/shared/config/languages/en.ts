@@ -308,7 +308,7 @@ export default {
       'Pin a specific GeForce NOW region instead of letting CloudMatch pick the nearest one automatically. If a title fails to start, try switching back to Auto.',
     PsPlusResolutionTitle: 'Resolution',
     PsPlusResolutionDesc:
-      'Set the streaming resolution requested from PS Plus cloud streaming.',
+      'Set the streaming resolution requested from PS Plus cloud streaming. 1440p/4K are only delivered if the datacenter and game support them -- otherwise the session falls back to a lower resolution.',
     PsPlusFpsTitle: 'Frame rate',
     PsPlusFpsDesc:
       'Set the streaming frame rate requested from PS Plus cloud streaming.',

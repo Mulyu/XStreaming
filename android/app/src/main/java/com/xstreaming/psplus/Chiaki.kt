@@ -31,7 +31,9 @@ enum class VideoResolutionPreset(val value: Int)
 	RES_360P(1),
 	RES_540P(2),
 	RES_720P(3),
-	RES_1080P(4)
+	RES_1080P(4),
+	RES_1440P(5),
+	RES_2160P(6)
 }
 
 enum class VideoFPSPreset(val value: Int)

@@ -14,6 +14,8 @@ const psplus = [
       {value: 2, text: '540P'},
       {value: 3, text: '720P'},
       {value: 4, text: '1080P'},
+      {value: 5, text: '1440P'},
+      {value: 6, text: '4K'},
     ],
   },
   {

@@ -306,7 +306,7 @@ export default {
       'CloudMatch による自動選択の代わりに、特定のGeForce NOWリージョンを固定します。起動に失敗する場合は自動に戻してみてください。',
     PsPlusResolutionTitle: '解像度',
     PsPlusResolutionDesc:
-      'PS Plusクラウドストリーミングでリクエストする解像度を設定します。',
+      'PS Plusクラウドストリーミングでリクエストする解像度を設定します。1440p・4Kはデータセンターやゲームが対応している場合のみ配信され、対応していない場合は低い解像度にフォールバックします。',
     PsPlusFpsTitle: 'フレームレート',
     PsPlusFpsDesc:
       'PS Plusクラウドストリーミングでリクエストするフレームレートを設定します。',
