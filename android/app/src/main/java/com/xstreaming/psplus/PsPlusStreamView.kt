@@ -1,6 +1,7 @@
 package com.xstreaming.psplus
 
 import android.content.Context
+import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.ViewGroup
@@ -30,6 +31,8 @@ import kotlin.math.roundToInt
 class PsPlusStreamView(context: Context) : ViewGroup(context) {
 
 	private companion object {
+		private const val TAG = "PsPlusStreamView"
+
 		const val VIDEO_FORMAT_MODE_AUTO = 0
 		const val VIDEO_FORMAT_MODE_STRETCH = 1
 		const val VIDEO_FORMAT_MODE_ZOOM = 2
@@ -74,6 +77,12 @@ class PsPlusStreamView(context: Context) : ViewGroup(context) {
 
 	private inner class SurfaceCallback : SurfaceHolder.Callback {
 		override fun surfaceCreated(holder: SurfaceHolder) {
+			// Timestamp + Surface identity, so a logcat capture across a
+			// background/foreground cycle can confirm this and surfaceDestroyed()
+			// below actually fire in the expected 1:1 pairing on the real device
+			// -- see video-decoder.c's set_surface() for the matching native-side
+			// branch-decision log this pairs with.
+			Log.i(TAG, "surfaceCreated() at ${System.currentTimeMillis()}, surface=${System.identityHashCode(holder.surface)}")
 			// Goes through attachSurface() (not a plain currentSurface write) so
 			// this can never race with startSession() reading currentSurface and
 			// publishing a fresh Session -- see PsPlusModule.surfaceLock.
@@ -83,6 +92,7 @@ class PsPlusStreamView(context: Context) : ViewGroup(context) {
 		override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
 
 		override fun surfaceDestroyed(holder: SurfaceHolder) {
+			Log.i(TAG, "surfaceDestroyed() at ${System.currentTimeMillis()}, surface=${System.identityHashCode(holder.surface)}")
 			psPlusModule?.attachSurface(null)
 		}
 	}

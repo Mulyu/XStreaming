@@ -82,6 +82,7 @@ ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *dec
 	decoder->target_codec = codec;
 	decoder->shutdown_output = false;
 	decoder->needs_keyframe = false;
+	decoder->logged_no_codec = false;
 	return chiaki_mutex_init(&decoder->codec_mutex, false);
 }
 
@@ -114,6 +115,8 @@ static void kill_decoder(AndroidChiakiVideoDecoder *decoder)
 	// The next decoder set_surface() creates from scratch starts with no
 	// reference-frame history -- see this flag's own comment in the header.
 	decoder->needs_keyframe = true;
+	// Starting a fresh offline period -- let the next "no codec" drop log once.
+	decoder->logged_no_codec = false;
 }
 
 void android_chiaki_video_decoder_fini(AndroidChiakiVideoDecoder *decoder)
@@ -125,6 +128,12 @@ void android_chiaki_video_decoder_fini(AndroidChiakiVideoDecoder *decoder)
 
 void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder, JNIEnv *env, jobject surface, const uint8_t *header_buf, size_t header_buf_size)
 {
+	// One unambiguous log line for which of the three branches below actually
+	// runs -- teardown / hot-swap-existing-codec / fresh-create -- since
+	// distinguishing exactly that was the open question in prior black-screen
+	// investigations of this surface-lifecycle path.
+	CHIAKI_LOGI(decoder->log, "set_surface() called, surface=%s, has_codec=%d", surface ? "present" : "null", decoder->codec != NULL);
+
 	if(!surface)
 	{
 		// kill_decoder() locks codec_mutex itself (see android_chiaki_video_decoder_fini(),
@@ -243,16 +252,34 @@ bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, in
 
 	if(!decoder->codec)
 	{
-		CHIAKI_LOGE(decoder->log, "Received video data, but decoder is not initialized!");
-		// This is reached for every frame the receiver thread keeps getting
-		// fed while backgrounded (the connection and chiaki's own video
-		// receiver keep running normally the whole time -- only the local
-		// AMediaCodec is gone). Previously left r at its initial `true`,
-		// so every one of those was reported as a *successful* decode --
-		// frame_index_prev_complete and the fake reference_frames list kept
-		// advancing throughout the entire backgrounded period as if nothing
-		// had happened.
-		r = false;
+		if(!decoder->logged_no_codec)
+		{
+			CHIAKI_LOGI(decoder->log, "Dropping video data while decoder is uninitialized (e.g. backgrounded) -- will request a fresh keyframe once it's recreated");
+			decoder->logged_no_codec = true;
+		}
+		// Report *success* here, not failure. This is reached for every frame
+		// the receiver thread keeps getting fed for as long as the app stays
+		// backgrounded (the connection and chiaki's own video receiver keep
+		// running normally the whole time -- only the local AMediaCodec is
+		// gone) -- that can be thousands of frames for a multi-minute
+		// backgrounding. Previously this returned `false` ("corrupt frame"),
+		// which chiaki_video_receiver_av_packet()'s missing-frame check
+		// (videoreceiver.c) turns into a stream_connection_send_corrupt_frame()
+		// report on every single subsequent frame, each with an ever-growing
+		// range back to the moment the app was backgrounded (frame_index_
+		// prev_complete never advances while every callback fails) -- i.e. a
+		// continuous, growing-range "corrupt frame" flood sent to the PS5 for
+		// the entire backgrounded duration, not the one-shot signal this
+		// mechanism is meant to be. That flood is the most likely reason the
+		// PS5 never cleanly resynced even after the needs_keyframe/header-
+		// replay fixes below landed: by the time they ran, the corrupt-frame
+		// bookkeeping was already far out of sync. Returning success instead
+		// keeps frame_index_prev_complete advancing normally (no report at
+		// all while intentionally not decoding -- there's nothing corrupt
+		// about a frame we chose not to decode), so when the decoder comes
+		// back, needs_keyframe below fires exactly once, for a small, sane,
+		// current frame range.
+		r = true;
 		goto beach;
 	}
 
