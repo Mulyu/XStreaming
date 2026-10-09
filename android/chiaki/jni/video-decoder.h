@@ -38,6 +38,12 @@ typedef struct android_chiaki_video_decoder_t
 	// other half (the fresh AMediaCodec has no CSD at all until those are
 	// fed to it, so even a successful resync has nothing to decode with).
 	bool needs_keyframe;
+	// Gates the "Received video data, but decoder is not initialized!" log in
+	// android_chiaki_video_decoder_video_sample() to once per offline period
+	// instead of once per frame -- the receiver thread keeps feeding frames
+	// the whole time the app is backgrounded (no surface/codec), which could
+	// otherwise be thousands of log lines for a multi-minute background.
+	bool logged_no_codec;
 } AndroidChiakiVideoDecoder;
 
 ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *decoder, ChiakiLog *log, int32_t target_width, int32_t target_height, ChiakiCodec codec);

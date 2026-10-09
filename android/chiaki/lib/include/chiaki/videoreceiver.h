@@ -9,6 +9,7 @@
 #include "takion.h"
 #include "frameprocessor.h"
 #include "bitstream.h"
+#include "thread.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +24,15 @@ typedef struct chiaki_video_receiver_t
 	ChiakiVideoProfile profiles[CHIAKI_VIDEO_PROFILES_MAX];
 	size_t profiles_count;
 	int profile_cur; // < 1 if no profile selected yet, else index in profiles
+	// Guards profile_cur only (profiles[]/profiles_count are written once at
+	// chiaki_video_receiver_stream_info() time and never mutated again, so
+	// they need no lock to read). Without this, chiaki_video_receiver_
+	// current_header() -- called from the Android UI thread via
+	// sessionSetSurface() whenever the app resumes from background -- could
+	// race chiaki_video_receiver_av_packet() (receiver thread) rewriting
+	// profile_cur on an adaptive-stream profile switch, and hand back a torn
+	// index / the wrong profile's header right at the moment that matters most.
+	ChiakiMutex profile_mutex;
 
 	int32_t frame_index_cur; // frame that is currently being filled
 	int32_t frame_index_prev; // last frame that has been at least partially decoded

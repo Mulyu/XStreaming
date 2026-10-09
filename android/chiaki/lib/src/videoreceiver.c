@@ -40,6 +40,7 @@ CHIAKI_EXPORT void chiaki_video_receiver_init(ChiakiVideoReceiver *video_receive
 	memset(video_receiver->profiles, 0, sizeof(video_receiver->profiles));
 	video_receiver->profiles_count = 0;
 	video_receiver->profile_cur = -1;
+	chiaki_mutex_init(&video_receiver->profile_mutex, false);
 
 	video_receiver->frame_index_cur = -1;
 	video_receiver->frame_index_prev = -1;
@@ -59,6 +60,7 @@ CHIAKI_EXPORT void chiaki_video_receiver_fini(ChiakiVideoReceiver *video_receive
 	for(size_t i=0; i<video_receiver->profiles_count; i++)
 		free(video_receiver->profiles[i].header);
 	chiaki_frame_processor_fini(&video_receiver->frame_processor);
+	chiaki_mutex_fini(&video_receiver->profile_mutex);
 }
 
 CHIAKI_EXPORT void chiaki_video_receiver_stream_info(ChiakiVideoReceiver *video_receiver, ChiakiVideoProfile *profiles, size_t profiles_count)
@@ -83,13 +85,20 @@ CHIAKI_EXPORT void chiaki_video_receiver_stream_info(ChiakiVideoReceiver *video_
 
 CHIAKI_EXPORT const uint8_t *chiaki_video_receiver_current_header(ChiakiVideoReceiver *video_receiver, size_t *header_sz_out)
 {
-	if(video_receiver->profile_cur < 0)
+	chiaki_mutex_lock(&video_receiver->profile_mutex);
+	int profile_cur = video_receiver->profile_cur;
+	chiaki_mutex_unlock(&video_receiver->profile_mutex);
+
+	if(profile_cur < 0)
 	{
 		if(header_sz_out)
 			*header_sz_out = 0;
 		return NULL;
 	}
-	ChiakiVideoProfile *profile = &video_receiver->profiles[video_receiver->profile_cur];
+	// profiles[]/profiles_count themselves are only ever written once, at
+	// chiaki_video_receiver_stream_info() time -- safe to read without the
+	// lock once profile_cur (the only mutable part) has been read safely.
+	ChiakiVideoProfile *profile = &video_receiver->profiles[profile_cur];
 	if(header_sz_out)
 		*header_sz_out = profile->header_sz;
 	return profile->header;
@@ -117,7 +126,9 @@ CHIAKI_EXPORT void chiaki_video_receiver_av_packet(ChiakiVideoReceiver *video_re
 					(unsigned int)video_receiver->profiles_count);
 			return;
 		}
+		chiaki_mutex_lock(&video_receiver->profile_mutex);
 		video_receiver->profile_cur = packet->adaptive_stream_index;
+		chiaki_mutex_unlock(&video_receiver->profile_mutex);
 
 		ChiakiVideoProfile *profile = video_receiver->profiles + video_receiver->profile_cur;
 		CHIAKI_LOGI(video_receiver->log, "Switched to profile %d, resolution: %ux%u", video_receiver->profile_cur, profile->width, profile->height);
