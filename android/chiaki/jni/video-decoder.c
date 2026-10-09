@@ -83,6 +83,7 @@ ChiakiErrorCode android_chiaki_video_decoder_init(AndroidChiakiVideoDecoder *dec
 	decoder->shutdown_output = false;
 	decoder->needs_keyframe = false;
 	decoder->logged_no_codec = false;
+	decoder->output_frames_since_reset = 0;
 	return chiaki_mutex_init(&decoder->codec_mutex, false);
 }
 
@@ -109,6 +110,15 @@ static void kill_decoder(AndroidChiakiVideoDecoder *decoder)
 		AMediaCodec_stop(decoder->codec);
 		chiaki_mutex_unlock(&decoder->codec_mutex);
 	}
+	// Re-locked (both branches above unlock before this) so decoder->codec
+	// is never visibly non-NULL to another thread while actually already
+	// stopped -- without this, android_chiaki_video_decoder_video_sample(),
+	// blocked on this same mutex while this function was mid-join above,
+	// could acquire it right in this gap, see a stale non-NULL codec, and
+	// try to queue into an AMediaCodec that's already been stopped (confirmed
+	// in the wild: logs a spurious "Failed to get input buffer" exactly at
+	// teardown).
+	chiaki_mutex_lock(&decoder->codec_mutex);
 	AMediaCodec_delete(decoder->codec);
 	decoder->codec = NULL;
 	decoder->shutdown_output = false;
@@ -117,6 +127,7 @@ static void kill_decoder(AndroidChiakiVideoDecoder *decoder)
 	decoder->needs_keyframe = true;
 	// Starting a fresh offline period -- let the next "no codec" drop log once.
 	decoder->logged_no_codec = false;
+	chiaki_mutex_unlock(&decoder->codec_mutex);
 }
 
 void android_chiaki_video_decoder_fini(AndroidChiakiVideoDecoder *decoder)
@@ -205,6 +216,8 @@ void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder
 		CHIAKI_LOGE(decoder->log, "AMediaCodec_start() failed: %d", (int)r);
 		goto error_codec;
 	}
+
+	decoder->output_frames_since_reset = 0;
 
 	ChiakiErrorCode err = chiaki_thread_create(&decoder->output_thread, android_chiaki_video_decoder_output_thread_func, decoder);
 	if(err != CHIAKI_ERR_SUCCESS)
@@ -315,7 +328,15 @@ static void *android_chiaki_video_decoder_output_thread_func(void *user)
 		ssize_t status = AMediaCodec_dequeueOutputBuffer(decoder->codec, &info, OUTPUT_BUFFER_TIMEOUT_MS * 1000);
 		if(status >= 0)
 		{
-			AMediaCodec_releaseOutputBuffer(decoder->codec, (size_t)status, info.size != 0);
+			media_status_t release_status = AMediaCodec_releaseOutputBuffer(decoder->codec, (size_t)status, info.size != 0);
+			if(release_status != AMEDIA_OK)
+				CHIAKI_LOGE(decoder->log, "AMediaCodec_releaseOutputBuffer() failed: %d", (int)release_status);
+			if(decoder->output_frames_since_reset < 5)
+			{
+				decoder->output_frames_since_reset++;
+				CHIAKI_LOGI(decoder->log, "Output thread: decoded frame #%d (size=%d, flags=0x%x, render=%d)",
+						decoder->output_frames_since_reset, (int)info.size, (unsigned)info.flags, info.size != 0);
+			}
 			if(info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM)
 			{
 				CHIAKI_LOGI(decoder->log, "AMediaCodec reported EOS");
