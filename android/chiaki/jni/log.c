@@ -68,6 +68,10 @@ static void log_cb_android_file(ChiakiLogLevel level, const char *msg, void *use
 	}
 	fwrite(msg, strlen(msg), 1, f);
 	fwrite("\n", 1, 1, f);
+	// Flushed on every line (not just at fclose()) so a user reading this file
+	// from in-app Settings mid-session -- no adb, can't tail it -- sees
+	// current content instead of whatever's still sitting in stdio's buffer.
+	fflush(f);
 }
 
 ChiakiErrorCode android_chiaki_file_log_init(ChiakiLog *log, uint32_t level, const char *file)

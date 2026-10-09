@@ -315,6 +315,11 @@ export default {
     PsPlusBitrateTitle: 'Bitrate',
     PsPlusBitrateDesc:
       'Set the streaming bitrate for PS Plus cloud streaming (Note: a lower bitrate can help on weaker networks).',
+    PsPlusCopyDebugInfoTitle: 'Copy PS Plus logs',
+    PsPlusCopyDebugInfoDesc:
+      'Copies the native streaming log from your most recent PS Plus session to the clipboard, for reporting a bug.',
+    PsPlusDebugCopyEmpty: 'No PS Plus session has run yet.',
+    PsPlusDebugCopyFailed: 'Could not copy the log.',
     GfnPlaytimeTitle: 'Playtime remaining this month',
     GfnPlaytimeSignedOutDesc:
       'Sign in to see how much playtime is left in your current billing period.',

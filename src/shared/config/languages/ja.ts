@@ -313,6 +313,11 @@ export default {
     PsPlusBitrateTitle: 'ビットレート',
     PsPlusBitrateDesc:
       'PS Plusクラウドストリーミングのビットレートを設定します(注:回線が弱い場合、ビットレートを下げると改善することがあります)。',
+    PsPlusCopyDebugInfoTitle: 'PS Plusのログをコピー',
+    PsPlusCopyDebugInfoDesc:
+      '直前のPS Plusセッションのログをクリップボードにコピーします。不具合報告の際にお使いください。',
+    PsPlusDebugCopyEmpty: 'まだPS Plusのセッションが実行されていません。',
+    PsPlusDebugCopyFailed: 'ログをコピーできませんでした。',
     GfnPlaytimeTitle: '今月の残りプレイ時間',
     GfnPlaytimeSignedOutDesc:
       'サインインすると、今の請求期間内の残りプレイ時間を確認できます。',

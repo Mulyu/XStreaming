@@ -169,6 +169,14 @@ class PsPlusChiakiClient {
     return PsPlusChiakiNative.stopSession();
   }
 
+  // The native chiaki log for the current/most recent session (see
+  // PsPlusModule.kt's debugLogFile() -- overwritten fresh by every
+  // startSession(), flushed after every line). Resolves '' if no session has
+  // ever logged to it yet.
+  getDebugLog(): Promise<string> {
+    return PsPlusChiakiNative?.getDebugLog?.() ?? Promise.resolve('');
+  }
+
   setControllerState(state: ControllerStateInput): void {
     PsPlusChiakiNative?.setControllerState?.(state);
   }

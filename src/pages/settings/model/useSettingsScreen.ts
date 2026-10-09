@@ -25,6 +25,7 @@ import {
   isPsPlusSignedIn,
   clearNpsso,
   clearCatalogGames,
+  psPlusChiaki,
 } from '../../../features/ps-plus-session';
 import {getValidGfnJwt, getValidGfnUserId} from '../../../entities/gfn-account';
 import {
@@ -403,6 +404,26 @@ export function useSettingsScreen(navigation: any) {
       });
   };
 
+  // Debug aid for the still-fragile PS Plus background/resume path -- most
+  // users can't pull a logcat capture, so this is the only way they can hand
+  // over the native chiaki log for a report. See PsPlusModule.kt's
+  // debugLogFile()/getDebugLog() for what this actually reads.
+  const handleCopyPsPlusDebugInfo = () => {
+    psPlusChiaki
+      .getDebugLog()
+      .then(debugLog => {
+        if (!debugLog) {
+          ToastAndroid.show(t('PsPlusDebugCopyEmpty'), ToastAndroid.SHORT);
+          return;
+        }
+        Clipboard.setString(debugLog);
+        ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
+      })
+      .catch(() => {
+        ToastAndroid.show(t('PsPlusDebugCopyFailed'), ToastAndroid.SHORT);
+      });
+  };
+
   const gfnCatalogDescription = (): string => {
     if (!gfnSignedIn) {
       return t('CatalogStatusSignInFirst');
@@ -557,6 +578,7 @@ export function useSettingsScreen(navigation: any) {
     onItemPress: handleItemPress,
     onGfnAccountPress: handleGfnAccountPress,
     onCopyGfnDebugInfo: handleCopyGfnDebugInfo,
+    onCopyPsPlusDebugInfo: handleCopyPsPlusDebugInfo,
     onPsPlusAccountPress: handlePsPlusAccountPress,
     onXcloudAccountPress: handleXcloudAccountPress,
     onXcloudCatalogReload: handleXcloudCatalogReload,
