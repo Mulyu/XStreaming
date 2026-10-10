@@ -28,15 +28,17 @@ typedef struct android_chiaki_video_decoder_t
 	// codec" branch -- never the live AMediaCodec_setOutputSurface() hot-swap
 	// just above it) knows it has no prior reference-frame state. A fresh
 	// AMediaCodec can't decode a P/B-frame referencing frames it never saw,
-	// so android_chiaki_video_decoder_video_sample() discards exactly one
-	// sample and reports failure instead of queuing it -- see its own
-	// comment and chiaki/session.h's video_sample_cb doc ("On false, a
-	// corrupt frame will be reported to get a new keyframe"), which is the
-	// existing, already-wired mechanism this reuses to make the PS5 resync
-	// with a fresh keyframe. On its own this is still not enough -- see
-	// set_surface()'s own header_buf/header_buf_size parameters for the
-	// other half (the fresh AMediaCodec has no CSD at all until those are
-	// fed to it, so even a successful resync has nothing to decode with).
+	// so android_chiaki_video_decoder_video_sample() discards every sample
+	// that isn't a keyframe (per its own is_keyframe parameter -- see
+	// chiaki/session.h's ChiakiVideoSampleCallback doc) and reports failure
+	// instead of queuing it, until the keyframe this itself asks for (see
+	// chiaki/session.h's video_sample_cb doc, "On false, a corrupt frame
+	// will be reported to get a new keyframe") actually arrives, then queues
+	// that one normally instead of discarding it too. On its own this is
+	// still not enough -- see set_surface()'s own header_buf/header_buf_size
+	// parameters for the other half (the fresh AMediaCodec has no CSD at all
+	// until those are fed to it, so even a successful resync has nothing to
+	// decode with).
 	bool needs_keyframe;
 	// Gates the "Received video data, but decoder is not initialized!" log in
 	// android_chiaki_video_decoder_video_sample() to once per offline period
@@ -66,6 +68,6 @@ void android_chiaki_video_decoder_fini(AndroidChiakiVideoDecoder *decoder);
 // NULL/0 if the caller has no header yet (e.g. the very first ever
 // set_surface() call, before any video has streamed at all).
 void android_chiaki_video_decoder_set_surface(AndroidChiakiVideoDecoder *decoder, JNIEnv *env, jobject surface, const uint8_t *header_buf, size_t header_buf_size);
-bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, void *user);
+bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, bool is_keyframe, void *user);
 
 #endif

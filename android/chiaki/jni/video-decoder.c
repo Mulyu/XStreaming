@@ -253,7 +253,7 @@ beach:
 	chiaki_mutex_unlock(&decoder->codec_mutex);
 }
 
-bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, void *user)
+bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, bool is_keyframe, void *user)
 {
 	bool r = true;
 	AndroidChiakiVideoDecoder *decoder = user;
@@ -300,15 +300,27 @@ bool android_chiaki_video_decoder_video_sample(uint8_t *buf, size_t buf_size, in
 	{
 		// This decoder was just (re-)created from scratch (e.g. after the app
 		// backgrounded and foregrounded again) and has no reference-frame
-		// history, so this sample -- almost certainly a P/B-frame the PS5 sent
-		// assuming decode continuity -- can't be decoded correctly. Discard it
-		// and report failure instead of queuing it: see video-decoder.h's own
-		// comment on this flag for why that's enough to make chiaki-lib
-		// request a fresh keyframe from the PS5 on its own.
+		// history, so it can't decode a P/B-frame referencing frames it never
+		// saw. Keep discarding (and reporting failure, which is what makes
+		// chiaki-lib ask the PS5 for a fresh keyframe in the first place --
+		// see video-decoder.h's own comment on this flag) samples until the
+		// is_keyframe one actually arrives, however many non-keyframe samples
+		// that takes -- confirmed in the wild that blindly discarding only
+		// the first sample can discard the very keyframe this is waiting for
+		// (if the PS5 answers the very first corrupt-frame report with it),
+		// leaving the decoder with literally nothing to ever resync from:
+		// it keeps accepting every later P-frame's queueInputBuffer() call
+		// without error, yet never produces a single decoded output frame
+		// again, because none of them have any valid reference to decode
+		// from -- a permanently black video with no further errors logged.
+		if(!is_keyframe)
+		{
+			CHIAKI_LOGI(decoder->log, "Discarding non-keyframe sample after decoder restart, still waiting for a keyframe");
+			r = false;
+			goto beach;
+		}
 		decoder->needs_keyframe = false;
-		CHIAKI_LOGI(decoder->log, "Discarding first sample after decoder restart, requesting keyframe");
-		r = false;
-		goto beach;
+		CHIAKI_LOGI(decoder->log, "Received keyframe after decoder restart -- queuing it instead of discarding");
 	}
 
 	r = queue_samples_locked(decoder, buf, buf_size);

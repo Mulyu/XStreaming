@@ -208,9 +208,16 @@ typedef void (*ChiakiEventCallback)(ChiakiEvent *event, void *user);
 
 /**
  * buf will always have an allocated padding of at least CHIAKI_VIDEO_BUFFER_PADDING_SIZE after buf_size
+ * @param is_keyframe whether this sample is a decoder-independent keyframe (I-slice), already
+ *        classified by chiaki_bitstream_slice() -- a platform decoder that discards samples after
+ *        being torn down and recreated (e.g. losing reference-frame state across a backgrounded
+ *        app) needs this to recognize the keyframe it asked for via a false return below, rather
+ *        than blindly discarding a fixed number of samples and possibly discarding that keyframe
+ *        itself, leaving the decoder with nothing to ever resync from. True for the header replayed
+ *        on a profile switch (config, not a captured slice, but keyframe-equivalent).
  * @return whether the sample was successfully pushed into the decoder. On false, a corrupt frame will be reported to get a new keyframe.
  */
-typedef bool (*ChiakiVideoSampleCallback)(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, void *user);
+typedef bool (*ChiakiVideoSampleCallback)(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, bool is_keyframe, void *user);
 
 
 
