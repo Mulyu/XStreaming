@@ -133,7 +133,7 @@ CHIAKI_EXPORT void chiaki_video_receiver_av_packet(ChiakiVideoReceiver *video_re
 		ChiakiVideoProfile *profile = video_receiver->profiles + video_receiver->profile_cur;
 		CHIAKI_LOGI(video_receiver->log, "Switched to profile %d, resolution: %ux%u", video_receiver->profile_cur, profile->width, profile->height);
 		if(video_receiver->session->video_sample_cb)
-			video_receiver->session->video_sample_cb(profile->header, profile->header_sz, 0, false, video_receiver->session->video_sample_cb_user);
+			video_receiver->session->video_sample_cb(profile->header, profile->header_sz, 0, false, true, video_receiver->session->video_sample_cb_user);
 		if(!chiaki_bitstream_header(&video_receiver->bitstream, profile->header, profile->header_sz))
 			CHIAKI_LOGW(video_receiver->log, "Failed to parse video header");
 	}
@@ -209,7 +209,11 @@ static ChiakiErrorCode chiaki_video_receiver_flush_frame(ChiakiVideoReceiver *vi
 	bool succ = flush_result != CHIAKI_FRAME_PROCESSOR_FLUSH_RESULT_FEC_FAILED;
 	bool recovered = false;
 
-	ChiakiBitstreamSlice slice;
+	// Zero-initialized (not just left uninitialized) so slice.slice_type is a
+	// well-defined CHIAKI_BITSTREAM_SLICE_UNKNOWN (used below, at the
+	// video_sample_cb call and the "Added reference" log either way) even if
+	// chiaki_bitstream_slice() fails to parse this frame.
+	ChiakiBitstreamSlice slice = {0};
 	if(chiaki_bitstream_slice(&video_receiver->bitstream, frame, frame_size, &slice))
 	{
 		if(slice.slice_type == CHIAKI_BITSTREAM_SLICE_P)
@@ -244,7 +248,8 @@ static ChiakiErrorCode chiaki_video_receiver_flush_frame(ChiakiVideoReceiver *vi
 
 	if(succ && video_receiver->session->video_sample_cb)
 	{
-		bool cb_succ = video_receiver->session->video_sample_cb(frame, frame_size, video_receiver->frames_lost, recovered, video_receiver->session->video_sample_cb_user);
+		bool is_keyframe = slice.slice_type == CHIAKI_BITSTREAM_SLICE_I;
+		bool cb_succ = video_receiver->session->video_sample_cb(frame, frame_size, video_receiver->frames_lost, recovered, is_keyframe, video_receiver->session->video_sample_cb_user);
 		video_receiver->cumulative_frames_lost += (uint64_t)video_receiver->frames_lost;
 		video_receiver->frames_lost = 0;
 		if(!cb_succ)

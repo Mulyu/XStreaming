@@ -113,9 +113,13 @@ CHIAKI_EXPORT void chiaki_ffmpeg_decoder_fini(ChiakiFfmpegDecoder *decoder)
 	chiaki_mutex_fini(&decoder->mutex);
 }
 
-CHIAKI_EXPORT bool chiaki_ffmpeg_decoder_video_sample_cb(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, void *user)
+CHIAKI_EXPORT bool chiaki_ffmpeg_decoder_video_sample_cb(uint8_t *buf, size_t buf_size, int32_t frames_lost, bool frame_recovered, bool is_keyframe, void *user)
 {
 	ChiakiFfmpegDecoder *decoder = user;
+	// ffmpeg's own decoder recognizes keyframes from the bitstream itself
+	// (unlike the Android MediaCodec path, which has no equivalent signal
+	// and needs is_keyframe passed in explicitly -- see session.h's doc).
+	(void)is_keyframe;
 
 	chiaki_mutex_lock(&decoder->mutex);
 	decoder->frames_lost += frames_lost;
