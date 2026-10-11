@@ -2,7 +2,7 @@ import React from 'react';
 import {View, StyleSheet, TextInput, Pressable} from 'react-native';
 import {Text, Button, Icon, ActivityIndicator} from 'react-native-paper';
 import {PsPlusStreamView as NativePsPlusStreamView} from '../../../features/ps-plus-session';
-import {VirtualGamepad} from '../../../entities/gamepad';
+import {VirtualGamepad, ButtonView} from '../../../entities/gamepad';
 import {CustomVirtualGamepad} from '../../../features/controller-customization';
 import {VirtualGamepadEditor} from '../../../widgets/virtual-gamepad-editor';
 import PsPlusControlRail from './PsPlusControlRail';
@@ -156,6 +156,12 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
                 {...swipeAimProps}
               />
             ))}
+          <ButtonView
+            style={styles.touchpadBtn}
+            buttonName="control_button_touchpad"
+            onPressIn={() => onPressIn('Touchpad')}
+            onPressOut={() => onPressOut('Touchpad')}
+          />
           <Pressable
             style={[
               styles.settingsBtn,
@@ -258,6 +264,21 @@ const styles = StyleSheet.create({
     // regardless of JSX order, so this needs to explicitly beat that to avoid
     // losing touches to the free analog stick's full-half-screen catcher
     // underneath it.
+    zIndex: 20,
+  },
+  // PS5 controller's touchpad-click button -- rendered as its own sibling
+  // (not inside VirtualGamepad/CustomVirtualGamepad, which are shared with
+  // every other streaming provider's Xbox-shaped layout and have no
+  // touchpad concept) so it shows regardless of which gamepad layout the
+  // user has active. Positioned opposite the settings cog for the same
+  // reason that one sits top-right: clear of both analog-stick catchers.
+  touchpadBtn: {
+    position: 'absolute',
+    left: 10,
+    top: 10,
+    width: 34,
+    height: 34,
+    opacity: 0.7,
     zIndex: 20,
   },
   video: {

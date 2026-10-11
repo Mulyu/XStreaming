@@ -28,6 +28,7 @@ const BUTTON_MAP: Array<[string, number]> = [
   ['DPadLeft', ControllerButton.DPAD_LEFT],
   ['DPadRight', ControllerButton.DPAD_RIGHT],
   ['Nexus', ControllerButton.PS],
+  ['Touchpad', ControllerButton.TOUCHPAD],
 ];
 
 const num = (v: any): number => (typeof v === 'number' && isFinite(v) ? v : 0);
