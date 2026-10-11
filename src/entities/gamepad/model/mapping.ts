@@ -16,6 +16,14 @@ export const GAMEPAD_MAPING = {
   Menu: 108,
   View: 109,
   Nexus: 110,
+  // KEYCODE_BUTTON_C (98) -- unused by every other entry above and the exact
+  // keycode ControllerHandler.java already checks for
+  // (dev.hasKeys(KeyEvent.KEYCODE_BUTTON_C)) to detect a DualShock 4's
+  // touchpad-click button, on the devices/drivers that surface it as a
+  // normal SOURCE_GAMEPAD key at all (some report it only via a separate
+  // SOURCE_TOUCHPAD input device instead, which this simple keycode mapping
+  // can't reach).
+  Touchpad: 98,
 };
 
 export const XBOX_360_GAMEPAD_MAPING = {

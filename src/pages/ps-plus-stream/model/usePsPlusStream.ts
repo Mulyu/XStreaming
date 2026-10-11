@@ -73,8 +73,15 @@ const VIDEO_FORMAT_OPTIONS = [
 // key-code mapping.
 const buildKeyMap = (): Record<number, string> => {
   const custom = getSettings().native_gamepad_maping;
+  // Merge rather than replace outright -- a custom mapping saved before a
+  // new default button (e.g. Touchpad) existed would otherwise silently
+  // lose that button forever, since it has no key for it at all and this
+  // screen's own remap UI doesn't offer every GAMEPAD_MAPING entry (see
+  // native-game-map's fixed buttonLabels list).
   const source =
-    custom && Object.keys(custom).length > 0 ? custom : GAMEPAD_MAPING;
+    custom && Object.keys(custom).length > 0
+      ? {...GAMEPAD_MAPING, ...custom}
+      : GAMEPAD_MAPING;
   const map: Record<number, string> = {};
   for (const [name, code] of Object.entries(source)) {
     map[code as number] = name;
@@ -185,6 +192,7 @@ const createGpState = () => ({
   DPadLeft: 0,
   DPadRight: 0,
   Nexus: 0,
+  Touchpad: 0,
   LeftTrigger: 0,
   RightTrigger: 0,
   LeftThumbXAxis: 0,
