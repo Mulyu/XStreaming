@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   settingsBtn: {
     position: 'absolute',
     right: 10,
-    top: 10,
+    bottom: 10,
     width: 34,
     height: 34,
     borderRadius: 17,
@@ -271,11 +271,11 @@ const styles = StyleSheet.create({
   // every other streaming provider's Xbox-shaped layout and have no
   // touchpad concept) so it shows regardless of which gamepad layout the
   // user has active. Positioned opposite the settings cog for the same
-  // reason that one sits top-right: clear of both analog-stick catchers.
+  // reason that one sits bottom-right: clear of both analog-stick catchers.
   touchpadBtn: {
     position: 'absolute',
     left: 10,
-    top: 10,
+    bottom: 10,
     width: 34,
     height: 34,
     opacity: 0.7,
