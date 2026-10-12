@@ -55,6 +55,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   canAddShortcut,
   addXcloudShortcut,
   addGfnShortcut,
+  addPsPlusShortcut,
   openStore,
 }) => {
   // One useTVFocus() per always-rendered-at-most-once Pressable below (the
@@ -70,6 +71,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const gfnShortcutFocus = useTVFocus();
   const psplusRowFocus = useTVFocus();
   const psplusStoreLinkFocus = useTVFocus();
+  const psplusShortcutFocus = useTVFocus();
   const [focusedVariantKey, setFocusedVariantKey] = React.useState<
     string | null
   >(null);
@@ -589,6 +591,24 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                         onFocus={psplusStoreLinkFocus.onFocus}
                         onBlur={psplusStoreLinkFocus.onBlur}>
                         <Icon source="open-in-new" size={16} color="#8A9A92" />
+                      </Pressable>
+                    )}
+                    {canAddShortcut && (
+                      <Pressable
+                        style={[
+                          styles.storeLinkBtn,
+                          psplusShortcutFocus.focused && tvFocusRing,
+                        ]}
+                        hitSlop={8}
+                        accessibilityLabel={t('Add to desktop')}
+                        onPress={addPsPlusShortcut}
+                        onFocus={psplusShortcutFocus.onFocus}
+                        onBlur={psplusShortcutFocus.onBlur}>
+                        <Icon
+                          source="plus-box-outline"
+                          size={16}
+                          color="#8A9A92"
+                        />
                       </Pressable>
                     )}
                     <Icon source="chevron-right" size={18} color="#8A9A92" />

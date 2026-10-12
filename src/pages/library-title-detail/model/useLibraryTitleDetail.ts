@@ -270,6 +270,13 @@ export function useLibraryTitleDetail() {
     });
   };
 
+  const addPsPlusShortcut = () => {
+    if (!catalogTitle.psplus?.raw) {
+      return;
+    }
+    addShortcut({provider: 'psplus', game: catalogTitle.psplus.raw});
+  };
+
   const openStore = (url: string) =>
     Linking.openURL(url).catch(() => {
       Alert.alert(t('Warning'), t('StoreLinkOpenFailed'));
@@ -303,6 +310,7 @@ export function useLibraryTitleDetail() {
     canAddShortcut,
     addXcloudShortcut,
     addGfnShortcut,
+    addPsPlusShortcut,
     openStore,
   };
 }

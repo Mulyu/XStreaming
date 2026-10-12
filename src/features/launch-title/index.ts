@@ -11,7 +11,9 @@ export {
   getTitleProductId,
   getTitleStreamingId,
   saveTitleShortcutSnapshot,
+  savePsPlusTitleShortcutSnapshot,
   findTitleByProductId,
+  findPsPlusGameByProductId,
   buildShortcutRequest,
   requestTitleShortcut,
 } from './model/shortcut';

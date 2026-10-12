@@ -39,6 +39,7 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
     private static final String EXTRA_ICON_URL = "iconUrl";
     private static final String PROVIDER_XCLOUD = "xcloud";
     private static final String PROVIDER_GFN = "gfn";
+    private static final String PROVIDER_PSPLUS = "psplus";
     private static final int SHORTCUT_ICON_SIZE_PX = 288;
 
     private final ReactApplicationContext reactContext;
@@ -95,6 +96,14 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
         if (PROVIDER_GFN.equals(provider)) {
             intent.putExtra(EXTRA_GFN_APP_ID, gfnAppId);
             intent.putExtra(EXTRA_GFN_STORE, getString(options, EXTRA_GFN_STORE));
+        } else if (PROVIDER_PSPLUS.equals(provider)) {
+            // PS Plus carries only its productId here -- like xCloud (and
+            // unlike GFN), the rest of what's needed to relaunch (service
+            // type, platform, entitlement, ...) is more than fits comfortably
+            // as Intent extras, so the JS side resolves the full CloudGame via
+            // its own persisted snapshot at open time (see
+            // features/launch-title/model/shortcut.ts).
+            intent.putExtra(EXTRA_PRODUCT_ID, productId);
         } else {
             intent.putExtra(EXTRA_PRODUCT_ID, productId);
             intent.putExtra(EXTRA_TITLE_ID, getString(options, EXTRA_TITLE_ID));
@@ -102,11 +111,16 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-        // Provider-prefixed so an xCloud title and a GFN title that happen to
+        // Provider-prefixed so titles from different providers that happen to
         // share an id (different stores, different id spaces) never collide.
-        final String shortcutId = PROVIDER_GFN.equals(provider)
-                ? "title-detail-gfn-" + gfnAppId
-                : "title-detail-xcloud-" + productId;
+        final String shortcutId;
+        if (PROVIDER_GFN.equals(provider)) {
+            shortcutId = "title-detail-gfn-" + gfnAppId;
+        } else if (PROVIDER_PSPLUS.equals(provider)) {
+            shortcutId = "title-detail-psplus-" + productId;
+        } else {
+            shortcutId = "title-detail-xcloud-" + productId;
+        }
         final String label = titleName;
         final String iconUrl = getString(options, EXTRA_ICON_URL);
         final android.content.pm.ShortcutManager manager = shortcutManager;
@@ -242,6 +256,12 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
             }
             params.putString(EXTRA_GFN_APP_ID, gfnAppId);
             params.putString(EXTRA_GFN_STORE, intent.getStringExtra(EXTRA_GFN_STORE));
+        } else if (PROVIDER_PSPLUS.equals(provider)) {
+            String productId = intent.getStringExtra(EXTRA_PRODUCT_ID);
+            if (TextUtils.isEmpty(productId)) {
+                return null;
+            }
+            params.putString(EXTRA_PRODUCT_ID, productId);
         } else {
             String productId = intent.getStringExtra(EXTRA_PRODUCT_ID);
             if (TextUtils.isEmpty(productId)) {

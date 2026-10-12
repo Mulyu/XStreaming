@@ -36,6 +36,7 @@ import store from './shared/lib/reduxStore';
 import {getSettings} from './shared/lib/settings';
 import {
   findTitleByProductId,
+  findPsPlusGameByProductId,
   getTitleStreamingId,
 } from './features/launch-title';
 import {normalizeTitle, recordTitlePlayed} from './entities/catalog-title';
@@ -214,6 +215,7 @@ function App() {
   const openTitleShortcut = React.useCallback(
     (shortcut: any) => {
       const isGfn = shortcut?.provider === 'gfn';
+      const isPsPlus = shortcut?.provider === 'psplus';
       if (!isGfn && !shortcut?.productId) {
         return;
       }
@@ -237,6 +239,31 @@ function App() {
           streamType: 'gfn',
           appId: shortcut.gfnAppId,
           title: shortcut.titleName,
+        });
+        return;
+      }
+
+      if (isPsPlus) {
+        const game = findPsPlusGameByProductId(shortcut.productId);
+        if (!game) {
+          Alert.alert(t('Warning'), t('TitleShortcutExpired'));
+          return;
+        }
+        if (game.name) {
+          recordTitlePlayed(normalizeTitle(game.name));
+        }
+        // Same params ps-plus-library's own onSelectGame and
+        // launchWithProvider's normal (non-shortcut) PS Plus launch path
+        // already use for this screen -- see features/launch-title/model/
+        // launchCatalogTitle.ts.
+        navigationRef.navigate('PsPlusStream', {
+          productId: game.productId,
+          name: game.name,
+          serviceType: game.streamServiceType === 'psnow' ? 'psnow' : 'pscloud',
+          streamIdentifier: game.streamIdentifier,
+          platform: game.platform,
+          isOwned: game.isOwned,
+          entitlementId: game.entitlementId,
         });
         return;
       }

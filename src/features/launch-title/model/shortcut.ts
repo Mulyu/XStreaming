@@ -2,6 +2,10 @@ import {storage} from '../../../shared/lib/mmkv';
 import {getXcloudData} from '../../../entities/catalog-title';
 
 const STORE_KEY = 'user.titleShortcuts';
+// Separate from xCloud's own STORE_KEY (not just a different id namespace
+// within it) so a productId format collision between an Xbox title and a PS
+// Plus CloudGame can never overwrite the other provider's snapshot.
+const PSPLUS_STORE_KEY = 'user.psplus.titleShortcuts';
 
 const normalizeId = (value: any) => {
   return typeof value === 'string' ? value.trim() : '';
@@ -17,8 +21,8 @@ export const getTitleStreamingId = (titleItem: any) => {
   return normalizeId(titleItem?.titleId || titleItem?.XCloudTitleId);
 };
 
-const readShortcutTitleMap = () => {
-  const data = storage.getString(STORE_KEY);
+const readSnapshotMap = (storeKey: string) => {
+  const data = storage.getString(storeKey);
   if (!data) {
     return {};
   }
@@ -30,16 +34,33 @@ const readShortcutTitleMap = () => {
   }
 };
 
-export const saveTitleShortcutSnapshot = (titleItem: any) => {
-  const productId = getTitleProductId(titleItem);
+const saveSnapshotToStore = (
+  storeKey: string,
+  productId: string,
+  value: any,
+) => {
   if (!productId) {
     return;
   }
 
-  const titleMap = readShortcutTitleMap();
-  titleMap[productId] = titleItem;
-  titleMap[productId.toUpperCase()] = titleItem;
-  storage.set(STORE_KEY, JSON.stringify(titleMap));
+  const map = readSnapshotMap(storeKey);
+  map[productId] = value;
+  map[productId.toUpperCase()] = value;
+  storage.set(storeKey, JSON.stringify(map));
+};
+
+export const saveTitleShortcutSnapshot = (titleItem: any) => {
+  saveSnapshotToStore(STORE_KEY, getTitleProductId(titleItem), titleItem);
+};
+
+// PS Plus's CloudGame object is already everything PsPlusStream needs to
+// relaunch (unlike xCloud's raw title, nothing has to be freshly refetched
+// off it), so -- like xCloud, and unlike GFN, which needs no lookup at all --
+// this is the sole source of truth at open time; there's no separate "live
+// catalog cache" helper for PS Plus the way getXcloudData() is for xCloud
+// that features/launch-title could reach without a layering violation.
+export const savePsPlusTitleShortcutSnapshot = (game: any) => {
+  saveSnapshotToStore(PSPLUS_STORE_KEY, getTitleProductId(game), game);
 };
 
 const findTitleInMap = (titleMap: any, productId: string) => {
@@ -78,8 +99,16 @@ export const findTitleByProductId = (productId: any) => {
     return titleFromCache;
   }
 
-  const shortcutTitleMap = readShortcutTitleMap();
-  return findTitleInMap(shortcutTitleMap, safeProductId);
+  return findTitleInMap(readSnapshotMap(STORE_KEY), safeProductId);
+};
+
+export const findPsPlusGameByProductId = (productId: any) => {
+  const safeProductId = normalizeId(productId);
+  if (!safeProductId) {
+    return null;
+  }
+
+  return findTitleInMap(readSnapshotMap(PSPLUS_STORE_KEY), safeProductId);
 };
 
 // ---- Provider-agnostic "add to home screen" request ----
@@ -94,6 +123,7 @@ export const findTitleByProductId = (productId: any) => {
 // NativeStream only ever needed {appId, title} to start streaming.
 export type TitleShortcutSnapshot =
   | {provider: 'xcloud'; titleItem: any}
+  | {provider: 'psplus'; game: any}
   | {
       provider: 'gfn';
       appId: string;
@@ -119,6 +149,21 @@ export const buildShortcutRequest = (snapshot: TitleShortcutSnapshot) => {
       gfnStore: snapshot.store,
       titleName: snapshot.title,
       iconUrl: snapshot.imageUrl || '',
+    };
+  }
+
+  if (snapshot.provider === 'psplus') {
+    savePsPlusTitleShortcutSnapshot(snapshot.game);
+    const productId = getTitleProductId(snapshot.game);
+    return {
+      provider: 'psplus',
+      productId,
+      titleName: snapshot.game?.name || productId,
+      // Unlike xCloud's Image_Poster.URL, CloudGame.imageUrl is already a
+      // full absolute URL (see entities/catalog-title's psplus builders) --
+      // xcloudIconUrl()'s "https:" prefix would double up into a broken
+      // "https://https://..." URL here, so this is passed through as-is.
+      iconUrl: snapshot.game?.imageUrl || '',
     };
   }
 
