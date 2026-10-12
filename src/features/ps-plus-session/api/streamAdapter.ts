@@ -27,7 +27,18 @@ const BUTTON_MAP: Array<[string, number]> = [
   ['DPadDown', ControllerButton.DPAD_DOWN],
   ['DPadLeft', ControllerButton.DPAD_LEFT],
   ['DPadRight', ControllerButton.DPAD_RIGHT],
-  ['Nexus', ControllerButton.PS],
+  // Standalone PS/Share presses don't do anything during an active PS Plus
+  // cloud session (Sony's backend has no OS shell to show for an ephemeral
+  // single-game session -- see usePsPlusStream's OPTIONS+SHARE chord, this
+  // app's own workaround for a real system menu), so the Nexus button
+  // VirtualGamepad/CustomVirtualGamepad already render in that spot is
+  // otherwise dead for this provider. Repurposed to fire a touchpad click
+  // instead of ControllerButton.PS, which both actually does something and
+  // means PS Plus needs no dedicated touchpad button of its own in the
+  // layout -- physical controllers with a separate touchpad-click key
+  // (KEYCODE_BUTTON_C, see entities/gamepad's GAMEPAD_MAPING) land on the
+  // same bit via the 'Touchpad' gpState field below.
+  ['Nexus', ControllerButton.TOUCHPAD],
   ['Touchpad', ControllerButton.TOUCHPAD],
 ];
 

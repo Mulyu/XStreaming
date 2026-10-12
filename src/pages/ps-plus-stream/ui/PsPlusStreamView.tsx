@@ -1,8 +1,8 @@
 import React from 'react';
-import {View, StyleSheet, TextInput, Pressable} from 'react-native';
-import {Text, Button, Icon, ActivityIndicator} from 'react-native-paper';
+import {View, StyleSheet, TextInput} from 'react-native';
+import {Text, Button, IconButton, ActivityIndicator} from 'react-native-paper';
 import {PsPlusStreamView as NativePsPlusStreamView} from '../../../features/ps-plus-session';
-import {VirtualGamepad, ButtonView} from '../../../entities/gamepad';
+import {VirtualGamepad} from '../../../entities/gamepad';
 import {CustomVirtualGamepad} from '../../../features/controller-customization';
 import {VirtualGamepadEditor} from '../../../widgets/virtual-gamepad-editor';
 import PsPlusControlRail from './PsPlusControlRail';
@@ -156,22 +156,16 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
                 {...swipeAimProps}
               />
             ))}
-          <ButtonView
-            style={styles.touchpadBtn}
-            buttonName="control_button_touchpad"
-            onPressIn={() => onPressIn('Touchpad')}
-            onPressOut={() => onPressOut('Touchpad')}
-          />
-          <Pressable
-            style={[
-              styles.settingsBtn,
-              settingsBtnFocus.focused && tvFocusRing,
-            ]}
-            onPress={onOpenControlRail}
-            onFocus={settingsBtnFocus.onFocus}
-            onBlur={settingsBtnFocus.onBlur}>
-            <Icon source="cog-outline" size={18} color="#fff" />
-          </Pressable>
+          <View style={styles.quickMenu}>
+            <IconButton
+              icon="menu"
+              size={28}
+              onPress={onOpenControlRail}
+              onFocus={settingsBtnFocus.onFocus}
+              onBlur={settingsBtnFocus.onBlur}
+              style={settingsBtnFocus.focused && tvFocusRing}
+            />
+          </View>
         </>
       )}
 
@@ -250,36 +244,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  settingsBtn: {
+  // Matches native-stream's own quickMenu exactly (see
+  // pages/native-stream/index.tsx) -- same control-rail-open button, same
+  // position and icon, so the two providers' in-stream UI don't diverge.
+  quickMenu: {
     position: 'absolute',
-    right: 10,
-    bottom: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    // VirtualGamepad's own wrapping View sits at zIndex 9 (see its styles.wrap)
-    // regardless of JSX order, so this needs to explicitly beat that to avoid
-    // losing touches to the free analog stick's full-half-screen catcher
-    // underneath it.
-    zIndex: 20,
-  },
-  // PS5 controller's touchpad-click button -- rendered as its own sibling
-  // (not inside VirtualGamepad/CustomVirtualGamepad, which are shared with
-  // every other streaming provider's Xbox-shaped layout and have no
-  // touchpad concept) so it shows regardless of which gamepad layout the
-  // user has active. Positioned opposite the settings cog for the same
-  // reason that one sits bottom-right: clear of both analog-stick catchers.
-  touchpadBtn: {
-    position: 'absolute',
-    left: 10,
-    bottom: 10,
-    width: 34,
-    height: 34,
-    opacity: 0.7,
-    zIndex: 20,
+    right: 5,
+    bottom: 5,
+    zIndex: 99,
   },
   video: {
     flex: 1,
