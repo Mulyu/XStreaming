@@ -417,6 +417,17 @@ export function NativeStreamScreenBase({
   );
 
   React.useEffect(() => {
+    // A TV's display is physically fixed landscape -- locking orientation
+    // (to either portrait or landscape) doesn't rotate anything there, it
+    // just tells Android this Activity "wants" a specific aspect ratio,
+    // which some Android TV/Google TV launchers honor by letterboxing the
+    // whole app into a small portrait-shaped window inside the TV screen
+    // instead of filling it. None of this orientation-lock dance is needed
+    // on TV in the first place (there's no rotating device to protect the
+    // rest of the phone-oriented app from), so skip it entirely.
+    if (Platform.isTV) {
+      return;
+    }
     let layoutTimer: any = null;
     const lockTimer = setTimeout(() => {
       if (portraitMode) {
@@ -746,7 +757,12 @@ export function NativeStreamScreenBase({
   const finishStreamExit = React.useCallback(() => {
     setIsExiting(false);
     setLoading(false);
-    Orientation.lockToPortrait();
+    // See the mount effect's own comment -- skip on TV, where this would
+    // letterbox the app into a small portrait-shaped window instead of the
+    // full landscape screen.
+    if (!Platform.isTV) {
+      Orientation.lockToPortrait();
+    }
     FullScreenManager.immersiveModeOff();
     if (getStreamDestination() === 'Library') {
       navigation.navigate('Main', {
@@ -1401,7 +1417,9 @@ export function NativeStreamScreenBase({
               setLoadingText(t('Disconnecting...'));
               setIsExiting(true);
               webrtcClient && webrtcClient.close();
-              Orientation.lockToPortrait();
+              if (!Platform.isTV) {
+                Orientation.lockToPortrait();
+              }
               await waitStopStream(_streamApi);
               finishStreamExit();
             },
@@ -2074,7 +2092,9 @@ export function NativeStreamScreenBase({
                   text: t('Confirm'),
                   style: 'default',
                   onPress: () => {
-                    Orientation.lockToPortrait();
+                    if (!Platform.isTV) {
+                      Orientation.lockToPortrait();
+                    }
                     if (route.params?.streamType === 'cloud') {
                       navigation.navigate('Main', {screen: 'Library'});
                     } else {
