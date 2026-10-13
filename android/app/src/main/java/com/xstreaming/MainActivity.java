@@ -513,15 +513,24 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
       float yaxis = motionEvent.getAxisValue(MotionEvent.AXIS_HAT_Y);
       List<Integer> pressedDirections = new ArrayList<>();
 
-      if (Float.compare(xaxis, -1.0f) == 0) {
+      // AXIS_HAT_X/Y are nominally -1/0/1, but that's not guaranteed for
+      // every controller's Bluetooth HID driver -- a hat switch that isn't
+      // perfectly centered/calibrated can report something like -0.86
+      // instead of exactly -1.0 for one specific direction, which the
+      // previous exact-equality check would simply never match (reported
+      // symptom: a Bluetooth controller's D-pad Left silently not
+      // responding in a PS Plus stream while the other directions worked).
+      // A signed threshold is strictly more tolerant than exact equality
+      // and still can't trigger two directions on the same axis at once.
+      if (xaxis <= -0.5f) {
         pressedDirections.add(KeyEvent.KEYCODE_DPAD_LEFT);
-      } else if (Float.compare(xaxis, 1.0f) == 0) {
+      } else if (xaxis >= 0.5f) {
         pressedDirections.add(KeyEvent.KEYCODE_DPAD_RIGHT);
       }
 
-      if (Float.compare(yaxis, -1.0f) == 0) {
+      if (yaxis <= -0.5f) {
         pressedDirections.add(KeyEvent.KEYCODE_DPAD_UP);
-      } else if (Float.compare(yaxis, 1.0f) == 0) {
+      } else if (yaxis >= 0.5f) {
         pressedDirections.add(KeyEvent.KEYCODE_DPAD_DOWN);
       }
 
