@@ -30,6 +30,12 @@ public class AnalogStickView extends CustomView {
     private Vector center;
     private Vector handlePosition = new Vector(0f, 0f);
     private GestureDetector doubleTapDetector;
+    // Set true on the double-tap that clicks the stick in, cleared when the
+    // finger that confirmed it finally lifts (see updateState's position==null
+    // branch) -- so a double-tap-and-hold-then-drag keeps L3/R3 held down for
+    // the whole drag, not just a 50ms blip, while a plain double-tap-and-release
+    // still reads as a quick click since that lift happens almost immediately.
+    private boolean stickPressed = false;
 
     public interface StateChangedCallback {
         void onStateChanged(Vector state);
@@ -114,7 +120,8 @@ public class AnalogStickView extends CustomView {
         doubleTapDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDoubleTap(MotionEvent e) {
-                sendPressEventToReactNative();
+                stickPressed = true;
+                sendPressEventToReactNative(true);
                 return true;
             }
         });
@@ -170,13 +177,15 @@ public class AnalogStickView extends CustomView {
         }
     }
 
-    private void sendPressEventToReactNative() {
+    private void sendPressEventToReactNative(boolean pressed) {
         if (getContext() instanceof ReactContext) {
             ReactContext reactContext = (ReactContext) getContext();
+            WritableMap event = Arguments.createMap();
+            event.putBoolean("pressed", pressed);
             reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
                     getId(),
                     "onAnalogStickPress",
-                    Arguments.createMap()
+                    event
             );
         }
     }
@@ -223,6 +232,10 @@ public class AnalogStickView extends CustomView {
             setState(new Vector(0f, 0f));
             handlePosition = new Vector(0f, 0f);
             invalidate();
+            if (stickPressed) {
+                stickPressed = false;
+                sendPressEventToReactNative(false);
+            }
             return;
         }
 
