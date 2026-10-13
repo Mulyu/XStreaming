@@ -58,6 +58,7 @@ const SettingsView: React.FC<Props> = ({
   onGfnAccountPress,
   onCopyGfnDebugInfo,
   onCopyPsPlusDebugInfo,
+  onCopyAppDebugInfo,
   onPsPlusAccountPress,
   onXcloudAccountPress,
   onXcloudCatalogReload,
@@ -170,6 +171,13 @@ const SettingsView: React.FC<Props> = ({
             title={t('HistoryTitle')}
             description={`${t('HistoryDesc')}`}
             onPress={onNavigateHistory}
+          />
+
+          <SectionLabel title={t('SectionDebug')} />
+          <SettingItem
+            title={t('AppCopyDebugInfoTitle')}
+            description={t('AppCopyDebugInfoDesc')}
+            onPress={onCopyAppDebugInfo}
           />
 
           <View style={styles.version}>

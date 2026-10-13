@@ -318,6 +318,11 @@ export default {
       '直前のPS Plusセッションのログをクリップボードにコピーします。不具合報告の際にお使いください。',
     PsPlusDebugCopyEmpty: 'まだPS Plusのセッションが実行されていません。',
     PsPlusDebugCopyFailed: 'ログをコピーできませんでした。',
+    AppCopyDebugInfoTitle: 'アプリのログをコピー',
+    AppCopyDebugInfoDesc:
+      'アプリのバックグラウンド/フォアグラウンド復帰や画面遷移などの直近のログをクリップボードにコピーします。不具合報告の際にお使いください。',
+    AppDebugCopyEmpty: 'まだログが記録されていません。',
+    AppDebugCopyFailed: 'ログをコピーできませんでした。',
     GfnPlaytimeTitle: '今月の残りプレイ時間',
     GfnPlaytimeSignedOutDesc:
       'サインインすると、今の請求期間内の残りプレイ時間を確認できます。',
