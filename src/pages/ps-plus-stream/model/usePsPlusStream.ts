@@ -67,21 +67,24 @@ const VIDEO_FORMAT_OPTIONS = [
   '4:3',
 ];
 
-// keyCode -> button name, same convention native-stream's own gpMaping uses:
-// the user's saved custom mapping (shared across every streaming provider,
-// including this one) if they set one, else the stock Android gamepad
-// key-code mapping.
-const buildKeyMap = (): Record<number, string> => {
+// button name -> keyCode: the user's saved custom mapping (shared across
+// every streaming provider, including this one) if they set one, else the
+// stock Android gamepad key-code mapping.
+const buildGamepadMapping = (): Record<string, number> => {
   const custom = getSettings().native_gamepad_maping;
   // Merge rather than replace outright -- a custom mapping saved before a
   // new default button (e.g. Touchpad) existed would otherwise silently
   // lose that button forever, since it has no key for it at all and this
   // screen's own remap UI doesn't offer every GAMEPAD_MAPING entry (see
   // native-game-map's fixed buttonLabels list).
-  const source =
-    custom && Object.keys(custom).length > 0
-      ? {...GAMEPAD_MAPING, ...custom}
-      : GAMEPAD_MAPING;
+  return custom && Object.keys(custom).length > 0
+    ? {...GAMEPAD_MAPING, ...custom}
+    : GAMEPAD_MAPING;
+};
+
+// keyCode -> button name, same convention native-stream's own gpMaping uses.
+const buildKeyMap = (): Record<number, string> => {
+  const source = buildGamepadMapping();
   const map: Record<number, string> = {};
   for (const [name, code] of Object.entries(source)) {
     map[code as number] = name;
@@ -808,14 +811,23 @@ export function usePsPlusStream(navigation: any, route: any) {
   // so both input sources compose for free.
   React.useEffect(() => {
     const keyMap = buildKeyMap();
+    const gamepadMapping = buildGamepadMapping();
     const eventEmitter = new NativeEventEmitter();
 
     const applyDpad = (pressedKeys: number[]) => {
+      // Was reading getSettings().native_gamepad_maping directly here,
+      // which (unlike buildGamepadMapping()/buildKeyMap() above) has no
+      // GAMEPAD_MAPING fallback -- for any user who never visited the
+      // remap screen (native_gamepad_maping unset), every direction's code
+      // was undefined and this silently never touched gpState at all. A
+      // Bluetooth controller reporting D-pad via hat-axis motion (this
+      // path) rather than discrete key events (onGamepadKeyDown below,
+      // unaffected -- it already goes through keyMap) would see that
+      // direction simply never respond.
       const active = new Set(pressedKeys ?? []);
-      const mapping = getSettings().native_gamepad_maping;
       (['DPadUp', 'DPadDown', 'DPadLeft', 'DPadRight'] as const).forEach(
         direction => {
-          const code = mapping?.[direction];
+          const code = gamepadMapping[direction];
           const name = code !== undefined ? keyMap[code] : undefined;
           if (name && code !== undefined) {
             (gpState.current as any)[name] = active.has(code) ? 1 : 0;
