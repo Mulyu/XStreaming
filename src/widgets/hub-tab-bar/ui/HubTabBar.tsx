@@ -3,7 +3,7 @@ import {View, Pressable, StyleSheet, DeviceEventEmitter} from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
-import {tvFocusRing} from '../../../shared/ui/tvFocus';
+import {TV_FOCUS_COLOR} from '../../../shared/ui/tvFocus';
 
 const ACCENT = '#2FD24B';
 
@@ -88,7 +88,7 @@ function HubTabBar({state, navigation}: any) {
               setFocusedKey(prev => (prev === route.key ? null : prev))
             }
             android_ripple={{color: 'rgba(150,150,150,0.15)', borderless: true}}
-            style={[styles.tab, focusedKey === route.key && tvFocusRing]}
+            style={[styles.tab, focusedKey === route.key && styles.tabFocused]}
             accessibilityRole="button"
             accessibilityState={isActive ? {selected: true} : {}}
             accessibilityLabel={t(meta.labelKey)}>
@@ -119,7 +119,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
-    paddingVertical: 2,
+    paddingVertical: 4,
+    marginHorizontal: 3,
+    borderRadius: 12,
+    // Constant width (transparent, not absent) so gaining the focus ring
+    // never shifts this tab's size the way adding a border from nothing
+    // would.
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  // A ring alone read as weak here next to the game grid's border+scale+glow
+  // treatment -- see Google TV's focus-system guide's Color indication
+  // (background/content color shift), combined with the existing outline,
+  // the same way this app's own filterChipOn/sortChipOn already shift a
+  // chip's background to show "selected".
+  tabFocused: {
+    borderColor: TV_FOCUS_COLOR,
+    backgroundColor: 'rgba(255,213,74,0.14)',
   },
   label: {
     fontSize: 10.5,

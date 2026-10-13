@@ -15,7 +15,11 @@ import {
   isCatalogTitleOwned,
 } from '../../../entities/catalog-title';
 import type {LibraryScreenViewModel} from '../model/useLibraryScreen';
-import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {
+  useTVFocus,
+  tvFocusRing,
+  TV_FOCUS_COLOR,
+} from '../../../shared/ui/tvFocus';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
@@ -71,6 +75,7 @@ const LibraryView: React.FC<Props> = ({
   const ownedOnlyChipFocus = useTVFocus();
   const onSaleChipFocus = useTVFocus();
   const sortChipFocus = useTVFocus();
+  const searchFocus = useTVFocus();
   const [focusedSortOption, setFocusedSortOption] = React.useState<
     string | null
   >(null);
@@ -198,14 +203,24 @@ const LibraryView: React.FC<Props> = ({
             <ActivityIndicator size={12} color="#8A9A92" />
           )}
         </View>
-        <View style={styles.searchBox}>
-          <Icon source="magnify" size={18} color="#8A9A92" />
+        <View
+          style={[
+            styles.searchBox,
+            searchFocus.focused && styles.searchBoxFocused,
+          ]}>
+          <Icon
+            source="magnify"
+            size={18}
+            color={searchFocus.focused ? TV_FOCUS_COLOR : '#8A9A92'}
+          />
           <TextInput
             value={keyword}
             onChangeText={setKeyword}
             placeholder={t('Search')}
             placeholderTextColor="#8A9A92"
             style={styles.searchInput}
+            onFocus={searchFocus.onFocus}
+            onBlur={searchFocus.onBlur}
           />
         </View>
         <View style={styles.filterRow}>
@@ -415,8 +430,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     backgroundColor: 'rgba(140,140,150,0.14)',
-    borderWidth: 1,
+    // Constant width (only the color changes on focus) so gaining a focus
+    // ring never shifts this box's size the way the 1px->2px jump on the
+    // filter chips below does.
+    borderWidth: 2,
     borderColor: 'rgba(140,140,150,0.24)',
+  },
+  // TextInput has no onPress, so this was invisible to
+  // scripts/check-tv-focus.js's static check and had no focus indicator at
+  // all until this -- see Google TV's focus-system guide's Outline + Color
+  // indications (developer.android.com/design/ui/tv/guides/styles/focus-system).
+  searchBoxFocused: {
+    borderColor: TV_FOCUS_COLOR,
+    backgroundColor: 'rgba(255,213,74,0.1)',
   },
   searchInput: {flex: 1, padding: 0, fontSize: 14, color: '#E6ECE8'},
   filterRow: {position: 'relative'},
@@ -477,8 +503,19 @@ const styles = StyleSheet.create({
   cell: {padding: 4},
   // Raises the whole cell (and the card's focus scale-up inside it) above
   // its row siblings, so the popped-out tile never paints underneath the
-  // next one over.
-  cellFocused: {zIndex: 10},
+  // next one over. The glow itself also lives here rather than on `card`
+  // below: `card` has overflow:hidden (to clip the cover art to its rounded
+  // corners), which would clip a shadow drawn on that same view away to
+  // nothing -- see Google TV's focus-system guide's "glow commonly used on
+  // cards" (elevation-style diffused glow, 2dp-32dp).
+  cellFocused: {
+    zIndex: 10,
+    shadowColor: TV_FOCUS_COLOR,
+    shadowOffset: {width: 0, height: 0},
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 10,
+  },
   // Square-cropped tile: the card IS the art, badges/title overlay on top of
   // it so more titles fit on screen at once (was a 16:10 card + text footer).
   card: {
