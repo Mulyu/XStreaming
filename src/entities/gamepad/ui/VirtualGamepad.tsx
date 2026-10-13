@@ -54,11 +54,16 @@ const VirtualGamepad: React.FC<Props> = ({
   };
 
   // Double-tapping a stick clicks it in, same as the dedicated L3/R3 button
-  // (control_button_left/right_joystick_down above) -- a quick press+release
-  // so turbo/hold-toggle/vibration on that button name all still apply.
-  const handleStickPress = (name: string) => {
-    handlePressIn(name);
-    setTimeout(() => handlePressOut(name), 50);
+  // (control_button_left/right_joystick_down above) -- held for as long as
+  // the double-tap's finger stays down, so turbo/hold-toggle/vibration on
+  // that button name all still apply, and dragging the stick while still
+  // holding keeps L3/R3 pressed for the whole drag instead of a 50ms blip.
+  const handleStickPress = (name: string, pressed: boolean) => {
+    if (pressed) {
+      handlePressIn(name);
+    } else {
+      handlePressOut(name);
+    }
   };
 
   const {width, height} = Dimensions.get('window');
@@ -208,7 +213,9 @@ const VirtualGamepad: React.FC<Props> = ({
             radius={140}
             handleRadius={80}
             onStickChange={(data: any) => handleStickMove('left', data)}
-            onStickPress={() => handleStickPress('LeftThumb')}
+            onStickPress={(pressed: boolean) =>
+              handleStickPress('LeftThumb', pressed)
+            }
           />
         </View>
       ) : null}
@@ -223,7 +230,9 @@ const VirtualGamepad: React.FC<Props> = ({
             radius={150}
             handleRadius={100}
             onStickChange={(data: any) => handleStickMove('right', data)}
-            onStickPress={() => handleStickPress('RightThumb')}
+            onStickPress={(pressed: boolean) =>
+              handleStickPress('RightThumb', pressed)
+            }
           />
         </View>
       ) : null}
@@ -235,7 +244,9 @@ const VirtualGamepad: React.FC<Props> = ({
             radius={140}
             handleRadius={80}
             onStickChange={(data: any) => handleStickMove('left', data)}
-            onStickPress={() => handleStickPress('LeftThumb')}
+            onStickPress={(pressed: boolean) =>
+              handleStickPress('LeftThumb', pressed)
+            }
           />
         </View>
       ) : null}
@@ -247,7 +258,9 @@ const VirtualGamepad: React.FC<Props> = ({
             radius={150}
             handleRadius={100}
             onStickChange={(data: any) => handleStickMove('right', data)}
-            onStickPress={() => handleStickPress('RightThumb')}
+            onStickPress={(pressed: boolean) =>
+              handleStickPress('RightThumb', pressed)
+            }
           />
         </View>
       ) : null}
