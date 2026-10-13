@@ -30,6 +30,7 @@ import android.os.IBinder;
 import android.app.Service;
 import android.content.ServiceConnection;
 import android.view.WindowManager;
+import android.view.ViewConfiguration;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -159,6 +160,36 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     long now = SystemClock.uptimeMillis();
     dispatchKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0));
     dispatchKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0));
+  }
+
+  // D-pad Down long-press -> jump focus straight to the bottom tab bar, on
+  // the same non-streaming screens the stick-focus navigation above targets
+  // (Library/Store/Settings). Catalog grids there can run to many rows on
+  // TV's 5-column layout (see useLibraryScreen.ts's maxColumns), and nothing
+  // short-circuits the one-row-per-press D-pad descent all the way down to
+  // the tab bar -- this adds a standard long-press gesture as that shortcut,
+  // without touching ordinary single-press navigation at all: the initial
+  // short press always behaves exactly as before (never consumed here), and
+  // this only fires extra behavior if the key is still held once the OS's
+  // own long-press timeout elapses.
+  private final Handler dpadDownLongPressHandler = new Handler(Looper.getMainLooper());
+  private Runnable dpadDownLongPressRunnable;
+
+  private void armDpadDownLongPress() {
+    disarmDpadDownLongPress();
+    dpadDownLongPressRunnable = () -> {
+      dpadDownLongPressRunnable = null;
+      sendEvent("onDpadDownLongPress", null);
+    };
+    dpadDownLongPressHandler.postDelayed(
+            dpadDownLongPressRunnable, ViewConfiguration.getLongPressTimeout());
+  }
+
+  private void disarmDpadDownLongPress() {
+    if (dpadDownLongPressRunnable != null) {
+      dpadDownLongPressHandler.removeCallbacks(dpadDownLongPressRunnable);
+      dpadDownLongPressRunnable = null;
+    }
   }
 
   private void resetStickFocusNavigation() {
@@ -387,6 +418,9 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
 //    Log.d("MainActivity1", "currentScreen:" + currentScreen);
 
     if (!currentScreen.equals("stream")) {
+      if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && event.getRepeatCount() == 0) {
+        armDpadDownLongPress();
+      }
       return super.onKeyDown(keyCode, event);
     }
     if (SdlGamepadManager.isActive() && SdlGamepadManager.handleKeyEvent(event)) {
@@ -408,6 +442,9 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     String currentScreen = GamepadManager.getCurrentScreen();
 
     if (!currentScreen.equals("stream")) {
+      if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+        disarmDpadDownLongPress();
+      }
       return super.onKeyUp(keyCode, event);
     }
     if (SdlGamepadManager.isActive() && SdlGamepadManager.handleKeyEvent(event)) {
@@ -759,6 +796,7 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
       inputManager.unregisterInputDeviceListener(this);
     }
     resetStickFocusNavigation();
+    disarmDpadDownLongPress();
     super.onPause();
   }
 
