@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Pressable, StyleSheet} from 'react-native';
+import {View, Pressable, StyleSheet, DeviceEventEmitter} from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
@@ -27,6 +27,23 @@ function HubTabBar({state, navigation}: any) {
   // Only a handful of tabs ever render -- a focused-key is simpler here than
   // extracting a per-tab sub-component (see tvFocus.ts's own doc comment).
   const [focusedKey, setFocusedKey] = React.useState<string | null>(null);
+  const tabRefs = React.useRef<Record<string, any>>({});
+
+  // Holding D-pad Down on a non-streaming screen (Library/Store/Settings)
+  // jumps focus straight here instead of requiring one Down-press per row of
+  // whatever's above (see MainActivity.java's armDpadDownLongPress -- this
+  // bar is the one thing that persists across those screens, so it's the
+  // natural place for the single listener). Lands on the currently active
+  // tab, not always the first one, so a repeat press naturally continues
+  // wherever the user already was.
+  React.useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('onDpadDownLongPress', () => {
+      const activeRoute = state.routes[state.index];
+      const ref = activeRoute && tabRefs.current[activeRoute.key];
+      ref?.focus?.();
+    });
+    return () => sub.remove();
+  }, [state]);
 
   return (
     <View
@@ -62,6 +79,9 @@ function HubTabBar({state, navigation}: any) {
         return (
           <Pressable
             key={route.key}
+            ref={r => {
+              tabRefs.current[route.key] = r;
+            }}
             onPress={onPress}
             onFocus={() => setFocusedKey(route.key)}
             onBlur={() =>
