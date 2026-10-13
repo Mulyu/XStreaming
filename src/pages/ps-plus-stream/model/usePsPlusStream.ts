@@ -397,9 +397,19 @@ export function usePsPlusStream(navigation: any, route: any) {
 
   React.useEffect(() => {
     FullScreenManager.immersiveModeOn();
-    Orientation.lockToLandscape();
+    // A TV's display is physically fixed landscape -- locking orientation
+    // doesn't rotate anything there, it just tells Android this Activity
+    // "wants" a specific aspect ratio, which some Android TV/Google TV
+    // launchers honor by letterboxing the app into a small portrait-shaped
+    // window inside the TV screen on the way back out (see native-stream's
+    // own identical fix). Skip the lock/re-lock dance entirely on TV.
+    if (!Platform.isTV) {
+      Orientation.lockToLandscape();
+    }
     return () => {
-      Orientation.lockToPortrait();
+      if (!Platform.isTV) {
+        Orientation.lockToPortrait();
+      }
       FullScreenManager.immersiveModeOff();
     };
   }, []);
