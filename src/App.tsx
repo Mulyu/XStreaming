@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Alert,
+  AppState,
   DeviceEventEmitter,
   Linking,
   NativeModules,
@@ -40,6 +41,7 @@ import {
   getTitleStreamingId,
 } from './features/launch-title';
 import {normalizeTitle, recordTitlePlayed} from './entities/catalog-title';
+import {appDebugLog} from './shared/lib/appDebugLog';
 
 import customDarkTheme from './shared/config/theme';
 
@@ -193,6 +195,22 @@ function App() {
     status: 'idle',
     totalBytes: 0,
   });
+
+  // Lands in the same shared log/timeline as MainActivity's own
+  // onCreate/onResume/onPause/onDestroy calls to AppDebugLog.log() -- see
+  // shared/lib/appDebugLog.ts's own comment on why this exists (diagnosing
+  // reports like the Home/Library screen occasionally coming back black
+  // after the app is backgrounded and resumed, which isn't specific to any
+  // one screen or streaming provider and so has nowhere else to log to).
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      appDebugLog('AppState', `change -> ${nextState}`);
+    });
+    appDebugLog('AppState', `initial -> ${AppState.currentState}`);
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   React.useEffect(() => {
     const subscription = DeviceEventEmitter.addListener(

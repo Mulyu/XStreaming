@@ -28,6 +28,7 @@ import {
   psPlusChiaki,
 } from '../../../features/ps-plus-session';
 import {getValidGfnJwt, getValidGfnUserId} from '../../../entities/gfn-account';
+import {getAppDebugLog} from '../../../shared/lib/appDebugLog';
 import {
   fetchGfnSubscription,
   fetchGfnVpcId,
@@ -424,6 +425,25 @@ export function useSettingsScreen(navigation: any) {
       });
   };
 
+  // Debug aid for reports that aren't specific to any one streaming provider,
+  // e.g. the Home/Library screen occasionally coming back black after the app
+  // is backgrounded and resumed -- see shared/lib/appDebugLog.ts for what this
+  // actually reads (app/Activity lifecycle events, not a streaming session).
+  const handleCopyAppDebugInfo = () => {
+    getAppDebugLog()
+      .then(debugLog => {
+        if (!debugLog) {
+          ToastAndroid.show(t('AppDebugCopyEmpty'), ToastAndroid.SHORT);
+          return;
+        }
+        Clipboard.setString(debugLog);
+        ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
+      })
+      .catch(() => {
+        ToastAndroid.show(t('AppDebugCopyFailed'), ToastAndroid.SHORT);
+      });
+  };
+
   const gfnCatalogDescription = (): string => {
     if (!gfnSignedIn) {
       return t('CatalogStatusSignInFirst');
@@ -579,6 +599,7 @@ export function useSettingsScreen(navigation: any) {
     onGfnAccountPress: handleGfnAccountPress,
     onCopyGfnDebugInfo: handleCopyGfnDebugInfo,
     onCopyPsPlusDebugInfo: handleCopyPsPlusDebugInfo,
+    onCopyAppDebugInfo: handleCopyAppDebugInfo,
     onPsPlusAccountPress: handlePsPlusAccountPress,
     onXcloudAccountPress: handleXcloudAccountPress,
     onXcloudCatalogReload: handleXcloudCatalogReload,

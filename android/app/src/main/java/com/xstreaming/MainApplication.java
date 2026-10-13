@@ -56,6 +56,7 @@ public class MainApplication extends Application implements ReactApplication {
             packages.add(new ShortcutManagerPackage());
             packages.add(new CoverDisplayPackage());
             packages.add(new PsPlusPackage());
+            packages.add(new AppDebugLogPackage());
           return packages;
         }
 

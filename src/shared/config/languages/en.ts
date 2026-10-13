@@ -320,6 +320,11 @@ export default {
       'Copies the native streaming log from your most recent PS Plus session to the clipboard, for reporting a bug.',
     PsPlusDebugCopyEmpty: 'No PS Plus session has run yet.',
     PsPlusDebugCopyFailed: 'Could not copy the log.',
+    AppCopyDebugInfoTitle: 'Copy app debug log',
+    AppCopyDebugInfoDesc:
+      'Copies a log of recent app foreground/background and screen activity to the clipboard, for reporting a bug (e.g. a black screen after resuming from the background).',
+    AppDebugCopyEmpty: 'No log recorded yet.',
+    AppDebugCopyFailed: 'Could not copy the log.',
     GfnPlaytimeTitle: 'Playtime remaining this month',
     GfnPlaytimeSignedOutDesc:
       'Sign in to see how much playtime is left in your current billing period.',

@@ -755,6 +755,8 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(null);
+    AppDebugLog.log(this, "Activity", "onCreate (savedInstanceState="
+            + (savedInstanceState != null) + ")");
 
     instance = this;
 
@@ -783,6 +785,7 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
   @Override
   protected void onResume() {
     super.onResume();
+    AppDebugLog.log(this, "Activity", "onResume");
 
     if (inputManager != null) {
       inputManager.registerInputDeviceListener(this, null);
@@ -801,12 +804,25 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
 
   @Override
   protected void onPause() {
+    AppDebugLog.log(this, "Activity", "onPause");
     if (inputManager != null) {
       inputManager.unregisterInputDeviceListener(this);
     }
     resetStickFocusNavigation();
     disarmDpadDownLongPress();
     super.onPause();
+  }
+
+  @Override
+  protected void onDestroy() {
+    // Distinguishes "the Activity was actually torn down" (process killed
+    // by the OS while backgrounded, a config change it doesn't already
+    // handle, etc.) from a plain pause/resume cycle -- onCreate firing again
+    // without a matching onDestroy in between would instead mean something
+    // more surprising happened. See AppDebugLog's own comment for why this
+    // trail exists at all.
+    AppDebugLog.log(this, "Activity", "onDestroy");
+    super.onDestroy();
   }
 
   @Override
