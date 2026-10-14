@@ -10,6 +10,7 @@ import {
   Pressable,
   Modal,
   DeviceEventEmitter,
+  findNodeHandle,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import {Text, Icon, ActivityIndicator} from 'react-native-paper';
@@ -89,6 +90,40 @@ const LibraryView: React.FC<Props> = ({
   // navigation rail proposal this implements).
   const [tvSearchOpen, setTvSearchOpen] = React.useState(false);
 
+  // Cards and sort-menu items are dynamic lists, so unlike the fixed set of
+  // filter/sort chips above they can't each hold their own useTVFocus() call
+  // (hooks can't run inside a loop over a variable-length list) -- instead
+  // one ref per currently-mounted item is kept here, and a single listener
+  // below looks the focus-change event's tag up against whichever map is
+  // relevant and sets the existing focusedKey/focusedSortOption state that
+  // already drove this before onFocus/onBlur were found to be dead on
+  // Android (see shared/ui/tvFocus.ts's own comment for the full story).
+  const cardRefs = React.useRef<Record<string, any>>({});
+  const sortItemRefs = React.useRef<Record<string, any>>({});
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!Platform.isTV) {
+        return;
+      }
+      const sub = DeviceEventEmitter.addListener(
+        'onNativeFocusChange',
+        (event: {tag: number}) => {
+          const cardKey = Object.keys(cardRefs.current).find(
+            key => findNodeHandle(cardRefs.current[key]) === event.tag,
+          );
+          setFocusedKey(cardKey ?? null);
+
+          const sortKey = Object.keys(sortItemRefs.current).find(
+            key => findNodeHandle(sortItemRefs.current[key]) === event.tag,
+          );
+          setFocusedSortOption(sortKey ?? null);
+        },
+      );
+      return () => sub.remove();
+    }, [setFocusedKey]),
+  );
+
   // Google TV's remote mic/voice-search button (MainActivity.java's own
   // onKeyDown -- KEYCODE_SEARCH/VOICE_ASSIST/ASSIST, all three since remotes
   // and launchers vary in which one they actually send) opens this screen's
@@ -130,6 +165,9 @@ const LibraryView: React.FC<Props> = ({
           isFocused && styles.cellFocused,
         ]}>
         <Pressable
+          ref={r => {
+            cardRefs.current[item.key] = r;
+          }}
           style={[styles.card, isFocused && styles.cardFocused]}
           onPress={() => openTitle(item)}
           onLongPress={() => openTitleDetail(item)}
@@ -249,6 +287,7 @@ const LibraryView: React.FC<Props> = ({
         {Platform.isTV ? (
           <>
             <Pressable
+              ref={searchFocus.ref}
               style={[
                 styles.tvSearchIconButton,
                 searchFocus.focused && tvFocusRing,
@@ -281,6 +320,7 @@ const LibraryView: React.FC<Props> = ({
                     autoFocus
                   />
                   <Pressable
+                    ref={tvSearchCloseFocus.ref}
                     style={[
                       styles.tvSearchCloseButton,
                       tvSearchCloseFocus.focused && tvFocusRing,
@@ -321,6 +361,7 @@ const LibraryView: React.FC<Props> = ({
         <View style={styles.filterRow}>
           <View style={styles.chipsRow}>
             <Pressable
+              ref={xcloudChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterXcloud && styles.filterChipOn,
@@ -344,6 +385,7 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
+              ref={gfnChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterGfn && styles.filterChipOn,
@@ -367,6 +409,7 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
+              ref={psPlusChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterPsPlus && styles.filterChipOn,
@@ -390,6 +433,7 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
+              ref={favoriteChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterFavorite && styles.filterChipOn,
@@ -413,6 +457,7 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
+              ref={ownedOnlyChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterOwnedOnly && styles.filterChipOn,
@@ -436,6 +481,7 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
+              ref={onSaleChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterOnSale && styles.filterChipOn,
@@ -460,6 +506,7 @@ const LibraryView: React.FC<Props> = ({
             </Pressable>
 
             <Pressable
+              ref={sortChipFocus.ref}
               style={[
                 styles.sortChip,
                 sortMode !== 'recent' && styles.sortChipOn,
@@ -494,6 +541,9 @@ const LibraryView: React.FC<Props> = ({
               {sortOptions.map(option => (
                 <Pressable
                   key={option.value}
+                  ref={r => {
+                    sortItemRefs.current[option.value] = r;
+                  }}
                   style={[
                     styles.sortItem,
                     focusedSortOption === option.value && tvFocusRing,
