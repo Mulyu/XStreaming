@@ -138,84 +138,80 @@ const LibraryView: React.FC<Props> = ({
             setFocusedKey(prev => (prev === item.key ? null : prev))
           }
           android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
-          <View style={styles.cardArt}>
-            {item.imageUrl ? (
-              <Image
-                source={{uri: item.imageUrl}}
-                resizeMode="cover"
-                style={styles.thumb}
-              />
-            ) : (
-              <View style={styles.thumbEmpty}>
-                <Text style={styles.thumbEmptyText} numberOfLines={3}>
-                  {item.title}
+          {item.imageUrl ? (
+            <Image
+              source={{uri: item.imageUrl}}
+              resizeMode="cover"
+              style={styles.thumb}
+            />
+          ) : (
+            <View style={styles.thumbEmpty}>
+              <Text style={styles.thumbEmptyText} numberOfLines={3}>
+                {item.title}
+              </Text>
+            </View>
+          )}
+
+          {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
+          <View style={styles.bottomScrim} pointerEvents="none" />
+
+          <View style={styles.availOverlay}>
+            {item.xcloud && (
+              <View
+                style={[
+                  styles.availDot,
+                  {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
+                  style={[
+                    styles.availDotText,
+                    !xcloudOwned && {color: DIM_BADGE_TEXT},
+                  ]}>
+                  X
                 </Text>
               </View>
             )}
-
-            {!isPlayable && (
-              <View style={styles.coverDim} pointerEvents="none" />
-            )}
-            <View style={styles.bottomScrim} pointerEvents="none" />
-
-            <View style={styles.availOverlay}>
-              {item.xcloud && (
-                <View
+            {item.gfn && (
+              <View
+                style={[
+                  styles.availDot,
+                  {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
                   style={[
-                    styles.availDot,
-                    {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
+                    styles.availDotText,
+                    !gfnOwned && {color: DIM_BADGE_TEXT},
                   ]}>
-                  <Text
-                    style={[
-                      styles.availDotText,
-                      !xcloudOwned && {color: DIM_BADGE_TEXT},
-                    ]}>
-                    X
-                  </Text>
-                </View>
-              )}
-              {item.gfn && (
-                <View
-                  style={[
-                    styles.availDot,
-                    {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
-                  ]}>
-                  <Text
-                    style={[
-                      styles.availDotText,
-                      !gfnOwned && {color: DIM_BADGE_TEXT},
-                    ]}>
-                    N
-                  </Text>
-                </View>
-              )}
-              {item.psplus && (
-                <View
-                  style={[
-                    styles.availDot,
-                    {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
-                  ]}>
-                  <Text
-                    style={[
-                      styles.availDotText,
-                      !psplusOwned && {color: DIM_BADGE_TEXT},
-                    ]}>
-                    PS
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {discount > 0 && (
-              <View style={styles.saleBadge}>
-                <Text style={styles.saleBadgeText}>-{discount}%</Text>
+                  N
+                </Text>
               </View>
             )}
-
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
+            {item.psplus && (
+              <View
+                style={[
+                  styles.availDot,
+                  {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
+                  style={[
+                    styles.availDotText,
+                    !psplusOwned && {color: DIM_BADGE_TEXT},
+                  ]}>
+                  PS
+                </Text>
+              </View>
+            )}
           </View>
+
+          {discount > 0 && (
+            <View style={styles.saleBadge}>
+              <Text style={styles.saleBadgeText}>-{discount}%</Text>
+            </View>
+          )}
+
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
         </Pressable>
       </View>
     );
@@ -571,16 +567,13 @@ const styles = StyleSheet.create({
   },
   filterRow: {position: 'relative'},
   chipsRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
-  // Constant border width (transparent when neither on nor focused) -- same
-  // technique HubTabBar's phone tab style uses, ported here so the focus
-  // ring (tvFocusRing, also 2px) never changes this chip's own size.
   filterChip: {
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
     backgroundColor: 'rgba(140,140,150,0.14)',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(140,140,150,0.24)',
   },
   filterChipOn: {backgroundColor: XBOX_ACCENT, borderColor: XBOX_ACCENT},
   filterChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
@@ -594,8 +587,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 999,
     backgroundColor: 'rgba(140,140,150,0.14)',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(140,140,150,0.24)',
   },
   sortChipOn: {backgroundColor: NVIDIA_ACCENT, borderColor: NVIDIA_ACCENT},
   sortChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
@@ -641,41 +634,22 @@ const styles = StyleSheet.create({
   },
   // Square-cropped tile: the card IS the art, badges/title overlay on top of
   // it so more titles fit on screen at once (was a 16:10 card + text footer).
-  // On TV, a fixed (not focus-conditional) inset around the artwork gives the
-  // focus ring below a plain mat to sit on instead of landing right on top of
-  // the box art -- image-only tiles otherwise made focus hard to tell apart
-  // from a plain scroll. The inset is always there, so it never reflows the
-  // grid the way `cellFocused`'s old padding/margin halo did.
   card: {
     aspectRatio: 1,
     borderRadius: 10,
-    position: 'relative',
-    backgroundColor: 'rgba(140,140,150,0.14)',
-    padding: Platform.isTV ? 6 : 0,
-  },
-  // The artwork itself, inset within `card`'s mat (or filling it exactly on
-  // phone, where padding is 0) -- this is what actually clips to a rounded
-  // corner; `card` no longer needs overflow:hidden since its border+scale on
-  // focus should render past its own edge, not get clipped by it.
-  cardArt: {
-    flex: 1,
-    borderRadius: Platform.isTV ? 6 : 10,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: 'rgba(140,140,150,0.14)',
   },
   // D-pad/remote focus indicator (Android TV navigates by moving View focus,
   // not touch) -- without this every tile looked identical regardless of
   // which one the remote had actually landed on. `card` has a fixed width
   // (from `cell`'s percentage width, independent of its own border), so a
   // border-width change here doesn't reflow neighboring cells the way
-  // `cellFocused`'s old padding/margin halo did. The background tint on TV
-  // lights up the mat itself (same "color indication" the sidebar's rail
-  // buttons use), not just the image, so the hit is visible even over art
-  // close to the same yellow.
+  // `cellFocused`'s old padding/margin halo did.
   cardFocused: {
     borderWidth: 3,
     borderColor: TV_FOCUS_COLOR,
-    backgroundColor: Platform.isTV ? 'rgba(255,213,74,0.18)' : undefined,
     transform: [{scale: 1.05}],
   },
   thumb: {...StyleSheet.absoluteFillObject},
