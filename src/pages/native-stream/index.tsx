@@ -3514,6 +3514,7 @@ export function NativeStreamScreenBase({
       <StreamControlRail
         visible={showControlRail}
         onClose={handleCloseControlRail}
+        screenHeight={screenHeight}
         streamType={route.params?.streamType}
         connected={connectState === CONNECTED}
         inputMode={inputMode}

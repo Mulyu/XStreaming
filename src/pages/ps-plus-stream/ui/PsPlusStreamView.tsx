@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, StyleSheet, TextInput} from 'react-native';
+import {View, StyleSheet, TextInput, useWindowDimensions} from 'react-native';
 import {Text, Button, IconButton, ActivityIndicator} from 'react-native-paper';
 import {PsPlusStreamView as NativePsPlusStreamView} from '../../../features/ps-plus-session';
 import {VirtualGamepad} from '../../../entities/gamepad';
@@ -71,6 +71,10 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   const closedCloseFocus = useTVFocus();
   const settingsBtnFocus = useTVFocus();
   const confirmPinFocus = useTVFocus();
+  // See PsPlusControlRail's own screenHeight prop comment -- an explicit
+  // height instead of relying on `top: 0` + `bottom: 0` to resolve against
+  // this screen's root container.
+  const {height: screenHeight} = useWindowDimensions();
 
   const swipeAimProps = {
     swipeAimEnabled,
@@ -171,6 +175,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
 
       <PsPlusControlRail
         t={t}
+        screenHeight={screenHeight}
         showControlRail={showControlRail}
         onCloseControlRail={onCloseControlRail}
         vibrationEnabled={vibrationEnabled}

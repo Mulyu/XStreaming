@@ -38,7 +38,13 @@ type Props = Pick<
   | 'coverPresented'
   | 'onToggleCoverControls'
   | 'onRailDisconnect'
->;
+> & {
+  // Explicit screen height (from useWindowDimensions()) -- see
+  // StreamControlRail.tsx's identical prop for why this replaces relying on
+  // `top: 0` + `bottom: 0` to resolve the rail's height from its positioned
+  // ancestor's own flex-resolved size.
+  screenHeight: number;
+};
 
 const RailButton: React.FC<{
   icon: string;
@@ -96,6 +102,7 @@ const SegOption: React.FC<{
 
 const PsPlusControlRail: React.FC<Props> = ({
   t,
+  screenHeight,
   showControlRail,
   onCloseControlRail,
   vibrationEnabled,
@@ -152,6 +159,7 @@ const PsPlusControlRail: React.FC<Props> = ({
       style={[
         styles.rail,
         {
+          height: screenHeight,
           transform: [
             {
               translateX: slideIn.interpolate({
@@ -295,7 +303,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    bottom: 0,
     width: 200,
     backgroundColor: 'rgba(8,11,10,0.92)',
     borderLeftWidth: 1,

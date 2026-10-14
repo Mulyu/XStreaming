@@ -13,6 +13,16 @@ const FOCUS_COLOR = '#FFD54A';
 export interface StreamControlRailProps {
   visible: boolean;
   onClose: () => void;
+  // Explicit screen height (from useWindowDimensions()) rather than relying
+  // on `top: 0` + `bottom: 0` to resolve the rail's height from its
+  // positioned ancestor's own flex-resolved size -- that ancestor is the
+  // stream screen's own root `container` view, several flex:1 levels below
+  // the Activity's decor view, and on Google TV this rail has been reported
+  // rendering as a small box pinned to the bottom-right corner instead of
+  // filling the right edge top-to-bottom, consistent with that chain not
+  // having a resolved height yet when the rail mounts. An explicit height
+  // needs nothing upstream to have resolved.
+  screenHeight: number;
   streamType?: string;
   connected: boolean;
   inputMode: StreamInputMode;
@@ -107,6 +117,7 @@ const SegOption: React.FC<{
 const StreamControlRail: React.FC<StreamControlRailProps> = ({
   visible,
   onClose,
+  screenHeight,
   streamType,
   connected,
   inputMode,
@@ -181,6 +192,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
       style={[
         styles.rail,
         {
+          height: screenHeight,
           transform: [
             {
               translateX: slideIn.interpolate({
@@ -418,7 +430,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    bottom: 0,
     width: 200,
     backgroundColor: 'rgba(8,11,10,0.92)',
     borderLeftWidth: 1,
