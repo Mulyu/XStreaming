@@ -131,8 +131,18 @@ const LibraryView: React.FC<Props> = ({
             </View>
           )}
 
+          {isFocused && Platform.isTV && (
+            <View style={styles.focusImageOverlay} pointerEvents="none" />
+          )}
+
           {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
-          <View style={styles.bottomScrim} pointerEvents="none" />
+          <View
+            style={[
+              styles.bottomScrim,
+              isFocused && Platform.isTV && styles.bottomScrimFocused,
+            ]}
+            pointerEvents="none"
+          />
 
           <View style={styles.availOverlay}>
             {item.xcloud && (
@@ -188,7 +198,12 @@ const LibraryView: React.FC<Props> = ({
             </View>
           )}
 
-          <Text style={styles.cardTitle} numberOfLines={2}>
+          <Text
+            style={[
+              styles.cardTitle,
+              isFocused && Platform.isTV && styles.cardTitleFocused,
+            ]}
+            numberOfLines={2}>
             {item.title}
           </Text>
         </Pressable>
@@ -600,25 +615,43 @@ const styles = StyleSheet.create({
   centreText: {color: '#8A9A92', fontSize: 14},
   list: {paddingHorizontal: 6, paddingBottom: 20},
   cell: {padding: 4},
+  // TEMPORARY on-device diagnostic (see cardTitleFocused/bottomScrimFocused/
+  // focusImageOverlay below too): on real Google TV hardware, focus styling
+  // driven by onFocus/onBlur may simply never apply at all (a separate
+  // investigation found no native event dispatch for Pressable/View's
+  // onFocus/onBlur on Android outside TextInput -- see tvFocus.ts). Rather
+  // than guess which single technique to ship, every independently-plausible
+  // one below is wired up at once, each in its own unmistakable color, so a
+  // real-device test tells us directly which ones actually render instead of
+  // which ones merely look correct on paper. Prune this down to whichever
+  // combination the device confirms once reported back.
+  //
   // Raises the whole cell (and the card's focus scale-up inside it) above
   // its row siblings, so the popped-out tile never paints underneath the
-  // next one over. On TV this also carries the halo: `shadowColor`/
-  // `shadowOpacity`/`shadowRadius` are iOS-only in this RN version (confirmed
-  // against ShadowStyleIOS and BaseViewManager.java -- Android only ever gets
-  // the colorless `elevation` shadow below), so instead of a glow that
-  // doesn't render, extra padding + a tinted background on this wrapper
-  // paints a solid halo around the card -- no blur, so it's identical on
-  // both platforms. `card` itself keeps overflow:hidden (to clip the cover
-  // art to its rounded corners), which would also clip a shadow drawn on
-  // that same view away to nothing, so this has to live on the wrapper
-  // either way.
+  // next one over. On TV this also carries two separate tests: a solid-color
+  // halo (plain backgroundColor, works identically on every platform) and,
+  // layered on the same view, an elevation+shadowColor glow in a different
+  // color -- shadowColor/shadowOpacity/shadowRadius are iOS-only in this RN
+  // version (confirmed against ShadowStyleIOS and BaseViewManager.java), but
+  // `elevation` alone is cross-platform and on API 28+ Android *can* tint it
+  // via outlineAmbientShadowColor/outlineSpotShadowColor, so it's worth
+  // seeing whether any colored fringe shows just past the halo's hard edge.
+  // `card` itself keeps overflow:hidden (to clip the cover art to its
+  // rounded corners), which would also clip a shadow drawn on that same view
+  // away to nothing, so both of these have to live on this wrapper either
+  // way.
   cellFocused: Platform.isTV
     ? {
         zIndex: 10,
         padding: 11,
         margin: -7,
         borderRadius: 17,
-        backgroundColor: 'rgba(255,213,74,0.22)',
+        backgroundColor: 'rgba(34,211,238,0.35)', // halo test: cyan
+        shadowColor: '#FFA500', // glow test: amber (expect nothing pre-API28)
+        shadowOffset: {width: 0, height: 0},
+        shadowOpacity: 0.85,
+        shadowRadius: 14,
+        elevation: 14,
       }
     : {
         zIndex: 10,
@@ -639,12 +672,20 @@ const styles = StyleSheet.create({
   },
   // D-pad/remote focus indicator (Android TV navigates by moving View focus,
   // not touch) -- without this every tile looked identical regardless of
-  // which one the remote had actually landed on. Bigger border + scale on TV
-  // (near Google TV's focus-system guide's upper end -- phones never drive
-  // this by remote, so their own values stay as they were).
+  // which one the remote had actually landed on. Border test: red on TV
+  // (distinct from every other color here). Scale isn't a color, but a
+  // visible size change is its own useful signal either way (phones never
+  // drive this by remote, so their own values stay as they were).
   cardFocused: Platform.isTV
-    ? {borderWidth: 4, borderColor: TV_FOCUS_COLOR, transform: [{scale: 1.08}]}
+    ? {borderWidth: 5, borderColor: '#FF3B30', transform: [{scale: 1.08}]}
     : {borderWidth: 3, borderColor: '#FFD54A', transform: [{scale: 1.045}]},
+  // Image-overlay test: a plain translucent View on top of the cover art --
+  // the most basic possible style change (backgroundColor on an ordinary
+  // View), in magenta so it can't be confused with any other test here.
+  focusImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,0,170,0.32)',
+  },
   thumb: {...StyleSheet.absoluteFillObject},
   thumbEmpty: {
     ...StyleSheet.absoluteFillObject,
@@ -671,6 +712,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: '28%',
     backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  // Scrim-color test: orange, in the same slot the scrim always occupies --
+  // tests a backgroundColor change on a view that (unlike focusImageOverlay)
+  // already exists unconditionally rather than being freshly mounted.
+  bottomScrimFocused: {
+    backgroundColor: 'rgba(255,138,0,0.55)',
   },
   availOverlay: {
     position: 'absolute',
@@ -708,6 +755,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 3,
+  },
+  // Text-color test: lime -- tests a Text color change specifically, since
+  // that's a different native code path from any of the View-based tests
+  // above.
+  cardTitleFocused: {
+    color: '#C6FF00',
   },
 });
 
