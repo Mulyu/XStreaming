@@ -10,7 +10,6 @@ import {
   Pressable,
   Modal,
   DeviceEventEmitter,
-  findNodeHandle,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import {Text, Icon, ActivityIndicator} from 'react-native-paper';
@@ -90,40 +89,6 @@ const LibraryView: React.FC<Props> = ({
   // navigation rail proposal this implements).
   const [tvSearchOpen, setTvSearchOpen] = React.useState(false);
 
-  // Cards and sort-menu items are dynamic lists, so unlike the fixed set of
-  // filter/sort chips above they can't each hold their own useTVFocus() call
-  // (hooks can't run inside a loop over a variable-length list) -- instead
-  // one ref per currently-mounted item is kept here, and a single listener
-  // below looks the focus-change event's tag up against whichever map is
-  // relevant and sets the existing focusedKey/focusedSortOption state that
-  // already drove this before onFocus/onBlur were found to be dead on
-  // Android (see shared/ui/tvFocus.ts's own comment for the full story).
-  const cardRefs = React.useRef<Record<string, any>>({});
-  const sortItemRefs = React.useRef<Record<string, any>>({});
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!Platform.isTV) {
-        return;
-      }
-      const sub = DeviceEventEmitter.addListener(
-        'onNativeFocusChange',
-        (event: {tag: number}) => {
-          const cardKey = Object.keys(cardRefs.current).find(
-            key => findNodeHandle(cardRefs.current[key]) === event.tag,
-          );
-          setFocusedKey(cardKey ?? null);
-
-          const sortKey = Object.keys(sortItemRefs.current).find(
-            key => findNodeHandle(sortItemRefs.current[key]) === event.tag,
-          );
-          setFocusedSortOption(sortKey ?? null);
-        },
-      );
-      return () => sub.remove();
-    }, [setFocusedKey]),
-  );
-
   // Google TV's remote mic/voice-search button (MainActivity.java's own
   // onKeyDown -- KEYCODE_SEARCH/VOICE_ASSIST/ASSIST, all three since remotes
   // and launchers vary in which one they actually send) opens this screen's
@@ -165,9 +130,6 @@ const LibraryView: React.FC<Props> = ({
           isFocused && styles.cellFocused,
         ]}>
         <Pressable
-          ref={r => {
-            cardRefs.current[item.key] = r;
-          }}
           style={[styles.card, isFocused && styles.cardFocused]}
           onPress={() => openTitle(item)}
           onLongPress={() => openTitleDetail(item)}
@@ -176,80 +138,84 @@ const LibraryView: React.FC<Props> = ({
             setFocusedKey(prev => (prev === item.key ? null : prev))
           }
           android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
-          {item.imageUrl ? (
-            <Image
-              source={{uri: item.imageUrl}}
-              resizeMode="cover"
-              style={styles.thumb}
-            />
-          ) : (
-            <View style={styles.thumbEmpty}>
-              <Text style={styles.thumbEmptyText} numberOfLines={3}>
-                {item.title}
-              </Text>
+          <View style={styles.cardArt}>
+            {item.imageUrl ? (
+              <Image
+                source={{uri: item.imageUrl}}
+                resizeMode="cover"
+                style={styles.thumb}
+              />
+            ) : (
+              <View style={styles.thumbEmpty}>
+                <Text style={styles.thumbEmptyText} numberOfLines={3}>
+                  {item.title}
+                </Text>
+              </View>
+            )}
+
+            {!isPlayable && (
+              <View style={styles.coverDim} pointerEvents="none" />
+            )}
+            <View style={styles.bottomScrim} pointerEvents="none" />
+
+            <View style={styles.availOverlay}>
+              {item.xcloud && (
+                <View
+                  style={[
+                    styles.availDot,
+                    {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
+                  ]}>
+                  <Text
+                    style={[
+                      styles.availDotText,
+                      !xcloudOwned && {color: DIM_BADGE_TEXT},
+                    ]}>
+                    X
+                  </Text>
+                </View>
+              )}
+              {item.gfn && (
+                <View
+                  style={[
+                    styles.availDot,
+                    {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
+                  ]}>
+                  <Text
+                    style={[
+                      styles.availDotText,
+                      !gfnOwned && {color: DIM_BADGE_TEXT},
+                    ]}>
+                    N
+                  </Text>
+                </View>
+              )}
+              {item.psplus && (
+                <View
+                  style={[
+                    styles.availDot,
+                    {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
+                  ]}>
+                  <Text
+                    style={[
+                      styles.availDotText,
+                      !psplusOwned && {color: DIM_BADGE_TEXT},
+                    ]}>
+                    PS
+                  </Text>
+                </View>
+              )}
             </View>
-          )}
 
-          {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
-          <View style={styles.bottomScrim} pointerEvents="none" />
+            {discount > 0 && (
+              <View style={styles.saleBadge}>
+                <Text style={styles.saleBadgeText}>-{discount}%</Text>
+              </View>
+            )}
 
-          <View style={styles.availOverlay}>
-            {item.xcloud && (
-              <View
-                style={[
-                  styles.availDot,
-                  {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.availDotText,
-                    !xcloudOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  X
-                </Text>
-              </View>
-            )}
-            {item.gfn && (
-              <View
-                style={[
-                  styles.availDot,
-                  {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.availDotText,
-                    !gfnOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  N
-                </Text>
-              </View>
-            )}
-            {item.psplus && (
-              <View
-                style={[
-                  styles.availDot,
-                  {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.availDotText,
-                    !psplusOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  PS
-                </Text>
-              </View>
-            )}
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
           </View>
-
-          {discount > 0 && (
-            <View style={styles.saleBadge}>
-              <Text style={styles.saleBadgeText}>-{discount}%</Text>
-            </View>
-          )}
-
-          <Text style={styles.cardTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
         </Pressable>
       </View>
     );
@@ -272,7 +238,6 @@ const LibraryView: React.FC<Props> = ({
         {Platform.isTV ? (
           <>
             <Pressable
-              ref={searchFocus.ref}
               style={[
                 styles.tvSearchIconButton,
                 searchFocus.focused && tvFocusRing,
@@ -305,7 +270,6 @@ const LibraryView: React.FC<Props> = ({
                     autoFocus
                   />
                   <Pressable
-                    ref={tvSearchCloseFocus.ref}
                     style={[
                       styles.tvSearchCloseButton,
                       tvSearchCloseFocus.focused && tvFocusRing,
@@ -346,7 +310,6 @@ const LibraryView: React.FC<Props> = ({
         <View style={styles.filterRow}>
           <View style={styles.chipsRow}>
             <Pressable
-              ref={xcloudChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterXcloud && styles.filterChipOn,
@@ -364,7 +327,6 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              ref={gfnChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterGfn && styles.filterChipOn,
@@ -382,7 +344,6 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              ref={psPlusChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterPsPlus && styles.filterChipOn,
@@ -400,7 +361,6 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              ref={favoriteChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterFavorite && styles.filterChipOn,
@@ -418,7 +378,6 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              ref={ownedOnlyChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterOwnedOnly && styles.filterChipOn,
@@ -436,7 +395,6 @@ const LibraryView: React.FC<Props> = ({
               </Text>
             </Pressable>
             <Pressable
-              ref={onSaleChipFocus.ref}
               style={[
                 styles.filterChip,
                 filterOnSale && styles.filterChipOn,
@@ -455,7 +413,6 @@ const LibraryView: React.FC<Props> = ({
             </Pressable>
 
             <Pressable
-              ref={sortChipFocus.ref}
               style={[
                 styles.sortChip,
                 sortMode !== 'recent' && styles.sortChipOn,
@@ -484,9 +441,6 @@ const LibraryView: React.FC<Props> = ({
               {sortOptions.map(option => (
                 <Pressable
                   key={option.value}
-                  ref={r => {
-                    sortItemRefs.current[option.value] = r;
-                  }}
                   style={[
                     styles.sortItem,
                     focusedSortOption === option.value && tvFocusRing,
@@ -617,13 +571,16 @@ const styles = StyleSheet.create({
   },
   filterRow: {position: 'relative'},
   chipsRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
+  // Constant border width (transparent when neither on nor focused) -- same
+  // technique HubTabBar's phone tab style uses, ported here so the focus
+  // ring (tvFocusRing, also 2px) never changes this chip's own size.
   filterChip: {
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
     backgroundColor: 'rgba(140,140,150,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   filterChipOn: {backgroundColor: XBOX_ACCENT, borderColor: XBOX_ACCENT},
   filterChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
@@ -637,8 +594,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 999,
     backgroundColor: 'rgba(140,140,150,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   sortChipOn: {backgroundColor: NVIDIA_ACCENT, borderColor: NVIDIA_ACCENT},
   sortChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
@@ -684,22 +641,41 @@ const styles = StyleSheet.create({
   },
   // Square-cropped tile: the card IS the art, badges/title overlay on top of
   // it so more titles fit on screen at once (was a 16:10 card + text footer).
+  // On TV, a fixed (not focus-conditional) inset around the artwork gives the
+  // focus ring below a plain mat to sit on instead of landing right on top of
+  // the box art -- image-only tiles otherwise made focus hard to tell apart
+  // from a plain scroll. The inset is always there, so it never reflows the
+  // grid the way `cellFocused`'s old padding/margin halo did.
   card: {
     aspectRatio: 1,
     borderRadius: 10,
-    overflow: 'hidden',
     position: 'relative',
     backgroundColor: 'rgba(140,140,150,0.14)',
+    padding: Platform.isTV ? 6 : 0,
+  },
+  // The artwork itself, inset within `card`'s mat (or filling it exactly on
+  // phone, where padding is 0) -- this is what actually clips to a rounded
+  // corner; `card` no longer needs overflow:hidden since its border+scale on
+  // focus should render past its own edge, not get clipped by it.
+  cardArt: {
+    flex: 1,
+    borderRadius: Platform.isTV ? 6 : 10,
+    overflow: 'hidden',
+    position: 'relative',
   },
   // D-pad/remote focus indicator (Android TV navigates by moving View focus,
   // not touch) -- without this every tile looked identical regardless of
   // which one the remote had actually landed on. `card` has a fixed width
   // (from `cell`'s percentage width, independent of its own border), so a
   // border-width change here doesn't reflow neighboring cells the way
-  // `cellFocused`'s old padding/margin halo did.
+  // `cellFocused`'s old padding/margin halo did. The background tint on TV
+  // lights up the mat itself (same "color indication" the sidebar's rail
+  // buttons use), not just the image, so the hit is visible even over art
+  // close to the same yellow.
   cardFocused: {
     borderWidth: 3,
     borderColor: TV_FOCUS_COLOR,
+    backgroundColor: Platform.isTV ? 'rgba(255,213,74,0.18)' : undefined,
     transform: [{scale: 1.05}],
   },
   thumb: {...StyleSheet.absoluteFillObject},
