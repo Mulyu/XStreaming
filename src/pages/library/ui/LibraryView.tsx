@@ -190,18 +190,8 @@ const LibraryView: React.FC<Props> = ({
             </View>
           )}
 
-          {isFocused && Platform.isTV && (
-            <View style={styles.focusImageOverlay} pointerEvents="none" />
-          )}
-
           {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
-          <View
-            style={[
-              styles.bottomScrim,
-              isFocused && Platform.isTV && styles.bottomScrimFocused,
-            ]}
-            pointerEvents="none"
-          />
+          <View style={styles.bottomScrim} pointerEvents="none" />
 
           <View style={styles.availOverlay}>
             {item.xcloud && (
@@ -257,12 +247,7 @@ const LibraryView: React.FC<Props> = ({
             </View>
           )}
 
-          <Text
-            style={[
-              styles.cardTitle,
-              isFocused && Platform.isTV && styles.cardTitleFocused,
-            ]}
-            numberOfLines={2}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
             {item.title}
           </Text>
         </Pressable>
@@ -366,9 +351,6 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterXcloud && styles.filterChipOn,
                 xcloudChipFocus.focused && tvFocusRing,
-                Platform.isTV &&
-                  xcloudChipFocus.focused &&
-                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterXcloud(v => !v)}
               onFocus={xcloudChipFocus.onFocus}
@@ -377,9 +359,6 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterXcloud && styles.filterChipTextOn,
-                  Platform.isTV &&
-                    xcloudChipFocus.focused &&
-                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterXcloud')}
               </Text>
@@ -390,9 +369,6 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterGfn && styles.filterChipOn,
                 gfnChipFocus.focused && tvFocusRing,
-                Platform.isTV &&
-                  gfnChipFocus.focused &&
-                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterGfn(v => !v)}
               onFocus={gfnChipFocus.onFocus}
@@ -401,9 +377,6 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterGfn && styles.filterChipTextOn,
-                  Platform.isTV &&
-                    gfnChipFocus.focused &&
-                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterGfn')}
               </Text>
@@ -414,9 +387,6 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterPsPlus && styles.filterChipOn,
                 psPlusChipFocus.focused && tvFocusRing,
-                Platform.isTV &&
-                  psPlusChipFocus.focused &&
-                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterPsPlus(v => !v)}
               onFocus={psPlusChipFocus.onFocus}
@@ -425,9 +395,6 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterPsPlus && styles.filterChipTextOn,
-                  Platform.isTV &&
-                    psPlusChipFocus.focused &&
-                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterPsPlus')}
               </Text>
@@ -438,9 +405,6 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterFavorite && styles.filterChipOn,
                 favoriteChipFocus.focused && tvFocusRing,
-                Platform.isTV &&
-                  favoriteChipFocus.focused &&
-                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterFavorite(v => !v)}
               onFocus={favoriteChipFocus.onFocus}
@@ -449,9 +413,6 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterFavorite && styles.filterChipTextOn,
-                  Platform.isTV &&
-                    favoriteChipFocus.focused &&
-                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterFavorite')}
               </Text>
@@ -462,9 +423,6 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterOwnedOnly && styles.filterChipOn,
                 ownedOnlyChipFocus.focused && tvFocusRing,
-                Platform.isTV &&
-                  ownedOnlyChipFocus.focused &&
-                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterOwnedOnly(v => !v)}
               onFocus={ownedOnlyChipFocus.onFocus}
@@ -473,9 +431,6 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterOwnedOnly && styles.filterChipTextOn,
-                  Platform.isTV &&
-                    ownedOnlyChipFocus.focused &&
-                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterOwned')}
               </Text>
@@ -486,9 +441,6 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterOnSale && styles.filterChipOn,
                 onSaleChipFocus.focused && tvFocusRing,
-                Platform.isTV &&
-                  onSaleChipFocus.focused &&
-                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterOnSale(v => !v)}
               onFocus={onSaleChipFocus.onFocus}
@@ -497,9 +449,6 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterOnSale && styles.filterChipTextOn,
-                  Platform.isTV &&
-                    onSaleChipFocus.focused &&
-                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterOnSale')}
               </Text>
@@ -511,9 +460,6 @@ const LibraryView: React.FC<Props> = ({
                 styles.sortChip,
                 sortMode !== 'recent' && styles.sortChipOn,
                 sortChipFocus.focused && tvFocusRing,
-                Platform.isTV &&
-                  sortChipFocus.focused &&
-                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setSortMenuOpen(v => !v)}
               onFocus={sortChipFocus.onFocus}
@@ -522,9 +468,6 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.sortChipText,
                   sortMode !== 'recent' && styles.sortChipTextOn,
-                  Platform.isTV &&
-                    sortChipFocus.focused &&
-                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {`${t('Sort')}: ${activeSortLabel}`}
               </Text>
@@ -547,9 +490,6 @@ const LibraryView: React.FC<Props> = ({
                   style={[
                     styles.sortItem,
                     focusedSortOption === option.value && tvFocusRing,
-                    Platform.isTV &&
-                      focusedSortOption === option.value &&
-                      styles.tvChipFocusDiagnostic,
                   ]}
                   onPress={() => {
                     setSortMode(option.value);
@@ -565,15 +505,7 @@ const LibraryView: React.FC<Props> = ({
                     {sortMode === option.value && (
                       <Icon source="check" size={13} color={NVIDIA_ACCENT} />
                     )}
-                    <Text
-                      style={[
-                        styles.sortItemLabel,
-                        Platform.isTV &&
-                          focusedSortOption === option.value &&
-                          styles.tvChipTextFocusDiagnostic,
-                      ]}>
-                      {option.label}
-                    </Text>
+                    <Text style={styles.sortItemLabel}>{option.label}</Text>
                   </View>
                   {!!option.scope && (
                     <Text style={styles.sortItemScope}>{option.scope}</Text>
@@ -685,22 +617,6 @@ const styles = StyleSheet.create({
   },
   filterRow: {position: 'relative'},
   chipsRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
-  // TEMPORARY on-device diagnostic (see LibraryView's card diagnostic for
-  // the full rationale) -- the filter/sort chips' existing tvFocusRing (a
-  // thin 2px border in the app's one shared TV_FOCUS_COLOR) was reported as
-  // not visibly changing on real hardware either, so this layers two more,
-  // more aggressive, differently-colored channels alongside it: a thicker
-  // red border and a cyan background fill.
-  tvChipFocusDiagnostic: {
-    borderWidth: 3,
-    borderColor: '#FF3B30',
-    backgroundColor: 'rgba(34,211,238,0.35)',
-  },
-  // Text-color test: lime -- same rationale as the card's own
-  // cardTitleFocused.
-  tvChipTextFocusDiagnostic: {
-    color: '#C6FF00',
-  },
   filterChip: {
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -755,52 +671,17 @@ const styles = StyleSheet.create({
   centreText: {color: '#8A9A92', fontSize: 14},
   list: {paddingHorizontal: 6, paddingBottom: 20},
   cell: {padding: 4},
-  // TEMPORARY on-device diagnostic (see cardTitleFocused/bottomScrimFocused/
-  // focusImageOverlay below too): on real Google TV hardware, focus styling
-  // driven by onFocus/onBlur may simply never apply at all (a separate
-  // investigation found no native event dispatch for Pressable/View's
-  // onFocus/onBlur on Android outside TextInput -- see tvFocus.ts). Rather
-  // than guess which single technique to ship, every independently-plausible
-  // one below is wired up at once, each in its own unmistakable color, so a
-  // real-device test tells us directly which ones actually render instead of
-  // which ones merely look correct on paper. Prune this down to whichever
-  // combination the device confirms once reported back.
-  //
   // Raises the whole cell (and the card's focus scale-up inside it) above
   // its row siblings, so the popped-out tile never paints underneath the
-  // next one over. On TV this also carries two separate tests: a solid-color
-  // halo (plain backgroundColor, works identically on every platform) and,
-  // layered on the same view, an elevation+shadowColor glow in a different
-  // color -- shadowColor/shadowOpacity/shadowRadius are iOS-only in this RN
-  // version (confirmed against ShadowStyleIOS and BaseViewManager.java), but
-  // `elevation` alone is cross-platform and on API 28+ Android *can* tint it
-  // via outlineAmbientShadowColor/outlineSpotShadowColor, so it's worth
-  // seeing whether any colored fringe shows just past the halo's hard edge.
-  // `card` itself keeps overflow:hidden (to clip the cover art to its
-  // rounded corners), which would also clip a shadow drawn on that same view
-  // away to nothing, so both of these have to live on this wrapper either
-  // way.
-  cellFocused: Platform.isTV
-    ? {
-        zIndex: 10,
-        padding: 11,
-        margin: -7,
-        borderRadius: 17,
-        backgroundColor: 'rgba(34,211,238,0.35)', // halo test: cyan
-        shadowColor: '#FFA500', // glow test: amber (expect nothing pre-API28)
-        shadowOffset: {width: 0, height: 0},
-        shadowOpacity: 0.85,
-        shadowRadius: 14,
-        elevation: 14,
-      }
-    : {
-        zIndex: 10,
-        shadowColor: TV_FOCUS_COLOR,
-        shadowOffset: {width: 0, height: 0},
-        shadowOpacity: 0.55,
-        shadowRadius: 10,
-        elevation: 10,
-      },
+  // next one over. No padding/margin/background here on purpose -- an
+  // earlier version tried a halo this way (extra padding + a tinted
+  // background, to work around `card`'s overflow:hidden clipping a shadow),
+  // but changing a flex child's padding on focus reflows its siblings in
+  // the grid, which read as the grid's layout visibly shifting whenever
+  // focus moved. zIndex alone has no layout cost.
+  cellFocused: {
+    zIndex: 10,
+  },
   // Square-cropped tile: the card IS the art, badges/title overlay on top of
   // it so more titles fit on screen at once (was a 16:10 card + text footer).
   card: {
@@ -812,19 +693,14 @@ const styles = StyleSheet.create({
   },
   // D-pad/remote focus indicator (Android TV navigates by moving View focus,
   // not touch) -- without this every tile looked identical regardless of
-  // which one the remote had actually landed on. Border test: red on TV
-  // (distinct from every other color here). Scale isn't a color, but a
-  // visible size change is its own useful signal either way (phones never
-  // drive this by remote, so their own values stay as they were).
-  cardFocused: Platform.isTV
-    ? {borderWidth: 5, borderColor: '#FF3B30', transform: [{scale: 1.08}]}
-    : {borderWidth: 3, borderColor: '#FFD54A', transform: [{scale: 1.045}]},
-  // Image-overlay test: a plain translucent View on top of the cover art --
-  // the most basic possible style change (backgroundColor on an ordinary
-  // View), in magenta so it can't be confused with any other test here.
-  focusImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,0,170,0.32)',
+  // which one the remote had actually landed on. `card` has a fixed width
+  // (from `cell`'s percentage width, independent of its own border), so a
+  // border-width change here doesn't reflow neighboring cells the way
+  // `cellFocused`'s old padding/margin halo did.
+  cardFocused: {
+    borderWidth: 3,
+    borderColor: TV_FOCUS_COLOR,
+    transform: [{scale: 1.05}],
   },
   thumb: {...StyleSheet.absoluteFillObject},
   thumbEmpty: {
@@ -852,12 +728,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: '28%',
     backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  // Scrim-color test: orange, in the same slot the scrim always occupies --
-  // tests a backgroundColor change on a view that (unlike focusImageOverlay)
-  // already exists unconditionally rather than being freshly mounted.
-  bottomScrimFocused: {
-    backgroundColor: 'rgba(255,138,0,0.55)',
   },
   availOverlay: {
     position: 'absolute',
@@ -895,12 +765,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 3,
-  },
-  // Text-color test: lime -- tests a Text color change specifically, since
-  // that's a different native code path from any of the View-based tests
-  // above.
-  cardTitleFocused: {
-    color: '#C6FF00',
   },
 });
 
