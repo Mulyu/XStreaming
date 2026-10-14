@@ -417,6 +417,8 @@ export default {
     LibraryFilterFavorite: 'お気に入り',
     LibraryFilterOwned: '所有済み',
     LibraryFilterOnSale: 'セール中',
+    LibraryRowNotOwned: '未所有',
+    LibraryRowDiscount: '{{percent}}%OFF',
     Store: 'ストア',
     StoreTabXbox: 'Xbox',
     StoreTabSteam: 'Steam',

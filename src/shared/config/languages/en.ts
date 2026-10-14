@@ -425,6 +425,8 @@ export default {
     LibraryFilterFavorite: 'Favorite',
     LibraryFilterOwned: 'Owned',
     LibraryFilterOnSale: 'On Sale',
+    LibraryRowNotOwned: 'Not owned',
+    LibraryRowDiscount: '{{percent}}% OFF',
     Store: 'Store',
     StoreTabXbox: 'Xbox',
     StoreTabSteam: 'Steam',
