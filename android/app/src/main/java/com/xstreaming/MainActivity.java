@@ -421,6 +421,21 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
       if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && event.getRepeatCount() == 0) {
         armDpadDownLongPress();
       }
+      // The remote's mic/voice-search button -- different Google TV remotes
+      // and launchers deliver this as any of these three keycodes rather
+      // than routing it to the system Assistant overlay first, so all three
+      // are handled the same way: open this app's own search UI (currently
+      // Library's) instead of falling through to Activity's own default
+      // onKeyDown handling, which would otherwise pop the system search
+      // dialog for KEYCODE_SEARCH specifically via onSearchRequested().
+      if (keyCode == KeyEvent.KEYCODE_SEARCH
+          || keyCode == KeyEvent.KEYCODE_VOICE_ASSIST
+          || keyCode == KeyEvent.KEYCODE_ASSIST) {
+        if (event.getRepeatCount() == 0) {
+          sendEvent("onSearchKeyPress", null);
+        }
+        return true;
+      }
       return super.onKeyDown(keyCode, event);
     }
     if (SdlGamepadManager.isActive() && SdlGamepadManager.handleKeyEvent(event)) {

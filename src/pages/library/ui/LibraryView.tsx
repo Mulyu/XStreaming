@@ -9,7 +9,9 @@ import {
   Platform,
   Pressable,
   Modal,
+  DeviceEventEmitter,
 } from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 import {Text, Icon, ActivityIndicator} from 'react-native-paper';
 import {
   CatalogTitle,
@@ -86,6 +88,25 @@ const LibraryView: React.FC<Props> = ({
   // filter chips carry most of the narrowing on TV instead (see the TV
   // navigation rail proposal this implements).
   const [tvSearchOpen, setTvSearchOpen] = React.useState(false);
+
+  // Google TV's remote mic/voice-search button (MainActivity.java's own
+  // onKeyDown -- KEYCODE_SEARCH/VOICE_ASSIST/ASSIST, all three since remotes
+  // and launchers vary in which one they actually send) opens this screen's
+  // own search overlay instead of the system's. useFocusEffect rather than a
+  // plain mount effect so a press while some other tab is active doesn't
+  // silently open Library's overlay behind it (every tab stays mounted at
+  // once -- see App.tsx's MainTabs).
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!Platform.isTV) {
+        return;
+      }
+      const sub = DeviceEventEmitter.addListener('onSearchKeyPress', () => {
+        setTvSearchOpen(true);
+      });
+      return () => sub.remove();
+    }, []),
+  );
 
   const renderCard = ({item}: {item: CatalogTitle}) => {
     // Cover art itself grays out when the title isn't playable via any of
@@ -304,6 +325,9 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterXcloud && styles.filterChipOn,
                 xcloudChipFocus.focused && tvFocusRing,
+                Platform.isTV &&
+                  xcloudChipFocus.focused &&
+                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterXcloud(v => !v)}
               onFocus={xcloudChipFocus.onFocus}
@@ -312,6 +336,9 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterXcloud && styles.filterChipTextOn,
+                  Platform.isTV &&
+                    xcloudChipFocus.focused &&
+                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterXcloud')}
               </Text>
@@ -321,6 +348,9 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterGfn && styles.filterChipOn,
                 gfnChipFocus.focused && tvFocusRing,
+                Platform.isTV &&
+                  gfnChipFocus.focused &&
+                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterGfn(v => !v)}
               onFocus={gfnChipFocus.onFocus}
@@ -329,6 +359,9 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterGfn && styles.filterChipTextOn,
+                  Platform.isTV &&
+                    gfnChipFocus.focused &&
+                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterGfn')}
               </Text>
@@ -338,6 +371,9 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterPsPlus && styles.filterChipOn,
                 psPlusChipFocus.focused && tvFocusRing,
+                Platform.isTV &&
+                  psPlusChipFocus.focused &&
+                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterPsPlus(v => !v)}
               onFocus={psPlusChipFocus.onFocus}
@@ -346,6 +382,9 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterPsPlus && styles.filterChipTextOn,
+                  Platform.isTV &&
+                    psPlusChipFocus.focused &&
+                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterPsPlus')}
               </Text>
@@ -355,6 +394,9 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterFavorite && styles.filterChipOn,
                 favoriteChipFocus.focused && tvFocusRing,
+                Platform.isTV &&
+                  favoriteChipFocus.focused &&
+                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterFavorite(v => !v)}
               onFocus={favoriteChipFocus.onFocus}
@@ -363,6 +405,9 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterFavorite && styles.filterChipTextOn,
+                  Platform.isTV &&
+                    favoriteChipFocus.focused &&
+                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterFavorite')}
               </Text>
@@ -372,6 +417,9 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterOwnedOnly && styles.filterChipOn,
                 ownedOnlyChipFocus.focused && tvFocusRing,
+                Platform.isTV &&
+                  ownedOnlyChipFocus.focused &&
+                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterOwnedOnly(v => !v)}
               onFocus={ownedOnlyChipFocus.onFocus}
@@ -380,6 +428,9 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterOwnedOnly && styles.filterChipTextOn,
+                  Platform.isTV &&
+                    ownedOnlyChipFocus.focused &&
+                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterOwned')}
               </Text>
@@ -389,6 +440,9 @@ const LibraryView: React.FC<Props> = ({
                 styles.filterChip,
                 filterOnSale && styles.filterChipOn,
                 onSaleChipFocus.focused && tvFocusRing,
+                Platform.isTV &&
+                  onSaleChipFocus.focused &&
+                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setFilterOnSale(v => !v)}
               onFocus={onSaleChipFocus.onFocus}
@@ -397,6 +451,9 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.filterChipText,
                   filterOnSale && styles.filterChipTextOn,
+                  Platform.isTV &&
+                    onSaleChipFocus.focused &&
+                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {t('LibraryFilterOnSale')}
               </Text>
@@ -407,6 +464,9 @@ const LibraryView: React.FC<Props> = ({
                 styles.sortChip,
                 sortMode !== 'recent' && styles.sortChipOn,
                 sortChipFocus.focused && tvFocusRing,
+                Platform.isTV &&
+                  sortChipFocus.focused &&
+                  styles.tvChipFocusDiagnostic,
               ]}
               onPress={() => setSortMenuOpen(v => !v)}
               onFocus={sortChipFocus.onFocus}
@@ -415,6 +475,9 @@ const LibraryView: React.FC<Props> = ({
                 style={[
                   styles.sortChipText,
                   sortMode !== 'recent' && styles.sortChipTextOn,
+                  Platform.isTV &&
+                    sortChipFocus.focused &&
+                    styles.tvChipTextFocusDiagnostic,
                 ]}>
                 {`${t('Sort')}: ${activeSortLabel}`}
               </Text>
@@ -434,6 +497,9 @@ const LibraryView: React.FC<Props> = ({
                   style={[
                     styles.sortItem,
                     focusedSortOption === option.value && tvFocusRing,
+                    Platform.isTV &&
+                      focusedSortOption === option.value &&
+                      styles.tvChipFocusDiagnostic,
                   ]}
                   onPress={() => {
                     setSortMode(option.value);
@@ -449,7 +515,15 @@ const LibraryView: React.FC<Props> = ({
                     {sortMode === option.value && (
                       <Icon source="check" size={13} color={NVIDIA_ACCENT} />
                     )}
-                    <Text style={styles.sortItemLabel}>{option.label}</Text>
+                    <Text
+                      style={[
+                        styles.sortItemLabel,
+                        Platform.isTV &&
+                          focusedSortOption === option.value &&
+                          styles.tvChipTextFocusDiagnostic,
+                      ]}>
+                      {option.label}
+                    </Text>
                   </View>
                   {!!option.scope && (
                     <Text style={styles.sortItemScope}>{option.scope}</Text>
@@ -561,6 +635,22 @@ const styles = StyleSheet.create({
   },
   filterRow: {position: 'relative'},
   chipsRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
+  // TEMPORARY on-device diagnostic (see LibraryView's card diagnostic for
+  // the full rationale) -- the filter/sort chips' existing tvFocusRing (a
+  // thin 2px border in the app's one shared TV_FOCUS_COLOR) was reported as
+  // not visibly changing on real hardware either, so this layers two more,
+  // more aggressive, differently-colored channels alongside it: a thicker
+  // red border and a cyan background fill.
+  tvChipFocusDiagnostic: {
+    borderWidth: 3,
+    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(34,211,238,0.35)',
+  },
+  // Text-color test: lime -- same rationale as the card's own
+  // cardTitleFocused.
+  tvChipTextFocusDiagnostic: {
+    color: '#C6FF00',
+  },
   filterChip: {
     paddingVertical: 6,
     paddingHorizontal: 10,
