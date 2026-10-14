@@ -8,6 +8,7 @@ import {
   TextInput,
   Platform,
   Pressable,
+  Modal,
 } from 'react-native';
 import {Text, Icon, ActivityIndicator} from 'react-native-paper';
 import {
@@ -76,9 +77,15 @@ const LibraryView: React.FC<Props> = ({
   const onSaleChipFocus = useTVFocus();
   const sortChipFocus = useTVFocus();
   const searchFocus = useTVFocus();
+  const tvSearchCloseFocus = useTVFocus();
   const [focusedSortOption, setFocusedSortOption] = React.useState<
     string | null
   >(null);
+  // TV only: the search box collapses to an icon button that opens this
+  // overlay -- typing with a remote's D-pad is slow, so the always-visible
+  // filter chips carry most of the narrowing on TV instead (see the TV
+  // navigation rail proposal this implements).
+  const [tvSearchOpen, setTvSearchOpen] = React.useState(false);
 
   const renderCard = ({item}: {item: CatalogTitle}) => {
     // Cover art itself grays out when the title isn't playable via any of
@@ -203,26 +210,78 @@ const LibraryView: React.FC<Props> = ({
             <ActivityIndicator size={12} color="#8A9A92" />
           )}
         </View>
-        <View
-          style={[
-            styles.searchBox,
-            searchFocus.focused && styles.searchBoxFocused,
-          ]}>
-          <Icon
-            source="magnify"
-            size={18}
-            color={searchFocus.focused ? TV_FOCUS_COLOR : '#8A9A92'}
-          />
-          <TextInput
-            value={keyword}
-            onChangeText={setKeyword}
-            placeholder={t('Search')}
-            placeholderTextColor="#8A9A92"
-            style={styles.searchInput}
-            onFocus={searchFocus.onFocus}
-            onBlur={searchFocus.onBlur}
-          />
-        </View>
+        {Platform.isTV ? (
+          <>
+            <Pressable
+              style={[
+                styles.tvSearchIconButton,
+                searchFocus.focused && tvFocusRing,
+              ]}
+              onPress={() => setTvSearchOpen(true)}
+              onFocus={searchFocus.onFocus}
+              onBlur={searchFocus.onBlur}
+              accessibilityRole="button"
+              accessibilityLabel={t('Search')}>
+              <Icon
+                source="magnify"
+                size={18}
+                color={searchFocus.focused ? TV_FOCUS_COLOR : '#8A9A92'}
+              />
+            </Pressable>
+            <Modal
+              visible={tvSearchOpen}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setTvSearchOpen(false)}>
+              <View style={styles.tvSearchOverlay}>
+                <View style={styles.tvSearchBox}>
+                  <Icon source="magnify" size={20} color="#8A9A92" />
+                  <TextInput
+                    value={keyword}
+                    onChangeText={setKeyword}
+                    placeholder={t('Search')}
+                    placeholderTextColor="#8A9A92"
+                    style={styles.tvSearchInput}
+                    autoFocus
+                  />
+                  <Pressable
+                    style={[
+                      styles.tvSearchCloseButton,
+                      tvSearchCloseFocus.focused && tvFocusRing,
+                    ]}
+                    onPress={() => setTvSearchOpen(false)}
+                    onFocus={tvSearchCloseFocus.onFocus}
+                    onBlur={tvSearchCloseFocus.onBlur}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Close')}>
+                    <Icon source="close" size={18} color="#E6ECE8" />
+                  </Pressable>
+                </View>
+              </View>
+            </Modal>
+          </>
+        ) : (
+          <View
+            style={[
+              styles.searchBox,
+              searchFocus.focused && styles.searchBoxFocused,
+            ]}>
+            <Icon
+              source="magnify"
+              size={18}
+              color={searchFocus.focused ? TV_FOCUS_COLOR : '#8A9A92'}
+            />
+            <TextInput
+              value={keyword}
+              onChangeText={setKeyword}
+              placeholder={t('Search')}
+              placeholderTextColor="#8A9A92"
+              style={styles.searchInput}
+              onFocus={searchFocus.onFocus}
+              onBlur={searchFocus.onBlur}
+            />
+          </View>
+        )}
         <View style={styles.filterRow}>
           <View style={styles.chipsRow}>
             <Pressable
@@ -445,6 +504,46 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,213,74,0.1)',
   },
   searchInput: {flex: 1, padding: 0, fontSize: 14, color: '#E6ECE8'},
+  // TV: the search box above collapses to this icon button -- same visual
+  // footprint as a filter chip so it sits naturally in the header row.
+  tvSearchIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(140,140,150,0.14)',
+    borderWidth: 2,
+    borderColor: 'rgba(140,140,150,0.24)',
+  },
+  tvSearchOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(5,7,6,0.72)',
+    alignItems: 'center',
+    paddingTop: 90,
+  },
+  tvSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: '70%',
+    maxWidth: 640,
+    height: 56,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    backgroundColor: '#1B2120',
+    borderWidth: 2,
+    borderColor: TV_FOCUS_COLOR,
+  },
+  tvSearchInput: {flex: 1, padding: 0, fontSize: 18, color: '#E6ECE8'},
+  tvSearchCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(140,140,150,0.18)',
+  },
   filterRow: {position: 'relative'},
   chipsRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
   filterChip: {
@@ -503,19 +602,32 @@ const styles = StyleSheet.create({
   cell: {padding: 4},
   // Raises the whole cell (and the card's focus scale-up inside it) above
   // its row siblings, so the popped-out tile never paints underneath the
-  // next one over. The glow itself also lives here rather than on `card`
-  // below: `card` has overflow:hidden (to clip the cover art to its rounded
-  // corners), which would clip a shadow drawn on that same view away to
-  // nothing -- see Google TV's focus-system guide's "glow commonly used on
-  // cards" (elevation-style diffused glow, 2dp-32dp).
-  cellFocused: {
-    zIndex: 10,
-    shadowColor: TV_FOCUS_COLOR,
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
-    elevation: 10,
-  },
+  // next one over. On TV this also carries the halo: `shadowColor`/
+  // `shadowOpacity`/`shadowRadius` are iOS-only in this RN version (confirmed
+  // against ShadowStyleIOS and BaseViewManager.java -- Android only ever gets
+  // the colorless `elevation` shadow below), so instead of a glow that
+  // doesn't render, extra padding + a tinted background on this wrapper
+  // paints a solid halo around the card -- no blur, so it's identical on
+  // both platforms. `card` itself keeps overflow:hidden (to clip the cover
+  // art to its rounded corners), which would also clip a shadow drawn on
+  // that same view away to nothing, so this has to live on the wrapper
+  // either way.
+  cellFocused: Platform.isTV
+    ? {
+        zIndex: 10,
+        padding: 11,
+        margin: -7,
+        borderRadius: 17,
+        backgroundColor: 'rgba(255,213,74,0.22)',
+      }
+    : {
+        zIndex: 10,
+        shadowColor: TV_FOCUS_COLOR,
+        shadowOffset: {width: 0, height: 0},
+        shadowOpacity: 0.55,
+        shadowRadius: 10,
+        elevation: 10,
+      },
   // Square-cropped tile: the card IS the art, badges/title overlay on top of
   // it so more titles fit on screen at once (was a 16:10 card + text footer).
   card: {
@@ -527,12 +639,12 @@ const styles = StyleSheet.create({
   },
   // D-pad/remote focus indicator (Android TV navigates by moving View focus,
   // not touch) -- without this every tile looked identical regardless of
-  // which one the remote had actually landed on.
-  cardFocused: {
-    borderWidth: 3,
-    borderColor: '#FFD54A',
-    transform: [{scale: 1.045}],
-  },
+  // which one the remote had actually landed on. Bigger border + scale on TV
+  // (near Google TV's focus-system guide's upper end -- phones never drive
+  // this by remote, so their own values stay as they were).
+  cardFocused: Platform.isTV
+    ? {borderWidth: 4, borderColor: TV_FOCUS_COLOR, transform: [{scale: 1.08}]}
+    : {borderWidth: 3, borderColor: '#FFD54A', transform: [{scale: 1.045}]},
   thumb: {...StyleSheet.absoluteFillObject},
   thumbEmpty: {
     ...StyleSheet.absoluteFillObject,
