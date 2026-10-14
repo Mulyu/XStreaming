@@ -28,6 +28,11 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const PS_ACCENT = '#0070D1';
 const SALE_ACCENT = '#E67E22';
+// TV: 3 wide cards per row -- a dense single-column list had too little
+// information density, and a dense image-only grid was the original focus-
+// visibility problem (see `wideCard`'s own comment). numColumns itself still
+// comes from the view-model for phone's own grid; this is TV-only and fixed.
+const TV_GRID_COLUMNS = 3;
 // Same dim treatment library-title-detail's own per-provider rows use for a
 // service a title isn't actually owned on.
 const DIM_BADGE_BG = 'rgba(140,140,150,0.3)';
@@ -79,6 +84,7 @@ const LibraryView: React.FC<Props> = ({
   const onSaleChipFocus = useTVFocus();
   const sortChipFocus = useTVFocus();
   const searchFocus = useTVFocus();
+  const tvSearchInputFocus = useTVFocus();
   const tvSearchCloseFocus = useTVFocus();
   const [focusedSortOption, setFocusedSortOption] = React.useState<
     string | null
@@ -91,21 +97,19 @@ const LibraryView: React.FC<Props> = ({
 
   // A toggle chip's "on" state (filterChipOn/sortChipOn) already fills the
   // chip with its own accent color -- focus must layer on top of that
-  // without erasing it, so the background tint from the focus investigation
-  // (see `row`'s own comment) only applies while the chip is OFF; an ON chip
-  // signals focus with just the border + text color, so it never stops
-  // reading as "selected" while the remote is sitting on it.
+  // without erasing it, so the border is the one signal that always wins; an
+  // already-accent-filled "on" chip never looks like it un-toggled itself
+  // while focused. No background tint on focus here on purpose -- that was
+  // tried (see this file's own history) and still read weakly on real
+  // hardware, so border + text/icon color (always drawn on top, never
+  // competing with whatever the platform draws underneath) are the only
+  // focus signals now.
   const chipStyle = (
     base: object,
     active: boolean,
     focused: boolean,
     onStyle: object,
-  ) => [
-    base,
-    active && onStyle,
-    focused && styles.chipFocusedBorder,
-    focused && !active && styles.chipFocusedBg,
-  ];
+  ) => [base, active && onStyle, focused && styles.chipFocusedBorder];
   const chipTextStyle = (
     base: object,
     active: boolean,
@@ -116,6 +120,11 @@ const LibraryView: React.FC<Props> = ({
     active && onTextStyle,
     focused && !active && styles.chipFocusedText,
   ];
+  // Same 3-state color rule as chipTextStyle, as a plain color string for
+  // the chip's leading icon (react-native-paper's Icon takes `color`, not a
+  // style array).
+  const chipContentColor = (active: boolean, focused: boolean) =>
+    active ? '#0B0F0C' : focused ? TV_FOCUS_COLOR : '#8A9A92';
 
   // Google TV's remote mic/voice-search button (MainActivity.java's own
   // onKeyDown -- KEYCODE_SEARCH/VOICE_ASSIST/ASSIST, all three since remotes
@@ -245,18 +254,16 @@ const LibraryView: React.FC<Props> = ({
     );
   };
 
-  // TV only: one row per title instead of the dense image grid above. Each
-  // row keeps a permanent, non-focus-conditional thumbnail + plain mat
-  // (see `row`'s own comment) -- the investigation that motivated this is in
-  // RowLayout's own history: a card whose focus ring sits directly on image-
-  // only art is hard to tell apart on real hardware, both for our own border
-  // and for Android's default per-view focus highlight (which paints behind
-  // opaque children, so it only shows through exposed background). A row's
-  // thumbnail is small and surrounded by plain background, so both read
-  // clearly without relying on a scale-up transform (which would have to
-  // z-index-raise the focused row over its neighbors in a single-column
-  // list, same as the grid's cells used to).
-  const renderRow = ({item}: {item: CatalogTitle}) => {
+  // TV only: 3 wide cards per row instead of the dense image-only grid
+  // above. A single-column list (this screen's own earlier history) had too
+  // little information density; this keeps that list's layout -- a bigger
+  // (84x84) but still non-focus-conditional thumbnail with plain exposed
+  // mat around it, title/badges beside it -- just 3 across instead of 1, so
+  // the focus ring (and Android's own default per-view focus highlight,
+  // which paints behind opaque children and only shows through exposed
+  // background) still has plain background to land on instead of fighting
+  // with box art the way the old dense square-image grid did.
+  const renderWideCard = ({item}: {item: CatalogTitle}) => {
     const isPlayable = isCatalogTitleOwned(item);
     const xcloudOwned = !!item.xcloud?.hasEntitlement;
     const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
@@ -265,9 +272,14 @@ const LibraryView: React.FC<Props> = ({
     const isFocused = focusedKey === item.key;
 
     return (
-      <View style={styles.rowCell}>
+      <View
+        style={[
+          styles.wideCell,
+          {width: `${100 / TV_GRID_COLUMNS}%`},
+          isFocused && styles.cellFocused,
+        ]}>
         <Pressable
-          style={[styles.row, isFocused && styles.rowFocused]}
+          style={[styles.wideCard, isFocused && styles.wideCardFocused]}
           onPress={() => openTitle(item)}
           onLongPress={() => openTitleDetail(item)}
           onFocus={() => setFocusedKey(item.key)}
@@ -275,7 +287,7 @@ const LibraryView: React.FC<Props> = ({
             setFocusedKey(prev => (prev === item.key ? null : prev))
           }
           android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
-          <View style={styles.rowThumb}>
+          <View style={styles.wideThumb}>
             {item.imageUrl ? (
               <Image
                 source={{uri: item.imageUrl}}
@@ -283,30 +295,30 @@ const LibraryView: React.FC<Props> = ({
                 style={styles.thumb}
               />
             ) : (
-              <View style={styles.rowThumbEmpty}>
-                <Text style={styles.rowThumbEmptyText} numberOfLines={2}>
+              <View style={styles.wideThumbEmpty}>
+                <Text style={styles.wideThumbEmptyText} numberOfLines={2}>
                   {item.title}
                 </Text>
               </View>
             )}
           </View>
 
-          <View style={styles.rowBody}>
+          <View style={styles.wideBody}>
             <Text
-              style={[styles.rowTitle, isFocused && styles.rowTitleFocused]}
+              style={[styles.wideTitle, isFocused && styles.wideTitleFocused]}
               numberOfLines={1}>
               {item.title}
             </Text>
-            <View style={styles.rowBadgesLine}>
+            <View style={styles.cardBadgesLine}>
               {item.xcloud && (
                 <View
                   style={[
-                    styles.rowBadge,
+                    styles.cardBadge,
                     {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
                   ]}>
                   <Text
                     style={[
-                      styles.rowBadgeText,
+                      styles.cardBadgeText,
                       !xcloudOwned && {color: DIM_BADGE_TEXT},
                     ]}>
                     X
@@ -316,12 +328,12 @@ const LibraryView: React.FC<Props> = ({
               {item.gfn && (
                 <View
                   style={[
-                    styles.rowBadge,
+                    styles.cardBadge,
                     {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
                   ]}>
                   <Text
                     style={[
-                      styles.rowBadgeText,
+                      styles.cardBadgeText,
                       !gfnOwned && {color: DIM_BADGE_TEXT},
                     ]}>
                     N
@@ -331,12 +343,12 @@ const LibraryView: React.FC<Props> = ({
               {item.psplus && (
                 <View
                   style={[
-                    styles.rowBadge,
+                    styles.cardBadge,
                     {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
                   ]}>
                   <Text
                     style={[
-                      styles.rowBadgeText,
+                      styles.cardBadgeText,
                       !psplusOwned && {color: DIM_BADGE_TEXT},
                     ]}>
                     PS
@@ -344,25 +356,15 @@ const LibraryView: React.FC<Props> = ({
                 </View>
               )}
               {discount > 0 && (
-                <Text style={styles.rowDiscount}>
+                <Text style={styles.cardDiscount}>
                   {t('LibraryRowDiscount', {percent: discount})}
                 </Text>
               )}
             </View>
-          </View>
-
-          <View
-            style={[
-              styles.rowOwnedTag,
-              isPlayable ? styles.rowOwnedTagOn : styles.rowOwnedTagOff,
-            ]}>
             <Text
-              style={[
-                styles.rowOwnedTagText,
-                isPlayable
-                  ? styles.rowOwnedTagTextOn
-                  : styles.rowOwnedTagTextOff,
-              ]}>
+              style={
+                isPlayable ? styles.wideOwnedTextOn : styles.wideOwnedTextOff
+              }>
               {isPlayable ? t('LibraryFilterOwned') : t('LibraryRowNotOwned')}
             </Text>
           </View>
@@ -409,14 +411,26 @@ const LibraryView: React.FC<Props> = ({
               animationType="fade"
               onRequestClose={() => setTvSearchOpen(false)}>
               <View style={styles.tvSearchOverlay}>
-                <View style={styles.tvSearchBox}>
-                  <Icon source="magnify" size={20} color="#8A9A92" />
+                <View
+                  style={[
+                    styles.tvSearchBox,
+                    tvSearchInputFocus.focused && styles.tvSearchBoxFocused,
+                  ]}>
+                  <Icon
+                    source="magnify"
+                    size={20}
+                    color={
+                      tvSearchInputFocus.focused ? TV_FOCUS_COLOR : '#8A9A92'
+                    }
+                  />
                   <TextInput
                     value={keyword}
                     onChangeText={setKeyword}
                     placeholder={t('Search')}
                     placeholderTextColor="#8A9A92"
                     style={styles.tvSearchInput}
+                    onFocus={tvSearchInputFocus.onFocus}
+                    onBlur={tvSearchInputFocus.onBlur}
                     autoFocus
                   />
                   <Pressable
@@ -429,7 +443,13 @@ const LibraryView: React.FC<Props> = ({
                     onBlur={tvSearchCloseFocus.onBlur}
                     accessibilityRole="button"
                     accessibilityLabel={t('Close')}>
-                    <Icon source="close" size={18} color="#E6ECE8" />
+                    <Icon
+                      source="close"
+                      size={18}
+                      color={
+                        tvSearchCloseFocus.focused ? TV_FOCUS_COLOR : '#E6ECE8'
+                      }
+                    />
                   </Pressable>
                 </View>
               </View>
@@ -469,6 +489,17 @@ const LibraryView: React.FC<Props> = ({
               onPress={() => setFilterXcloud(v => !v)}
               onFocus={xcloudChipFocus.onFocus}
               onBlur={xcloudChipFocus.onBlur}>
+              {Platform.isTV && (
+                <Text
+                  style={chipTextStyle(
+                    styles.filterChipText,
+                    filterXcloud,
+                    xcloudChipFocus.focused,
+                    styles.filterChipTextOn,
+                  )}>
+                  X
+                </Text>
+              )}
               <Text
                 style={chipTextStyle(
                   styles.filterChipText,
@@ -489,6 +520,17 @@ const LibraryView: React.FC<Props> = ({
               onPress={() => setFilterGfn(v => !v)}
               onFocus={gfnChipFocus.onFocus}
               onBlur={gfnChipFocus.onBlur}>
+              {Platform.isTV && (
+                <Text
+                  style={chipTextStyle(
+                    styles.filterChipText,
+                    filterGfn,
+                    gfnChipFocus.focused,
+                    styles.filterChipTextOn,
+                  )}>
+                  N
+                </Text>
+              )}
               <Text
                 style={chipTextStyle(
                   styles.filterChipText,
@@ -509,6 +551,17 @@ const LibraryView: React.FC<Props> = ({
               onPress={() => setFilterPsPlus(v => !v)}
               onFocus={psPlusChipFocus.onFocus}
               onBlur={psPlusChipFocus.onBlur}>
+              {Platform.isTV && (
+                <Text
+                  style={chipTextStyle(
+                    styles.filterChipText,
+                    filterPsPlus,
+                    psPlusChipFocus.focused,
+                    styles.filterChipTextOn,
+                  )}>
+                  PS
+                </Text>
+              )}
               <Text
                 style={chipTextStyle(
                   styles.filterChipText,
@@ -529,6 +582,16 @@ const LibraryView: React.FC<Props> = ({
               onPress={() => setFilterFavorite(v => !v)}
               onFocus={favoriteChipFocus.onFocus}
               onBlur={favoriteChipFocus.onBlur}>
+              {Platform.isTV && (
+                <Icon
+                  source="heart-outline"
+                  size={13}
+                  color={chipContentColor(
+                    filterFavorite,
+                    favoriteChipFocus.focused,
+                  )}
+                />
+              )}
               <Text
                 style={chipTextStyle(
                   styles.filterChipText,
@@ -549,6 +612,16 @@ const LibraryView: React.FC<Props> = ({
               onPress={() => setFilterOwnedOnly(v => !v)}
               onFocus={ownedOnlyChipFocus.onFocus}
               onBlur={ownedOnlyChipFocus.onBlur}>
+              {Platform.isTV && (
+                <Icon
+                  source="check-circle-outline"
+                  size={13}
+                  color={chipContentColor(
+                    filterOwnedOnly,
+                    ownedOnlyChipFocus.focused,
+                  )}
+                />
+              )}
               <Text
                 style={chipTextStyle(
                   styles.filterChipText,
@@ -569,6 +642,16 @@ const LibraryView: React.FC<Props> = ({
               onPress={() => setFilterOnSale(v => !v)}
               onFocus={onSaleChipFocus.onFocus}
               onBlur={onSaleChipFocus.onBlur}>
+              {Platform.isTV && (
+                <Icon
+                  source="tag-outline"
+                  size={13}
+                  color={chipContentColor(
+                    filterOnSale,
+                    onSaleChipFocus.focused,
+                  )}
+                />
+              )}
               <Text
                 style={chipTextStyle(
                   styles.filterChipText,
@@ -656,10 +739,10 @@ const LibraryView: React.FC<Props> = ({
       ) : (
         <FlatList
           data={sorted}
-          key={Platform.isTV ? 'tv-rows' : numColumns}
-          numColumns={Platform.isTV ? 1 : numColumns}
+          key={Platform.isTV ? `tv-wide-${TV_GRID_COLUMNS}` : numColumns}
+          numColumns={Platform.isTV ? TV_GRID_COLUMNS : numColumns}
           keyExtractor={item => item.key}
-          renderItem={Platform.isTV ? renderRow : renderCard}
+          renderItem={Platform.isTV ? renderWideCard : renderCard}
           contentContainerStyle={styles.list}
           // A smaller virtualized window trades a bit of scroll-ahead
           // smoothness for a lot less concurrently-decoded image memory --
@@ -734,7 +817,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 18,
     backgroundColor: '#1B2120',
+    // Plain until the input itself actually has focus -- this used to be a
+    // permanent TV_FOCUS_COLOR border regardless of real focus state, which
+    // made it look focused even when, say, the close button had the
+    // remote's attention instead.
     borderWidth: 2,
+    borderColor: 'rgba(140,140,150,0.3)',
+  },
+  tvSearchBoxFocused: {
     borderColor: TV_FOCUS_COLOR,
   },
   tvSearchInput: {flex: 1, padding: 0, fontSize: 18, color: '#E6ECE8'},
@@ -753,10 +843,17 @@ const styles = StyleSheet.create({
   // exposed background for Android's own default focus highlight to land
   // on, same reasoning as `row`'s mat. A constant 2px border (transparent
   // when idle) keeps the chip's size the same whether or not it's focused.
+  // TV gets a rounded-rect shape (not a pill) with room for a leading
+  // icon/letter -- the same RailButton box the in-stream control rail's
+  // buttons use, confirmed to read clearly on real hardware, rather than a
+  // shape invented just for this chip.
   filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: Platform.isTV ? 9 : 6,
     paddingHorizontal: Platform.isTV ? 16 : 10,
-    borderRadius: 999,
+    borderRadius: Platform.isTV ? 9 : 999,
     backgroundColor: Platform.isTV
       ? 'rgba(255,255,255,0.04)'
       : 'rgba(140,140,150,0.14)',
@@ -777,7 +874,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     paddingVertical: Platform.isTV ? 9 : 6,
     paddingHorizontal: Platform.isTV ? 16 : 10,
-    borderRadius: 999,
+    borderRadius: Platform.isTV ? 9 : 999,
     backgroundColor: Platform.isTV
       ? 'rgba(255,255,255,0.04)'
       : 'rgba(140,140,150,0.14)',
@@ -791,12 +888,11 @@ const styles = StyleSheet.create({
     color: '#8A9A92',
   },
   sortChipTextOn: {color: '#0B0F0C'},
-  // Shared focus layer for both chip kinds above -- border always wins (so
-  // an "on" chip still visibly has the remote's attention), the background
-  // tint and text-color swap only apply while the chip is OFF, so an
-  // already-accent-filled "on" chip never looks like it un-toggled itself.
+  // Shared focus layer for both chip kinds above -- the border always wins
+  // (so an "on" chip still visibly has the remote's attention); the text
+  // color swap only applies while the chip is OFF, so an already-accent-
+  // filled "on" chip never looks like it un-toggled itself.
   chipFocusedBorder: {borderColor: TV_FOCUS_COLOR},
-  chipFocusedBg: {backgroundColor: 'rgba(255,213,74,0.14)'},
   chipFocusedText: {color: TV_FOCUS_COLOR},
   sortMenu: {
     position: 'absolute',
@@ -921,51 +1017,58 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 3,
   },
-  rowCell: {paddingHorizontal: 6, paddingVertical: 4},
-  // Plain mat, always present (not conditional on focus) -- the thumbnail is
-  // small, so most of the row is exposed background for a focus ring and
-  // Android's own default focus highlight to land on, unlike the grid's
-  // image-only cards. Constant 2px border (transparent when idle) so gaining
-  // the ring never resizes the row, same technique as the filter chips.
-  row: {
+  // TV 3-up grid: each cell is a 3-way split of the row, same gutter as the
+  // phone grid's own `cell`.
+  wideCell: {padding: 4},
+  // Plain mat, always present (not conditional on focus) -- the thumbnail
+  // is a fixed 84x84, so most of the card is exposed background for a
+  // focus ring and Android's own default focus highlight to land on,
+  // unlike the dense image-only grid this replaced. Constant 2px border
+  // (transparent when idle) so gaining the ring never resizes the card,
+  // same technique as the filter chips.
+  wideCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    alignItems: 'flex-start',
+    gap: 10,
     borderRadius: 10,
     backgroundColor: 'rgba(140,140,150,0.10)',
     borderWidth: 2,
     borderColor: 'transparent',
-    padding: 8,
+    padding: 10,
   },
-  rowFocused: {
+  wideCardFocused: {
     borderColor: TV_FOCUS_COLOR,
     backgroundColor: 'rgba(255,213,74,0.12)',
   },
-  rowThumb: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+  wideThumb: {
+    width: 84,
+    height: 84,
+    borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: 'rgba(140,140,150,0.2)',
+    flexShrink: 0,
   },
-  rowThumbEmpty: {
+  wideThumbEmpty: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 2,
+    padding: 4,
   },
-  rowThumbEmptyText: {
+  wideThumbEmptyText: {
     color: '#B7C6BD',
-    fontSize: 7,
+    fontSize: 10,
     fontWeight: '700',
     textAlign: 'center',
   },
-  rowBody: {flex: 1, gap: 3, minWidth: 0},
-  rowTitle: {fontSize: 13, fontWeight: '800', color: '#E6ECE8'},
-  rowTitleFocused: {color: TV_FOCUS_COLOR},
-  rowBadgesLine: {flexDirection: 'row', alignItems: 'center', gap: 4},
-  rowBadge: {
+  wideBody: {flex: 1, gap: 4, minWidth: 0},
+  wideTitle: {fontSize: 13, fontWeight: '800', color: '#E6ECE8'},
+  wideTitleFocused: {color: TV_FOCUS_COLOR},
+  wideOwnedTextOn: {fontSize: 9.5, fontWeight: '700', color: '#4FA82F'},
+  wideOwnedTextOff: {fontSize: 9.5, fontWeight: '700', color: DIM_BADGE_TEXT},
+  // Shared between the 3-up grid's badges and the sale callout.
+  cardBadgesLine: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  cardBadge: {
     minWidth: 16,
     height: 13,
     paddingHorizontal: 2,
@@ -973,19 +1076,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowBadgeText: {fontSize: 7, fontWeight: '800', color: '#0B0F0C'},
-  rowDiscount: {fontSize: 10.5, fontWeight: '800', color: SALE_ACCENT},
-  rowOwnedTag: {
-    marginLeft: 'auto',
-    paddingVertical: 3,
-    paddingHorizontal: 9,
-    borderRadius: 999,
-  },
-  rowOwnedTagOn: {backgroundColor: 'rgba(47,168,47,0.18)'},
-  rowOwnedTagOff: {backgroundColor: 'rgba(140,140,150,0.16)'},
-  rowOwnedTagText: {fontSize: 10, fontWeight: '700'},
-  rowOwnedTagTextOn: {color: '#4FA82F'},
-  rowOwnedTagTextOff: {color: DIM_BADGE_TEXT},
+  cardBadgeText: {fontSize: 7, fontWeight: '800', color: '#0B0F0C'},
+  cardDiscount: {fontSize: 9.5, fontWeight: '800', color: SALE_ACCENT},
 });
 
 export default LibraryView;
