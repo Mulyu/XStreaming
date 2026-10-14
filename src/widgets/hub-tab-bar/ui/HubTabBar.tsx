@@ -5,7 +5,6 @@ import {
   StyleSheet,
   DeviceEventEmitter,
   Platform,
-  findNodeHandle,
 } from 'react-native';
 import {Text, Icon, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -73,24 +72,6 @@ function HubTabBar({state, navigation}: any) {
     });
     return () => sub.remove();
   }, [state]);
-
-  // onFocus/onBlur on these tabs never actually fire on Android (confirmed
-  // on real Google TV hardware -- see shared/ui/tvFocus.ts's own comment for
-  // the full story), so focusedKey is driven from the same tabRefs map this
-  // already kept for the D-pad-long-press jump above: on every native focus
-  // change anywhere, look the reported tag up against each tab's own ref.
-  React.useEffect(() => {
-    const sub = DeviceEventEmitter.addListener(
-      'onNativeFocusChange',
-      (event: {tag: number}) => {
-        const key = Object.keys(tabRefs.current).find(
-          k => findNodeHandle(tabRefs.current[k]) === event.tag,
-        );
-        setFocusedKey(key ?? null);
-      },
-    );
-    return () => sub.remove();
-  }, []);
 
   const tabs = state.routes
     .map((route: any, index: number) => ({
