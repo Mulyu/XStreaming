@@ -5,6 +5,7 @@ import {
   DeviceEventEmitter,
   Linking,
   NativeModules,
+  Platform,
   StyleSheet,
   View,
 } from 'react-native';
@@ -72,7 +73,7 @@ import {useTranslation} from 'react-i18next';
 import {SystemBars} from 'react-native-edge-to-edge';
 
 import './i18n';
-import {HubTabBar} from './widgets/hub-tab-bar';
+import {HubTabBar, TV_RAIL_WIDTH} from './widgets/hub-tab-bar';
 import {useTVFocus, tvFocusRing} from './shared/ui/tvFocus';
 
 const RootStack = createStackNavigator();
@@ -119,6 +120,13 @@ const withPageBackground = (ScreenComponent: any) => {
 // Tab screens have no stack header, so they must reserve the status-bar area
 // themselves (the header used to do this). Same page background as above, plus
 // the top safe-area inset so content isn't drawn under the status bar.
+//
+// On TV, HubTabBar renders as a left rail that overlays the content instead
+// of taking its own row (see HubTabBar.tsx's own comment on why), so this is
+// also the one place that reserves TV_RAIL_WIDTH of left padding -- every tab
+// screen goes through here, so it only needs doing once.
+const TAB_SCREEN_LEFT_PADDING = Platform.isTV ? TV_RAIL_WIDTH : 0;
+
 const withTabScreen = (ScreenComponent: any) => {
   const WrappedScreen = (props: any) => {
     const insets = useSafeAreaInsets();
@@ -128,7 +136,10 @@ const withTabScreen = (ScreenComponent: any) => {
         style={[
           styles.backgroundScreen,
           styles.backgroundScreenDark,
-          {paddingTop: insets.top},
+          {
+            paddingTop: insets.top,
+            paddingLeft: TAB_SCREEN_LEFT_PADDING,
+          },
         ]}>
         <View style={styles.backgroundContent}>
           <ScreenComponent {...props} />
