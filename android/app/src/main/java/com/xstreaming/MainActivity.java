@@ -31,6 +31,7 @@ import android.app.Service;
 import android.content.ServiceConnection;
 import android.view.WindowManager;
 import android.view.ViewConfiguration;
+import android.view.ViewTreeObserver;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -784,6 +785,28 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
             usbDriverServiceConnection, Service.BIND_AUTO_CREATE);
 
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+    // Confirmed on real Google TV hardware: a plain Pressable/View's
+    // onFocus/onBlur props never fire on Android in this RN version (every
+    // one of six independently-colored test styles gated on that callback
+    // went completely unseen -- see LibraryView.tsx's own diagnostic
+    // comments). Real Android focus movement itself is fine; only the
+    // bridge that would tell JS about it is missing, since RN's Android
+    // BaseViewConfig has no topFocus/topBlur direct-event registration for
+    // a generic View (TextInput is the one native exception). This
+    // ViewTreeObserver listener is the actual bridge: it fires on *every*
+    // focus change anywhere in the window, native-Android-side, with no
+    // dependency on Pressable's own (non-functional) event props. JS
+    // compares the reported tag against its own via findNodeHandle (see
+    // shared/ui/tvFocus.ts's useTVFocus()) to know whether a given
+    // component itself is the one now focused.
+    getWindow().getDecorView().getViewTreeObserver().addOnGlobalFocusChangeListener(
+        (oldFocus, newFocus) -> {
+          WritableMap params = Arguments.createMap();
+          params.putInt("tag", newFocus != null ? newFocus.getId() : -1);
+          sendEvent("onNativeFocusChange", params);
+        }
+    );
   }
 
   @Override
