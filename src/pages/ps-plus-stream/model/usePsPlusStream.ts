@@ -416,6 +416,14 @@ export function usePsPlusStream(navigation: any, route: any) {
 
   const sessionRef = React.useRef<PsPlusSession | null>(null);
   const gpState = React.useRef(createGpState());
+  // Auto-fire (turbo): button names with turbo in the active profile, and
+  // their running repeat timers -- mirrors native-stream's own
+  // turboSetRef/turboTimersRef (see its handleButtonPressIn/Out), which this
+  // screen never had despite sharing the exact same per-profile ButtonConfig.
+  const turboSetRef = React.useRef<Set<string>>(new Set());
+  const turboTimersRef = React.useRef<Record<string, any>>({});
+  // Toggle-hold: button names with holdToggle in the active profile.
+  const holdToggleSetRef = React.useRef<Set<string>>(new Set());
 
   // Background keep-alive notification -- mirrors native-stream's own
   // StreamKeepAliveManager wiring verbatim (same native service/notification,
@@ -471,6 +479,34 @@ export function usePsPlusStream(navigation: any, route: any) {
     return fallback;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfile, gamepadLayoutVersion]);
+
+  // Rebuild the set of turbo/hold-toggle button names for the active profile
+  // -- same rebuild native-stream's own effect does for its own refs.
+  React.useEffect(() => {
+    const layout = activeProfile ? getGamepadLayouts()[activeProfile] : null;
+    const set = new Set<string>();
+    const holdSet = new Set<string>();
+    if (Array.isArray(layout)) {
+      layout.forEach((b: ButtonConfig) => {
+        if (b?.turbo) {
+          set.add(b.name);
+        }
+        if (b?.holdToggle) {
+          holdSet.add(b.name);
+        }
+      });
+    }
+    turboSetRef.current = set;
+    holdToggleSetRef.current = holdSet;
+  }, [activeProfile, gamepadLayoutVersion]);
+
+  // Clear any running turbo timers when leaving the stream screen.
+  React.useEffect(() => {
+    const timers = turboTimersRef.current;
+    return () => {
+      Object.keys(timers).forEach(n => clearInterval(timers[n]));
+    };
+  }, []);
 
   // Whether swipe-aim should actually claim/apply a touch right now, per its
   // activation scheme (same scheme as gyro-aim's SensorConfig.activation):
@@ -759,8 +795,55 @@ export function usePsPlusStream(navigation: any, route: any) {
   const menuLongPressTimer = React.useRef<ReturnType<typeof setTimeout>>();
   const menuLongPressTriggered = React.useRef(false);
 
+  // Auto-fire: while held, rapidly toggle the button so it repeats -- same
+  // 60ms on/off cadence as native-stream's own startTurbo/stopTurbo.
+  const startTurbo = React.useCallback(
+    (name: string) => {
+      if (turboTimersRef.current[name]) {
+        return;
+      }
+      let on = true;
+      (gpState.current as any)[name] = 1;
+      flushGpState();
+      turboTimersRef.current[name] = setInterval(() => {
+        on = !on;
+        (gpState.current as any)[name] = on ? 1 : 0;
+        flushGpState();
+      }, 60);
+    },
+    [flushGpState],
+  );
+
+  const stopTurbo = React.useCallback(
+    (name: string) => {
+      const timer = turboTimersRef.current[name];
+      if (timer) {
+        clearInterval(timer);
+        delete turboTimersRef.current[name];
+      }
+      (gpState.current as any)[name] = 0;
+      flushGpState();
+    },
+    [flushGpState],
+  );
+
   const handlePressIn = React.useCallback(
     (name: string) => {
+      if (turboSetRef.current.has(name)) {
+        startTurbo(name);
+        return;
+      }
+
+      if (holdToggleSetRef.current.has(name)) {
+        (gpState.current as any)[name] =
+          (gpState.current as any)[name] === 1 ? 0 : 1;
+        flushGpState();
+        if (name === 'LeftTrigger' || name === 'LeftShoulder') {
+          setSwipeAimActive(isSwipeAimActive());
+        }
+        return;
+      }
+
       (gpState.current as any)[name] = 1;
       flushGpState();
       if (name === 'LeftTrigger' || name === 'LeftShoulder') {
@@ -777,11 +860,20 @@ export function usePsPlusStream(navigation: any, route: any) {
         }, 2000);
       }
     },
-    [flushGpState, openControlRail, isSwipeAimActive],
+    [flushGpState, openControlRail, isSwipeAimActive, startTurbo],
   );
 
   const handlePressOut = React.useCallback(
     (name: string) => {
+      if (turboTimersRef.current[name]) {
+        stopTurbo(name);
+        return;
+      }
+
+      if (holdToggleSetRef.current.has(name)) {
+        return;
+      }
+
       (gpState.current as any)[name] = 0;
       flushGpState();
       if (name === 'LeftTrigger' || name === 'LeftShoulder') {
@@ -795,7 +887,7 @@ export function usePsPlusStream(navigation: any, route: any) {
         menuLongPressTriggered.current = false;
       }
     },
-    [flushGpState, isSwipeAimActive],
+    [flushGpState, isSwipeAimActive, stopTurbo],
   );
 
   const handleStickMove = React.useCallback(
