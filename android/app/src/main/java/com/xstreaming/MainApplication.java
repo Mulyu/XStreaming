@@ -15,6 +15,7 @@ import com.oney.WebRTCModule.EglUtils;
 import com.oney.WebRTCModule.webrtcutils.H264AndSoftwareVideoEncoderFactory;
 import com.xstreaming.touchcontrols.AnalogStickPackage;
 import com.xstreaming.touchcontrols.ButtonViewPackage;
+import com.xstreaming.touchcontrols.SwipeAimViewPackage;
 import com.xstreaming.webrtc.LowLatencyVideoDecoderFactory;
 import com.xstreaming.psplus.PsPlusPackage;
 
@@ -48,6 +49,7 @@ public class MainApplication extends Application implements ReactApplication {
             packages.add(new GamepadSensorPackage());
             packages.add(new AnalogStickPackage());
             packages.add(new ButtonViewPackage());
+            packages.add(new SwipeAimViewPackage());
             packages.add(new AudioSettingPackage());
             packages.add(new RTCFsrVideoViewPackage());
             packages.add(new UpdateManagerPackage());
