@@ -76,6 +76,7 @@ const LibraryView: React.FC<Props> = ({
   openTitle,
   openTitleDetail,
   saleDiscount,
+  titleRating,
 }) => {
   const searchFocus = useTVFocus();
   const tvSearchInputFocus = useTVFocus();
@@ -238,12 +239,20 @@ const LibraryView: React.FC<Props> = ({
   // background) still has plain background to land on instead of fighting
   // with box art the way the old dense square-image grid did.
   const renderWideCard = ({item}: {item: CatalogTitle}) => {
-    const isPlayable = isCatalogTitleOwned(item);
     const xcloudOwned = !!item.xcloud?.hasEntitlement;
     const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
     const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
     const discount = saleDiscount(item);
     const isFocused = focusedKey === item.key;
+    // Owned/not-owned already reads from the X/N/PS badges' own color (lit
+    // vs dimmed) -- this line used to just repeat that as text, so it's
+    // genre + rating instead now, the same two things Title Detail already
+    // shows. Genre comes from the catalog itself (every provider has it by
+    // the time a title reaches this grid); rating only ever covers xCloud
+    // titles the Store price fetch has reached (see titleRating's own
+    // comment), so it's simply left out rather than faked when absent.
+    const genreLabel = item.genres.slice(0, 2).join(' · ');
+    const rating = titleRating(item);
 
     return (
       <View
@@ -335,12 +344,21 @@ const LibraryView: React.FC<Props> = ({
                 </Text>
               )}
             </View>
-            <Text
-              style={
-                isPlayable ? styles.wideOwnedTextOn : styles.wideOwnedTextOff
-              }>
-              {isPlayable ? t('LibraryFilterOwned') : t('LibraryRowNotOwned')}
-            </Text>
+            <View style={styles.wideMetaLine}>
+              {rating && (
+                <View style={styles.wideRating}>
+                  <Icon source="star" size={10} color="#E6ECE8" />
+                  <Text style={styles.wideRatingText}>
+                    {rating.average.toFixed(1)}
+                  </Text>
+                </View>
+              )}
+              {!!genreLabel && (
+                <Text style={styles.wideGenreText} numberOfLines={1}>
+                  {genreLabel}
+                </Text>
+              )}
+            </View>
           </View>
         </Pressable>
       </View>
@@ -363,22 +381,14 @@ const LibraryView: React.FC<Props> = ({
         </View>
         {Platform.isTV ? (
           <>
-            <Pressable
-              style={[
-                styles.tvSearchIconButton,
-                searchFocus.focused && tvFocusRing,
-              ]}
-              onPress={() => setTvSearchOpen(true)}
-              onFocus={searchFocus.onFocus}
-              onBlur={searchFocus.onBlur}
-              accessibilityRole="button"
-              accessibilityLabel={t('Search')}>
-              <Icon
-                source="magnify"
-                size={18}
-                color={searchFocus.focused ? TV_FOCUS_COLOR : '#8A9A92'}
+            <View style={styles.tvSearchChip}>
+              <RailButton
+                icon="magnify"
+                label={t('Search')}
+                accent={XBOX_ACCENT}
+                onPress={() => setTvSearchOpen(true)}
               />
-            </Pressable>
+            </View>
             <Modal
               visible={tvSearchOpen}
               transparent
@@ -739,18 +749,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,213,74,0.1)',
   },
   searchInput: {flex: 1, padding: 0, fontSize: 14, color: '#E6ECE8'},
-  // TV: the search box above collapses to this icon button -- same visual
-  // footprint as a filter chip so it sits naturally in the header row.
-  tvSearchIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(140,140,150,0.14)',
-    borderWidth: 2,
-    borderColor: 'rgba(140,140,150,0.24)',
-  },
+  // TV: the search box above collapses to this RailButton -- same shape as
+  // the filter chips below it (icon + label, not an icon-only square) so
+  // Android's own per-view focus highlight has the same exposed mat area to
+  // land on, instead of the thin 2px-border-only cue a small icon button
+  // gave it before. alignSelf keeps it content-sized -- `header`'s a column
+  // flex container, which would otherwise stretch a bare RailButton (no
+  // explicit width of its own) to the header's full width.
+  tvSearchChip: {alignSelf: 'flex-start'},
   tvSearchOverlay: {
     flex: 1,
     backgroundColor: 'rgba(5,7,6,0.72)',
@@ -996,8 +1002,19 @@ const styles = StyleSheet.create({
   wideBody: {flex: 1, gap: 4, minWidth: 0},
   wideTitle: {fontSize: 13, fontWeight: '800', color: '#E6ECE8'},
   wideTitleFocused: {color: TV_FOCUS_COLOR},
-  wideOwnedTextOn: {fontSize: 9.5, fontWeight: '700', color: '#4FA82F'},
-  wideOwnedTextOff: {fontSize: 9.5, fontWeight: '700', color: DIM_BADGE_TEXT},
+  // Replaces the old owned/not-owned text line -- that was redundant with
+  // the X/N/PS badges' own lit/dimmed color just above it. height keeps
+  // every row the same height in the grid even on a title with neither
+  // genre nor a cached rating (rare, but real -- see titleRating's comment).
+  wideMetaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 14,
+  },
+  wideRating: {flexDirection: 'row', alignItems: 'center', gap: 3},
+  wideRatingText: {fontSize: 10.5, fontWeight: '700', color: '#E6ECE8'},
+  wideGenreText: {fontSize: 10.5, fontWeight: '600', color: DIM_BADGE_TEXT},
   // Shared between the 3-up grid's badges and the sale callout.
   cardBadgesLine: {flexDirection: 'row', alignItems: 'center', gap: 4},
   cardBadge: {

@@ -79,6 +79,7 @@ export {
   fetchPricesWithRetry,
   fetchTitleDetails,
   getPrice,
+  getRating,
   formatPrice,
   discountPercent,
   isSaleForDisplay,
