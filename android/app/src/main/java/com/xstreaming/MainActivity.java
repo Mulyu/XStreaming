@@ -840,6 +840,28 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     super.onDestroy();
   }
 
+  // Mitigates a reported "Library/Home comes back solid black after being
+  // backgrounded for a while" bug. AppDebugLog captures from an actual
+  // repro confirmed this is NOT the process being killed and recreated
+  // (onResume fires with no onCreate in between, even after background
+  // gaps well over an hour) -- so it's the other known category for this
+  // symptom on Android: under memory pressure the OS can reclaim the
+  // Activity's hardware-accelerated window surface without killing the
+  // process, and resuming the (still-alive) Activity doesn't by itself
+  // force a fresh composite, leaving the last (blank) frame on screen
+  // until something unrelated happens to trigger a redraw. Forcing one
+  // the moment window focus actually returns is the standard fix for this
+  // class of bug; it's a no-op (one extra invalidate) on every normal
+  // resume where nothing was actually lost.
+  @Override
+  public void onWindowFocusChanged(boolean hasFocus) {
+    super.onWindowFocusChanged(hasFocus);
+    if (hasFocus) {
+      AppDebugLog.log(this, "Activity", "onWindowFocusChanged (hasFocus=true)");
+      getWindow().getDecorView().invalidate();
+    }
+  }
+
   @Override
   public void onInputDeviceAdded(int deviceId) {
     InputDevice device = InputDevice.getDevice(deviceId);
