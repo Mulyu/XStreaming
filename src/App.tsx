@@ -22,6 +22,7 @@ import {
 
 // TEMPORARY diagnostic aid -- see its own file comment.
 
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {createStackNavigator} from '@react-navigation/stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -465,7 +466,17 @@ function App() {
         )}`;
 
   return (
-    <>
+    // react-native-gesture-handler requires this at (or near) the app's true
+    // root on Android -- without it, a Gesture.Pan()-based view (e.g.
+    // SwipeAimZone, the xCloud swipe-to-aim trackpad) can end up claiming
+    // touch delivery for the whole screen while a swipe is in progress,
+    // instead of only the touches that land inside its own bounds, so
+    // ordinary Pressables elsewhere (other virtual gamepad buttons) stop
+    // responding for the duration of the swipe. See
+    // https://docs.swmansion.com/react-native-gesture-handler/docs/fundamentals/installation
+    // ("Though it is not always necessary it is recommended that you complete
+    // this step since not doing so can lead to some unexpected behavior").
+    <GestureHandlerRootView style={styles.gestureRoot}>
       <Provider store={store}>
         <PaperProvider theme={paperTheme}>
           <NavigationContainer
@@ -593,11 +604,14 @@ function App() {
         </PaperProvider>
       </Provider>
       <SystemBars style="light" hidden={false} />
-    </>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   backgroundScreen: {
     flex: 1,
   },
