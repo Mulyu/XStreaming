@@ -681,7 +681,10 @@ export function usePsPlusStream(navigation: any, route: any) {
         // cut the stream even with a foreground service; offer to whitelist
         // the app from battery optimization (once per session, only if
         // needed) -- same prompt native-stream's own connect handler shows.
-        if (!batteryOptPromptRef.current) {
+        // Google TV boxes are mains-powered and don't carry this OEM
+        // battery-management UI, so there's nothing useful for this prompt
+        // to send the user to there.
+        if (!Platform.isTV && !batteryOptPromptRef.current) {
           batteryOptPromptRef.current = true;
           StreamKeepAliveManager?.isIgnoringBatteryOptimizations?.()
             .then((ignoring: boolean) => {
