@@ -3,12 +3,13 @@ import {View, StyleSheet, Pressable, Animated, Easing} from 'react-native';
 import {Text, Icon} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import {useTranslation} from 'react-i18next';
+import {RailButton, SegOption} from '../../../shared/ui/RailControls';
+import {TV_FOCUS_COLOR as FOCUS_COLOR} from '../../../shared/ui/tvFocus';
 
 export type StreamInputMode = 'off' | 'gamepad' | 'mouse' | 'touch';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
-const FOCUS_COLOR = '#FFD54A';
 
 export interface StreamControlRailProps {
   visible: boolean;
@@ -57,62 +58,6 @@ export interface StreamControlRailProps {
   onPressNexus: () => void;
   onDisconnect: () => void;
 }
-
-const RailButton: React.FC<{
-  icon: string;
-  label: string;
-  onPress: () => void;
-  active?: boolean;
-  danger?: boolean;
-  accent: string;
-}> = ({icon, label, onPress, active, danger, accent}) => {
-  const [focused, setFocused] = React.useState(false);
-  const iconColor = danger ? '#ff5347' : active ? accent : '#8a9a92';
-  return (
-    <Pressable
-      style={[
-        styles.railBtn,
-        focused && styles.railBtnFocused,
-        active && !danger && styles.railBtnActive,
-      ]}
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      android_ripple={{color: 'rgba(255,255,255,0.15)'}}>
-      <Icon source={icon} size={18} color={iconColor} />
-      <Text
-        style={[styles.railBtnLabel, danger && styles.railBtnLabelDanger]}
-        numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-};
-
-const SegOption: React.FC<{
-  icon: string;
-  label: string;
-  active: boolean;
-  accent: string;
-  onPress: () => void;
-}> = ({icon, label, active, accent, onPress}) => {
-  const [focused, setFocused] = React.useState(false);
-  return (
-    <Pressable
-      style={[
-        styles.segOpt,
-        active && {backgroundColor: accent},
-        focused && styles.segOptFocused,
-      ]}
-      accessibilityLabel={label}
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      android_ripple={{color: 'rgba(255,255,255,0.2)'}}>
-      <Icon source={icon} size={18} color={active ? '#0a0f0c' : '#8a9a92'} />
-    </Pressable>
-  );
-};
 
 const StreamControlRail: React.FC<StreamControlRailProps> = ({
   visible,
@@ -471,42 +416,6 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     padding: 2,
     gap: 2,
-  },
-  segOpt: {
-    flex: 1,
-    height: 34,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segOptFocused: {
-    borderWidth: 2,
-    borderColor: FOCUS_COLOR,
-  },
-  railBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  railBtnFocused: {
-    borderWidth: 2,
-    borderColor: FOCUS_COLOR,
-  },
-  railBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-  railBtnLabel: {
-    fontSize: 11.5,
-    fontWeight: '500',
-    color: '#eef4ef',
-    flexShrink: 1,
-  },
-  railBtnLabelDanger: {
-    color: '#ff5347',
   },
   sliderRow: {
     gap: 4,

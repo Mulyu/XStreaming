@@ -3,9 +3,10 @@ import {View, StyleSheet, Pressable, Animated, Easing} from 'react-native';
 import {Text, Icon} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
+import {RailButton, SegOption} from '../../../shared/ui/RailControls';
+import {TV_FOCUS_COLOR as FOCUS_COLOR} from '../../../shared/ui/tvFocus';
 
 const PS_ACCENT = '#0070D1';
-const FOCUS_COLOR = '#FFD54A';
 
 // Grouped-section layout ported from native-stream's own StreamControlRail
 // (same group labels, segmented control, slider, and focus-ring styling),
@@ -44,60 +45,6 @@ type Props = Pick<
   // `top: 0` + `bottom: 0` to resolve the rail's height from its positioned
   // ancestor's own flex-resolved size.
   screenHeight: number;
-};
-
-const RailButton: React.FC<{
-  icon: string;
-  label: string;
-  onPress: () => void;
-  active?: boolean;
-  danger?: boolean;
-}> = ({icon, label, onPress, active, danger}) => {
-  const [focused, setFocused] = React.useState(false);
-  const iconColor = danger ? '#ff5347' : active ? PS_ACCENT : '#8a9a92';
-  return (
-    <Pressable
-      style={[
-        styles.railBtn,
-        focused && styles.railBtnFocused,
-        active && !danger && styles.railBtnActive,
-      ]}
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      android_ripple={{color: 'rgba(255,255,255,0.15)'}}>
-      <Icon source={icon} size={18} color={iconColor} />
-      <Text
-        style={[styles.railBtnLabel, danger && styles.railBtnLabelDanger]}
-        numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-};
-
-const SegOption: React.FC<{
-  icon: string;
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}> = ({icon, label, active, onPress}) => {
-  const [focused, setFocused] = React.useState(false);
-  return (
-    <Pressable
-      style={[
-        styles.segOpt,
-        active && {backgroundColor: PS_ACCENT},
-        focused && styles.segOptFocused,
-      ]}
-      accessibilityLabel={label}
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      android_ripple={{color: 'rgba(255,255,255,0.2)'}}>
-      <Icon source={icon} size={18} color={active ? '#0a0f0c' : '#8a9a92'} />
-    </Pressable>
-  );
 };
 
 const PsPlusControlRail: React.FC<Props> = ({
@@ -182,6 +129,7 @@ const PsPlusControlRail: React.FC<Props> = ({
       <View style={styles.group}>
         <Text style={styles.groupLabel}>{t('Input')}</Text>
         <RailButton
+          accent={PS_ACCENT}
           icon={
             showVirtualGamepad ? 'gamepad-variant' : 'gamepad-variant-outline'
           }
@@ -190,11 +138,13 @@ const PsPlusControlRail: React.FC<Props> = ({
           onPress={onToggleVirtualGamepad}
         />
         <RailButton
+          accent={PS_ACCENT}
           icon="pencil-outline"
           label={t('Edit Virtual Gamepad')}
           onPress={onEditGamepadLayout}
         />
         <RailButton
+          accent={PS_ACCENT}
           icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
           label={t('Vibration')}
           active={vibrationEnabled}
@@ -227,6 +177,7 @@ const PsPlusControlRail: React.FC<Props> = ({
       <View style={styles.group}>
         <Text style={styles.groupLabel}>{t('Display')}</Text>
         <RailButton
+          accent={PS_ACCENT}
           icon="chart-line"
           label={t('Perf stats')}
           active={performanceVisible}
@@ -248,6 +199,7 @@ const PsPlusControlRail: React.FC<Props> = ({
         )}
         {coverAvailable && (
           <RailButton
+            accent={PS_ACCENT}
             icon="image-outline"
             label={t('Cover controls')}
             active={coverPresented}
@@ -260,18 +212,21 @@ const PsPlusControlRail: React.FC<Props> = ({
         <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
         <View style={styles.segRow}>
           <SegOption
+            accent={PS_ACCENT}
             icon="align-vertical-top"
             label={t('Top')}
             active={screenPosition === 'top'}
             onPress={() => onSetScreenPosition('top')}
           />
           <SegOption
+            accent={PS_ACCENT}
             icon="align-vertical-center"
             label={t('Center')}
             active={screenPosition === 'center'}
             onPress={() => onSetScreenPosition('center')}
           />
           <SegOption
+            accent={PS_ACCENT}
             icon="align-vertical-bottom"
             label={t('Bottom')}
             active={screenPosition === 'bottom'}
@@ -279,6 +234,7 @@ const PsPlusControlRail: React.FC<Props> = ({
           />
         </View>
         <RailButton
+          accent={PS_ACCENT}
           icon="aspect-ratio"
           label={videoFormatLabel}
           onPress={onCycleVideoFormat}
@@ -288,6 +244,7 @@ const PsPlusControlRail: React.FC<Props> = ({
       <View style={[styles.group, styles.sessionGroup]}>
         <Text style={styles.groupLabel}>{t('Session')}</Text>
         <RailButton
+          accent={PS_ACCENT}
           icon="power"
           label={t('Disconnect')}
           danger
@@ -344,42 +301,6 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     padding: 2,
     gap: 2,
-  },
-  segOpt: {
-    flex: 1,
-    height: 34,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segOptFocused: {
-    borderWidth: 2,
-    borderColor: FOCUS_COLOR,
-  },
-  railBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  railBtnFocused: {
-    borderWidth: 2,
-    borderColor: FOCUS_COLOR,
-  },
-  railBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-  railBtnLabel: {
-    fontSize: 11.5,
-    fontWeight: '500',
-    color: '#eef4ef',
-    flexShrink: 1,
-  },
-  railBtnLabelDanger: {
-    color: '#ff5347',
   },
   metrics: {
     paddingHorizontal: 4,
