@@ -1,6 +1,5 @@
 import React from 'react';
-import {View, StyleSheet} from 'react-native';
-import {Gesture, GestureDetector} from 'react-native-gesture-handler';
+import {requireNativeComponent, StyleSheet, ViewProps} from 'react-native';
 
 export interface SwipeAimRect {
   x: number;
@@ -8,6 +7,29 @@ export interface SwipeAimRect {
   width: number;
   height: number;
 }
+
+type NativeSwipeAimMoveEvent = {
+  nativeEvent: {dx: number; dy: number};
+};
+
+type NativeSwipeAimViewProps = ViewProps & {
+  onSwipeAimMove?: (event: NativeSwipeAimMoveEvent) => void;
+  onSwipeAimEnd?: () => void;
+};
+
+// See SwipeAimView.java's own comment for why this is a plain native View
+// (hosting its own onTouchEvent, like ButtonView/AnalogStickView) rather
+// than a react-native-gesture-handler GestureDetector, which this used to
+// be: a finger tracked by a Gesture.Pan() here could keep ButtonViews
+// elsewhere on screen from getting their own touches for as long as a
+// swipe was in progress, since gesture-handler's touch delivery and plain
+// Android Views' touch delivery don't fully coexist on Android. A plain
+// View gets Android's own default per-pointer motion-event splitting
+// across sibling views for free, the same mechanism that already lets a
+// ButtonView and an AnalogStickView each take their own finger
+// simultaneously.
+const NativeSwipeAimView =
+  requireNativeComponent<NativeSwipeAimViewProps>('SwipeAimView');
 
 export interface SwipeAimZoneProps {
   enabled: boolean;
@@ -33,24 +55,17 @@ export interface SwipeAimZoneProps {
   // zIndex so the trackpad rectangle actually receives touches that land
   // inside it.
   zIndex?: number;
-  // Whether the zone should actually claim a touch right now (e.g. an
+  // Whether the zone should actually apply a move right now (e.g. an
   // activation scheme like "only while the left trigger is held"). Checked
-  // live at each touch, not memoized, so a trigger release is picked up
-  // immediately rather than waiting for a re-render. When it declines, the
-  // touch falls through to whatever this zone would otherwise sit above --
-  // a button, or the free analog-stick catcher it's nested over -- instead
-  // of being swallowed by an aim mode that isn't actually active right now.
-  // Omit to always claim touches whenever enabled.
+  // live on every reported move, not memoized, so a trigger release is
+  // picked up immediately rather than waiting for a re-render. The touch
+  // itself is still claimed either way (this view always owns whatever
+  // finger starts inside its own bounds, same as a ButtonView would) --
+  // this only gates whether that finger's movement is actually forwarded
+  // as aim input. Omit to always report moves whenever enabled.
   isActive?: () => boolean;
 }
 
-/**
- * A transparent overlay that turns finger swipes into right-stick (camera)
- * movement, the way mobile shooters do: the camera turns by how fast you drag
- * rather than by holding a stick in a direction. It sits behind the virtual
- * buttons, so buttons layered on top still receive their own touches; only the
- * empty right side of the screen drives aiming.
- */
 const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   enabled,
   sensitivity,
@@ -61,99 +76,38 @@ const SwipeAimZone: React.FC<SwipeAimZoneProps> = ({
   zIndex = 1,
   isActive,
 }) => {
-  const last = React.useRef<{x: number; y: number} | null>(null);
-  // The identifier of the one finger that actually started this swipe. Once
-  // a second finger is down elsewhere (e.g. the other hand working the free
-  // left stick), its movement must never be read as a continuation of this
-  // gesture.
-  const touchId = React.useRef<number | null>(null);
-
-  // Built on react-native-gesture-handler's raw per-touch callbacks rather
-  // than RN's built-in PanResponder. PanResponder depends on RN's Android
-  // JSTouchDispatcher, which hit-tests only the FIRST finger of a multi-touch
-  // sequence and reuses that same target view for every later finger -- so
-  // if the free left stick (a native view, which bypasses this entirely) is
-  // touched first, a second finger landing inside this zone never gets its
-  // own touchStart and this responder is never granted. RNGH's handlers are
-  // hit-tested per pointer at the native layer, which doesn't have that
-  // limitation. We deliberately never rely on the gesture's own
-  // activation/state machine (onStart/onUpdate/onEnd) -- just the touch
-  // callbacks, which fire regardless of activation -- and track/compute
-  // everything ourselves exactly as the previous PanResponder version did.
-  const gesture = React.useMemo(() => {
-    const shouldCapture = () => enabled && (!isActive || isActive());
-    return Gesture.Pan()
-      .onTouchesDown(e => {
-        if (touchId.current != null || !shouldCapture()) {
-          return;
-        }
-        const touch = e.changedTouches[0];
-        if (!touch) {
-          return;
-        }
-        touchId.current = touch.id;
-        last.current = {x: touch.absoluteX, y: touch.absoluteY};
-      })
-      .onTouchesMove(e => {
-        if (touchId.current == null) {
-          return;
-        }
-        // Find our own finger among whatever touches are currently active,
-        // and ignore the event entirely if it isn't one of them -- it's some
-        // other finger moving, not this swipe.
-        const ownTouch = e.allTouches.find(t => t.id === touchId.current);
-        if (!ownTouch || !last.current) {
-          return;
-        }
-        const dx = ownTouch.absoluteX - last.current.x;
-        const dy = ownTouch.absoluteY - last.current.y;
-        last.current = {x: ownTouch.absoluteX, y: ownTouch.absoluteY};
-        // Boost grows with how far the finger moved this one event (a proxy
-        // for swipe speed): a slow drag has boost ~= 1 (acceleration barely
-        // contributes), a fast flick's larger per-event distance multiplies
-        // it up sharply.
-        const boost =
-          acceleration > 0 ? 1 + acceleration * Math.hypot(dx, dy) : 1;
-        onAim(dx * sensitivity * boost, dy * sensitivity * boost);
-      })
-      .onTouchesUp(e => {
-        const ownTouch = e.changedTouches.find(t => t.id === touchId.current);
-        if (touchId.current == null || !ownTouch) {
-          return;
-        }
-        last.current = null;
-        touchId.current = null;
-        onEnd();
-      })
-      .onTouchesCancelled(() => {
-        if (touchId.current == null) {
-          return;
-        }
-        last.current = null;
-        touchId.current = null;
-        onEnd();
-      });
-  }, [enabled, sensitivity, acceleration, onAim, onEnd, isActive]);
-
   if (!enabled) {
     return null;
   }
 
+  const handleMove = (event: NativeSwipeAimMoveEvent) => {
+    if (isActive && !isActive()) {
+      return;
+    }
+    const {dx, dy} = event.nativeEvent;
+    // Boost grows with how far the finger moved this one event (a proxy
+    // for swipe speed): a slow drag has boost ~= 1 (acceleration barely
+    // contributes), a fast flick's larger per-event distance multiplies
+    // it up sharply.
+    const boost = acceleration > 0 ? 1 + acceleration * Math.hypot(dx, dy) : 1;
+    onAim(dx * sensitivity * boost, dy * sensitivity * boost);
+  };
+
   return (
-    <GestureDetector gesture={gesture}>
-      <View
-        style={[
-          styles.zone,
-          {
-            left: rect.x,
-            top: rect.y,
-            width: rect.width,
-            height: rect.height,
-            zIndex,
-          },
-        ]}
-      />
-    </GestureDetector>
+    <NativeSwipeAimView
+      style={[
+        styles.zone,
+        {
+          left: rect.x,
+          top: rect.y,
+          width: rect.width,
+          height: rect.height,
+          zIndex,
+        },
+      ]}
+      onSwipeAimMove={handleMove}
+      onSwipeAimEnd={onEnd}
+    />
   );
 };
 
