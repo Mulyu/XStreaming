@@ -565,6 +565,21 @@ export const getPrice = (
   return map[storeId] || map[String(storeId).toUpperCase()] || null;
 };
 
+// Same lookup as getPrice, for the rating map fetchPricesWithRetry returns
+// alongside prices. Store ratings only ever come from this one Microsoft
+// Store-backed source, so GFN/PS Plus titles (and any xCloud title the
+// fetch hasn't covered yet) simply have none -- callers treat a null return
+// as "no rating to show", never a placeholder.
+export const getRating = (
+  map: Record<string, RatingInfo> | null | undefined,
+  storeId: string | null | undefined,
+): RatingInfo | null => {
+  if (!map || !storeId) {
+    return null;
+  }
+  return map[storeId] || map[String(storeId).toUpperCase()] || null;
+};
+
 // Format an amount for display, e.g. 7750 JPY -> "¥7,750", 19.99 USD -> "$19.99".
 // Deterministic (so the list and detail always agree) and independent of the
 // runtime's Intl support: known currencies get their symbol, others fall back

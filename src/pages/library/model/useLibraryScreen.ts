@@ -41,9 +41,11 @@ import {
   fetchPopularOrder,
   buildPopularRank,
   PriceInfo,
+  RatingInfo,
   deriveMarketLanguage,
   fetchPricesWithRetry,
   getPrice,
+  getRating,
   isSaleForDisplay,
   discountPercent,
   SteamPriceInfo,
@@ -68,6 +70,7 @@ import {getSystemRegion} from '../../../shared/lib/locale';
 export type SortMode = 'reco' | 'newest' | 'popular' | 'recent';
 
 const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
+const EMPTY_RATING_MAP: Record<string, RatingInfo> = {};
 const EMPTY_RANK: Record<string, number> = {};
 
 // The single "Library" tab: xCloud and GeForce NOW titles merged by name into
@@ -133,6 +136,11 @@ export function useLibraryScreen() {
   // notes), so these stay empty for GFN titles rather than faking a value.
   const [priceMap, setPriceMap] =
     React.useState<Record<string, PriceInfo>>(EMPTY_PRICE_MAP);
+  // Same xCloud-only source as priceMap (the two are fetched and cached
+  // together -- see fetchPricesWithRetry below), for the TV list row's
+  // rating line.
+  const [ratingMap, setRatingMap] =
+    React.useState<Record<string, RatingInfo>>(EMPTY_RATING_MAP);
   // GFN's linked Steam store variants, for the sale badge/filter -- GFN's own
   // catalog has no price data of its own, but a title backed by Steam can
   // still be on sale there, same as an xCloud title can be on Game Pass.
@@ -239,12 +247,18 @@ export function useLibraryScreen() {
     const cache = getFreshPriceCache(market);
     if (cache) {
       setPriceMap(cache.priceMap);
+      if (cache.ratingMap) {
+        setRatingMap(cache.ratingMap);
+      }
     }
 
     fetchPricesWithRetry(productIds, market, language).then(
       ({prices, ratings, ok}) => {
         if (Object.keys(prices).length > 0) {
           setPriceMap(prev => ({...prev, ...prices}));
+        }
+        if (Object.keys(ratings).length > 0) {
+          setRatingMap(prev => ({...prev, ...ratings}));
         }
         if (ok) {
           savePriceCache(prices, ratings, market, sig);
@@ -603,6 +617,18 @@ export function useLibraryScreen() {
     [priceMap, steamPriceMap],
   );
 
+  // Store rating for the TV list row -- same xCloud-only source as
+  // saleDiscount's own price lookup, so most GFN/PS Plus titles (and any
+  // xCloud title the fetch hasn't reached yet) simply return null rather
+  // than a faked value.
+  const titleRating = React.useCallback(
+    (item: CatalogTitle): RatingInfo | null => {
+      const productId = item.xcloud?.raw?.productId;
+      return productId ? getRating(ratingMap, productId) : null;
+    },
+    [ratingMap],
+  );
+
   const providerOwnedFiltered = React.useMemo(() => {
     let list = catalog;
     if (filterXcloud || filterGfn || filterPsPlus) {
@@ -834,6 +860,7 @@ export function useLibraryScreen() {
     openTitle,
     openTitleDetail,
     saleDiscount,
+    titleRating,
   };
 }
 
