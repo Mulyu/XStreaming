@@ -23,6 +23,7 @@ import {
   tvFocusRing,
   TV_FOCUS_COLOR,
 } from '../../../shared/ui/tvFocus';
+import {RailButton} from '../../../shared/ui/RailControls';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
@@ -76,6 +77,13 @@ const LibraryView: React.FC<Props> = ({
   openTitleDetail,
   saleDiscount,
 }) => {
+  const searchFocus = useTVFocus();
+  const tvSearchInputFocus = useTVFocus();
+  const tvSearchCloseFocus = useTVFocus();
+  // Phone only -- TV's own chips are the shared RailButton (self-managed
+  // focus), but phone's plain pill chips still need their own onFocus/onBlur
+  // per this app's blanket rule (scripts/check-tv-focus.js) that every
+  // onPress element wires one up.
   const xcloudChipFocus = useTVFocus();
   const gfnChipFocus = useTVFocus();
   const psPlusChipFocus = useTVFocus();
@@ -83,9 +91,6 @@ const LibraryView: React.FC<Props> = ({
   const ownedOnlyChipFocus = useTVFocus();
   const onSaleChipFocus = useTVFocus();
   const sortChipFocus = useTVFocus();
-  const searchFocus = useTVFocus();
-  const tvSearchInputFocus = useTVFocus();
-  const tvSearchCloseFocus = useTVFocus();
   const [focusedSortOption, setFocusedSortOption] = React.useState<
     string | null
   >(null);
@@ -94,37 +99,6 @@ const LibraryView: React.FC<Props> = ({
   // filter chips carry most of the narrowing on TV instead (see the TV
   // navigation rail proposal this implements).
   const [tvSearchOpen, setTvSearchOpen] = React.useState(false);
-
-  // A toggle chip's "on" state (filterChipOn/sortChipOn) already fills the
-  // chip with its own accent color -- focus must layer on top of that
-  // without erasing it, so the border is the one signal that always wins; an
-  // already-accent-filled "on" chip never looks like it un-toggled itself
-  // while focused. No background tint on focus here on purpose -- that was
-  // tried (see this file's own history) and still read weakly on real
-  // hardware, so border + text/icon color (always drawn on top, never
-  // competing with whatever the platform draws underneath) are the only
-  // focus signals now.
-  const chipStyle = (
-    base: object,
-    active: boolean,
-    focused: boolean,
-    onStyle: object,
-  ) => [base, active && onStyle, focused && styles.chipFocusedBorder];
-  const chipTextStyle = (
-    base: object,
-    active: boolean,
-    focused: boolean,
-    onTextStyle: object,
-  ) => [
-    base,
-    active && onTextStyle,
-    focused && !active && styles.chipFocusedText,
-  ];
-  // Same 3-state color rule as chipTextStyle, as a plain color string for
-  // the chip's leading icon (react-native-paper's Icon takes `color`, not a
-  // style array).
-  const chipContentColor = (active: boolean, focused: boolean) =>
-    active ? '#0B0F0C' : focused ? TV_FOCUS_COLOR : '#8A9A92';
 
   // Google TV's remote mic/voice-search button (MainActivity.java's own
   // onKeyDown -- KEYCODE_SEARCH/VOICE_ASSIST/ASSIST, all three since remotes
@@ -479,221 +453,197 @@ const LibraryView: React.FC<Props> = ({
         )}
         <View style={styles.filterRow}>
           <View style={styles.chipsRow}>
-            <Pressable
-              style={chipStyle(
-                styles.filterChip,
-                filterXcloud,
-                xcloudChipFocus.focused,
-                styles.filterChipOn,
-              )}
-              onPress={() => setFilterXcloud(v => !v)}
-              onFocus={xcloudChipFocus.onFocus}
-              onBlur={xcloudChipFocus.onBlur}>
-              {Platform.isTV && (
-                <Text
-                  style={chipTextStyle(
-                    styles.filterChipText,
-                    filterXcloud,
-                    xcloudChipFocus.focused,
-                    styles.filterChipTextOn,
-                  )}>
-                  X
-                </Text>
-              )}
-              <Text
-                style={chipTextStyle(
-                  styles.filterChipText,
-                  filterXcloud,
-                  xcloudChipFocus.focused,
-                  styles.filterChipTextOn,
-                )}>
-                {t('LibraryFilterXcloud')}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={chipStyle(
-                styles.filterChip,
-                filterGfn,
-                gfnChipFocus.focused,
-                styles.filterChipOn,
-              )}
-              onPress={() => setFilterGfn(v => !v)}
-              onFocus={gfnChipFocus.onFocus}
-              onBlur={gfnChipFocus.onBlur}>
-              {Platform.isTV && (
-                <Text
-                  style={chipTextStyle(
-                    styles.filterChipText,
-                    filterGfn,
-                    gfnChipFocus.focused,
-                    styles.filterChipTextOn,
-                  )}>
-                  N
-                </Text>
-              )}
-              <Text
-                style={chipTextStyle(
-                  styles.filterChipText,
-                  filterGfn,
-                  gfnChipFocus.focused,
-                  styles.filterChipTextOn,
-                )}>
-                {t('LibraryFilterGfn')}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={chipStyle(
-                styles.filterChip,
-                filterPsPlus,
-                psPlusChipFocus.focused,
-                styles.filterChipOn,
-              )}
-              onPress={() => setFilterPsPlus(v => !v)}
-              onFocus={psPlusChipFocus.onFocus}
-              onBlur={psPlusChipFocus.onBlur}>
-              {Platform.isTV && (
-                <Text
-                  style={chipTextStyle(
-                    styles.filterChipText,
-                    filterPsPlus,
-                    psPlusChipFocus.focused,
-                    styles.filterChipTextOn,
-                  )}>
-                  PS
-                </Text>
-              )}
-              <Text
-                style={chipTextStyle(
-                  styles.filterChipText,
-                  filterPsPlus,
-                  psPlusChipFocus.focused,
-                  styles.filterChipTextOn,
-                )}>
-                {t('LibraryFilterPsPlus')}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={chipStyle(
-                styles.filterChip,
-                filterFavorite,
-                favoriteChipFocus.focused,
-                styles.filterChipOn,
-              )}
-              onPress={() => setFilterFavorite(v => !v)}
-              onFocus={favoriteChipFocus.onFocus}
-              onBlur={favoriteChipFocus.onBlur}>
-              {Platform.isTV && (
-                <Icon
-                  source="heart-outline"
-                  size={13}
-                  color={chipContentColor(
-                    filterFavorite,
-                    favoriteChipFocus.focused,
-                  )}
+            {Platform.isTV ? (
+              <>
+                <RailButton
+                  letter="X"
+                  label={t('LibraryFilterXcloud')}
+                  active={filterXcloud}
+                  accent={XBOX_ACCENT}
+                  fill
+                  onPress={() => setFilterXcloud(v => !v)}
                 />
-              )}
-              <Text
-                style={chipTextStyle(
-                  styles.filterChipText,
-                  filterFavorite,
-                  favoriteChipFocus.focused,
-                  styles.filterChipTextOn,
-                )}>
-                {t('LibraryFilterFavorite')}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={chipStyle(
-                styles.filterChip,
-                filterOwnedOnly,
-                ownedOnlyChipFocus.focused,
-                styles.filterChipOn,
-              )}
-              onPress={() => setFilterOwnedOnly(v => !v)}
-              onFocus={ownedOnlyChipFocus.onFocus}
-              onBlur={ownedOnlyChipFocus.onBlur}>
-              {Platform.isTV && (
-                <Icon
-                  source="check-circle-outline"
-                  size={13}
-                  color={chipContentColor(
-                    filterOwnedOnly,
-                    ownedOnlyChipFocus.focused,
-                  )}
+                <RailButton
+                  letter="N"
+                  label={t('LibraryFilterGfn')}
+                  active={filterGfn}
+                  accent={XBOX_ACCENT}
+                  fill
+                  onPress={() => setFilterGfn(v => !v)}
                 />
-              )}
-              <Text
-                style={chipTextStyle(
-                  styles.filterChipText,
-                  filterOwnedOnly,
-                  ownedOnlyChipFocus.focused,
-                  styles.filterChipTextOn,
-                )}>
-                {t('LibraryFilterOwned')}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={chipStyle(
-                styles.filterChip,
-                filterOnSale,
-                onSaleChipFocus.focused,
-                styles.filterChipOn,
-              )}
-              onPress={() => setFilterOnSale(v => !v)}
-              onFocus={onSaleChipFocus.onFocus}
-              onBlur={onSaleChipFocus.onBlur}>
-              {Platform.isTV && (
-                <Icon
-                  source="tag-outline"
-                  size={13}
-                  color={chipContentColor(
-                    filterOnSale,
-                    onSaleChipFocus.focused,
-                  )}
+                <RailButton
+                  letter="PS"
+                  label={t('LibraryFilterPsPlus')}
+                  active={filterPsPlus}
+                  accent={XBOX_ACCENT}
+                  fill
+                  onPress={() => setFilterPsPlus(v => !v)}
                 />
-              )}
-              <Text
-                style={chipTextStyle(
-                  styles.filterChipText,
-                  filterOnSale,
-                  onSaleChipFocus.focused,
-                  styles.filterChipTextOn,
-                )}>
-                {t('LibraryFilterOnSale')}
-              </Text>
-            </Pressable>
+                <RailButton
+                  icon="heart-outline"
+                  label={t('LibraryFilterFavorite')}
+                  active={filterFavorite}
+                  accent={XBOX_ACCENT}
+                  fill
+                  onPress={() => setFilterFavorite(v => !v)}
+                />
+                <RailButton
+                  icon="check-circle-outline"
+                  label={t('LibraryFilterOwned')}
+                  active={filterOwnedOnly}
+                  accent={XBOX_ACCENT}
+                  fill
+                  onPress={() => setFilterOwnedOnly(v => !v)}
+                />
+                <RailButton
+                  icon="tag-outline"
+                  label={t('LibraryFilterOnSale')}
+                  active={filterOnSale}
+                  accent={XBOX_ACCENT}
+                  fill
+                  onPress={() => setFilterOnSale(v => !v)}
+                />
+                <View style={styles.sortChipTv}>
+                  <RailButton
+                    icon="sort"
+                    trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
+                    label={`${t('Sort')}: ${activeSortLabel}`}
+                    active={sortMode !== 'recent'}
+                    accent={NVIDIA_ACCENT}
+                    fill
+                    onPress={() => setSortMenuOpen(v => !v)}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <Pressable
+                  style={[
+                    styles.filterChip,
+                    filterXcloud && styles.filterChipOn,
+                    xcloudChipFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={() => setFilterXcloud(v => !v)}
+                  onFocus={xcloudChipFocus.onFocus}
+                  onBlur={xcloudChipFocus.onBlur}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterXcloud && styles.filterChipTextOn,
+                    ]}>
+                    {t('LibraryFilterXcloud')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.filterChip,
+                    filterGfn && styles.filterChipOn,
+                    gfnChipFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={() => setFilterGfn(v => !v)}
+                  onFocus={gfnChipFocus.onFocus}
+                  onBlur={gfnChipFocus.onBlur}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterGfn && styles.filterChipTextOn,
+                    ]}>
+                    {t('LibraryFilterGfn')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.filterChip,
+                    filterPsPlus && styles.filterChipOn,
+                    psPlusChipFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={() => setFilterPsPlus(v => !v)}
+                  onFocus={psPlusChipFocus.onFocus}
+                  onBlur={psPlusChipFocus.onBlur}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterPsPlus && styles.filterChipTextOn,
+                    ]}>
+                    {t('LibraryFilterPsPlus')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.filterChip,
+                    filterFavorite && styles.filterChipOn,
+                    favoriteChipFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={() => setFilterFavorite(v => !v)}
+                  onFocus={favoriteChipFocus.onFocus}
+                  onBlur={favoriteChipFocus.onBlur}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterFavorite && styles.filterChipTextOn,
+                    ]}>
+                    {t('LibraryFilterFavorite')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.filterChip,
+                    filterOwnedOnly && styles.filterChipOn,
+                    ownedOnlyChipFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={() => setFilterOwnedOnly(v => !v)}
+                  onFocus={ownedOnlyChipFocus.onFocus}
+                  onBlur={ownedOnlyChipFocus.onBlur}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterOwnedOnly && styles.filterChipTextOn,
+                    ]}>
+                    {t('LibraryFilterOwned')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.filterChip,
+                    filterOnSale && styles.filterChipOn,
+                    onSaleChipFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={() => setFilterOnSale(v => !v)}
+                  onFocus={onSaleChipFocus.onFocus}
+                  onBlur={onSaleChipFocus.onBlur}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterOnSale && styles.filterChipTextOn,
+                    ]}>
+                    {t('LibraryFilterOnSale')}
+                  </Text>
+                </Pressable>
 
-            <Pressable
-              style={chipStyle(
-                styles.sortChip,
-                sortMode !== 'recent',
-                sortChipFocus.focused,
-                styles.sortChipOn,
-              )}
-              onPress={() => setSortMenuOpen(v => !v)}
-              onFocus={sortChipFocus.onFocus}
-              onBlur={sortChipFocus.onBlur}>
-              <Text
-                style={chipTextStyle(
-                  styles.sortChipText,
-                  sortMode !== 'recent',
-                  sortChipFocus.focused,
-                  styles.sortChipTextOn,
-                )}>
-                {`${t('Sort')}: ${activeSortLabel}`}
-              </Text>
-              <Icon
-                source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
-                size={14}
-                color={
-                  sortChipFocus.focused && sortMode === 'recent'
-                    ? TV_FOCUS_COLOR
-                    : sortMode !== 'recent'
-                    ? '#0B0F0C'
-                    : '#8A9A92'
-                }
-              />
-            </Pressable>
+                <Pressable
+                  style={[
+                    styles.sortChip,
+                    sortMode !== 'recent' && styles.sortChipOn,
+                    sortChipFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={() => setSortMenuOpen(v => !v)}
+                  onFocus={sortChipFocus.onFocus}
+                  onBlur={sortChipFocus.onBlur}>
+                  <Text
+                    style={[
+                      styles.sortChipText,
+                      sortMode !== 'recent' && styles.sortChipTextOn,
+                    ]}>
+                    {`${t('Sort')}: ${activeSortLabel}`}
+                  </Text>
+                  <Icon
+                    source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
+                    size={14}
+                    color={sortMode !== 'recent' ? '#0B0F0C' : '#8A9A92'}
+                  />
+                </Pressable>
+              </>
+            )}
           </View>
 
           {sortMenuOpen && (
@@ -837,63 +787,45 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(140,140,150,0.18)',
   },
   filterRow: {position: 'relative'},
-  chipsRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
-  // TV gets a bigger, plainer idle chip (more padding, a flatter near-
-  // transparent fill instead of the mid-gray tint phone uses) -- more
-  // exposed background for Android's own default focus highlight to land
-  // on, same reasoning as `row`'s mat. A constant 2px border (transparent
-  // when idle) keeps the chip's size the same whether or not it's focused.
-  // TV gets a rounded-rect shape (not a pill) with room for a leading
-  // icon/letter -- the same RailButton box the in-stream control rail's
-  // buttons use, confirmed to read clearly on real hardware, rather than a
-  // shape invented just for this chip.
-  filterChip: {
+  chipsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
-    paddingVertical: Platform.isTV ? 9 : 6,
-    paddingHorizontal: Platform.isTV ? 16 : 10,
-    borderRadius: Platform.isTV ? 9 : 999,
-    backgroundColor: Platform.isTV
-      ? 'rgba(255,255,255,0.04)'
-      : 'rgba(140,140,150,0.14)',
-    borderWidth: Platform.isTV ? 2 : 1,
-    borderColor: Platform.isTV ? 'transparent' : 'rgba(140,140,150,0.24)',
+    alignItems: 'center',
+  },
+  // Phone only now -- TV uses the shared RailButton (see shared/ui/
+  // RailControls.tsx) instead of its own lookalike chip, after this file's
+  // own hand-rolled version turned out to be the third near-identical copy
+  // of that same box across the app.
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(140,140,150,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(140,140,150,0.24)',
   },
   filterChipOn: {backgroundColor: XBOX_ACCENT, borderColor: XBOX_ACCENT},
-  filterChipText: {
-    fontSize: Platform.isTV ? 12.5 : 11.5,
-    fontWeight: '700',
-    color: '#8A9A92',
-  },
+  filterChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
   filterChipTextOn: {color: '#0B0F0C'},
   sortChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginLeft: 'auto',
-    paddingVertical: Platform.isTV ? 9 : 6,
-    paddingHorizontal: Platform.isTV ? 16 : 10,
-    borderRadius: Platform.isTV ? 9 : 999,
-    backgroundColor: Platform.isTV
-      ? 'rgba(255,255,255,0.04)'
-      : 'rgba(140,140,150,0.14)',
-    borderWidth: Platform.isTV ? 2 : 1,
-    borderColor: Platform.isTV ? 'transparent' : 'rgba(140,140,150,0.24)',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(140,140,150,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(140,140,150,0.24)',
   },
   sortChipOn: {backgroundColor: NVIDIA_ACCENT, borderColor: NVIDIA_ACCENT},
-  sortChipText: {
-    fontSize: Platform.isTV ? 12.5 : 11.5,
-    fontWeight: '700',
-    color: '#8A9A92',
-  },
+  sortChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
   sortChipTextOn: {color: '#0B0F0C'},
-  // Shared focus layer for both chip kinds above -- the border always wins
-  // (so an "on" chip still visibly has the remote's attention); the text
-  // color swap only applies while the chip is OFF, so an already-accent-
-  // filled "on" chip never looks like it un-toggled itself.
-  chipFocusedBorder: {borderColor: TV_FOCUS_COLOR},
-  chipFocusedText: {color: TV_FOCUS_COLOR},
+  // TV only -- pushes the sort RailButton to the row's far end, same as
+  // phone's sortChip's own marginLeft:'auto'.
+  sortChipTv: {marginLeft: 'auto'},
   sortMenu: {
     position: 'absolute',
     top: '100%',
