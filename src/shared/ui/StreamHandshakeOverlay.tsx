@@ -9,11 +9,30 @@ import {
   View,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
-import type {LoadingPhase} from '../../../shared/lib/loadingPhase';
-import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import type {LoadingPhase} from '../lib/loadingPhase';
+import {useTVFocus, tvFocusRing} from './tvFocus';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
+const PS_ACCENT = '#0070CC';
+
+// Per-provider chip look. streamType values come from NativeStream's own
+// route params ('cloud'/'gfn'/'home') and PsPlusStream's ('psplus'); any
+// other/missing value (xCloud's own 'cloud', mainly) falls through to the
+// Xbox Cloud Gaming default below rather than needing its own entry.
+const PROVIDER_META: Record<
+  string,
+  {accent: string; badge: string; label: string}
+> = {
+  gfn: {accent: NVIDIA_ACCENT, badge: 'N', label: 'GeForce Now'},
+  home: {accent: XBOX_ACCENT, badge: 'X', label: 'Xbox Console'},
+  psplus: {accent: PS_ACCENT, badge: 'P', label: 'PlayStation Plus'},
+};
+const DEFAULT_PROVIDER_META = {
+  accent: XBOX_ACCENT,
+  badge: 'X',
+  label: 'Xbox Cloud Gaming',
+};
 
 export interface StreamHandshakeOverlayProps {
   streamType?: string;
@@ -21,9 +40,12 @@ export interface StreamHandshakeOverlayProps {
   posterUrl?: string;
   phase: LoadingPhase;
   queuePosition?: number;
-  // The existing raw connection-step text (e.g. "Ready to send ICE..."),
-  // shown verbatim as the telemetry line -- nothing technical is dropped,
-  // it just moves out of the headline and into this detail row.
+  // A short, one-line status for the telemetry row. xCloud/GFN pass their
+  // own already-condensed connection-step text (e.g. "Ready to send
+  // ICE..."); PS Plus passes a localized summary of its own much more
+  // granular native provisioning stages (see PsPlusSession.connect's
+  // mapProvisionStageToPhase) rather than that raw text, which would be
+  // untranslated, overly technical and far too frequent for this one line.
   detailText: string;
   onCancel: () => void;
 }
@@ -150,14 +172,11 @@ const StreamHandshakeOverlay: React.FC<StreamHandshakeOverlayProps> = ({
 }) => {
   const {t} = useTranslation();
   const cancelFocus = useTVFocus();
-  const isGfn = streamType === 'gfn';
-  const accent = isGfn ? NVIDIA_ACCENT : XBOX_ACCENT;
-  const badgeLetter = isGfn ? 'N' : 'X';
-  const providerLabel = isGfn
-    ? 'GeForce Now'
-    : streamType === 'home'
-    ? 'Xbox Console'
-    : 'Xbox Cloud Gaming';
+  const {
+    accent,
+    badge: badgeLetter,
+    label: providerLabel,
+  } = (streamType && PROVIDER_META[streamType]) || DEFAULT_PROVIDER_META;
   const isLive = phase === 'live';
 
   const kenBurns = React.useRef(new Animated.Value(0)).current;

@@ -43,6 +43,7 @@ import type {
 } from '../../../features/controller-customization';
 import {getSettings, saveSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
+import type {LoadingPhase} from '../../../shared/lib/loadingPhase';
 
 const {
   FullScreenManager,
@@ -210,6 +211,11 @@ export function usePsPlusStream(navigation: any, route: any) {
   const [connectState, setConnectState] =
     React.useState<PsPlusConnectionState>('connecting');
   const [progressText, setProgressText] = React.useState('');
+  // Drives StreamHandshakeOverlay's phase ladder, same as native-stream's
+  // own loadingPhase -- see PsPlusSession.connect's mapProvisionStageToPhase
+  // for how the native provisioning stage strings map onto this.
+  const [loadingPhase, setLoadingPhase] =
+    React.useState<LoadingPhase>('handshake');
   const [errorDetail, setErrorDetail] = React.useState('');
   const [pinRequest, setPinRequest] = React.useState<{
     pinIncorrect: boolean;
@@ -704,7 +710,10 @@ export function usePsPlusStream(navigation: any, route: any) {
             .catch(() => {});
         }
       },
-      onProgress: stage => setProgressText(stage),
+      onProgress: (text, phase) => {
+        setProgressText(text);
+        setLoadingPhase(phase);
+      },
       onLoginPinRequest: pinIncorrect => setPinRequest({pinIncorrect}),
       // Chiaki's rumble is just the two continuous DualSense motor
       // magnitudes (0-255, no duration/trigger-effect data the way xCloud's
@@ -1375,8 +1384,10 @@ export function usePsPlusStream(navigation: any, route: any) {
   return {
     t,
     title: params.name ?? '',
+    posterUrl: typeof params.posterUrl === 'string' ? params.posterUrl : '',
     connectState,
     progressText,
+    loadingPhase,
     errorDetail,
     pinRequest,
     pin,

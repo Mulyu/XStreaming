@@ -294,6 +294,7 @@ function App() {
           platform: game.platform,
           isOwned: game.isOwned,
           entitlementId: game.entitlementId,
+          posterUrl: game.imageUrl || '',
         });
         return;
       }

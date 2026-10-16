@@ -9,6 +9,38 @@ import {
   Codec,
   PsPlusSessionEvent,
 } from './native';
+import i18next from '../../../i18n';
+import type {LoadingPhase} from '../../../shared/lib/loadingPhase';
+
+const {t} = i18next;
+
+// The native provisioning flow (cloudsession_kamaji.c for PSNOW,
+// cloudsession_gaikai.c for PSCloud) reports progress as ~15 fine-grained,
+// untranslated, technical stage strings ("Pinging Datacenters - Step 8 of
+// 10", "Allocating streaming slot - Queue position: 3 - Attempt 2", ...).
+// Showing those raw strings in the same overlay xCloud/GFN use (which
+// already condenses their own richer internal states down to one short,
+// localized line) would be far more verbose than either provider's -- so
+// fold them into the same 5-phase ladder (shared/lib/loadingPhase) those
+// providers use, and report one short localized summary per phase instead
+// of the raw string. The full raw string keeps flowing into the PS Plus
+// debug log untouched (see PsPlusModule.kt's addProvisionProgressListener),
+// so nothing is lost for diagnosing a stuck connect -- it's just not what
+// the player sees. Matched by substring, not exact string, since several
+// stages carry interpolated text (a datacenter name, a retry/attempt
+// count, a queue position) that a fixed lookup table would miss; stages
+// this doesn't recognize fall back to 'handshake', the earliest phase.
+const mapProvisionStageToPhase = (
+  stage: string,
+): {phase: LoadingPhase; text: string} => {
+  if (stage.includes('Datacenter')) {
+    return {phase: 'negotiating', text: t('PsPlusLaunchNegotiating')};
+  }
+  if (stage.includes('Allocat') || stage.includes('Migrating')) {
+    return {phase: 'starting', text: t('PsPlusLaunchStarting')};
+  }
+  return {phase: 'handshake', text: t('PsPlusLaunchHandshake')};
+};
 
 // xCloud/native-stream-style gpState button field -> chiaki ControllerState
 // bit value (see native.ts's ControllerButton and Chiaki.kt's ControllerState).
@@ -110,7 +142,10 @@ export type PsPlusConnectionState =
 
 export type PsPlusAdapterHandlers = {
   onState?: (state: PsPlusConnectionState, detail?: string) => void;
-  onProgress?: (stage: string) => void;
+  // text is a short, localized, already-summarized line -- see
+  // mapProvisionStageToPhase's own comment for why the raw native stage
+  // string itself isn't passed through.
+  onProgress?: (text: string, phase: LoadingPhase) => void;
   onLoginPinRequest?: (pinIncorrect: boolean) => void;
   onRumble?: (left: number, right: number) => void;
   onPsChord?: () => void;
@@ -147,7 +182,8 @@ export class PsPlusSession {
     this.removeProgressListener = psPlusChiaki.addProvisionProgressListener(
       event => {
         if (!this.disposed) {
-          this.handlers.onProgress?.(event.stage);
+          const {phase, text} = mapProvisionStageToPhase(event.stage);
+          this.handlers.onProgress?.(text, phase);
         }
       },
     );

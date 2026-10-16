@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, StyleSheet, TextInput, useWindowDimensions} from 'react-native';
-import {Text, Button, ActivityIndicator} from 'react-native-paper';
+import {Text, Button} from 'react-native-paper';
 import {PsPlusStreamView as NativePsPlusStreamView} from '../../../features/ps-plus-session';
 import {VirtualGamepad} from '../../../entities/gamepad';
 import {CustomVirtualGamepad} from '../../../features/controller-customization';
@@ -8,14 +8,17 @@ import {VirtualGamepadEditor} from '../../../widgets/virtual-gamepad-editor';
 import PsPlusControlRail from './PsPlusControlRail';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import StreamHandshakeOverlay from '../../../shared/ui/StreamHandshakeOverlay';
 
 type Props = PsPlusStreamViewModel;
 
 const PsPlusStreamScreenView: React.FC<Props> = ({
   t,
   title,
+  posterUrl,
   connectState,
   progressText,
+  loadingPhase,
   errorDetail,
   pinRequest,
   pin,
@@ -91,17 +94,19 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         videoFormat={videoFormat}
       />
 
-      {connectState !== 'connected' && (
+      {connectState === 'connecting' && (
+        <StreamHandshakeOverlay
+          streamType="psplus"
+          gameTitle={title}
+          posterUrl={posterUrl || undefined}
+          phase={loadingPhase}
+          detailText={progressText}
+          onCancel={onRequestExit}
+        />
+      )}
+
+      {(connectState === 'failed' || connectState === 'closed') && (
         <View style={styles.overlay}>
-          {connectState === 'connecting' && (
-            <>
-              <ActivityIndicator size="large" />
-              <Text style={styles.overlayText}>{title}</Text>
-              {!!progressText && (
-                <Text style={styles.overlaySubText}>{progressText}</Text>
-              )}
-            </>
-          )}
           {connectState === 'failed' && (
             <>
               <Text style={styles.overlayText}>{t('Failed to connect')}</Text>

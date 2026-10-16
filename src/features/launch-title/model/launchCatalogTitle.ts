@@ -62,6 +62,7 @@ export const launchWithProvider = (
       platform: game.platform,
       isOwned: game.isOwned,
       entitlementId: game.entitlementId,
+      posterUrl: catalogTitle.imageUrl ?? '',
     });
     return;
   }
@@ -71,6 +72,12 @@ export const launchWithProvider = (
     streamType: 'gfn',
     appId: preference.gfnId,
     title: catalogTitle.title,
+    // Unlike xCloud's own raw.Image_Poster above, GFN's launch params never
+    // carried an image at all -- the merged catalog entry already has one
+    // (Steam-backed titles get it from gfnPublicGames.ts; other stores have
+    // none, same as xCloud/PS Plus titles with no art fall back to
+    // StreamHandshakeOverlay's plain glow backdrop).
+    postUrl: catalogTitle.imageUrl ?? '',
   });
 };
 
