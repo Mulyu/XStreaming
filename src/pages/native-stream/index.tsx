@@ -15,7 +15,6 @@ import {
   Dimensions,
   useWindowDimensions,
 } from 'react-native';
-import {IconButton} from 'react-native-paper';
 import {RTCView, MediaStream, RTCRtpReceiver} from 'react-native-webrtc';
 import Orientation from 'react-native-orientation-locker';
 import StreamHandshakeOverlay from './ui/StreamHandshakeOverlay';
@@ -27,7 +26,6 @@ import {
   PointerWireData,
 } from '../../features/xcloud-session';
 import {getSettings, saveSettings} from '../../shared/lib/settings';
-import {tvFocusRing} from '../../shared/ui/tvFocus';
 import {
   saveVirtualGamepadLayout as saveGamepadLayout,
   getVirtualGamepadLayouts as getGamepadLayouts,
@@ -273,7 +271,6 @@ export function NativeStreamScreenBase({
   const [isExiting, setIsExiting] = React.useState(false);
   const [showControlRail, setShowControlRail] = React.useState(false);
   const [showVirtualGamepad, setShowVirtualGamepad] = React.useState(false);
-  const [menuBtnFocused, setMenuBtnFocused] = React.useState(false);
   // GFN-only: a trackpad-style overlay for mouse-driven (Steam) titles,
   // mutually exclusive with the virtual gamepad -- see renderMouseTrackpad().
   const [showMouseTrackpad, setShowMouseTrackpad] = React.useState(false);
@@ -1427,29 +1424,16 @@ export function NativeStreamScreenBase({
         ]);
         return;
       }
-      if (Platform.isTV) {
-        if (e.data.action.type !== 'GO_BACK') {
-          navigation.dispatch(e.data.action);
-        } else {
-          // Exit directly in Android TV
-          const _streamApi =
-            route.params?.streamType === 'cloud'
-              ? xCloudApiRef.current
-              : xHomeApiRef.current;
-          setLoading(true);
-          setIsExiting(true);
-          waitStopStream(_streamApi).then(finishStreamExit);
-        }
+      // Landscape (TV included -- the quick-menu button that used to open
+      // this panel is gone, this is the only way in now): back opens the
+      // control rail instead of exiting, same as tapping its own Disconnect
+      // button inside is the actual way to leave.
+      if (e.data.action.type !== 'GO_BACK') {
+        navigation.dispatch(e.data.action);
       } else {
-        if (e.data.action.type !== 'GO_BACK') {
-          navigation.dispatch(e.data.action);
-        } else {
-          e.preventDefault();
-
-          // Show confirm modal
-          setShowControlRail(true);
-          GamepadManager.setCurrentScreen('');
-        }
+        e.preventDefault();
+        setShowControlRail(true);
+        GamepadManager.setCurrentScreen('');
       }
     });
 
@@ -3481,27 +3465,6 @@ export function NativeStreamScreenBase({
     }
   };
 
-  const renderMenu = () => {
-    if (!portraitMode && !isInPictureInPicture) {
-      return (
-        <View style={styles.quickMenu}>
-          <IconButton
-            icon="menu"
-            size={28}
-            onPress={() => {
-              setShowControlRail(true);
-            }}
-            onFocus={() => setMenuBtnFocused(true)}
-            onBlur={() => setMenuBtnFocused(false)}
-            style={menuBtnFocused && tvFocusRing}
-          />
-        </View>
-      );
-    } else {
-      return null;
-    }
-  };
-
   const renderControlRail = () => {
     if (portraitMode || isInPictureInPicture) {
       return null;
@@ -3770,8 +3733,6 @@ export function NativeStreamScreenBase({
         onDeleteProfile={handleDeleteGamepadProfile}
       />
 
-      {renderMenu()}
-
       {renderControlRail()}
     </View>
   );
@@ -3813,12 +3774,6 @@ const styles = StyleSheet.create({
   portraitControls: {
     flex: 1,
     backgroundColor: '#050505',
-  },
-  quickMenu: {
-    position: 'absolute',
-    right: 5,
-    bottom: 5,
-    zIndex: 99,
   },
 });
 

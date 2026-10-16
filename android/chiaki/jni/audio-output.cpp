@@ -11,10 +11,19 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
+#include <thread>
 
 #define BUFFER_CHUNK_SIZE 1024
 #define BUFFER_CHUNKS_COUNT 32
+
+// Connect-time open/start is otherwise one-shot: a transient failure (seen
+// in practice on Google TV, plausibly HDMI/ARC renegotiation or audio-focus
+// churn around session connect) left the stream permanently silent for the
+// rest of that session with nothing ever retrying it.
+#define AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS 5
+#define AUDIO_OUTPUT_OPEN_RETRY_DELAY_MS 200
 
 using AudioBuffer = CircularBuffer<BUFFER_CHUNKS_COUNT, BUFFER_CHUNK_SIZE>;
 
@@ -63,25 +72,43 @@ extern "C" void android_chiaki_audio_output_settings(uint32_t channels, uint32_t
 {
 	auto ao = reinterpret_cast<AudioOutput *>(audio_output);
 
-	oboe::AudioStreamBuilder builder;
-	builder.setPerformanceMode(oboe::PerformanceMode::LowLatency)
-		->setSharingMode(oboe::SharingMode::Exclusive)
-		->setFormat(oboe::AudioFormat::I16)
-		->setChannelCount(channels)
-		->setSampleRate(rate)
-		->setCallback(&ao->stream_callback);
+	for(int attempt = 1; attempt <= AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS; attempt++)
+	{
+		oboe::AudioStreamBuilder builder;
+		builder.setPerformanceMode(oboe::PerformanceMode::LowLatency)
+			->setSharingMode(oboe::SharingMode::Exclusive)
+			->setFormat(oboe::AudioFormat::I16)
+			->setChannelCount(channels)
+			->setSampleRate(rate)
+			->setCallback(&ao->stream_callback);
 
-	auto result = builder.openManagedStream(ao->stream);
-	if(result == oboe::Result::OK)
-		CHIAKI_LOGI(ao->log, "Audio Output opened Oboe stream");
-	else
-		CHIAKI_LOGE(ao->log, "Audio Output failed to open Oboe stream: %s", oboe::convertToText(result));
+		auto result = builder.openManagedStream(ao->stream);
+		if(result != oboe::Result::OK)
+		{
+			CHIAKI_LOGE(ao->log, "Audio Output failed to open Oboe stream (attempt %d/%d): %s",
+					attempt, AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS, oboe::convertToText(result));
+			if(attempt < AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS)
+				std::this_thread::sleep_for(std::chrono::milliseconds(AUDIO_OUTPUT_OPEN_RETRY_DELAY_MS));
+			continue;
+		}
+		CHIAKI_LOGI(ao->log, "Audio Output opened Oboe stream (attempt %d/%d)", attempt, AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS);
 
-	result = ao->stream->start();
-	if(result == oboe::Result::OK)
-		CHIAKI_LOGI(ao->log, "Audio Output started Oboe stream");
-	else
-		CHIAKI_LOGE(ao->log, "Audio Output failed to start Oboe stream: %s", oboe::convertToText(result));
+		result = ao->stream->start();
+		if(result == oboe::Result::OK)
+		{
+			CHIAKI_LOGI(ao->log, "Audio Output started Oboe stream");
+			return;
+		}
+
+		CHIAKI_LOGE(ao->log, "Audio Output failed to start Oboe stream (attempt %d/%d): %s",
+				attempt, AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS, oboe::convertToText(result));
+		ao->stream->close();
+		ao->stream = nullptr;
+		if(attempt < AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS)
+			std::this_thread::sleep_for(std::chrono::milliseconds(AUDIO_OUTPUT_OPEN_RETRY_DELAY_MS));
+	}
+
+	CHIAKI_LOGE(ao->log, "Audio Output giving up on opening/starting Oboe stream after %d attempts", AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS);
 }
 
 extern "C" void android_chiaki_audio_output_frame(int16_t *buf, size_t samples_count, void *audio_output)

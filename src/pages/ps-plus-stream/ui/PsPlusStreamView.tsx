@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, StyleSheet, TextInput, useWindowDimensions} from 'react-native';
-import {Text, Button, IconButton, ActivityIndicator} from 'react-native-paper';
+import {Text, Button, ActivityIndicator} from 'react-native-paper';
 import {PsPlusStreamView as NativePsPlusStreamView} from '../../../features/ps-plus-session';
 import {VirtualGamepad} from '../../../entities/gamepad';
 import {CustomVirtualGamepad} from '../../../features/controller-customization';
@@ -28,7 +28,6 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   activeProfile,
   joystickMode,
   showControlRail,
-  onOpenControlRail,
   onCloseControlRail,
   showVirtualGamepad,
   onToggleVirtualGamepad,
@@ -69,7 +68,6 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
 }) => {
   const failedCloseFocus = useTVFocus();
   const closedCloseFocus = useTVFocus();
-  const settingsBtnFocus = useTVFocus();
   const confirmPinFocus = useTVFocus();
   // See PsPlusControlRail's own screenHeight prop comment -- an explicit
   // height instead of relying on `top: 0` + `bottom: 0` to resolve against
@@ -136,42 +134,30 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         </View>
       )}
 
-      {connectState === 'connected' && !showControlRail && (
-        <>
-          {showVirtualGamepad &&
-            (activeProfile ? (
-              <CustomVirtualGamepad
-                title={activeProfile}
-                opacity={0.7}
-                joystickMode={joystickMode}
-                refreshKey={gamepadLayoutVersion}
-                onPressIn={onPressIn}
-                onPressOut={onPressOut}
-                onStickMove={onStickMove}
-                {...swipeAimProps}
-              />
-            ) : (
-              <VirtualGamepad
-                opacity={0.7}
-                joystickMode={joystickMode}
-                onPressIn={onPressIn}
-                onPressOut={onPressOut}
-                onStickMove={onStickMove}
-                {...swipeAimProps}
-              />
-            ))}
-          <View style={styles.quickMenu}>
-            <IconButton
-              icon="menu"
-              size={28}
-              onPress={onOpenControlRail}
-              onFocus={settingsBtnFocus.onFocus}
-              onBlur={settingsBtnFocus.onBlur}
-              style={settingsBtnFocus.focused && tvFocusRing}
-            />
-          </View>
-        </>
-      )}
+      {connectState === 'connected' &&
+        !showControlRail &&
+        showVirtualGamepad &&
+        (activeProfile ? (
+          <CustomVirtualGamepad
+            title={activeProfile}
+            opacity={0.7}
+            joystickMode={joystickMode}
+            refreshKey={gamepadLayoutVersion}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            onStickMove={onStickMove}
+            {...swipeAimProps}
+          />
+        ) : (
+          <VirtualGamepad
+            opacity={0.7}
+            joystickMode={joystickMode}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            onStickMove={onStickMove}
+            {...swipeAimProps}
+          />
+        ))}
 
       <PsPlusControlRail
         t={t}
@@ -248,15 +234,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-  },
-  // Matches native-stream's own quickMenu exactly (see
-  // pages/native-stream/index.tsx) -- same control-rail-open button, same
-  // position and icon, so the two providers' in-stream UI don't diverge.
-  quickMenu: {
-    position: 'absolute',
-    right: 5,
-    bottom: 5,
-    zIndex: 99,
   },
   video: {
     flex: 1,
