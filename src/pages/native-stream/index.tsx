@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import {RTCView, MediaStream, RTCRtpReceiver} from 'react-native-webrtc';
 import Orientation from 'react-native-orientation-locker';
-import StreamHandshakeOverlay from './ui/StreamHandshakeOverlay';
+import StreamHandshakeOverlay from '../../shared/ui/StreamHandshakeOverlay';
 import type {LoadingPhase} from '../../shared/lib/loadingPhase';
 import {useSelector} from 'react-redux';
 import {
