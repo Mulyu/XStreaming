@@ -303,12 +303,20 @@ const styles = StyleSheet.create({
   },
   fieldBlobTopLeft: {position: 'absolute', top: -80, left: -60},
   fieldBlobBottomRight: {position: 'absolute', bottom: -60, right: -40},
+  // Fixed dp, not a percentage of screen height: topBar/hud's own content
+  // below is fixed-size text, not relative, so sizing these as a % of the
+  // container scaled the band itself up far past its content on anything
+  // taller than a phone (a TV's 1080px-tall landscape frame turned the old
+  // 22%/46% into ~240px/~500px bands over a poster that needed maybe a
+  // third of that). Sized to comfortably fit topBar/hud's own content
+  // (checked against their real font sizes/paddings below) plus a soft
+  // margin, so the poster underneath stays visible everywhere else.
   scrimTop: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: '22%',
+    height: 72,
     backgroundColor: 'rgba(6,8,7,0.55)',
   },
   scrimBottom: {
@@ -316,7 +324,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '46%',
+    height: 160,
     backgroundColor: 'rgba(6,8,7,0.85)',
   },
   topBar: {
