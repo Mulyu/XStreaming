@@ -1331,6 +1331,10 @@ export function usePsPlusStream(navigation: any, route: any) {
     }
   }, [connectState, requestExit]);
 
+  // Back opens the control rail instead of exiting -- the quickMenu button
+  // that used to open it is gone, this is the only way in now, same as
+  // native-stream's own identical change. Its own Disconnect button is the
+  // actual way to leave from here.
   React.useEffect(() => {
     const beforeRemove = navigation.addListener('beforeRemove', (e: any) => {
       if (exitConfirmedRef.current) {
@@ -1338,11 +1342,11 @@ export function usePsPlusStream(navigation: any, route: any) {
       }
       if (e.data.action.type === 'GO_BACK' && connectState === 'connected') {
         e.preventDefault();
-        requestExit();
+        openControlRail();
       }
     });
     return beforeRemove;
-  }, [navigation, connectState, requestExit]);
+  }, [navigation, connectState, openControlRail]);
 
   const onRailDisconnect = React.useCallback(() => {
     closeControlRail();
