@@ -16,11 +16,7 @@ public class AppDebugLogModule extends ReactContextBaseJavaModule {
     }
 
     // Lets JS-side lifecycle events (App.tsx's AppState listener) land in
-    // the exact same file/timeline as MainActivity's own onCreate/onResume/
-    // onPause/onDestroy calls to AppDebugLog.log() -- a bug report is only
-    // useful if the JS and native sides of "what happened" can be read as
-    // one ordered trace, not two separate ones that have to be manually
-    // interleaved by timestamp.
+    // the app debug log file.
     @ReactMethod
     public void log(String tag, String message) {
         AppDebugLog.log(getReactApplicationContext(), tag, message);
