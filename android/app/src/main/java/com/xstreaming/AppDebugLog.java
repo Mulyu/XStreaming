@@ -12,15 +12,11 @@ import java.util.Locale;
 
 // General-purpose, provider-agnostic sibling to PsPlusModule.kt's own
 // debugLogFile()/getDebugLog() -- that one only ever captures what happens
-// during an active PS Plus session (it's chiaki's own native log), so it has
-// nothing to say about a bug like "the Home/Library screen sometimes comes
-// back black after the app is backgrounded and resumed", which has nothing
-// to do with any streaming session. This instead logs app/Activity-level
-// lifecycle events (see MainActivity's onCreate/onResume/onPause/onDestroy
-// and App.tsx's AppState listener) to one shared file, for the same reason
-// PS Plus's log exists: most users have no adb access to pull a logcat
-// capture, so this is the only way they can hand over a trace of what
-// actually happened right before a bug, for a report.
+// during an active PS Plus session (it's chiaki's own native log). This logs
+// app-level foreground/background transitions (App.tsx's AppState listener)
+// to one shared file, for the same reason PS Plus's log exists: most users
+// have no adb access to pull a logcat capture, so this is the only way they
+// can hand over a trace of what actually happened right before a bug.
 public final class AppDebugLog {
     private static final String TAG = "AppDebugLog";
     private static final String LOG_FILE_NAME = "app_debug.log";
