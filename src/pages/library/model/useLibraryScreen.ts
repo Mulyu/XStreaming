@@ -70,8 +70,18 @@ import {
   getCachedCatalogGames,
   saveCatalogGames,
 } from '../../../features/ps-plus-session';
+import {fetchPsStoreRanking} from '../../../features/store-charts';
 import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
+
+import {
+  buildPsRankTable,
+  EMPTY_RANK_TABLE,
+  makeRankTable,
+  newestScore,
+  popularityScore,
+  RankTable,
+} from './rankSort';
 
 export type OwnershipFilter = 'owned' | 'notOwned' | 'all';
 const OWNERSHIP_NEXT: Record<OwnershipFilter, OwnershipFilter> = {
@@ -180,6 +190,15 @@ export function useLibraryScreen() {
     React.useState<Record<string, number>>(EMPTY_RANK);
   const [gfnNewestRank, setGfnNewestRank] =
     React.useState<Record<string, number>>(EMPTY_RANK);
+
+  // The PS Store's own top-sellers / newest-release orders (a prefix of its
+  // "All PS5 games" category) -- Sony has no per-title popularity or release
+  // date on the Plus catalog itself, so PS titles are ranked by where they
+  // sit in these.
+  const [psPopularTable, setPsPopularTable] =
+    React.useState<RankTable>(EMPTY_RANK_TABLE);
+  const [psNewestTable, setPsNewestTable] =
+    React.useState<RankTable>(EMPTY_RANK_TABLE);
 
   // Filter chips: provider (OR between active ones; neither active = all)
   // plus Favorite/Owned/On Sale, each an independent AND filter. Owned
@@ -642,6 +661,37 @@ export function useLibraryScreen() {
     });
   }, [psPlusGames]);
 
+  // PS Store popularity / release-date orders, fetched once the PS catalog is
+  // known (cached 12h by the fetch itself).
+  const psRankingLoadedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (psPlusGames.length === 0 || psRankingLoadedRef.current) {
+      return;
+    }
+    psRankingLoadedRef.current = true;
+    let cancelled = false;
+    Promise.all([
+      // Top sellers is a 30-day window, so older catalog titles sit deep in
+      // it: take a longer prefix than for new releases.
+      fetchPsStoreRanking('topsellers', 1000),
+      fetchPsStoreRanking('new', 400),
+    ]).then(([popular, newest]) => {
+      if (cancelled) {
+        return;
+      }
+      if (popular.entries.length === 0 && newest.entries.length === 0) {
+        // Both failed: allow a retry on the next catalog update.
+        psRankingLoadedRef.current = false;
+        return;
+      }
+      setPsPopularTable(buildPsRankTable(popular.entries, popular.totalCount));
+      setPsNewestTable(buildPsRankTable(newest.entries, newest.totalCount));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [psPlusGames]);
+
   // xCloud release dates, turned into an ordinal rank (0 = newest known
   // date) so they combine fairly with GFN's ordinal "last added" rank --
   // comparing a real timestamp against a catalog position wouldn't mean
@@ -657,7 +707,7 @@ export function useLibraryScreen() {
       }))
       // A future release date is bad catalog data, not an actual newest
       // title -- treat it the same as no date at all (excluded here, so it
-      // falls back to last-place in mergedRankOf) rather than letting it
+      // falls back to last-place when sorting) rather than letting it
       // sort to the very top.
       .filter(x => x.id && Number.isFinite(x.ms) && x.ms <= now)
       .sort((a, b) => b.ms - a.ms);
@@ -798,38 +848,41 @@ export function useLibraryScreen() {
     );
   }, [providerOwnedFiltered, keyword]);
 
-  // Combines a title's xCloud rank and GFN rank (each an ordinal position
-  // within that provider's own ordered list -- see the two memos above and
-  // the two GFN fetch effects) into one rank: whichever provider ranks it
-  // more favorably, so a single mixed list can sort by it. A title present
-  // on only one provider just uses that provider's rank; absent from both,
-  // it sorts last.
-  const mergedRankOf = React.useCallback(
-    (
-      item: CatalogTitle,
-      xRank: Record<string, number>,
-      gRank: Record<string, number>,
-      upperXKey: boolean,
-    ): number => {
-      const xId = item.xcloud?.raw?.productId;
-      const xR = xId ? xRank[upperXKey ? xId.toUpperCase() : xId] : undefined;
-      const gIds = item.gfn?.variants.map(v => v.id) ?? [];
-      const gRs = gIds
-        .map(id => gRank[id])
-        .filter((r): r is number => r !== undefined);
-      const gR = gRs.length > 0 ? Math.min(...gRs) : undefined;
-      if (xR === undefined && gR === undefined) {
-        return Number.MAX_SAFE_INTEGER;
-      }
-      if (xR === undefined) {
-        return gR!;
-      }
-      if (gR === undefined) {
-        return xR;
-      }
-      return Math.min(xR, gR);
-    },
-    [],
+  // Each provider's order as "how far down its own list" tables -- see
+  // rankSort.ts for why positions aren't compared directly.
+  const xcloudPopularTable = React.useMemo(
+    () => makeRankTable(popularRank),
+    [popularRank],
+  );
+  const xcloudNewestTable = React.useMemo(
+    () => makeRankTable(xcloudNewestRank),
+    [xcloudNewestRank],
+  );
+  const gfnPopularTable = React.useMemo(
+    () => makeRankTable(gfnPopularRank),
+    [gfnPopularRank],
+  );
+  const gfnNewestTable = React.useMemo(
+    () => makeRankTable(gfnNewestRank),
+    [gfnNewestRank],
+  );
+  const sortTables = React.useMemo(
+    () => ({
+      xcloudPopular: xcloudPopularTable,
+      xcloudNewest: xcloudNewestTable,
+      gfnPopular: gfnPopularTable,
+      gfnNewest: gfnNewestTable,
+      psPopular: psPopularTable,
+      psNewest: psNewestTable,
+    }),
+    [
+      xcloudPopularTable,
+      xcloudNewestTable,
+      gfnPopularTable,
+      gfnNewestTable,
+      psPopularTable,
+      psNewestTable,
+    ],
   );
 
   const sorted = React.useMemo(() => {
@@ -840,23 +893,20 @@ export function useLibraryScreen() {
     if (sortMode === 'newest') {
       list.sort(
         (a, b) =>
-          mergedRankOf(a, xcloudNewestRank, gfnNewestRank, false) -
-            mergedRankOf(b, xcloudNewestRank, gfnNewestRank, false) ||
+          newestScore(a, sortTables) - newestScore(b, sortTables) ||
           a.title.localeCompare(b.title),
       );
     } else if (sortMode === 'popular') {
       list.sort(
         (a, b) =>
-          mergedRankOf(a, popularRank, gfnPopularRank, true) -
-            mergedRankOf(b, popularRank, gfnPopularRank, true) ||
+          popularityScore(a, sortTables) - popularityScore(b, sortTables) ||
           a.title.localeCompare(b.title),
       );
     } else if (sortMode === 'recent') {
       // Local play history, not a provider API -- see
       // entities/catalog-title/model/playHistory.ts. Keyed directly by the
       // unified catalog key, so it ranks xCloud/GFN/PS Plus titles alike
-      // (unlike mergedRankOf's xCloud/GFN-only provider ranks above, PS
-      // Plus never had an equivalent API to source one from). A title never
+      // (unlike the provider-derived ranks for Newest/Popular). A title never
       // launched from this device sorts last.
       list.sort(
         (a, b) =>
@@ -865,16 +915,7 @@ export function useLibraryScreen() {
       );
     }
     return list;
-  }, [
-    filtered,
-    sortMode,
-    mergedRankOf,
-    xcloudNewestRank,
-    gfnNewestRank,
-    popularRank,
-    gfnPopularRank,
-    playHistory,
-  ]);
+  }, [filtered, sortMode, sortTables, playHistory]);
 
   // 'reco' was never an actual recommendation ranking -- it's just the
   // catalog's own unsorted order, which is alphabetical (publicGames.ts and
