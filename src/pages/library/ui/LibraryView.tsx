@@ -143,7 +143,7 @@ const LibraryView: React.FC<Props> = ({
         <Icon
           source={included ? 'playlist-check' : 'clock-outline'}
           size={size - 4}
-          color={PS_MARK_COLOR}
+          color={included ? '#FFFFFF' : PS_MARK_COLOR}
         />
       </View>
     );
@@ -1053,9 +1053,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // In the Plus catalog: filled. Trial only: outlined.
-  psMarkIncluded: {backgroundColor: 'rgba(0,112,209,0.35)'},
-  psMarkTrial: {borderWidth: 1, borderColor: PS_ACCENT},
+  // In the Plus catalog: solid PS blue. Trial only: dark chip with a light-blue
+  // outline (opaque enough to read over cover art).
+  psMarkIncluded: {backgroundColor: PS_ACCENT},
+  psMarkTrial: {
+    backgroundColor: 'rgba(8,20,34,0.9)',
+    borderWidth: 1,
+    borderColor: PS_MARK_COLOR,
+  },
   cardBadge: {
     minWidth: 16,
     height: 13,
