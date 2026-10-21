@@ -424,6 +424,8 @@ export default {
     LibraryRowDiscount: '{{percent}}%OFF',
     LibraryPsIncluded: 'PS Plusカタログに含まれています',
     LibraryPsTrial: 'PS Plusのゲームトライアルあり',
+    LibraryFilterNotOwned: '非所有',
+    LibraryFilterOwnershipAll: '所有: すべて',
     PsStoreOnSale: 'セール中',
     PsStoreTrialAvailable: 'ゲームトライアルあり',
     PsStoreIncludedRow: 'PS Plusカタログに含まれています',

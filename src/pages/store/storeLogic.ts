@@ -7,6 +7,7 @@ import {
   buildXcloudCatalogTitle,
   buildPsPlusCatalogTitle,
   CatalogTitle,
+  discountPercent,
   formatPrice,
   getPrice,
   isSaleForDisplay,
@@ -36,6 +37,8 @@ export type StoreRow = {
   imageUrl?: string;
   price?: string;
   originalPrice?: string;
+  // Whole-number percent off when on sale (e.g. 30 for -30%).
+  discountPercent?: number;
   catalogTitle: CatalogTitle | null;
 };
 
@@ -112,6 +115,10 @@ export const buildXboxStoreRows = (
         priceInfo && isSaleForDisplay(priceInfo)
           ? formatPrice(priceInfo.msrp, priceInfo.currencyCode)
           : undefined,
+      discountPercent:
+        priceInfo && isSaleForDisplay(priceInfo)
+          ? discountPercent(priceInfo)
+          : undefined,
       catalogTitle,
     });
   });
@@ -146,6 +153,7 @@ export const buildGfnStoreRows = (
       imageUrl: entry.imageUrl,
       price: entry.price,
       originalPrice: entry.originalPrice,
+      discountPercent: entry.discountPercent || undefined,
       catalogTitle,
     };
   });
@@ -192,6 +200,7 @@ export const buildPsStoreRows = (
       imageUrl: entry.imageUrl,
       price: entry.price,
       originalPrice: entry.originalPrice,
+      discountPercent: entry.discountPercent || undefined,
       catalogTitle,
     };
   });

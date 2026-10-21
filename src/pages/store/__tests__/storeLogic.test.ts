@@ -99,6 +99,7 @@ describe('buildXboxStoreRows', () => {
     const rows = buildXboxStoreRows(['AAA'], xcloudByProductId, priceMap);
     expect(rows[0].price).toBe('$5.00');
     expect(rows[0].originalPrice).toBe('$10.00');
+    expect(rows[0].discountPercent).toBe(50);
   });
 
   it('omits the original price when there is no real discount', () => {
@@ -111,6 +112,7 @@ describe('buildXboxStoreRows', () => {
     const rows = buildXboxStoreRows(['AAA'], xcloudByProductId, priceMap);
     expect(rows[0].price).toBe('$10.00');
     expect(rows[0].originalPrice).toBeUndefined();
+    expect(rows[0].discountPercent).toBeUndefined();
   });
 
   // Regression for the keyExtractor bug: two distinct store listings whose

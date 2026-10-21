@@ -432,6 +432,8 @@ export default {
     LibraryRowDiscount: '{{percent}}% OFF',
     LibraryPsIncluded: 'Included in PS Plus catalog',
     LibraryPsTrial: 'PS Plus game trial available',
+    LibraryFilterNotOwned: 'Not owned',
+    LibraryFilterOwnershipAll: 'Ownership: all',
     PsStoreOnSale: 'On sale',
     PsStoreTrialAvailable: 'Game trial available',
     PsStoreIncludedRow: 'Included in the PS Plus catalog',
