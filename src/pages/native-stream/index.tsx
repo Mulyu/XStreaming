@@ -62,7 +62,10 @@ import {
   androidKeyCodeToVk,
   modifierMaskFromMetaState,
 } from '../../entities/gfn-input';
-import {usePhysicalInput} from '../../features/physical-input';
+import {
+  createGamepadMapper,
+  usePhysicalInput,
+} from '../../features/physical-input';
 import type {PhysicalKeyEvent} from '../../features/physical-input';
 import CustomKeyButtons from './ui/CustomKeyButtons';
 import {
@@ -95,6 +98,9 @@ const CLOSED = 'closed';
 const FAILED = 'failed';
 const DUALSENSE = 'DualSenseController';
 const LIVE_GAMEPAD_PROFILE = 'LiveLayout';
+// Mouse aim when the profile has no swipe-aim sensitivity (0 = off for the
+// touch trackpad, but a mouse still needs to aim).
+const PHYSICAL_MOUSE_SENSITIVITY = 20;
 // Cycled in order by the control rail's Video format button -- was the
 // DropdownRow option list on the old Settings screen entry.
 const VIDEO_FORMAT_OPTIONS = [
@@ -2876,15 +2882,10 @@ export function NativeStreamScreenBase({
     return Math.sign(clamped) * magnitude;
   };
 
-  const handleSwipeAim = (dx: number, dy: number) => {
-    // The touch-capture gate below (SwipeAimZone's isActive prop) already
-    // keeps an inactive swipe-aim from claiming a touch at all; this repeats
-    // the same check so releasing the trigger mid-swipe stops applying
-    // movement immediately too, since a granted gesture keeps delivering
-    // move events regardless of activation state.
-    if (!isSwipeAimActive()) {
-      return;
-    }
+  // Writes a right-stick (camera) velocity and arms the recentre timer. Not
+  // gated on the swipe-aim activation scheme -- handleSwipeAim adds that for
+  // touch, a physical mouse always aims.
+  const applyAim = (dx: number, dy: number) => {
     const invertY = activeSwipe.invertY;
     gpState.RightThumbXAxis = shapeSwipeAim(dx);
     // Screen y is down-positive; a right stick pushed up (look up) is positive,
@@ -2896,6 +2897,18 @@ export function NativeStreamScreenBase({
       clearTimeout(swipeAimResetTimer.current);
     }
     swipeAimResetTimer.current = setTimeout(clearSwipeAim, 60);
+  };
+
+  const handleSwipeAim = (dx: number, dy: number) => {
+    // The touch-capture gate below (SwipeAimZone's isActive prop) already
+    // keeps an inactive swipe-aim from claiming a touch at all; this repeats
+    // the same check so releasing the trigger mid-swipe stops applying
+    // movement immediately too, since a granted gesture keeps delivering
+    // move events regardless of activation state.
+    if (!isSwipeAimActive()) {
+      return;
+    }
+    applyAim(dx, dy);
   };
 
   const requestExit = React.useCallback(() => {
@@ -3420,6 +3433,55 @@ export function NativeStreamScreenBase({
     setShowControlRail(true);
     GamepadManager.setCurrentScreen('');
   }, []);
+
+  // xCloud has no keyboard/mouse report, so a physical keyboard/mouse is
+  // translated onto the gamepad state instead (see createGamepadMapper).
+  // The handlers are re-created every render, hence the ref -- the mapper
+  // itself (and any keys it holds) must outlive them.
+  const gamepadSinkRef = React.useRef<any>(null);
+  gamepadSinkRef.current = {
+    press: handleButtonPressIn,
+    release: handleButtonPressOut,
+    stick: handleStickMove,
+    aim: applyAim,
+  };
+  const gamepadMapper = React.useMemo(
+    () =>
+      createGamepadMapper({
+        press: name => gamepadSinkRef.current.press(name),
+        release: name => gamepadSinkRef.current.release(name),
+        moveLeftStick: (x, y) => gamepadSinkRef.current.stick('left', {x, y}),
+      }),
+    [],
+  );
+  const handleMouseAimMove = (dx: number, dy: number) => {
+    const sensitivity =
+      (Number(activeSwipe.sensitivity) || PHYSICAL_MOUSE_SENSITIVITY) * 0.0025;
+    const acceleration = (Number(activeSwipe.acceleration) || 0) * 0.0003;
+    const boost = acceleration > 0 ? 1 + acceleration * Math.hypot(dx, dy) : 1;
+    gamepadSinkRef.current.aim(
+      dx * sensitivity * boost,
+      dy * sensitivity * boost,
+    );
+  };
+  const gamepadKeyboardMouseEnabled =
+    route.params?.streamType !== 'gfn' &&
+    connectState === CONNECTED &&
+    !portraitMode &&
+    !isInPictureInPicture;
+  React.useEffect(() => {
+    if (!gamepadKeyboardMouseEnabled) {
+      return undefined;
+    }
+    return () => gamepadMapper.releaseAll();
+  }, [gamepadKeyboardMouseEnabled, gamepadMapper]);
+  usePhysicalInput(gamepadKeyboardMouseEnabled, {
+    onKey: e => gamepadMapper.key(e.keyCode, e.down),
+    onMouseMove: handleMouseAimMove,
+    onMouseButton: gamepadMapper.mouseButton,
+    onMouseWheel: gamepadMapper.wheel,
+    onMenu: handlePhysicalMenu,
+  });
 
   usePhysicalInput(
     route.params?.streamType === 'gfn' &&

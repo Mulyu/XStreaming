@@ -44,6 +44,10 @@ import type {
   SwipeConfig,
 } from '../../../features/controller-customization';
 import {getSettings, saveSettings} from '../../../shared/lib/settings';
+import {
+  createGamepadMapper,
+  usePhysicalInput,
+} from '../../../features/physical-input';
 import {debugFactory} from '../../../shared/lib/debug';
 import type {LoadingPhase} from '../../../shared/lib/loadingPhase';
 
@@ -124,6 +128,14 @@ const shapeSwipeAim = (v: number): number => {
     (1 - SWIPE_AIM_DEADZONE_FLOOR) * Math.abs(clamped);
   return Math.sign(clamped) * magnitude;
 };
+
+// Raw swipe-aim sensitivity/acceleration settings -> the per-pixel factors
+// SwipeAimZone expects.
+const SWIPE_AIM_SENSITIVITY_SCALE = 0.0025;
+const SWIPE_AIM_ACCELERATION_SCALE = 0.0003;
+// Mouse aim when the profile has no swipe-aim sensitivity (0 = off for the
+// touch trackpad, but a mouse still needs to aim).
+const PHYSICAL_MOUSE_SENSITIVITY = 20;
 
 const log = debugFactory('PsPlusStreamScreen');
 
@@ -629,16 +641,11 @@ export function usePsPlusStream(navigation: any, route: any) {
     flushGpState();
   }, [flushGpState]);
 
-  const handleSwipeAim = React.useCallback(
+  // Writes a right-stick (camera) velocity and arms the recentre timer. Not
+  // gated on the swipe-aim activation scheme -- handleSwipeAim adds that for
+  // touch, a physical mouse always aims.
+  const applyAim = React.useCallback(
     (dx: number, dy: number) => {
-      // The touch-capture gate below (SwipeAimZone's isActive prop) already
-      // keeps an inactive swipe-aim from claiming a touch at all; this
-      // repeats the same check so releasing the trigger mid-swipe stops
-      // applying movement immediately too, since a granted gesture keeps
-      // delivering move events regardless of activation state.
-      if (!isSwipeAimActive()) {
-        return;
-      }
       const invertY = activeSwipe.invertY;
       gpState.current.RightThumbXAxis = shapeSwipeAim(dx);
       // Screen y is down-positive; a right stick pushed up (look up) is
@@ -650,7 +657,22 @@ export function usePsPlusStream(navigation: any, route: any) {
       }
       swipeAimResetTimer.current = setTimeout(clearSwipeAim, 60);
     },
-    [isSwipeAimActive, activeSwipe.invertY, flushGpState, clearSwipeAim],
+    [activeSwipe.invertY, flushGpState, clearSwipeAim],
+  );
+
+  const handleSwipeAim = React.useCallback(
+    (dx: number, dy: number) => {
+      // The touch-capture gate below (SwipeAimZone's isActive prop) already
+      // keeps an inactive swipe-aim from claiming a touch at all; this
+      // repeats the same check so releasing the trigger mid-swipe stops
+      // applying movement immediately too, since a granted gesture keeps
+      // delivering move events regardless of activation state.
+      if (!isSwipeAimActive()) {
+        return;
+      }
+      applyAim(dx, dy);
+    },
+    [isSwipeAimActive, applyAim],
   );
 
   // Screen position / aspect ratio / volume: shared with native-stream's own
@@ -978,6 +1000,59 @@ export function usePsPlusStream(navigation: any, route: any) {
     },
     [flushGpState],
   );
+
+  // Physical keyboard + mouse (USB/Bluetooth, incl. Samsung DeX): the PS Plus
+  // protocol has no keyboard/mouse channel, so both are translated onto the
+  // same gamepad state the on-screen controls drive. Mouse motion becomes
+  // right-stick aim using the active profile's swipe-aim tuning.
+  // Handlers go through a ref so the mapper (and the keys it is holding)
+  // survives handler identity changes.
+  const physicalSinkRef = React.useRef({
+    press: handlePressIn,
+    release: handlePressOut,
+    stick: handleStickMove,
+  });
+  physicalSinkRef.current = {
+    press: handlePressIn,
+    release: handlePressOut,
+    stick: handleStickMove,
+  };
+  const physicalMapper = React.useMemo(
+    () =>
+      createGamepadMapper({
+        press: name => physicalSinkRef.current.press(name),
+        release: name => physicalSinkRef.current.release(name),
+        moveLeftStick: (x, y) => physicalSinkRef.current.stick('left', {x, y}),
+      }),
+    [],
+  );
+  const physicalEnabled = connectState === 'connected';
+  React.useEffect(() => {
+    if (!physicalEnabled) {
+      return undefined;
+    }
+    return () => physicalMapper.releaseAll();
+  }, [physicalEnabled, physicalMapper]);
+  const handlePhysicalMouseMove = React.useCallback(
+    (dx: number, dy: number) => {
+      const sensitivity =
+        (Number(activeSwipe.sensitivity) || PHYSICAL_MOUSE_SENSITIVITY) *
+        SWIPE_AIM_SENSITIVITY_SCALE;
+      const acceleration =
+        (Number(activeSwipe.acceleration) || 0) * SWIPE_AIM_ACCELERATION_SCALE;
+      const boost =
+        acceleration > 0 ? 1 + acceleration * Math.hypot(dx, dy) : 1;
+      applyAim(dx * sensitivity * boost, dy * sensitivity * boost);
+    },
+    [activeSwipe.sensitivity, activeSwipe.acceleration, applyAim],
+  );
+  usePhysicalInput(physicalEnabled, {
+    onKey: e => physicalMapper.key(e.keyCode, e.down),
+    onMouseMove: handlePhysicalMouseMove,
+    onMouseButton: physicalMapper.mouseButton,
+    onMouseWheel: physicalMapper.wheel,
+    onMenu: openControlRail,
+  });
 
   // Physical controller (USB/Bluetooth) support, mirroring native-stream's
   // own "normal mode" gamepad wiring (not its separate USB-DualSense-native
@@ -1491,8 +1566,9 @@ export function usePsPlusStream(navigation: any, route: any) {
     onDeleteGamepadProfile,
     gamepadLayoutVersion,
     swipeAimEnabled,
-    swipeAimSensitivity: swipeAimSensitivityRaw * 0.0025,
-    swipeAimAcceleration: swipeAimAccelerationRaw * 0.0003,
+    swipeAimSensitivity: swipeAimSensitivityRaw * SWIPE_AIM_SENSITIVITY_SCALE,
+    swipeAimAcceleration:
+      swipeAimAccelerationRaw * SWIPE_AIM_ACCELERATION_SCALE,
     swipeAimRect,
     onSwipeAim: handleSwipeAim,
     onSwipeAimEnd: clearSwipeAim,

@@ -7,3 +7,9 @@ export type {
   PhysicalKeyEvent,
   PhysicalMouseButton,
 } from './model/usePhysicalInput';
+export {createGamepadMapper} from './model/gamepadMapper';
+export type {
+  GamepadButtonName,
+  GamepadMapper,
+  GamepadMapperSink,
+} from './model/gamepadMapper';
