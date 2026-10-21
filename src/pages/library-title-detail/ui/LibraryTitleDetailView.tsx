@@ -686,6 +686,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                             </View>
                           )}
                         </View>
+                        {psStoreShowSale && psPurchase.memberPrice && (
+                          <Text style={styles.saleUntil}>
+                            {t('PsStoreMemberPrice')}
+                          </Text>
+                        )}
                         {psStoreShowSale && !!psPurchase.saleEndsAt && (
                           <Text style={styles.saleUntil}>
                             {t('PsStoreSaleUntil', {

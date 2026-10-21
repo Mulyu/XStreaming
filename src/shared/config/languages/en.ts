@@ -441,6 +441,7 @@ export default {
     PsStoreTrialMinutes: 'PS Plus Premium · up to {{n}} min free',
     PsStoreTrialUnknown: 'Free with PS Plus Premium',
     PsStoreSaleUntil: 'Sale until {{date}}',
+    PsStoreMemberPrice: 'PS Plus member price',
     Store: 'Store',
     StoreTabXbox: 'Xbox',
     StoreTabSteam: 'Steam',

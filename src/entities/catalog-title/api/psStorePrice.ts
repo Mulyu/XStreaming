@@ -36,6 +36,9 @@ export type PsStorePurchasePrice = {
   isFree: boolean;
   // Epoch ms the current sale ends, when Sony reports one.
   saleEndsAt?: number;
+  // True when the sale price is the PS Plus members' discount, not a public
+  // sale.
+  memberPrice?: boolean;
 };
 
 export type PsStoreTrial = {
@@ -73,19 +76,33 @@ const parseDiscountPercent = (discountText?: string | null): number => {
   return match ? parseInt(match[1], 10) : 0;
 };
 
-// A concept can carry more than one purchase CTA -- a PS Plus-tied "Game
-// Trial"/discount alongside the standalone purchase price, confirmed live
-// (concept 10017168: one CTA with upSellService "PS_PLUS" priced as a free
-// trial, one with "NONE" priced at the real $9.99/¥1,210 purchase price).
-// This picks the plain, no-subscription-required purchase price -- the same
-// thing Steam/Xbox's price fields already mean here -- and falls back to
-// whatever's available if every CTA turns out subscription-tied.
-const pickPurchaseCta = (ctas: RawCta[]): RawCta | undefined =>
-  ctas.find(c => c.meta?.upSellService === 'NONE') ??
-  ctas.find(c => !c.price?.isTiedToSubscription);
+// A concept can carry several CTAs side by side (confirmed live): a PS Plus
+// game trial ("UPSELL_PS_PLUS_TRIAL", service PS_PLUS, priced "free"), the
+// plain purchase ("ADD_TO_CART"/"PREORDER", service NONE), a PS Plus member
+// discount ("UPSELL_PS_PLUS_DISCOUNT") and, for EA titles, an EA Play trial
+// ("UPSELL_EA_ACCESS_PLAY_FIRST_TRIAL") or a demo download
+// ("DOWNLOAD_TRIAL"). Only the purchase ones are prices.
+const isTrialType = (c: RawCta): boolean => /TRIAL/i.test(c.type ?? '');
 
+// The plain, no-subscription-required purchase price -- the same thing
+// Steam/Xbox's price fields mean here.
+const pickPurchaseCta = (ctas: RawCta[]): RawCta | undefined => {
+  const candidates = ctas.filter(
+    c => !isTrialType(c) && !/^UPSELL_/.test(c.type ?? ''),
+  );
+  return (
+    candidates.find(c => c.meta?.upSellService === 'NONE') ??
+    candidates.find(c => !c.price?.isTiedToSubscription)
+  );
+};
+
+const findMemberDiscountCta = (ctas: RawCta[]): RawCta | undefined =>
+  ctas.find(c => c.type === 'UPSELL_PS_PLUS_DISCOUNT');
+
+// Only the PS Plus game trial: an EA Play trial or a demo download is a
+// different thing and is not playable through this app's PS Plus session.
 const findTrialCta = (ctas: RawCta[]): RawCta | undefined =>
-  ctas.find(c => /TRIAL/i.test(c.type ?? ''));
+  ctas.find(c => isTrialType(c) && c.meta?.upSellService === 'PS_PLUS');
 
 // "2時間の製品版ゲームトライアルを..." / "0.5時間の..." / "a 2-hour ..." /
 // "30分の..." -- Sony localizes the sentence, so only the common unit words
@@ -104,22 +121,46 @@ const parseTrialMinutes = (text?: string | null): number | undefined => {
   return minutes ? parseInt(minutes[1], 10) : undefined;
 };
 
+const toEndTime = (value?: number | string | null): number | undefined => {
+  const ms = Number(value);
+  return Number.isFinite(ms) && ms > 0 ? ms : undefined;
+};
+
 export const parsePsStoreCtas = (ctas: RawCta[]): PsStorePriceInfo => {
   const price = pickPurchaseCta(ctas)?.price;
+  const member = findMemberDiscountCta(ctas)?.price;
   const trialCta = findTrialCta(ctas);
-  const endTime = Number(price?.endTime);
+
+  let purchase: PsStorePurchasePrice | null = null;
+  if (price?.basePrice && price?.discountedPrice) {
+    purchase = {
+      basePrice: price.basePrice,
+      discountedPrice: price.discountedPrice,
+      discountPercent: parseDiscountPercent(price.discountText),
+      isFree: !!price.isFree,
+      saleEndsAt: toEndTime(price.endTime),
+    };
+  }
+  // The PS Plus member price wins when it is the deeper discount (or the
+  // only one) -- the account this app signs in with is a PS Plus one.
+  const memberPercent = parseDiscountPercent(member?.discountText);
+  if (
+    member?.basePrice &&
+    member?.discountedPrice &&
+    memberPercent > (purchase?.discountPercent ?? 0)
+  ) {
+    purchase = {
+      basePrice: purchase?.basePrice ?? member.basePrice,
+      discountedPrice: member.discountedPrice,
+      discountPercent: memberPercent,
+      isFree: !!member.isFree,
+      saleEndsAt: toEndTime(member.endTime),
+      memberPrice: true,
+    };
+  }
+
   return {
-    purchase:
-      price?.basePrice && price?.discountedPrice
-        ? {
-            basePrice: price.basePrice,
-            discountedPrice: price.discountedPrice,
-            discountPercent: parseDiscountPercent(price.discountText),
-            isFree: !!price.isFree,
-            saleEndsAt:
-              Number.isFinite(endTime) && endTime > 0 ? endTime : undefined,
-          }
-        : null,
+    purchase,
     trial: trialCta
       ? {minutes: parseTrialMinutes(trialCta.price?.upsellText)}
       : null,
