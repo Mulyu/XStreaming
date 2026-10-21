@@ -62,8 +62,8 @@ const LibraryView: React.FC<Props> = ({
   setFilterPsPlus,
   filterFavorite,
   setFilterFavorite,
-  filterOwnedOnly,
-  setFilterOwnedOnly,
+  filterOwnership,
+  cycleOwnership,
   filterOnSale,
   setFilterOnSale,
   focusedKey,
@@ -80,6 +80,14 @@ const LibraryView: React.FC<Props> = ({
   psAvailability,
   titleRating,
 }) => {
+  // One chip cycles owned -> not owned -> all; its label names the state.
+  const ownershipLabel = t(
+    filterOwnership === 'owned'
+      ? 'LibraryFilterOwned'
+      : filterOwnership === 'notOwned'
+      ? 'LibraryFilterNotOwned'
+      : 'LibraryFilterOwnershipAll',
+  );
   const searchFocus = useTVFocus();
   const tvSearchInputFocus = useTVFocus();
   const tvSearchCloseFocus = useTVFocus();
@@ -529,12 +537,16 @@ const LibraryView: React.FC<Props> = ({
                   onPress={() => setFilterFavorite(v => !v)}
                 />
                 <RailButton
-                  icon="check-circle-outline"
-                  label={t('LibraryFilterOwned')}
-                  active={filterOwnedOnly}
+                  icon={
+                    filterOwnership === 'notOwned'
+                      ? 'close-circle-outline'
+                      : 'check-circle-outline'
+                  }
+                  label={ownershipLabel}
+                  active={filterOwnership !== 'all'}
                   accent={XBOX_ACCENT}
                   fill
-                  onPress={() => setFilterOwnedOnly(v => !v)}
+                  onPress={cycleOwnership}
                 />
                 <RailButton
                   icon="tag-outline"
@@ -629,18 +641,18 @@ const LibraryView: React.FC<Props> = ({
                 <Pressable
                   style={[
                     styles.filterChip,
-                    filterOwnedOnly && styles.filterChipOn,
+                    filterOwnership !== 'all' && styles.filterChipOn,
                     ownedOnlyChipFocus.focused && tvFocusRing,
                   ]}
-                  onPress={() => setFilterOwnedOnly(v => !v)}
+                  onPress={cycleOwnership}
                   onFocus={ownedOnlyChipFocus.onFocus}
                   onBlur={ownedOnlyChipFocus.onBlur}>
                   <Text
                     style={[
                       styles.filterChipText,
-                      filterOwnedOnly && styles.filterChipTextOn,
+                      filterOwnership !== 'all' && styles.filterChipTextOn,
                     ]}>
-                    {t('LibraryFilterOwned')}
+                    {ownershipLabel}
                   </Text>
                 </Pressable>
                 <Pressable

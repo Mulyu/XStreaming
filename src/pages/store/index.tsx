@@ -920,6 +920,13 @@ function StoreScreen() {
           </Text>
           {!!item.price && (
             <View style={styles.priceRow}>
+              {!!item.discountPercent && (
+                <View style={styles.discountPill}>
+                  <Text style={styles.discountPillText}>
+                    -{item.discountPercent}%
+                  </Text>
+                </View>
+              )}
               {!!item.originalPrice && (
                 <Text style={styles.originalPrice}>{item.originalPrice}</Text>
               )}
@@ -1202,6 +1209,13 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   onSale: {color: SALE_ACCENT, fontWeight: '700'},
+  discountPill: {
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    borderRadius: 5,
+    backgroundColor: SALE_ACCENT,
+  },
+  discountPillText: {fontSize: 10.5, fontWeight: '800', color: '#2B1400'},
   footer: {paddingVertical: 16, alignItems: 'center'},
   centre: {
     flex: 1,

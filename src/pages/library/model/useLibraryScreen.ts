@@ -73,6 +73,13 @@ import {
 import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
 
+export type OwnershipFilter = 'owned' | 'notOwned' | 'all';
+const OWNERSHIP_NEXT: Record<OwnershipFilter, OwnershipFilter> = {
+  owned: 'notOwned',
+  notOwned: 'all',
+  all: 'owned',
+};
+
 export type SortMode = 'reco' | 'newest' | 'popular' | 'recent';
 
 const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
@@ -181,7 +188,14 @@ export function useLibraryScreen() {
   const [filterGfn, setFilterGfn] = React.useState(false);
   const [filterPsPlus, setFilterPsPlus] = React.useState(false);
   const [filterFavorite, setFilterFavorite] = React.useState(false);
-  const [filterOwnedOnly, setFilterOwnedOnly] = React.useState(true);
+  // Three states, cycled by one chip: only titles playable now ('owned',
+  // the default), only the ones that aren't ('notOwned'), or everything.
+  const [filterOwnership, setFilterOwnership] =
+    React.useState<OwnershipFilter>('owned');
+  const cycleOwnership = React.useCallback(
+    () => setFilterOwnership(v => OWNERSHIP_NEXT[v]),
+    [],
+  );
   const [filterOnSale, setFilterOnSale] = React.useState(false);
 
   // Favorites live in their own catalog-key-based store (not tied to one
@@ -737,7 +751,7 @@ export function useLibraryScreen() {
     if (filterFavorite) {
       list = list.filter(item => favoriteKeys.has(item.key));
     }
-    if (filterOwnedOnly) {
+    if (filterOwnership !== 'all') {
       // Plain "Owned" (no provider filter) means playable via any service --
       // isCatalogTitleOwned's OR-across-providers is right there. But
       // combined with a provider filter (e.g. "PS Plus" + "Owned"), the user
@@ -745,16 +759,18 @@ export function useLibraryScreen() {
       // owned on some other one" -- the OR check let a PS Plus title merely
       // present in the catalog (not actually owned) pass as long as it
       // happened to be owned via xCloud/GFN. Mirrors ps-plus-library's own
-      // filter, which checks only that service's isOwned.
+      // filter, which checks only that service's isOwned. "Not owned" is the
+      // exact complement of the same test.
       const providerFilterActive = filterXcloud || filterGfn || filterPsPlus;
-      list = list.filter(item =>
+      const isOwned = (item: CatalogTitle) =>
         providerFilterActive
           ? (filterXcloud && !!item.xcloud?.hasEntitlement) ||
             (filterGfn && !!item.gfn?.variants.some(v => v.owned)) ||
             (filterPsPlus &&
               (!!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog))
-          : isCatalogTitleOwned(item),
-      );
+          : isCatalogTitleOwned(item);
+      const wantOwned = filterOwnership === 'owned';
+      list = list.filter(item => isOwned(item) === wantOwned);
     }
     if (filterOnSale) {
       list = list.filter(item => saleDiscount(item) > 0);
@@ -767,7 +783,7 @@ export function useLibraryScreen() {
     filterGfn,
     filterFavorite,
     favoriteKeys,
-    filterOwnedOnly,
+    filterOwnership,
     filterOnSale,
     saleDiscount,
   ]);
@@ -940,8 +956,8 @@ export function useLibraryScreen() {
     setFilterPsPlus,
     filterFavorite,
     setFilterFavorite,
-    filterOwnedOnly,
-    setFilterOwnedOnly,
+    filterOwnership,
+    cycleOwnership,
     filterOnSale,
     setFilterOnSale,
     focusedKey,
