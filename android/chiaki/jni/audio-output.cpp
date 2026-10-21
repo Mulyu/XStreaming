@@ -13,6 +13,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <mutex>
 #include <thread>
 
 #define BUFFER_CHUNK_SIZE 1024
@@ -49,6 +50,17 @@ struct AudioOutput
 	AudioBuffer buf;
 	std::atomic<float> gain { 1.0f };
 
+	// Remembered from the audio header so the stream can be rebuilt
+	// identically after the output device changes (see onErrorAfterClose).
+	uint32_t channels = 0;
+	uint32_t rate = 0;
+
+	// Guards (re)creating `stream` against free(): reopening happens on
+	// Oboe's own error thread, which can run at the same time as a session
+	// teardown. shutting_down is only touched under the lock.
+	std::mutex stream_mutex;
+	bool shutting_down = false;
+
 	AudioOutput() : stream_callback(this) {}
 };
 
@@ -64,22 +76,26 @@ extern "C" void android_chiaki_audio_output_free(void *audio_output)
 	if(!audio_output)
 		return;
 	auto ao = reinterpret_cast<AudioOutput *>(audio_output);
-	ao->stream = nullptr;
+	{
+		std::lock_guard<std::mutex> lock(ao->stream_mutex);
+		ao->shutting_down = true;
+		ao->stream = nullptr;
+	}
 	delete ao;
 }
 
-extern "C" void android_chiaki_audio_output_settings(uint32_t channels, uint32_t rate, void *audio_output)
+// Opens and starts ao->stream from the remembered channels/rate, retrying a
+// few times. The caller must hold ao->stream_mutex.
+static bool android_chiaki_audio_output_open_stream(AudioOutput *ao)
 {
-	auto ao = reinterpret_cast<AudioOutput *>(audio_output);
-
 	for(int attempt = 1; attempt <= AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS; attempt++)
 	{
 		oboe::AudioStreamBuilder builder;
 		builder.setPerformanceMode(oboe::PerformanceMode::LowLatency)
 			->setSharingMode(oboe::SharingMode::Exclusive)
 			->setFormat(oboe::AudioFormat::I16)
-			->setChannelCount(channels)
-			->setSampleRate(rate)
+			->setChannelCount(ao->channels)
+			->setSampleRate(ao->rate)
 			->setCallback(&ao->stream_callback);
 
 		auto result = builder.openManagedStream(ao->stream);
@@ -97,7 +113,7 @@ extern "C" void android_chiaki_audio_output_settings(uint32_t channels, uint32_t
 		if(result == oboe::Result::OK)
 		{
 			CHIAKI_LOGI(ao->log, "Audio Output started Oboe stream");
-			return;
+			return true;
 		}
 
 		CHIAKI_LOGE(ao->log, "Audio Output failed to start Oboe stream (attempt %d/%d): %s",
@@ -109,6 +125,17 @@ extern "C" void android_chiaki_audio_output_settings(uint32_t channels, uint32_t
 	}
 
 	CHIAKI_LOGE(ao->log, "Audio Output giving up on opening/starting Oboe stream after %d attempts", AUDIO_OUTPUT_OPEN_MAX_ATTEMPTS);
+	return false;
+}
+
+extern "C" void android_chiaki_audio_output_settings(uint32_t channels, uint32_t rate, void *audio_output)
+{
+	auto ao = reinterpret_cast<AudioOutput *>(audio_output);
+
+	std::lock_guard<std::mutex> lock(ao->stream_mutex);
+	ao->channels = channels;
+	ao->rate = rate;
+	android_chiaki_audio_output_open_stream(ao);
 }
 
 extern "C" void android_chiaki_audio_output_frame(int16_t *buf, size_t samples_count, void *audio_output)
@@ -178,4 +205,19 @@ void AudioOutputCallback::onErrorBeforeClose(oboe::AudioStream *stream, oboe::Re
 void AudioOutputCallback::onErrorAfterClose(oboe::AudioStream *stream, oboe::Result error)
 {
 	CHIAKI_LOGE(audio_output->log, "Oboe reported error after close: %s", oboe::convertToText(error));
+
+	// The output device went away -- switching to/from Bluetooth, plugging in
+	// headphones or HDMI, etc. Oboe has already stopped and closed the dead
+	// stream and won't open a new one by itself, so without this the session
+	// stayed silent for good. Opening a fresh stream picks up whichever device
+	// is the default now. This runs on Oboe's own error thread, where Oboe
+	// documents that the old stream may be deleted, which is exactly what
+	// replacing ao->stream does.
+	if(error != oboe::Result::ErrorDisconnected)
+		return;
+	std::lock_guard<std::mutex> lock(audio_output->stream_mutex);
+	if(audio_output->shutting_down)
+		return;
+	CHIAKI_LOGI(audio_output->log, "Audio Output device disconnected, reopening Oboe stream");
+	android_chiaki_audio_output_open_stream(audio_output);
 }
