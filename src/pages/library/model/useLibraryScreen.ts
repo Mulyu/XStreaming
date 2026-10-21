@@ -51,6 +51,12 @@ import {
   SteamPriceInfo,
   fetchSteamPrices,
   isSteamSaleForDisplay,
+  isPsStoreSaleForDisplay,
+  PsStorePriceInfo,
+  fetchPsStorePrices,
+  getFreshPsPrices,
+  savePsPrices,
+  getPsStoreLocale,
 } from '../../../entities/catalog-title';
 import {
   launchWithProvider,
@@ -146,6 +152,12 @@ export function useLibraryScreen() {
   // still be on sale there, same as an xCloud title can be on Game Pass.
   const [steamPriceMap, setSteamPriceMap] = React.useState<
     Record<string, SteamPriceInfo>
+  >({});
+  // PS Store sale + game-trial info per PS title (keyed by conceptId), for
+  // the sale badge/filter and the trial icon -- the PS catalog itself has
+  // neither.
+  const [psPriceMap, setPsPriceMap] = React.useState<
+    Record<string, PsStorePriceInfo>
   >({});
   const [popularRank, setPopularRank] =
     React.useState<Record<string, number>>(EMPTY_RANK);
@@ -559,6 +571,63 @@ export function useLibraryScreen() {
     });
   }, [gfnGames, deviceRegion]);
 
+  // PS Store prices/trials, fetched one concept at a time through a small
+  // worker pool and cached per concept (24h). Titles the account can't
+  // already play come first: a trial or sale is what matters for those.
+  const psPriceSigRef = React.useRef('');
+  React.useEffect(() => {
+    const concepts = psPlusGames
+      .filter(g => !!g.conceptId)
+      .sort(
+        (a, b) =>
+          Number(a.isOwned || a.plusCatalog === true) -
+          Number(b.isOwned || b.plusCatalog === true),
+      )
+      .map(g => g.conceptId);
+    if (concepts.length === 0) {
+      return;
+    }
+    const locale = getPsStoreLocale();
+    const sig = `${locale}:${concepts.length}`;
+    if (psPriceSigRef.current === sig) {
+      return;
+    }
+    psPriceSigRef.current = sig;
+
+    const cached = getFreshPsPrices(locale);
+    setPsPriceMap(prev => ({...prev, ...cached}));
+    const missing = concepts.filter(id => !cached[id]);
+    if (missing.length === 0) {
+      return;
+    }
+
+    // State updates and cache writes are batched -- one render per result
+    // across a whole catalog would be hundreds of renders.
+    let pending: Record<string, PsStorePriceInfo> = {};
+    let flushTimer: ReturnType<typeof setTimeout> | undefined;
+    const flush = () => {
+      flushTimer = undefined;
+      const batch = pending;
+      pending = {};
+      if (Object.keys(batch).length === 0) {
+        return;
+      }
+      setPsPriceMap(prev => ({...prev, ...batch}));
+      savePsPrices(locale, batch);
+    };
+    fetchPsStorePrices(missing, (id, info) => {
+      pending[id] = info;
+      if (!flushTimer) {
+        flushTimer = setTimeout(flush, 1500);
+      }
+    }).then(() => {
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+      }
+      flush();
+    });
+  }, [psPlusGames]);
+
   // xCloud release dates, turned into an ordinal rank (0 = newest known
   // date) so they combine fairly with GFN's ordinal "last added" rank --
   // comparing a real timestamp against a catalog position wouldn't mean
@@ -612,9 +681,35 @@ export function useLibraryScreen() {
           : best;
       }, 0);
 
-      return Math.max(xcloudDiscount, steamDiscount);
+      // An owned PS title is already bought; its store sale is moot.
+      const psConcept = item.psplus?.isOwned ? '' : item.psplus?.raw?.conceptId;
+      const psPrice = psConcept ? psPriceMap[psConcept] : null;
+      const psDiscount = isPsStoreSaleForDisplay(psPrice)
+        ? psPrice!.purchase!.discountPercent
+        : 0;
+
+      return Math.max(xcloudDiscount, steamDiscount, psDiscount);
     },
-    [priceMap, steamPriceMap],
+    [priceMap, steamPriceMap, psPriceMap],
+  );
+
+  // The two PS availability icons on a list card: "included" (in the Plus
+  // catalog the account is subscribed to) and "trial" (a PS Plus game trial
+  // exists for a title that is neither owned nor in the catalog).
+  const psAvailability = React.useCallback(
+    (item: CatalogTitle): {included: boolean; trial: boolean} => {
+      const ps = item.psplus;
+      if (!ps) {
+        return {included: false, trial: false};
+      }
+      const conceptId = ps.raw?.conceptId;
+      const hasTrial = !!(conceptId && psPriceMap[conceptId]?.trial);
+      return {
+        included: ps.inPlusCatalog,
+        trial: hasTrial && !ps.isOwned && !ps.inPlusCatalog,
+      };
+    },
+    [psPriceMap],
   );
 
   // Store rating for the TV list row -- same xCloud-only source as
@@ -860,6 +955,7 @@ export function useLibraryScreen() {
     openTitle,
     openTitleDetail,
     saleDiscount,
+    psAvailability,
     titleRating,
   };
 }

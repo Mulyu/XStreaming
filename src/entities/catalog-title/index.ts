@@ -123,10 +123,16 @@ export {
 
 export {getGfnLocaleSlug, getGfnGraphqlLocale} from './api/gfnLocale';
 
-export type {PsStorePriceInfo} from './api/psStorePrice';
+export type {
+  PsStorePriceInfo,
+  PsStorePurchasePrice,
+  PsStoreTrial,
+} from './api/psStorePrice';
 export {
   fetchPsStorePrice,
+  fetchPsStorePrices,
   isPsStoreSaleForDisplay,
   getPsStoreUrl,
 } from './api/psStorePrice';
 export {getPsStoreLocale, getPsStoreUrlSlug} from './api/psStoreLocale';
+export {getFreshPsPrices, savePsPrices} from './model/psStorePriceCache';

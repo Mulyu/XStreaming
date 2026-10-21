@@ -29,6 +29,7 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const PS_ACCENT = '#0070D1';
 const SALE_ACCENT = '#E67E22';
+const PS_MARK_COLOR = '#6DB4F5';
 // TV: 3 wide cards per row -- a dense single-column list had too little
 // information density, and a dense image-only grid was the original focus-
 // visibility problem (see `wideCard`'s own comment). numColumns itself still
@@ -76,6 +77,7 @@ const LibraryView: React.FC<Props> = ({
   openTitle,
   openTitleDetail,
   saleDiscount,
+  psAvailability,
   titleRating,
 }) => {
   const searchFocus = useTVFocus();
@@ -119,6 +121,33 @@ const LibraryView: React.FC<Props> = ({
       return () => sub.remove();
     }, []),
   );
+
+  // Icon-only PS availability marks, shown right after the PS badge: a list
+  // check for "included in the PS Plus catalog", a clock for "a game trial
+  // exists". `size` matches the badge row they sit in.
+  const renderPsMarks = (item: CatalogTitle, size: number) => {
+    const {included, trial} = psAvailability(item);
+    if (!included && !trial) {
+      return null;
+    }
+    return (
+      <View
+        style={[
+          styles.psMark,
+          included ? styles.psMarkIncluded : styles.psMarkTrial,
+          {width: size, height: size},
+        ]}
+        accessibilityLabel={t(
+          included ? 'LibraryPsIncluded' : 'LibraryPsTrial',
+        )}>
+        <Icon
+          source={included ? 'playlist-check' : 'clock-outline'}
+          size={size - 4}
+          color={PS_MARK_COLOR}
+        />
+      </View>
+    );
+  };
 
   const renderCard = ({item}: {item: CatalogTitle}) => {
     // Cover art itself grays out when the title isn't playable via any of
@@ -213,6 +242,7 @@ const LibraryView: React.FC<Props> = ({
                 </Text>
               </View>
             )}
+            {renderPsMarks(item, 14)}
           </View>
 
           {discount > 0 && (
@@ -338,6 +368,7 @@ const LibraryView: React.FC<Props> = ({
                   </Text>
                 </View>
               )}
+              {renderPsMarks(item, 13)}
               {discount > 0 && (
                 <Text style={styles.cardDiscount}>
                   {t('LibraryRowDiscount', {percent: discount})}
@@ -1017,6 +1048,14 @@ const styles = StyleSheet.create({
   wideGenreText: {fontSize: 10.5, fontWeight: '600', color: DIM_BADGE_TEXT},
   // Shared between the 3-up grid's badges and the sale callout.
   cardBadgesLine: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  psMark: {
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // In the Plus catalog: filled. Trial only: outlined.
+  psMarkIncluded: {backgroundColor: 'rgba(0,112,209,0.35)'},
+  psMarkTrial: {borderWidth: 1, borderColor: PS_ACCENT},
   cardBadge: {
     minWidth: 16,
     height: 13,
