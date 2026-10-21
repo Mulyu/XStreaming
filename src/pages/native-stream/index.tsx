@@ -754,15 +754,6 @@ export function NativeStreamScreenBase({
     } catch {}
   }, []);
 
-  const getStreamDestination = React.useCallback(() => {
-    // Cloud and GFN both browse from the single merged Library tab now;
-    // anything else (xHome) goes back to the Home gate.
-    return route.params?.streamType === 'cloud' ||
-      route.params?.streamType === 'gfn'
-      ? 'Library'
-      : 'Home';
-  }, [route.params?.streamType]);
-
   const finishStreamExit = React.useCallback(() => {
     setIsExiting(false);
     setLoading(false);
@@ -773,15 +764,11 @@ export function NativeStreamScreenBase({
       Orientation.lockToPortrait();
     }
     FullScreenManager.immersiveModeOff();
-    if (getStreamDestination() === 'Library') {
-      navigation.navigate('Main', {
-        screen: 'Library',
-        params: {needRefresh: true},
-      });
-    } else {
-      navigation.navigate('Home', {needRefresh: true});
-    }
-  }, [getStreamDestination, navigation]);
+    navigation.navigate('Main', {
+      screen: 'Library',
+      params: {needRefresh: true},
+    });
+  }, [navigation]);
 
   const waitStopStream = React.useCallback(async (api: any) => {
     try {
@@ -2094,11 +2081,7 @@ export function NativeStreamScreenBase({
                     if (!Platform.isTV) {
                       Orientation.lockToPortrait();
                     }
-                    if (route.params?.streamType === 'cloud') {
-                      navigation.navigate('Main', {screen: 'Library'});
-                    } else {
-                      navigation.navigate('Home');
-                    }
+                    navigation.navigate('Main', {screen: 'Library'});
                   },
                 },
               ]);

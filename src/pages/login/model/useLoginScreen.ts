@@ -26,10 +26,10 @@ export function useLoginScreen(navigation: any, route: any) {
     // log.info('onNavigationStateChange:', navState);
     const {url} = navState;
     if (url.startsWith('ms-xal-000000004c20a908:')) {
-      // Save url，return to home
+      // Save url, return to Settings, which finishes the sign-in
       navigation.navigate({
-        name: 'Home',
-        params: {xalUrl: url},
+        name: 'Main',
+        params: {screen: 'Settings', params: {xalUrl: url}},
         merge: true,
       });
     }
