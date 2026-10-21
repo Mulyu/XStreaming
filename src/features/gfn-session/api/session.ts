@@ -354,20 +354,21 @@ const toGfnSession = (
     settings: GfnStreamSettings;
   },
 ): GfnSession => {
-  if (payload.requestStatus?.statusCode !== 1 || !payload.session?.sessionId) {
+  const session = payload.session;
+  const sessionId = session?.sessionId;
+  if (payload.requestStatus?.statusCode !== 1 || !session || !sessionId) {
     throw new Error(
       `CloudMatch error: ${
         payload.requestStatus?.statusDescription ?? 'unknown'
       } (code ${payload.requestStatus?.statusCode})`,
     );
   }
-  const session = payload.session;
   const serverIp = streamingServerIp(session) ?? '';
   // The signaling connection's resourcePath (usage=14) — carried even when the
   // connection has no `ip` field, so do not require one.
   const sigConn = (session.connectionInfo ?? []).find(c => c.usage === 14);
   return {
-    sessionId: session.sessionId,
+    sessionId,
     status: session.status ?? 1,
     queuePosition:
       session.queuePosition ?? session.seatSetupInfo?.queuePosition,
