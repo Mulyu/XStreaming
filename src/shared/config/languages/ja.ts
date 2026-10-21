@@ -433,6 +433,7 @@ export default {
     PsStoreTrialMinutes: 'PS Plus プレミアム · {{n}}分まで無料',
     PsStoreTrialUnknown: 'PS Plus プレミアムで無料',
     PsStoreSaleUntil: 'セール {{date}} まで',
+    PsStoreMemberPrice: 'PS Plus会員価格',
     Store: 'ストア',
     StoreTabXbox: 'Xbox',
     StoreTabSteam: 'Steam',

@@ -5,7 +5,8 @@ import {PsStorePriceInfo} from '../api/psStorePrice';
 // the xCloud and Steam price caches (see steamPriceCache.ts) so refreshing
 // one never resets another's age. Entries age out individually because the
 // map fills in over many requests across sessions.
-const STORE_KEY = 'user.psstore.prices';
+// v2: the parser now separates member discounts and PS Plus-only trials.
+const STORE_KEY = 'user.psstore.prices.v2';
 
 type PsPriceCache = {
   locale: string;
