@@ -9,6 +9,7 @@ import MsalAuthentication from '../../../MsalAuthentication';
 
 import {useSelector, useDispatch} from 'react-redux';
 import SplashScreen from 'react-native-splash-screen';
+import {decideHomeEntry} from './homeEntry';
 import {useTranslation} from 'react-i18next';
 import NetInfo from '@react-native-community/netinfo';
 import {debugFactory} from '../../../shared/lib/debug';
@@ -236,21 +237,34 @@ export function useHomeScreen(navigation: any, route: any) {
       if (_isFocused.current) {
         log.info('HomeScreen isFocused:', _isFocused.current);
 
-        // Return from Login screen(XAL auth)
-        if (route.params?.xalUrl) {
-          if (!_isLogined.current) {
-            log.info('HomeScreen receive xalUrl:', route.params?.xalUrl);
-            setXalUrl(route.params.xalUrl);
-            setLoading(true);
-            setLoadingText(
-              t('Login successful, refreshing login credentials...'),
-            );
-            _authentication.current.startAuthflow(
-              _redirect.current,
-              route.params.xalUrl,
-            );
-          }
-        } else if (!_isLogined.current && !wantsLogin) {
+        const entry = decideHomeEntry({
+          hasXalUrl: !!route.params?.xalUrl,
+          isLogined: _isLogined.current,
+          wantsLogin,
+        });
+        if (entry === 'enterMain') {
+          // Already signed in (e.g. the app was closed with Back and reopened
+          // while the process was still alive -- Redux outlives the
+          // Activity), so there's nothing to wait for. Land back on
+          // Settings when that's where a sign-in was started from.
+          navigatedSilently = true;
+          navigation.replace(
+            'Main',
+            wantsLogin ? {screen: 'Settings'} : undefined,
+          );
+        } else if (entry === 'finishXalLogin') {
+          // Return from Login screen(XAL auth)
+          log.info('HomeScreen receive xalUrl:', route.params?.xalUrl);
+          setXalUrl(route.params.xalUrl);
+          setLoading(true);
+          setLoadingText(
+            t('Login successful, refreshing login credentials...'),
+          );
+          _authentication.current.startAuthflow(
+            _redirect.current,
+            route.params.xalUrl,
+          );
+        } else if (entry === 'enterMainSilently') {
           // Silent, non-blocking check, same treatment as GFN's own
           // opportunistic refresh above: don't wait for -- or gate
           // navigation on -- the result. checkAuthentication() itself
@@ -264,7 +278,7 @@ export function useHomeScreen(navigation: any, route: any) {
           navigatedSilently = true;
           navigation.replace('Main');
           _authentication.current.checkAuthentication().catch(() => {});
-        } else if (!_isLogined.current) {
+        } else {
           setLoading(true);
           setLoadingText(t('Checking login status...'));
           _authentication.current
