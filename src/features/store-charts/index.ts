@@ -21,6 +21,7 @@ export type {
 
 export {
   fetchPsStoreChart,
+  fetchPsStoreRanking,
   getFreshPsStoreChart,
   PS_STORE_CHART_PAGE_SIZE,
 } from './api/psStoreCharts';
@@ -28,4 +29,5 @@ export type {
   PsStoreChartKind,
   PsStoreChartEntry,
   PsStoreChartPage,
+  PsStoreRanking,
 } from './api/psStoreCharts';

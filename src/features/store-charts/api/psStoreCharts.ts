@@ -113,6 +113,10 @@ export const fetchPsStoreChart = async (
   kind: PsStoreChartKind,
   offset = 0,
   size = PS_STORE_CHART_PAGE_SIZE,
+  // The Store tab's instant-paint cache holds exactly its own first page;
+  // callers fetching a different page size (see fetchPsStoreRanking) pass
+  // false so they don't overwrite it.
+  cacheFirstPage = true,
 ): Promise<PsStoreChartPage> => {
   const locale = getPsStoreLocale();
   let res;
@@ -159,7 +163,7 @@ export const fetchPsStoreChart = async (
       discountPercent: parseDiscountPercent(p.price?.discountText),
     }));
 
-  if (offset === 0 && entries.length > 0) {
+  if (cacheFirstPage && offset === 0 && entries.length > 0) {
     try {
       storage.set(
         cacheKey(kind, locale),
@@ -169,4 +173,82 @@ export const fetchPsStoreChart = async (
   }
 
   return {entries, totalCount: grid?.pageInfo?.totalCount};
+};
+
+export type PsStoreRanking = {
+  // Best first: top sellers (sales30) or newest releases, per `kind`.
+  entries: {productId: string; title: string}[];
+  // Size of the whole category the ranking is a prefix of, so callers can
+  // turn a position into "top N%" of the PS Store.
+  totalCount?: number;
+};
+
+const RANKING_PAGE_SIZE = 100;
+const rankingCacheKey = (kind: PsStoreChartKind, locale: string): string =>
+  `store.psStoreRank.${kind}.${locale}`;
+
+const readRankingCache = (
+  kind: PsStoreChartKind,
+  locale: string,
+): PsStoreRanking | null => {
+  const raw = storage.getString(rankingCacheKey(kind, locale));
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      Array.isArray(parsed.entries) &&
+      typeof parsed.ts === 'number' &&
+      Date.now() - parsed.ts < CACHE_TTL_MS
+    ) {
+      return {entries: parsed.entries, totalCount: parsed.totalCount};
+    }
+  } catch {}
+  return null;
+};
+
+// A longer prefix of the same category the Store tab's PS Store chart shows
+// (`count` entries, in pages of 100), for ranking the Library's PS titles by
+// popularity / release date. Cached for 12h; never rejects -- a failed first
+// page yields an empty ranking, a failed later page keeps what was fetched.
+export const fetchPsStoreRanking = async (
+  kind: PsStoreChartKind,
+  count = 400,
+): Promise<PsStoreRanking> => {
+  const locale = getPsStoreLocale();
+  const cached = readRankingCache(kind, locale);
+  if (cached) {
+    return cached;
+  }
+  const entries: PsStoreRanking['entries'] = [];
+  let totalCount: number | undefined;
+  for (let offset = 0; offset < count; offset += RANKING_PAGE_SIZE) {
+    const page = await fetchPsStoreChart(
+      kind,
+      offset,
+      RANKING_PAGE_SIZE,
+      false,
+    );
+    if (page.entries.length === 0) {
+      break;
+    }
+    page.entries.forEach(e =>
+      entries.push({productId: e.productId, title: e.title}),
+    );
+    totalCount = page.totalCount ?? totalCount;
+    if (totalCount !== undefined && entries.length >= totalCount) {
+      break;
+    }
+  }
+  if (entries.length > 0) {
+    try {
+      storage.set(
+        rankingCacheKey(kind, locale),
+        JSON.stringify({ts: Date.now(), entries, totalCount}),
+      );
+    } catch {}
+  }
+  return {entries, totalCount};
 };
