@@ -57,7 +57,13 @@ import PerfPanel from './ui/PerfPanel';
 import StreamControlRail, {StreamInputMode} from './ui/StreamControlRail';
 import RTCFsrView from '../../shared/ui/RTCFsrView';
 import NativeTouchOverlay from './ui/NativeTouchOverlay';
-import {MouseTrackpadZone} from '../../entities/gfn-input';
+import {
+  MouseTrackpadZone,
+  androidKeyCodeToVk,
+  modifierMaskFromMetaState,
+} from '../../entities/gfn-input';
+import {usePhysicalInput} from '../../features/physical-input';
+import type {PhysicalKeyEvent} from '../../features/physical-input';
 import CustomKeyButtons from './ui/CustomKeyButtons';
 import {
   useKeyboardModifiers,
@@ -3329,8 +3335,10 @@ export function NativeStreamScreenBase({
   );
 
   const handleMouseWheel = React.useCallback(
-    (delta: number) => {
-      webrtcClient?.getChannelProcessor('input')?.queueMouseWheel(delta);
+    (delta: number, horizontal = 0) => {
+      webrtcClient
+        ?.getChannelProcessor('input')
+        ?.queueMouseWheel(delta, horizontal);
     },
     [webrtcClient],
   );
@@ -3367,6 +3375,65 @@ export function NativeStreamScreenBase({
   // and any custom key buttons on the active profile -- see
   // features/virtual-keyboard.
   const keyboardModifiers = useKeyboardModifiers(handleKeyDown, handleKeyUp);
+
+  // Physical keyboard/mouse (USB, Bluetooth, DeX) for GFN: keys and mouse go
+  // straight to the remote PC as real key/mouse input. The native side owns
+  // the mouse capture and clears it whenever the control rail opens.
+  const handlePhysicalKey = React.useCallback(
+    (event: PhysicalKeyEvent) => {
+      const virtualKey = androidKeyCodeToVk(event.keyCode);
+      if (virtualKey === undefined) {
+        return;
+      }
+      const modifiers = modifierMaskFromMetaState(event.metaState, virtualKey);
+      if (event.down) {
+        handleKeyDown(virtualKey, modifiers);
+      } else {
+        handleKeyUp(virtualKey, modifiers);
+      }
+    },
+    [handleKeyDown, handleKeyUp],
+  );
+
+  // One wheel notch is 120 units, as on Windows; the horizontal axis is
+  // positive to the right on both Android and Windows.
+  const handlePhysicalMouseWheel = React.useCallback(
+    (x: number, y: number) => {
+      handleMouseWheel(Math.round(y * 120), Math.round(x * 120));
+    },
+    [handleMouseWheel],
+  );
+
+  const handlePhysicalMouseButton = React.useCallback(
+    (button: number, down: boolean) => {
+      // GFN's buttons are 1-based in the same order as DOM MouseEvent.button.
+      if (down) {
+        handleMouseButtonDown(button + 1);
+      } else {
+        handleMouseButtonUp(button + 1);
+      }
+    },
+    [handleMouseButtonDown, handleMouseButtonUp],
+  );
+
+  const handlePhysicalMenu = React.useCallback(() => {
+    setShowControlRail(true);
+    GamepadManager.setCurrentScreen('');
+  }, []);
+
+  usePhysicalInput(
+    route.params?.streamType === 'gfn' &&
+      connectState === CONNECTED &&
+      !portraitMode &&
+      !isInPictureInPicture,
+    {
+      onKey: handlePhysicalKey,
+      onMouseMove: handleMouseMove,
+      onMouseButton: handlePhysicalMouseButton,
+      onMouseWheel: handlePhysicalMouseWheel,
+      onMenu: handlePhysicalMenu,
+    },
+  );
 
   // Releases any latched modifier when leaving Native touch (mirrors
   // showNativeTouch/showKeyboard being reset in handleSetInputMode above) so

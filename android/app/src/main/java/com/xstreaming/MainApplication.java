@@ -59,6 +59,7 @@ public class MainApplication extends Application implements ReactApplication {
             packages.add(new CoverDisplayPackage());
             packages.add(new PsPlusPackage());
             packages.add(new AppDebugLogPackage());
+            packages.add(new PhysicalInputPackage());
           return packages;
         }
 
