@@ -33,6 +33,29 @@ const NVIDIA_ACCENT = '#76B900';
 const PS_ACCENT = '#0070D1';
 const DIM_ICON_BG = 'rgba(140,140,150,0.16)';
 const DIM_TEXT = '#8A9A92';
+const PS_MARK_COLOR = '#6DB4F5';
+
+// "up to 2h free" / "up to 30 min free" from the trial's length in minutes;
+// the length is parsed from Sony's own text and may be missing.
+const formatTrialNote = (
+  minutes: number | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string => {
+  if (!minutes) {
+    return t('PsStoreTrialUnknown');
+  }
+  return minutes % 60 === 0
+    ? t('PsStoreTrialHours', {n: minutes / 60})
+    : t('PsStoreTrialMinutes', {n: minutes});
+};
+
+const formatSaleEnd = (ms: number): string =>
+  new Date(ms).toLocaleString(undefined, {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 // TV: the left-hand column's fixed art + identity width -- everything else
 // (PlayOn/Features/Media/Description) scrolls beside it. See `tvSplit`'s
 // own comment for why this screen needs a second layout at all.
@@ -137,11 +160,21 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const psStoreUrl = catalogTitle.psplus
     ? getPsStoreUrl(psPlusGame?.conceptId, psPlusGame?.storeProductId)
     : null;
-  const psStoreShowSale =
-    !!catalogTitle.psplus &&
+  // A purchase price/sale and a game trial are both shown whenever they
+  // exist: the sale also for titles in the Plus catalog (it is still a
+  // discount on owning the game), the trial only when the title isn't
+  // already playable.
+  const psPurchase =
+    catalogTitle.psplus && !catalogTitle.psplus.isOwned
+      ? psStorePrice?.purchase ?? null
+      : null;
+  const psStoreShowSale = !!psPurchase && isPsStoreSaleForDisplay(psStorePrice);
+  const psTrial =
+    catalogTitle.psplus &&
     !catalogTitle.psplus.isOwned &&
-    !catalogTitle.psplus.inPlusCatalog &&
-    isPsStoreSaleForDisplay(psStorePrice);
+    !catalogTitle.psplus.inPlusCatalog
+      ? psStorePrice?.trial ?? null
+      : null;
 
   const favoriteBtn = (
     <Pressable
@@ -514,11 +547,18 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           // (subscribe/buy) before it can stream.
           const psplusAvailable =
             catalogTitle.psplus.isOwned || catalogTitle.psplus.inPlusCatalog;
-          const subtitle = catalogTitle.psplus.isOwned
+          const baseSubtitle = catalogTitle.psplus.isOwned
             ? t('LibraryFilterOwned')
             : catalogTitle.psplus.inPlusCatalog
             ? t('PsPlusIncludedDesc')
+            : psTrial
+            ? t('PsStoreTrialAvailable')
             : t('LibraryViewDetails');
+          const subtitle = psStoreShowSale
+            ? `${baseSubtitle} · ${t('PsStoreOnSale')}`
+            : baseSubtitle;
+          const showIncludedRow =
+            catalogTitle.psplus.inPlusCatalog && !catalogTitle.psplus.isOwned;
           return (
             <View style={styles.providerCard}>
               <Pressable
@@ -546,22 +586,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 <View style={styles.providerText}>
                   <Text style={styles.providerName}>PS Plus</Text>
                   <Text style={styles.providerSub}>{subtitle}</Text>
-                  {!psplusAvailable && psStorePrice && (
-                    <View style={styles.priceRow}>
-                      <Text
-                        style={[
-                          styles.priceNow,
-                          psStoreShowSale && styles.priceNowSale,
-                        ]}>
-                        {psStorePrice.discountedPrice}
-                      </Text>
-                      {psStoreShowSale && (
-                        <Text style={styles.priceWas}>
-                          {psStorePrice.basePrice}
-                        </Text>
-                      )}
-                    </View>
-                  )}
                 </View>
                 {preference?.provider === 'psplus' && (
                   <Icon source="check-circle" size={18} color={PS_ACCENT} />
@@ -595,6 +619,85 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 )}
                 <Icon source="chevron-right" size={18} color="#8A9A92" />
               </Pressable>
+              {(showIncludedRow || psTrial || psPurchase) && (
+                <View style={styles.stores}>
+                  {showIncludedRow && (
+                    <View style={styles.psInfoRow}>
+                      <View style={styles.storeMark}>
+                        <Icon
+                          source="playlist-check"
+                          size={14}
+                          color={PS_MARK_COLOR}
+                        />
+                      </View>
+                      <View style={styles.storeText}>
+                        <Text style={styles.storeName}>
+                          {t('PsStoreIncludedRow')}
+                        </Text>
+                        <Text style={styles.psInfoNote}>
+                          {t('PsStoreIncludedNote')}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  {psTrial && (
+                    <View style={styles.psInfoRow}>
+                      <View style={styles.storeMark}>
+                        <Icon
+                          source="clock-outline"
+                          size={14}
+                          color={PS_MARK_COLOR}
+                        />
+                      </View>
+                      <View style={styles.storeText}>
+                        <Text style={styles.storeName}>
+                          {t('PsStoreGameTrial')}
+                        </Text>
+                        <Text style={styles.psInfoNote}>
+                          {formatTrialNote(psTrial.minutes, t)}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  {psPurchase && (
+                    <View style={styles.psInfoRow}>
+                      <View style={styles.storeMark}>
+                        <Icon source="cart-outline" size={14} color="#E67E22" />
+                      </View>
+                      <View style={styles.storeText}>
+                        <View style={styles.priceRow}>
+                          <Text
+                            style={[
+                              styles.priceNow,
+                              psStoreShowSale && styles.priceNowSale,
+                            ]}>
+                            {psPurchase.discountedPrice}
+                          </Text>
+                          {psStoreShowSale && (
+                            <Text style={styles.priceWas}>
+                              {psPurchase.basePrice}
+                            </Text>
+                          )}
+                          {psStoreShowSale && (
+                            <View style={styles.salePill}>
+                              <Text style={styles.salePillText}>
+                                -{psPurchase.discountPercent}%
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        {psStoreShowSale && !!psPurchase.saleEndsAt && (
+                          <Text style={styles.saleUntil}>
+                            {t('PsStoreSaleUntil', {
+                              date: formatSaleEnd(psPurchase.saleEndsAt),
+                            })}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           );
         })()}
@@ -901,6 +1004,25 @@ const styles = StyleSheet.create({
   storeMarkText: {fontSize: 9, fontWeight: '800', color: '#8A9A92'},
   storeText: {flex: 1, gap: 1},
   storeName: {fontSize: 13, fontWeight: '600'},
+  // Informational PS rows under the PS card (included / trial / purchase) --
+  // same indent as the GFN store rows, but not pressable.
+  psInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingLeft: 22,
+  },
+  psInfoNote: {fontSize: 11, color: DIM_TEXT},
+  salePill: {
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 5,
+    backgroundColor: '#E67E22',
+  },
+  salePillText: {fontSize: 10, fontWeight: '800', color: '#2B1400'},
+  saleUntil: {fontSize: 10.5, color: '#E67E22'},
   storeRowEnd: {flexDirection: 'row', alignItems: 'center', gap: 6},
   ownedText: {fontSize: 11, fontWeight: '700', color: NVIDIA_ACCENT},
   storeLinkBtn: {padding: 2},
