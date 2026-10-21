@@ -8,4 +8,5 @@
 // so this has to sit at a layer both can import from. Consumers outside
 // this slice import from here, not from model/inputEncoding directly.
 export * from './model/inputEncoding';
+export * from './model/androidKeyMap';
 export {default as MouseTrackpadZone} from './ui/MouseTrackpadZone';

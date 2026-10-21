@@ -374,12 +374,12 @@ export class GfnWebRtcClient {
     } catch {}
   }
 
-  sendMouseWheel(delta: number): void {
+  sendMouseWheel(delta: number, horizontal = 0): void {
     if (!this.inputReady || this.reliableInput?.readyState !== 'open') {
       return;
     }
     try {
-      this.reliableInput.send(this.encoder.encodeMouseWheel(delta));
+      this.reliableInput.send(this.encoder.encodeMouseWheel(delta, horizontal));
     } catch {}
   }
 

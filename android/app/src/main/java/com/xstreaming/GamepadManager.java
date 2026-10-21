@@ -285,6 +285,7 @@ public class GamepadManager extends ReactContextBaseJavaModule {
     @ReactMethod
     public void setCurrentScreen(String value) {
         currentScreen = value;
+        PhysicalInput.onScreenChanged();
     }
 
     // Synchronous-ish initial read for whether a physical controller is already

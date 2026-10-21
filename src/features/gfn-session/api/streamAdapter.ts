@@ -442,8 +442,8 @@ export class GfnStreamAdapter {
         sendMouseButtonUp: (button: number) => {
           this.gfnClient?.sendMouseButtonUp(button);
         },
-        queueMouseWheel: (delta: number) => {
-          this.gfnClient?.sendMouseWheel(delta);
+        queueMouseWheel: (delta: number, horizontal = 0) => {
+          this.gfnClient?.sendMouseWheel(delta, horizontal);
         },
         sendKeyDown: (virtualKey: number, modifiers: number) => {
           this.gfnClient?.sendKeyDown(virtualKey, modifiers);

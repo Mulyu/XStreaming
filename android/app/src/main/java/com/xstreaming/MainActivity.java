@@ -772,6 +772,7 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     super.onCreate(null);
 
     instance = this;
+    PhysicalInput.attach(this);
 
     controllerHandler = new ControllerHandler(this);
 
@@ -843,6 +844,18 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     if (hasFocus) {
       getWindow().getDecorView().invalidate();
     }
+    PhysicalInput.onWindowFocusChanged(hasFocus);
+  }
+
+  // Physical keyboard events are claimed here, ahead of the view hierarchy,
+  // while a stream is active -- otherwise a focused React Native view (or the
+  // system) would handle keys like Space/Enter/arrows itself.
+  @Override
+  public boolean dispatchKeyEvent(KeyEvent event) {
+    if (PhysicalInput.handleKeyEvent(event)) {
+      return true;
+    }
+    return super.dispatchKeyEvent(event);
   }
 
   @Override
@@ -851,17 +864,19 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     if (isGameControllerDevice(device)) {
       getOrAssignControllerIndex(deviceId);
     }
+    PhysicalInput.onInputDevicesChanged();
   }
 
   @Override
   public void onInputDeviceRemoved(int deviceId) {
     releaseControllerIndex(deviceId);
     resetStickFocusNavigation();
+    PhysicalInput.onInputDevicesChanged();
   }
 
   @Override
   public void onInputDeviceChanged(int deviceId) {
-    // No-op
+    PhysicalInput.onInputDevicesChanged();
   }
 
   /**

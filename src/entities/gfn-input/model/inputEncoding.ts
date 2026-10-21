@@ -157,7 +157,10 @@ export const PARTIALLY_RELIABLE_GAMEPAD_MASK_ALL =
 
 // Mouse button constants (1-based, matching the GFN protocol).
 export const MOUSE_LEFT = 1;
+export const MOUSE_MIDDLE = 2;
 export const MOUSE_RIGHT = 3;
+export const MOUSE_X1 = 4; // "back" side button
+export const MOUSE_X2 = 5; // "forward" side button
 
 export type GamepadInput = {
   controllerId: number; // 0-3
@@ -395,12 +398,12 @@ export class GfnInputEncoder {
     return this.encodeMouseButton(INPUT_MOUSE_BUTTON_UP, button);
   }
 
-  encodeMouseWheel(delta: number): Uint8Array {
+  encodeMouseWheel(delta: number, horizontal = 0): Uint8Array {
     const bytes = new Uint8Array(22);
     const view = new DataView(bytes.buffer);
     // [type 4B LE][horiz 2B BE][vert 2B BE][reserved 6B BE][timestamp 8B BE]
     view.setUint32(0, INPUT_MOUSE_WHEEL, true);
-    view.setInt16(4, 0, false);
+    view.setInt16(4, clampI16(horizontal), false);
     view.setInt16(6, clampI16(delta), false);
     view.setUint16(8, 0, false);
     view.setUint32(10, 0, false);
