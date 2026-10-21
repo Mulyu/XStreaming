@@ -238,12 +238,13 @@ const StreamHandshakeOverlay: React.FC<StreamHandshakeOverlayProps> = ({
         <FieldBackdrop accent={accent} />
       )}
       {!!posterUrl && (
-        <Image
-          source={{uri: posterUrl}}
-          style={StyleSheet.absoluteFill}
-          resizeMode="contain"
-          pointerEvents="none"
-        />
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Image
+            source={{uri: posterUrl}}
+            style={StyleSheet.absoluteFill}
+            resizeMode="contain"
+          />
+        </View>
       )}
       <View style={styles.scrimTop} pointerEvents="none" />
       <View style={styles.scrimBottom} pointerEvents="none" />

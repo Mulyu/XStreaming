@@ -1023,7 +1023,7 @@ export function NativeStreamScreenBase({
     keepAliveDisconnectListener.current = DeviceEventEmitter.addListener(
       'StreamKeepAliveDisconnect',
       () => {
-        exit();
+        handleExitRef.current();
       },
     );
 
