@@ -2,6 +2,8 @@ import {
   psPlusChiaki,
   ControllerButton,
   ControllerStateInput,
+  TOUCHPAD_WIDTH,
+  TOUCHPAD_HEIGHT,
   CloudProvisionOptions,
   StartSessionOptions,
   VideoResolutionPreset,
@@ -59,18 +61,13 @@ const BUTTON_MAP: Array<[string, number]> = [
   ['DPadDown', ControllerButton.DPAD_DOWN],
   ['DPadLeft', ControllerButton.DPAD_LEFT],
   ['DPadRight', ControllerButton.DPAD_RIGHT],
-  // Standalone PS/Share presses don't do anything during an active PS Plus
-  // cloud session (Sony's backend has no OS shell to show for an ephemeral
-  // single-game session -- see usePsPlusStream's OPTIONS+SHARE chord, this
-  // app's own workaround for a real system menu), so the Nexus button
-  // VirtualGamepad/CustomVirtualGamepad already render in that spot is
-  // otherwise dead for this provider. Repurposed to fire a touchpad click
-  // instead of ControllerButton.PS, which both actually does something and
-  // means PS Plus needs no dedicated touchpad button of its own in the
-  // layout -- physical controllers with a separate touchpad-click key
-  // (KEYCODE_BUTTON_C, see entities/gamepad's GAMEPAD_MAPING) land on the
-  // same bit via the 'Touchpad' gpState field below.
-  ['Nexus', ControllerButton.TOUCHPAD],
+  // The on-screen Nexus button is the PS button. (It used to fire a
+  // touchpad click as a stand-in while PS Plus had no touchpad; the touchpad
+  // is now real -- see the 'Touchpad' click field and Touches below.)
+  ['Nexus', ControllerButton.PS],
+  // Click of the touchpad: physical controllers with a separate touchpad-
+  // click key (KEYCODE_BUTTON_C, see entities/gamepad's GAMEPAD_MAPING) and
+  // the on-screen touchpad's press-and-hold land on this field.
   ['Touchpad', ControllerButton.TOUCHPAD],
 ];
 
@@ -84,6 +81,17 @@ const normalizeTriggerToUint8 = (value: number): number =>
 
 // Convert an xCloud/native-stream-style gpState object into chiaki's
 // ControllerState input shape.
+// gpState.Touches is [{id, x, y}] with x/y normalized to 0..1 across the
+// touchpad; ids stay the same for the life of one touch.
+const touchesToPsPlusInput = (
+  touches: any,
+): {id: number; x: number; y: number}[] =>
+  (Array.isArray(touches) ? touches : []).slice(0, 2).map((t: any) => ({
+    id: Math.round(num(t?.id)) & 0x7f,
+    x: Math.round(Math.max(0, Math.min(1, num(t?.x))) * (TOUCHPAD_WIDTH - 1)),
+    y: Math.round(Math.max(0, Math.min(1, num(t?.y))) * (TOUCHPAD_HEIGHT - 1)),
+  }));
+
 export const gpStateToPsPlusInput = (gp: any): ControllerStateInput => {
   let buttons = 0;
   for (const [key, mask] of BUTTON_MAP) {
@@ -106,6 +114,7 @@ export const gpStateToPsPlusInput = (gp: any): ControllerStateInput => {
     leftY: normalizeAxisToInt16(num(gp?.LeftThumbYAxis)),
     rightX: normalizeAxisToInt16(num(gp?.RightThumbXAxis)),
     rightY: normalizeAxisToInt16(num(gp?.RightThumbYAxis)),
+    touches: touchesToPsPlusInput(gp?.Touches),
   };
 };
 

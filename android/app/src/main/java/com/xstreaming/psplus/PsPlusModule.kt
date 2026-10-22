@@ -339,17 +339,32 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 	@ReactMethod
 	fun setControllerState(state: ReadableMap) {
 		val current = session ?: return
-		current.setControllerState(
-			ControllerState(
-				buttons = (if (state.hasKey("buttons")) state.getDouble("buttons").toLong() else 0L).toUInt(),
-				l2State = (if (state.hasKey("l2State")) state.getInt("l2State") else 0).toUByte(),
-				r2State = (if (state.hasKey("r2State")) state.getInt("r2State") else 0).toUByte(),
-				leftX = (if (state.hasKey("leftX")) state.getInt("leftX") else 0).toShort(),
-				leftY = (if (state.hasKey("leftY")) state.getInt("leftY") else 0).toShort(),
-				rightX = (if (state.hasKey("rightX")) state.getInt("rightX") else 0).toShort(),
-				rightY = (if (state.hasKey("rightY")) state.getInt("rightY") else 0).toShort(),
-			)
+		val controllerState = ControllerState(
+			buttons = (if (state.hasKey("buttons")) state.getDouble("buttons").toLong() else 0L).toUInt(),
+			l2State = (if (state.hasKey("l2State")) state.getInt("l2State") else 0).toUByte(),
+			r2State = (if (state.hasKey("r2State")) state.getInt("r2State") else 0).toUByte(),
+			leftX = (if (state.hasKey("leftX")) state.getInt("leftX") else 0).toShort(),
+			leftY = (if (state.hasKey("leftY")) state.getInt("leftY") else 0).toShort(),
+			rightX = (if (state.hasKey("rightX")) state.getInt("rightX") else 0).toShort(),
+			rightY = (if (state.hasKey("rightY")) state.getInt("rightY") else 0).toShort(),
 		)
+		// Touchpad fingers, at most ControllerState's two slots: [{id, x, y}] with
+		// x/y in touchpad pixels (0..TOUCHPAD_WIDTH-1 / 0..TOUCHPAD_HEIGHT-1).
+		// Slots left unset stay "up" (id -1).
+		if (state.hasKey("touches") && !state.isNull("touches")) {
+			val touches = state.getArray("touches")
+			if (touches != null) {
+				val count = minOf(touches.size(), controllerState.touches.size)
+				for (i in 0 until count) {
+					val touch = touches.getMap(i) ?: continue
+					val slot = controllerState.touches[i]
+					slot.id = touch.getInt("id").toByte()
+					slot.x = touch.getInt("x").coerceIn(0, ControllerState.TOUCHPAD_WIDTH.toInt() - 1).toUShort()
+					slot.y = touch.getInt("y").coerceIn(0, ControllerState.TOUCHPAD_HEIGHT.toInt() - 1).toUShort()
+				}
+			}
+		}
+		current.setControllerState(controllerState)
 	}
 
 	@ReactMethod

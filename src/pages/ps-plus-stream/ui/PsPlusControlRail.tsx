@@ -35,6 +35,8 @@ type Props = Pick<
   | 'onEditGamepadLayout'
   | 'showVirtualGamepad'
   | 'onToggleVirtualGamepad'
+  | 'touchpadVisible'
+  | 'onToggleTouchpad'
   | 'coverAvailable'
   | 'coverPresented'
   | 'onToggleCoverControls'
@@ -66,6 +68,8 @@ const PsPlusControlRail: React.FC<Props> = ({
   onEditGamepadLayout,
   showVirtualGamepad,
   onToggleVirtualGamepad,
+  touchpadVisible,
+  onToggleTouchpad,
   coverAvailable,
   coverPresented,
   onToggleCoverControls,
@@ -136,6 +140,13 @@ const PsPlusControlRail: React.FC<Props> = ({
           label={t('Virtual gamepad')}
           active={showVirtualGamepad}
           onPress={onToggleVirtualGamepad}
+        />
+        <RailButton
+          accent={PS_ACCENT}
+          icon="gesture-swipe"
+          label={t('Touchpad')}
+          active={touchpadVisible}
+          onPress={onToggleTouchpad}
         />
         <RailButton
           accent={PS_ACCENT}

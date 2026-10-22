@@ -101,7 +101,13 @@ export type ControllerStateInput = {
   leftY?: number;
   rightX?: number;
   rightY?: number;
+  /** Touchpad fingers (at most two), positions in touchpad pixels. */
+  touches?: {id: number; x: number; y: number}[];
 };
+
+/** The DualSense touchpad's coordinate space (Chiaki.kt's TOUCHPAD_WIDTH/HEIGHT). */
+export const TOUCHPAD_WIDTH = 1920;
+export const TOUCHPAD_HEIGHT = 942;
 
 // ControllerState.BUTTON_* bit values (see Chiaki.kt).
 export const ControllerButton = {
