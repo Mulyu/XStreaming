@@ -17,7 +17,9 @@ import {
   PsPlusConnectionState,
   StreamMetrics,
   getNpsso,
+  createTouchpadClickTracker,
 } from '../../../features/ps-plus-session';
+import type {TouchpadTouch} from '../../../features/ps-plus-session';
 import {GAMEPAD_MAPING} from '../../../entities/gamepad';
 import {
   getJoystickMode,
@@ -217,6 +219,8 @@ const createGpState = () => ({
   LeftThumbYAxis: 0,
   RightThumbXAxis: 0,
   RightThumbYAxis: 0,
+  // Touchpad fingers, [{id, x, y}] with x/y 0..1 across the pad.
+  Touches: [] as {id: number; x: number; y: number}[],
 });
 
 export function usePsPlusStream(navigation: any, route: any) {
@@ -530,6 +534,55 @@ export function usePsPlusStream(navigation: any, route: any) {
   const flushGpState = React.useCallback(() => {
     sessionRef.current?.setGamepadState(gpState.current);
   }, []);
+
+  // The touchpad: an on-screen pad (toggled from the control rail) whose
+  // fingers go out as the PS touchpad's touches, and whose press-and-hold is
+  // the touchpad click. Fingers and click live in gpState like everything
+  // else, so the 16 ms input loop sends them with the sticks and buttons.
+  const [touchpadVisible, setTouchpadVisible] = React.useState(false);
+  const touchpadClickTracker = React.useMemo(
+    () =>
+      createTouchpadClickTracker(down => {
+        gpState.current.Touchpad = down ? 1 : 0;
+        flushGpState();
+      }),
+    [flushGpState],
+  );
+  const onTouchpadChange = React.useCallback(
+    (touches: TouchpadTouch[]) => {
+      gpState.current.Touches = touches;
+      touchpadClickTracker.update(touches);
+      flushGpState();
+    },
+    [flushGpState, touchpadClickTracker],
+  );
+  const touchpadShown =
+    touchpadVisible && connectState === 'connected' && !showControlRail;
+  // Whenever the pad goes away (closed, rail opened, stream ended) lift every
+  // finger and the click -- the native view can't report fingers that were
+  // still down when it unmounted.
+  React.useEffect(() => {
+    if (touchpadShown) {
+      return undefined;
+    }
+    touchpadClickTracker.reset();
+    if (gpState.current.Touches.length > 0 || gpState.current.Touchpad) {
+      gpState.current.Touches = [];
+      gpState.current.Touchpad = 0;
+      flushGpState();
+    }
+    return undefined;
+  }, [touchpadShown, touchpadClickTracker, flushGpState]);
+  // Opening the pad also closes the rail it was toggled from, so it is
+  // usable straight away.
+  const onToggleTouchpad = React.useCallback(() => {
+    setTouchpadVisible(prev => !prev);
+    setShowControlRail(false);
+  }, []);
+  const onCloseTouchpad = React.useCallback(
+    () => setTouchpadVisible(false),
+    [],
+  );
 
   // Swipe-to-aim: shared with native-stream's own implementation -- a
   // trackpad rectangle (placed/sized per-profile in the shared gamepad
@@ -1542,6 +1595,10 @@ export function usePsPlusStream(navigation: any, route: any) {
     onCloseControlRail: closeControlRail,
     showVirtualGamepad,
     onToggleVirtualGamepad,
+    touchpadVisible: touchpadShown,
+    onTouchpadChange,
+    onToggleTouchpad,
+    onCloseTouchpad,
     vibrationEnabled,
     onToggleVibration,
     performanceVisible,

@@ -432,6 +432,8 @@ export default {
     LibraryRowDiscount: '{{percent}}% OFF',
     LibraryPsIncluded: 'Included in PS Plus catalog',
     LibraryPsTrial: 'PS Plus game trial available',
+    Touchpad: 'Touchpad',
+    TouchpadHint: 'Swipe on the pad. Hold still to click.',
     LibraryFilterNotOwned: 'Not owned',
     LibraryFilterOwnershipAll: 'Ownership: all',
     PsStoreOnSale: 'On sale',

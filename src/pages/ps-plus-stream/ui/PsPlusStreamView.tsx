@@ -9,6 +9,7 @@ import PsPlusControlRail from './PsPlusControlRail';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 import StreamHandshakeOverlay from '../../../shared/ui/StreamHandshakeOverlay';
+import TouchpadZone from '../../../shared/ui/TouchpadZone';
 
 type Props = PsPlusStreamViewModel;
 
@@ -64,6 +65,10 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   onSwipeAim,
   onSwipeAimEnd,
   swipeAimIsActive,
+  touchpadVisible,
+  onTouchpadChange,
+  onToggleTouchpad,
+  onCloseTouchpad,
   coverAvailable,
   coverPresented,
   onToggleCoverControls,
@@ -75,7 +80,17 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   // See PsPlusControlRail's own screenHeight prop comment -- an explicit
   // height instead of relying on `top: 0` + `bottom: 0` to resolve against
   // this screen's root container.
-  const {height: screenHeight} = useWindowDimensions();
+  const {width: screenWidth, height: screenHeight} = useWindowDimensions();
+  // Centered in the upper part of the screen, like the real touchpad's place
+  // on the controller; wide enough for two-finger swipes.
+  const touchpadWidth = Math.round(screenWidth * 0.5);
+  const touchpadHeight = Math.round(screenHeight * 0.5);
+  const touchpadRect = {
+    x: Math.round((screenWidth - touchpadWidth) / 2),
+    y: Math.round(screenHeight * 0.08),
+    width: touchpadWidth,
+    height: touchpadHeight,
+  };
 
   const swipeAimProps = {
     swipeAimEnabled,
@@ -164,6 +179,15 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
           />
         ))}
 
+      {touchpadVisible && (
+        <TouchpadZone
+          rect={touchpadRect}
+          onChange={onTouchpadChange}
+          onClose={onCloseTouchpad}
+          hint={t('TouchpadHint')}
+        />
+      )}
+
       <PsPlusControlRail
         t={t}
         screenHeight={screenHeight}
@@ -183,6 +207,8 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         onEditGamepadLayout={onEditGamepadLayout}
         showVirtualGamepad={showVirtualGamepad}
         onToggleVirtualGamepad={onToggleVirtualGamepad}
+        touchpadVisible={touchpadVisible}
+        onToggleTouchpad={onToggleTouchpad}
         coverAvailable={coverAvailable}
         coverPresented={coverPresented}
         onToggleCoverControls={onToggleCoverControls}

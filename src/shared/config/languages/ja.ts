@@ -424,6 +424,8 @@ export default {
     LibraryRowDiscount: '{{percent}}%OFF',
     LibraryPsIncluded: 'PS Plusカタログに含まれています',
     LibraryPsTrial: 'PS Plusのゲームトライアルあり',
+    Touchpad: 'タッチパッド',
+    TouchpadHint: 'パッド上でスワイプ。じっと押すとクリック',
     LibraryFilterNotOwned: '非所有',
     LibraryFilterOwnershipAll: '所有: すべて',
     PsStoreOnSale: 'セール中',

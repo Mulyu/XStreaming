@@ -13,6 +13,8 @@ export {
   clearCatalogGames,
 } from './api/catalogCache';
 export {PsPlusSession, gpStateToPsPlusInput} from './api/streamAdapter';
+export {createTouchpadClickTracker} from './lib/touchpadClick';
+export type {TouchpadTouch} from './lib/touchpadClick';
 export {default as PsPlusStreamView} from './ui/PsPlusStreamView';
 export type {
   PsPlusLaunchOptions,
