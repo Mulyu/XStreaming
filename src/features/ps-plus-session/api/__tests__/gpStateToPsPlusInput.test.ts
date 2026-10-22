@@ -11,9 +11,9 @@ import {gpStateToPsPlusInput} from '../streamAdapter';
 import {ControllerButton} from '../native';
 
 describe('gpStateToPsPlusInput', () => {
-  it('maps the on-screen Nexus button to the PS button, not the touchpad', () => {
+  it('maps the Nexus button to the touchpad click', () => {
     const input = gpStateToPsPlusInput({Nexus: 1});
-    expect(input.buttons).toBe(ControllerButton.PS);
+    expect(input.buttons).toBe(ControllerButton.TOUCHPAD);
   });
 
   it('maps the Touchpad click field to the touchpad button', () => {
