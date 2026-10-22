@@ -12,6 +12,7 @@ import {
   PsPlusSessionEvent,
 } from './native';
 import i18next from '../../../i18n';
+import {createNexusTouchpadCombo} from '../lib/nexusTouchpadCombo';
 import type {LoadingPhase} from '../../../shared/lib/loadingPhase';
 
 const {t} = i18next;
@@ -61,13 +62,16 @@ const BUTTON_MAP: Array<[string, number]> = [
   ['DPadDown', ControllerButton.DPAD_DOWN],
   ['DPadLeft', ControllerButton.DPAD_LEFT],
   ['DPadRight', ControllerButton.DPAD_RIGHT],
-  // The on-screen Nexus button is the PS button. (It used to fire a
-  // touchpad click as a stand-in while PS Plus had no touchpad; the touchpad
-  // is now real -- see the 'Touchpad' click field and Touches below.)
-  ['Nexus', ControllerButton.PS],
-  // Click of the touchpad: physical controllers with a separate touchpad-
-  // click key (KEYCODE_BUTTON_C, see entities/gamepad's GAMEPAD_MAPING) and
-  // the on-screen touchpad's press-and-hold land on this field.
+  // Nexus (the button the on-screen gamepad draws in that spot, and a
+  // physical controller's home key) is the touchpad click: a standalone PS
+  // press does nothing in a cloud session (Sony's backend has no OS shell for
+  // an ephemeral single-game session -- see usePsPlusStream's OPTIONS+SHARE
+  // chord). Nexus + D-pad is a touchpad swipe instead; see
+  // lib/nexusTouchpadCombo.ts, applied per input tick before this mapping.
+  ['Nexus', ControllerButton.TOUCHPAD],
+  // Physical controllers with a separate touchpad-click key (KEYCODE_BUTTON_C,
+  // see entities/gamepad's GAMEPAD_MAPING) and the on-screen pad's press-and-
+  // hold land on the same bit.
   ['Touchpad', ControllerButton.TOUCHPAD],
 ];
 
@@ -178,6 +182,7 @@ export class PsPlusSession {
   private removeProgressListener: (() => void) | null = null;
   private inputTimer: ReturnType<typeof setInterval> | null = null;
   private gpState: any = null;
+  private nexusCombo = createNexusTouchpadCombo();
 
   constructor(private readonly handlers: PsPlusAdapterHandlers) {}
 
@@ -314,7 +319,9 @@ export class PsPlusSession {
     // Matches native-stream's own default virtual-gamepad polling rate.
     this.inputTimer = setInterval(() => {
       if (this.gpState) {
-        psPlusChiaki.setControllerState(gpStateToPsPlusInput(this.gpState));
+        psPlusChiaki.setControllerState(
+          gpStateToPsPlusInput(this.nexusCombo.apply(this.gpState, Date.now())),
+        );
       }
     }, 16);
   }
