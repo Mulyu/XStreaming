@@ -21,6 +21,7 @@ import {
   GfnFullCatalogStatus,
 } from '../../../entities/catalog-title';
 import {useGfnSignIn} from '../../../features/gfn-auth';
+import {useXcloudLogin} from '../../../features/xbox-auth';
 import {
   isPsPlusSignedIn,
   clearNpsso,
@@ -72,10 +73,18 @@ export const M = (name: string): any => allMetas.find(m => m.name === name);
 
 export type Lane = 'common' | 'xbox' | 'gfn' | 'psplus';
 
-export function useSettingsScreen(navigation: any) {
+export function useSettingsScreen(navigation: any, route: any) {
   const {t} = useTranslation();
   const authentication = useSelector((state: any) => state.authentication);
   const streamingTokens = useSelector((state: any) => state.streamingTokens);
+
+  const {
+    xcloudLoginLoading,
+    xcloudLoginText,
+    msalData,
+    startXcloudLogin,
+    cancelXcloudLogin,
+  } = useXcloudLogin(navigation, route);
 
   const [loading, setLoading] = React.useState(false);
   const [lane, setLane] = React.useState<Lane>('common');
@@ -304,17 +313,15 @@ export function useSettingsScreen(navigation: any) {
   };
 
   // Mirrors the GFN account row above: signed in -> confirm-then-logout
-  // (the existing 'logout' handler, unchanged); signed out -> Home with
-  // {intent: 'login'}, which is what tells Home.tsx to actually show the
-  // interactive login UI instead of its normal silent, non-blocking check
-  // (xCloud sign-in is optional now, like GFN -- Home no longer gates app
-  // launch on it).
+  // (the existing 'logout' handler, unchanged); signed out -> the interactive
+  // sign-in, which now lives here rather than on a separate Home screen
+  // (xCloud sign-in is optional, like GFN -- nothing gates app launch on it).
   const handleXcloudAccountPress = () => {
     if (isAuthed) {
       handleItemPress('logout');
       return;
     }
-    navigation.navigate('Home', {intent: 'login'});
+    startXcloudLogin();
   };
 
   // Clears the cached xCloud catalog and immediately re-fetches it, so a
@@ -569,6 +576,10 @@ export function useSettingsScreen(navigation: any) {
   return {
     t,
     loading,
+    xcloudLoginLoading,
+    xcloudLoginText,
+    msalData,
+    onCancelXcloudLogin: cancelXcloudLogin,
     lane,
     settings,
     gfnSignedIn,

@@ -1,6 +1,6 @@
 import React from 'react';
 import {StyleSheet, ScrollView, View} from 'react-native';
-import {Text, SegmentedButtons} from 'react-native-paper';
+import {Text, SegmentedButtons, Portal, Modal, Card} from 'react-native-paper';
 import Spinner from '../../../shared/ui/Spinner';
 import SettingItem from '../../../shared/ui/SettingItem';
 import {
@@ -14,6 +14,7 @@ import {
   PS_ACCENT,
 } from '../../../shared/ui/InlineSettingRows';
 import {GfnSignInModal} from '../../../entities/gfn-account';
+import {MsalAuth} from '../../../entities/xbox-token';
 import {M} from '../model/useSettingsScreen';
 import type {Lane, SettingsScreenViewModel} from '../model/useSettingsScreen';
 
@@ -28,6 +29,10 @@ function SectionLabel({title}: {title: string}) {
 const SettingsView: React.FC<Props> = ({
   t,
   loading,
+  xcloudLoginLoading,
+  xcloudLoginText,
+  msalData,
+  onCancelXcloudLogin,
   lane,
   settings,
   gfnSignedIn,
@@ -71,7 +76,10 @@ const SettingsView: React.FC<Props> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Spinner loading={loading} text={t('Loading...')} />
+      <Spinner
+        loading={loading || xcloudLoginLoading}
+        text={xcloudLoginLoading ? xcloudLoginText : t('Loading...')}
+      />
 
       <View style={styles.header}>
         <Text style={styles.title}>{t('Settings')}</Text>
@@ -421,6 +429,21 @@ const SettingsView: React.FC<Props> = ({
         </ScrollView>
       )}
 
+      {!!msalData && (
+        <Portal>
+          <Modal
+            visible={true}
+            onDismiss={onCancelXcloudLogin}
+            contentContainerStyle={styles.msalModal}>
+            <Card>
+              <Card.Content>
+                <MsalAuth data={msalData} />
+              </Card.Content>
+            </Card>
+          </Modal>
+        </Portal>
+      )}
+
       <GfnSignInModal
         visible={gfnLoginVisible}
         status={gfnLoginStatus}
@@ -436,6 +459,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  msalModal: {marginLeft: '4%', marginRight: '4%'},
   settingsScroll: {
     flex: 1,
   },

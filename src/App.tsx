@@ -46,8 +46,10 @@ import {normalizeTitle, recordTitlePlayed} from './entities/catalog-title';
 import {appDebugLog} from './shared/lib/appDebugLog';
 
 import customDarkTheme from './shared/config/theme';
+import SplashScreen from 'react-native-splash-screen';
+import {useXboxAuthBootstrap} from './features/xbox-auth';
+import HarmonyNotice from './widgets/harmony-notice';
 
-import HomeScreen from './pages/home';
 import LoginScreen from './pages/login';
 import NativeStreamScreen from './pages/native-stream';
 import NativePortraitStreamScreen from './pages/native-stream/portrait';
@@ -159,7 +161,6 @@ const LibraryTabScreen = withTabScreen(LibraryScreen);
 const StoreTabScreen = withTabScreen(StoreScreen);
 const SettingsTabScreen = withTabScreen(SettingsScreen);
 
-const HomeBackgroundScreen = withPageBackground(HomeScreen);
 const LoginBackgroundScreen = withPageBackground(LoginScreen);
 const LibraryTitleDetailBackgroundScreen = withPageBackground(
   LibraryTitleDetailScreen,
@@ -196,6 +197,9 @@ function MainTabs() {
 function App() {
   const {t} = useTranslation();
   const settings = getSettings();
+  // Xbox authentication object + launch-time silent token refresh -- see
+  // features/xbox-auth. Runs for the whole app; no screen gates on it.
+  useXboxAuthBootstrap();
   const updateHideFocus = useTVFocus();
   const updateCheckedRef = React.useRef(false);
   const pendingTitleShortcutRef = React.useRef<any>(null);
@@ -480,10 +484,13 @@ function App() {
     <GestureHandlerRootView style={styles.gestureRoot}>
       <Provider store={store}>
         <PaperProvider theme={paperTheme}>
+          <HarmonyNotice />
           <NavigationContainer
             ref={navigationRef}
             theme={navigationTheme}
             onReady={() => {
+              // The first screen (Main) is on screen: drop the launch splash.
+              SplashScreen.hide();
               if (pendingTitleShortcutRef.current) {
                 const shortcut = pendingTitleShortcutRef.current;
                 pendingTitleShortcutRef.current = null;
@@ -492,14 +499,6 @@ function App() {
             }}>
             <RootStack.Navigator>
               <RootStack.Group>
-                <RootStack.Screen
-                  name="Home"
-                  component={HomeBackgroundScreen}
-                  options={{
-                    headerShown: false,
-                    cardStyle: styles.transparentCard,
-                  }}
-                />
                 <RootStack.Screen
                   name="Main"
                   component={MainTabs}
@@ -621,9 +620,6 @@ const styles = StyleSheet.create({
   },
   backgroundContent: {
     flex: 1,
-  },
-  transparentCard: {
-    backgroundColor: 'transparent',
   },
   updateProgressText: {
     marginBottom: 12,
