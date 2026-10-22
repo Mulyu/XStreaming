@@ -12,7 +12,7 @@ import {
   PsPlusSessionEvent,
 } from './native';
 import i18next from '../../../i18n';
-import {createNexusTouchpadCombo} from '../lib/nexusTouchpadCombo';
+import {createViewTouchpadCombo} from '../lib/viewTouchpadCombo';
 import type {LoadingPhase} from '../../../shared/lib/loadingPhase';
 
 const {t} = i18next;
@@ -54,7 +54,13 @@ const BUTTON_MAP: Array<[string, number]> = [
   ['Y', ControllerButton.PYRAMID],
   ['LeftShoulder', ControllerButton.L1],
   ['RightShoulder', ControllerButton.R1],
-  ['View', ControllerButton.SHARE],
+  // View is the touchpad: a tap clicks it and View + D-pad swipes it (see
+  // lib/viewTouchpadCombo.ts, applied per input tick before this mapping), so
+  // it is not also Share -- a standalone Share press does nothing in a cloud
+  // session anyway (Sony's backend has no OS shell for an ephemeral
+  // single-game session -- see usePsPlusStream's Menu long-press for the
+  // in-stream menu).
+  ['View', ControllerButton.TOUCHPAD],
   ['Menu', ControllerButton.OPTIONS],
   ['LeftThumb', ControllerButton.L3],
   ['RightThumb', ControllerButton.R3],
@@ -62,16 +68,10 @@ const BUTTON_MAP: Array<[string, number]> = [
   ['DPadDown', ControllerButton.DPAD_DOWN],
   ['DPadLeft', ControllerButton.DPAD_LEFT],
   ['DPadRight', ControllerButton.DPAD_RIGHT],
-  // Nexus (the button the on-screen gamepad draws in that spot, and a
-  // physical controller's home key) is the touchpad click: a standalone PS
-  // press does nothing in a cloud session (Sony's backend has no OS shell for
-  // an ephemeral single-game session -- see usePsPlusStream's OPTIONS+SHARE
-  // chord). Nexus + D-pad is a touchpad swipe instead; see
-  // lib/nexusTouchpadCombo.ts, applied per input tick before this mapping.
-  ['Nexus', ControllerButton.TOUCHPAD],
+  ['Nexus', ControllerButton.PS],
   // Physical controllers with a separate touchpad-click key (KEYCODE_BUTTON_C,
   // see entities/gamepad's GAMEPAD_MAPING) and the on-screen pad's press-and-
-  // hold land on the same bit.
+  // hold land on the same bit as View.
   ['Touchpad', ControllerButton.TOUCHPAD],
 ];
 
@@ -182,7 +182,7 @@ export class PsPlusSession {
   private removeProgressListener: (() => void) | null = null;
   private inputTimer: ReturnType<typeof setInterval> | null = null;
   private gpState: any = null;
-  private nexusCombo = createNexusTouchpadCombo();
+  private touchpadCombo = createViewTouchpadCombo();
 
   constructor(private readonly handlers: PsPlusAdapterHandlers) {}
 
@@ -320,7 +320,9 @@ export class PsPlusSession {
     this.inputTimer = setInterval(() => {
       if (this.gpState) {
         psPlusChiaki.setControllerState(
-          gpStateToPsPlusInput(this.nexusCombo.apply(this.gpState, Date.now())),
+          gpStateToPsPlusInput(
+            this.touchpadCombo.apply(this.gpState, Date.now()),
+          ),
         );
       }
     }, 16);
