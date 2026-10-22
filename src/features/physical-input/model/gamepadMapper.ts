@@ -137,11 +137,14 @@ export const createGamepadMapper = (sink: GamepadMapperSink): GamepadMapper => {
     if (moveKeys.has(KEY.A)) {
       x -= 1;
     }
+    // gpState's left stick Y is screen-down positive (what the on-screen
+    // stick reports; xCloud/GFN negate it on the wire, PS Plus sends it as
+    // is), so forward (W) is negative.
     if (moveKeys.has(KEY.W)) {
-      y += 1;
+      y -= 1;
     }
     if (moveKeys.has(KEY.S)) {
-      y -= 1;
+      y += 1;
     }
     // Diagonals are normalized so they don't outrun straight movement.
     if (x !== 0 && y !== 0) {

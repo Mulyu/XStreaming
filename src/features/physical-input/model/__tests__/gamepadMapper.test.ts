@@ -13,6 +13,7 @@ const setup = () => {
 
 const KEY_W = 51;
 const KEY_A = 29;
+const KEY_S = 47;
 const KEY_C = 31;
 const KEY_CTRL = 113;
 const KEY_SPACE = 62;
@@ -24,14 +25,18 @@ describe('createGamepadMapper', () => {
 
   it('maps WASD to the left stick with normalized diagonals', () => {
     const {mapper, sticks} = setup();
+    // Screen-down positive: W (forward) is -1, S (back) is +1.
     mapper.key(KEY_W, true);
-    expect(sticks[sticks.length - 1]).toEqual([0, 1]);
+    expect(sticks[sticks.length - 1]).toEqual([0, -1]);
     mapper.key(KEY_A, true);
     const [x, y] = sticks[sticks.length - 1];
     expect(x).toBeCloseTo(-Math.SQRT1_2);
-    expect(y).toBeCloseTo(Math.SQRT1_2);
+    expect(y).toBeCloseTo(-Math.SQRT1_2);
     mapper.key(KEY_W, false);
     expect(sticks[sticks.length - 1]).toEqual([-1, 0]);
+    mapper.key(KEY_S, true);
+    expect(sticks[sticks.length - 1]).toEqual([-Math.SQRT1_2, Math.SQRT1_2]);
+    mapper.key(KEY_S, false);
     mapper.key(KEY_A, false);
     expect(sticks[sticks.length - 1]).toEqual([0, 0]);
   });

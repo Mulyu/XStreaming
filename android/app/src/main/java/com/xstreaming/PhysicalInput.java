@@ -1,7 +1,10 @@
 package com.xstreaming;
 
+import android.content.Context;
+import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -35,6 +38,13 @@ final class PhysicalInput {
     // doesn't flood the React Native bridge.
     private static final long MOVE_FLUSH_DELAY_MS = 8;
 
+    // The stream screen's "current screen" flag can flip off and straight
+    // back on (a React effect re-running clears it in its cleanup and sets it
+    // again moments later). Reacting to the off half would drop the pointer
+    // capture and release every held key for a blink, so capture and held
+    // input are kept this long before an off flag counts.
+    private static final long INACTIVE_GRACE_MS = 300;
+
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private static WeakReference<MainActivity> activityRef = new WeakReference<>(null);
@@ -52,11 +62,19 @@ final class PhysicalInput {
     private static float accX = 0f;
     private static float accY = 0f;
     private static boolean flushScheduled = false;
+    // Input device add/remove/change callbacks since the last logged capture
+    // transition -- DeX can emit these constantly, which is worth knowing when
+    // diagnosing capture that drops.
+    private static int deviceEvents = 0;
 
     private static final Runnable FLUSH = () -> {
         flushScheduled = false;
         flushMove();
     };
+
+    // Uptime (ms) the screen flag was first seen off, 0 while on.
+    private static long inactiveSince = 0;
+    private static final Runnable RECHECK = PhysicalInput::update;
 
     private PhysicalInput() {}
 
@@ -88,7 +106,45 @@ final class PhysicalInput {
     }
 
     static void onInputDevicesChanged() {
+        deviceEvents++;
         update();
+    }
+
+    /** Logs capture transitions (only) to the app debug log, to diagnose capture that drops. */
+    private static void log(String message) {
+        MainActivity activity = activity();
+        if (activity != null) {
+            AppDebugLog.log(activity, "PhysicalInput", message);
+        }
+    }
+
+    private static String stateSummary(MainActivity activity) {
+        return "active=" + isActive()
+                + " userReleased=" + userReleased
+                + " windowFocus=" + activity.hasWindowFocus()
+                + " deviceEvents=" + deviceEvents;
+    }
+
+    /** The 1px view that holds focus (and so pointer capture) while a stream is active. */
+    private static final class CaptureView extends View {
+        CaptureView(Context context) {
+            super(context);
+        }
+
+        @Override
+        public void onPointerCaptureChange(boolean hasCapture) {
+            super.onPointerCaptureChange(hasCapture);
+            MainActivity activity = activity();
+            log("captureChanged hasCapture=" + hasCapture + " focused=" + isFocused()
+                    + (activity != null ? " " + stateSummary(activity) : ""));
+            deviceEvents = 0;
+        }
+
+        @Override
+        protected void onFocusChanged(boolean gainFocus, int direction, Rect previouslyFocusedRect) {
+            super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+            log("captureViewFocus gained=" + gainFocus);
+        }
     }
 
     private static MainActivity activity() {
@@ -97,6 +153,11 @@ final class PhysicalInput {
 
     private static boolean isActive() {
         return enabled && "stream".equals(GamepadManager.getCurrentScreen());
+    }
+
+    /** Active, or within the grace period after the screen flag flipped off. */
+    private static boolean isLive() {
+        return isActive() || inactiveSince != 0;
     }
 
     private static boolean hasMouse() {
@@ -116,7 +177,7 @@ final class PhysicalInput {
 
     private static View ensureCaptureView(MainActivity activity) {
         if (captureView == null || captureView.getContext() != activity) {
-            View view = new View(activity);
+            View view = new CaptureView(activity);
             view.setFocusable(true);
             view.setFocusableInTouchMode(true);
             view.setOnCapturedPointerListener((v, event) -> handleCapturedPointer(event));
@@ -135,19 +196,46 @@ final class PhysicalInput {
             return;
         }
         boolean active = isActive();
-        boolean wantCapture = active && !userReleased && activity.hasWindowFocus() && hasMouse();
+        boolean captured = captureView != null && captureView.hasPointerCapture();
+        boolean canKeep = active && !userReleased && activity.hasWindowFocus();
+        // A mouse is only needed to *start* capturing. Once captured, a device
+        // list that momentarily lacks one (devices being re-enumerated, which
+        // DeX does) must not drop the capture.
+        boolean wantCapture = canKeep && (captured || hasMouse());
         if (wantCapture) {
+            inactiveSince = 0;
+            mainHandler.removeCallbacks(RECHECK);
             View view = ensureCaptureView(activity);
             if (!view.hasPointerCapture()) {
+                log("request " + stateSummary(activity));
                 view.requestFocus();
                 view.requestPointerCapture();
             }
-        } else if (captureView != null && captureView.hasPointerCapture()) {
+            return;
+        }
+        if (!active && enabled && !userReleased && activity.hasWindowFocus()
+                && inactiveGraceRunning()) {
+            return;
+        }
+        inactiveSince = 0;
+        if (captured) {
+            log("release " + stateSummary(activity) + " hasMouse=" + hasMouse());
             captureView.releasePointerCapture();
         }
         if (!active) {
             releaseAll();
         }
+    }
+
+    /** True while the screen flag has been off for less than the grace period. */
+    private static boolean inactiveGraceRunning() {
+        long now = SystemClock.uptimeMillis();
+        if (inactiveSince == 0) {
+            inactiveSince = now;
+            mainHandler.postDelayed(RECHECK, INACTIVE_GRACE_MS);
+            return true;
+        }
+        return now - inactiveSince < INACTIVE_GRACE_MS;
     }
 
     private static boolean isPhysicalKeyboard(KeyEvent event) {
@@ -164,7 +252,9 @@ final class PhysicalInput {
 
     /** MainActivity.dispatchKeyEvent. Returns true if the event was consumed. */
     static boolean handleKeyEvent(KeyEvent event) {
-        if (!isActive()) {
+        // Keys keep flowing through a brief flag flip so a key released
+        // during it isn't left stuck down.
+        if (!isLive()) {
             return false;
         }
         int action = event.getAction();
@@ -218,7 +308,7 @@ final class PhysicalInput {
     }
 
     private static boolean handleCapturedPointer(MotionEvent event) {
-        if (!isActive()) {
+        if (!isLive()) {
             return false;
         }
         if (!event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)) {
