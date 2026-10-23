@@ -32,6 +32,7 @@ import {
   fetchUnifiedCatalog,
   CloudGame,
   getCachedCatalogGames,
+  getFreshCatalogGames,
   saveCatalogGames,
 } from '../../features/ps-plus-session';
 import {getSettings} from '../../shared/lib/settings';
@@ -283,6 +284,13 @@ function StoreScreen() {
     }
     const npsso = getNpsso();
     if (!npsso) {
+      return;
+    }
+    // The Library (or an earlier visit) already stored today's catalog: no
+    // need for another native round trip.
+    const fresh = getFreshCatalogGames();
+    if (fresh && fresh.length > 0) {
+      setPsPlusGames(fresh);
       return;
     }
     fetchUnifiedCatalog(npsso, undefined, false)
