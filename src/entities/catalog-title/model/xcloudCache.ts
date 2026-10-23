@@ -25,14 +25,25 @@ export const saveXcloudData = (data: any) => {
   }
 };
 
+// The blob holds the whole xCloud title list, so it is large: parse it once
+// per stored value rather than on every read (the Library reads it several
+// times while mounting). The returned object is shared -- callers copy
+// (`{...getXcloudData(), x}`) rather than mutate it.
+let parsedRaw: string | undefined;
+let parsedData: any = null;
+
 export const getXcloudData = (): any => {
-  let data = storage.getString(STORE_KEY);
+  const data = storage.getString(STORE_KEY);
   if (!data) {
     return null;
   }
+  if (data === parsedRaw) {
+    return parsedData;
+  }
   try {
-    const _data = JSON.parse(data) as any;
-    return _data;
+    parsedData = JSON.parse(data) as any;
+    parsedRaw = data;
+    return parsedData;
   } catch {
     return null;
   }

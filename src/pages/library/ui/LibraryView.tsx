@@ -41,6 +41,295 @@ const DIM_BADGE_TEXT = '#8A9A92';
 
 type Props = LibraryScreenViewModel;
 
+type CardCommon = {
+  item: CatalogTitle;
+  isFocused: boolean;
+  discount: number;
+  t: Props['t'];
+  openTitle: Props['openTitle'];
+  openTitleDetail: Props['openTitleDetail'];
+  setFocusedKey: Props['setFocusedKey'];
+};
+type GridCardProps = CardCommon & {numColumns: number};
+type WideCardProps = CardCommon & {rating: ReturnType<Props['titleRating']>};
+
+// Icon-only mark shown right after the PS badge: a list check for "included
+// in the PS Plus catalog". `size` matches the badge row it sits in.
+const PsMark: React.FC<{item: CatalogTitle; size: number; t: Props['t']}> = ({
+  item,
+  size,
+  t,
+}) => {
+  if (!item.psplus?.inPlusCatalog) {
+    return null;
+  }
+  return (
+    <View
+      style={[styles.psMark, {width: size, height: size}]}
+      accessibilityLabel={t('LibraryPsIncluded')}>
+      <Icon source="playlist-check" size={size - 4} color="#FFFFFF" />
+    </View>
+  );
+};
+
+// The list cells are memoised so a focus move or a price update re-renders
+// only the cells whose own props changed, not every visible card.
+const GridCard = React.memo(function GridCard({
+  item,
+  isFocused,
+  discount,
+  numColumns,
+  t,
+  openTitle,
+  openTitleDetail,
+  setFocusedKey,
+}: GridCardProps) {
+  // Cover art itself grays out when the title isn't playable via any of
+  // its listed services today (no Game Pass entitlement, no owned GFN
+  // store variant, no owned PS Plus game).
+  const isPlayable = isCatalogTitleOwned(item);
+  // Each badge answers "owned on this service" individually -- a title
+  // supported by all three but owned on only one (e.g. Xbox/xCloud) must
+  // only light up that one, not every service it merely appears under.
+  const xcloudOwned = !!item.xcloud?.hasEntitlement;
+  const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
+  const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
+
+  return (
+    <View
+      style={[
+        styles.cell,
+        {width: `${100 / numColumns}%`},
+        isFocused && styles.cellFocused,
+      ]}>
+      <Pressable
+        style={[styles.card, isFocused && styles.cardFocused]}
+        onPress={() => openTitle(item)}
+        onLongPress={() => openTitleDetail(item)}
+        onFocus={() => setFocusedKey(item.key)}
+        onBlur={() => setFocusedKey(prev => (prev === item.key ? null : prev))}
+        android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
+        {item.imageUrl ? (
+          <Image
+            source={{uri: item.imageUrl}}
+            resizeMode="cover"
+            style={styles.thumb}
+          />
+        ) : (
+          <View style={styles.thumbEmpty}>
+            <Text style={styles.thumbEmptyText} numberOfLines={3}>
+              {item.title}
+            </Text>
+          </View>
+        )}
+
+        {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
+        <View style={styles.bottomScrim} pointerEvents="none" />
+
+        <View style={styles.availOverlay}>
+          {item.xcloud && (
+            <View
+              style={[
+                styles.availDot,
+                {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
+              ]}>
+              <Text
+                style={[
+                  styles.availDotText,
+                  !xcloudOwned && {color: DIM_BADGE_TEXT},
+                ]}>
+                X
+              </Text>
+            </View>
+          )}
+          {item.gfn && (
+            <View
+              style={[
+                styles.availDot,
+                {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
+              ]}>
+              <Text
+                style={[
+                  styles.availDotText,
+                  !gfnOwned && {color: DIM_BADGE_TEXT},
+                ]}>
+                N
+              </Text>
+            </View>
+          )}
+          {item.psplus && (
+            <View
+              style={[
+                styles.availDot,
+                {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
+              ]}>
+              <Text
+                style={[
+                  styles.availDotText,
+                  !psplusOwned && {color: DIM_BADGE_TEXT},
+                ]}>
+                PS
+              </Text>
+            </View>
+          )}
+          <PsMark item={item} size={14} t={t} />
+        </View>
+
+        {discount > 0 && (
+          <View style={styles.saleBadge}>
+            <Text style={styles.saleBadgeText}>-{discount}%</Text>
+          </View>
+        )}
+
+        <Text style={styles.cardTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+      </Pressable>
+    </View>
+  );
+});
+
+// TV only: 3 wide cards per row instead of the dense image-only grid
+// above. A single-column list (this screen's own earlier history) had too
+// little information density; this keeps that list's layout -- a bigger
+// (84x84) but still non-focus-conditional thumbnail with plain exposed
+// mat around it, title/badges beside it -- just 3 across instead of 1, so
+// the focus ring (and Android's own default per-view focus highlight,
+// which paints behind opaque children and only shows through exposed
+// background) still has plain background to land on instead of fighting
+// with box art the way the old dense square-image grid did.
+const WideCard = React.memo(function WideCard({
+  item,
+  isFocused,
+  discount,
+  rating,
+  t,
+  openTitle,
+  openTitleDetail,
+  setFocusedKey,
+}: WideCardProps) {
+  const xcloudOwned = !!item.xcloud?.hasEntitlement;
+  const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
+  const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
+  // Owned/not-owned already reads from the X/N/PS badges' own color (lit
+  // vs dimmed) -- this line used to just repeat that as text, so it's
+  // genre + rating instead now, the same two things Title Detail already
+  // shows. Genre comes from the catalog itself (every provider has it by
+  // the time a title reaches this grid); rating only ever covers xCloud
+  // titles the Store price fetch has reached (see titleRating's own
+  // comment), so it's simply left out rather than faked when absent.
+  const genreLabel = item.genres.slice(0, 2).join(' · ');
+
+  return (
+    <View
+      style={[
+        styles.wideCell,
+        {width: `${100 / TV_GRID_COLUMNS}%`},
+        isFocused && styles.cellFocused,
+      ]}>
+      <Pressable
+        style={[styles.wideCard, isFocused && styles.wideCardFocused]}
+        onPress={() => openTitle(item)}
+        onLongPress={() => openTitleDetail(item)}
+        onFocus={() => setFocusedKey(item.key)}
+        onBlur={() => setFocusedKey(prev => (prev === item.key ? null : prev))}
+        android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
+        <View style={styles.wideThumb}>
+          {item.imageUrl ? (
+            <Image
+              source={{uri: item.imageUrl}}
+              resizeMode="cover"
+              style={styles.thumb}
+            />
+          ) : (
+            <View style={styles.wideThumbEmpty}>
+              <Text style={styles.wideThumbEmptyText} numberOfLines={2}>
+                {item.title}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.wideBody}>
+          <Text
+            style={[styles.wideTitle, isFocused && styles.wideTitleFocused]}
+            numberOfLines={1}>
+            {item.title}
+          </Text>
+          <View style={styles.cardBadgesLine}>
+            {item.xcloud && (
+              <View
+                style={[
+                  styles.cardBadge,
+                  {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
+                  style={[
+                    styles.cardBadgeText,
+                    !xcloudOwned && {color: DIM_BADGE_TEXT},
+                  ]}>
+                  X
+                </Text>
+              </View>
+            )}
+            {item.gfn && (
+              <View
+                style={[
+                  styles.cardBadge,
+                  {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
+                  style={[
+                    styles.cardBadgeText,
+                    !gfnOwned && {color: DIM_BADGE_TEXT},
+                  ]}>
+                  N
+                </Text>
+              </View>
+            )}
+            {item.psplus && (
+              <View
+                style={[
+                  styles.cardBadge,
+                  {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
+                ]}>
+                <Text
+                  style={[
+                    styles.cardBadgeText,
+                    !psplusOwned && {color: DIM_BADGE_TEXT},
+                  ]}>
+                  PS
+                </Text>
+              </View>
+            )}
+            <PsMark item={item} size={13} t={t} />
+            {discount > 0 && (
+              <Text style={styles.cardDiscount}>
+                {t('LibraryRowDiscount', {percent: discount})}
+              </Text>
+            )}
+          </View>
+          <View style={styles.wideMetaLine}>
+            {rating && (
+              <View style={styles.wideRating}>
+                <Icon source="star" size={10} color="#E6ECE8" />
+                <Text style={styles.wideRatingText}>
+                  {rating.average.toFixed(1)}
+                </Text>
+              </View>
+            )}
+            {!!genreLabel && (
+              <Text style={styles.wideGenreText} numberOfLines={1}>
+                {genreLabel}
+              </Text>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    </View>
+  );
+});
+
 const LibraryView: React.FC<Props> = ({
   t,
   backgroundColor,
@@ -128,267 +417,57 @@ const LibraryView: React.FC<Props> = ({
     }, []),
   );
 
-  // Icon-only mark shown right after the PS badge: a list check for
-  // "included in the PS Plus catalog". `size` matches the badge row it sits in.
-  const renderPsMarks = (item: CatalogTitle, size: number) => {
-    if (!item.psplus?.inPlusCatalog) {
-      return null;
-    }
-    return (
-      <View
-        style={[styles.psMark, {width: size, height: size}]}
-        accessibilityLabel={t('LibraryPsIncluded')}>
-        <Icon source="playlist-check" size={size - 4} color="#FFFFFF" />
-      </View>
-    );
-  };
+  // Held in refs so the memoised cells get stable handlers even when the
+  // view-model hands out new function identities.
+  const openTitleRef = React.useRef(openTitle);
+  openTitleRef.current = openTitle;
+  const openTitleDetailRef = React.useRef(openTitleDetail);
+  openTitleDetailRef.current = openTitleDetail;
+  const stableOpenTitle = React.useCallback(
+    (item: CatalogTitle) => openTitleRef.current(item),
+    [],
+  );
+  const stableOpenTitleDetail = React.useCallback(
+    (item: CatalogTitle) => openTitleDetailRef.current(item),
+    [],
+  );
 
-  const renderCard = ({item}: {item: CatalogTitle}) => {
-    // Cover art itself grays out when the title isn't playable via any of
-    // its listed services today (no Game Pass entitlement, no owned GFN
-    // store variant, no owned PS Plus game).
-    const isPlayable = isCatalogTitleOwned(item);
-    // Each badge answers "owned on this service" individually -- a title
-    // supported by all three but owned on only one (e.g. Xbox/xCloud) must
-    // only light up that one, not every service it merely appears under.
-    const xcloudOwned = !!item.xcloud?.hasEntitlement;
-    const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
-    const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
-    const discount = saleDiscount(item);
-    const isFocused = focusedKey === item.key;
-
-    return (
-      <View
-        style={[
-          styles.cell,
-          {width: `${100 / numColumns}%`},
-          isFocused && styles.cellFocused,
-        ]}>
-        <Pressable
-          style={[styles.card, isFocused && styles.cardFocused]}
-          onPress={() => openTitle(item)}
-          onLongPress={() => openTitleDetail(item)}
-          onFocus={() => setFocusedKey(item.key)}
-          onBlur={() =>
-            setFocusedKey(prev => (prev === item.key ? null : prev))
-          }
-          android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
-          {item.imageUrl ? (
-            <Image
-              source={{uri: item.imageUrl}}
-              resizeMode="cover"
-              style={styles.thumb}
-            />
-          ) : (
-            <View style={styles.thumbEmpty}>
-              <Text style={styles.thumbEmptyText} numberOfLines={3}>
-                {item.title}
-              </Text>
-            </View>
-          )}
-
-          {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
-          <View style={styles.bottomScrim} pointerEvents="none" />
-
-          <View style={styles.availOverlay}>
-            {item.xcloud && (
-              <View
-                style={[
-                  styles.availDot,
-                  {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.availDotText,
-                    !xcloudOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  X
-                </Text>
-              </View>
-            )}
-            {item.gfn && (
-              <View
-                style={[
-                  styles.availDot,
-                  {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.availDotText,
-                    !gfnOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  N
-                </Text>
-              </View>
-            )}
-            {item.psplus && (
-              <View
-                style={[
-                  styles.availDot,
-                  {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.availDotText,
-                    !psplusOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  PS
-                </Text>
-              </View>
-            )}
-            {renderPsMarks(item, 14)}
-          </View>
-
-          {discount > 0 && (
-            <View style={styles.saleBadge}>
-              <Text style={styles.saleBadgeText}>-{discount}%</Text>
-            </View>
-          )}
-
-          <Text style={styles.cardTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  };
-
-  // TV only: 3 wide cards per row instead of the dense image-only grid
-  // above. A single-column list (this screen's own earlier history) had too
-  // little information density; this keeps that list's layout -- a bigger
-  // (84x84) but still non-focus-conditional thumbnail with plain exposed
-  // mat around it, title/badges beside it -- just 3 across instead of 1, so
-  // the focus ring (and Android's own default per-view focus highlight,
-  // which paints behind opaque children and only shows through exposed
-  // background) still has plain background to land on instead of fighting
-  // with box art the way the old dense square-image grid did.
-  const renderWideCard = ({item}: {item: CatalogTitle}) => {
-    const xcloudOwned = !!item.xcloud?.hasEntitlement;
-    const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
-    const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
-    const discount = saleDiscount(item);
-    const isFocused = focusedKey === item.key;
-    // Owned/not-owned already reads from the X/N/PS badges' own color (lit
-    // vs dimmed) -- this line used to just repeat that as text, so it's
-    // genre + rating instead now, the same two things Title Detail already
-    // shows. Genre comes from the catalog itself (every provider has it by
-    // the time a title reaches this grid); rating only ever covers xCloud
-    // titles the Store price fetch has reached (see titleRating's own
-    // comment), so it's simply left out rather than faked when absent.
-    const genreLabel = item.genres.slice(0, 2).join(' · ');
-    const rating = titleRating(item);
-
-    return (
-      <View
-        style={[
-          styles.wideCell,
-          {width: `${100 / TV_GRID_COLUMNS}%`},
-          isFocused && styles.cellFocused,
-        ]}>
-        <Pressable
-          style={[styles.wideCard, isFocused && styles.wideCardFocused]}
-          onPress={() => openTitle(item)}
-          onLongPress={() => openTitleDetail(item)}
-          onFocus={() => setFocusedKey(item.key)}
-          onBlur={() =>
-            setFocusedKey(prev => (prev === item.key ? null : prev))
-          }
-          android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
-          <View style={styles.wideThumb}>
-            {item.imageUrl ? (
-              <Image
-                source={{uri: item.imageUrl}}
-                resizeMode="cover"
-                style={styles.thumb}
-              />
-            ) : (
-              <View style={styles.wideThumbEmpty}>
-                <Text style={styles.wideThumbEmptyText} numberOfLines={2}>
-                  {item.title}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.wideBody}>
-            <Text
-              style={[styles.wideTitle, isFocused && styles.wideTitleFocused]}
-              numberOfLines={1}>
-              {item.title}
-            </Text>
-            <View style={styles.cardBadgesLine}>
-              {item.xcloud && (
-                <View
-                  style={[
-                    styles.cardBadge,
-                    {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
-                  ]}>
-                  <Text
-                    style={[
-                      styles.cardBadgeText,
-                      !xcloudOwned && {color: DIM_BADGE_TEXT},
-                    ]}>
-                    X
-                  </Text>
-                </View>
-              )}
-              {item.gfn && (
-                <View
-                  style={[
-                    styles.cardBadge,
-                    {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
-                  ]}>
-                  <Text
-                    style={[
-                      styles.cardBadgeText,
-                      !gfnOwned && {color: DIM_BADGE_TEXT},
-                    ]}>
-                    N
-                  </Text>
-                </View>
-              )}
-              {item.psplus && (
-                <View
-                  style={[
-                    styles.cardBadge,
-                    {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
-                  ]}>
-                  <Text
-                    style={[
-                      styles.cardBadgeText,
-                      !psplusOwned && {color: DIM_BADGE_TEXT},
-                    ]}>
-                    PS
-                  </Text>
-                </View>
-              )}
-              {renderPsMarks(item, 13)}
-              {discount > 0 && (
-                <Text style={styles.cardDiscount}>
-                  {t('LibraryRowDiscount', {percent: discount})}
-                </Text>
-              )}
-            </View>
-            <View style={styles.wideMetaLine}>
-              {rating && (
-                <View style={styles.wideRating}>
-                  <Icon source="star" size={10} color="#E6ECE8" />
-                  <Text style={styles.wideRatingText}>
-                    {rating.average.toFixed(1)}
-                  </Text>
-                </View>
-              )}
-              {!!genreLabel && (
-                <Text style={styles.wideGenreText} numberOfLines={1}>
-                  {genreLabel}
-                </Text>
-              )}
-            </View>
-          </View>
-        </Pressable>
-      </View>
-    );
-  };
+  const renderItem = React.useCallback(
+    ({item}: {item: CatalogTitle}) =>
+      Platform.isTV ? (
+        <WideCard
+          item={item}
+          isFocused={focusedKey === item.key}
+          discount={saleDiscount(item)}
+          rating={titleRating(item)}
+          t={t}
+          openTitle={stableOpenTitle}
+          openTitleDetail={stableOpenTitleDetail}
+          setFocusedKey={setFocusedKey}
+        />
+      ) : (
+        <GridCard
+          item={item}
+          isFocused={focusedKey === item.key}
+          discount={saleDiscount(item)}
+          numColumns={numColumns}
+          t={t}
+          openTitle={stableOpenTitle}
+          openTitleDetail={stableOpenTitleDetail}
+          setFocusedKey={setFocusedKey}
+        />
+      ),
+    [
+      focusedKey,
+      saleDiscount,
+      titleRating,
+      numColumns,
+      t,
+      stableOpenTitle,
+      stableOpenTitleDetail,
+      setFocusedKey,
+    ],
+  );
 
   return (
     <View style={[styles.root, {backgroundColor}]}>
@@ -731,7 +810,7 @@ const LibraryView: React.FC<Props> = ({
           key={Platform.isTV ? `tv-wide-${TV_GRID_COLUMNS}` : numColumns}
           numColumns={Platform.isTV ? TV_GRID_COLUMNS : numColumns}
           keyExtractor={item => item.key}
-          renderItem={Platform.isTV ? renderWideCard : renderCard}
+          renderItem={renderItem}
           contentContainerStyle={styles.list}
           // A smaller virtualized window trades a bit of scroll-ahead
           // smoothness for a lot less concurrently-decoded image memory --

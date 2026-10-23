@@ -7,7 +7,7 @@ jest.mock('../../../../i18n', () => ({
   default: {t: (k: string) => k},
 }));
 
-import {gpStateToPsPlusInput} from '../streamAdapter';
+import {controllerInputEquals, gpStateToPsPlusInput} from '../streamAdapter';
 import {ControllerButton} from '../native';
 
 describe('gpStateToPsPlusInput', () => {
@@ -50,5 +50,36 @@ describe('gpStateToPsPlusInput', () => {
 
   it('has no touches when none are down', () => {
     expect(gpStateToPsPlusInput({}).touches).toEqual([]);
+  });
+});
+
+describe('controllerInputEquals', () => {
+  it('is true for the same pad state and false once anything moves', () => {
+    const a = gpStateToPsPlusInput({A: 1, LeftThumbXAxis: 0.5});
+    expect(
+      controllerInputEquals(
+        a,
+        gpStateToPsPlusInput({A: 1, LeftThumbXAxis: 0.5}),
+      ),
+    ).toBe(true);
+    expect(
+      controllerInputEquals(
+        a,
+        gpStateToPsPlusInput({A: 1, LeftThumbXAxis: 0.6}),
+      ),
+    ).toBe(false);
+    expect(
+      controllerInputEquals(a, gpStateToPsPlusInput({LeftThumbXAxis: 0.5})),
+    ).toBe(false);
+  });
+
+  it('compares touches by id and position', () => {
+    const touch = (x: number) =>
+      gpStateToPsPlusInput({Touches: [{id: 1, x, y: 0.5}]});
+    expect(controllerInputEquals(touch(0.2), touch(0.2))).toBe(true);
+    expect(controllerInputEquals(touch(0.2), touch(0.3))).toBe(false);
+    expect(controllerInputEquals(touch(0.2), gpStateToPsPlusInput({}))).toBe(
+      false,
+    );
   });
 });
