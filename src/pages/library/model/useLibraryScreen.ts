@@ -44,6 +44,12 @@ import {
   RatingInfo,
   deriveMarketLanguage,
   fetchPricesWithRetry,
+  fetchPsStoreSales,
+  lookupPsSale,
+  getFreshPsSales,
+  savePsSales,
+  getPsStoreLocale,
+  PsSaleMap,
   getPrice,
   getRating,
   isSaleForDisplay,
@@ -169,6 +175,9 @@ export function useLibraryScreen() {
   const [steamPriceMap, setSteamPriceMap] = React.useState<
     Record<string, SteamPriceInfo>
   >({});
+  // PS Store sale percent per PS title (ids + normalized name), from one
+  // daily crawl of the PS5 category -- the PS catalog itself has no prices.
+  const [psSaleMap, setPsSaleMap] = React.useState<PsSaleMap>({});
   const [popularRank, setPopularRank] =
     React.useState<Record<string, number>>(EMPTY_RANK);
   const [releaseDates, setReleaseDates] = React.useState<
@@ -611,6 +620,37 @@ export function useLibraryScreen() {
     });
   }, [gfnGames, deviceRegion]);
 
+  // PS Store sales: read the cached crawl, or crawl the category once (a
+  // few dozen pages, in the background) and cache it for a day. State is set
+  // in a few steps only, so the list re-sorts a handful of times, not per
+  // page.
+  const psSalesRequestedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (psPlusGames.length === 0 || psSalesRequestedRef.current) {
+      return;
+    }
+    psSalesRequestedRef.current = true;
+    const locale = getPsStoreLocale();
+    const cached = getFreshPsSales(locale);
+    if (cached) {
+      setPsSaleMap(cached);
+      return;
+    }
+    fetchPsStoreSales(partial => setPsSaleMap(partial)).then(
+      ({sales, complete}) => {
+        if (Object.keys(sales).length > 0) {
+          setPsSaleMap(sales);
+        }
+        if (complete && Object.keys(sales).length > 0) {
+          savePsSales(locale, sales);
+        } else {
+          // Allow a retry on the next catalog update.
+          psSalesRequestedRef.current = false;
+        }
+      },
+    );
+  }, [psPlusGames]);
+
   // PS Store popularity / release-date orders, fetched once the PS catalog is
   // known (cached 12h by the fetch itself).
   const psRankingLoadedRef = React.useRef(false);
@@ -695,9 +735,20 @@ export function useLibraryScreen() {
           : best;
       }, 0);
 
-      return Math.max(xcloudDiscount, steamDiscount);
+      // An owned PS title is already bought; its store sale is moot.
+      const ps = item.psplus;
+      const psDiscount =
+        ps && !ps.isOwned && ps.raw
+          ? lookupPsSale(psSaleMap, {
+              productId: ps.raw.productId,
+              storeProductId: ps.raw.storeProductId,
+              name: ps.raw.name || item.title,
+            })
+          : 0;
+
+      return Math.max(xcloudDiscount, steamDiscount, psDiscount);
     },
-    [priceMap, steamPriceMap],
+    [priceMap, steamPriceMap, psSaleMap],
   );
 
   // Store rating for the TV list row -- same xCloud-only source as

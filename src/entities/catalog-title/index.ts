@@ -130,3 +130,13 @@ export {
   getPsStoreUrl,
 } from './api/psStorePrice';
 export {getPsStoreLocale, getPsStoreUrlSlug} from './api/psStoreLocale';
+export type {PsSaleMap} from './api/psStoreGrid';
+export {
+  PS_GRAPHQL_URL,
+  PS_OP_CATEGORY_GRID,
+  PS_HASH_CATEGORY_GRID,
+  PS5_GAMES_CATEGORY_ID,
+  fetchPsStoreSales,
+  lookupPsSale,
+} from './api/psStoreGrid';
+export {getFreshPsSales, savePsSales} from './model/psStoreSaleCache';
