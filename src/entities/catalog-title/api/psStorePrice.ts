@@ -41,17 +41,9 @@ export type PsStorePurchasePrice = {
   memberPrice?: boolean;
 };
 
-export type PsStoreTrial = {
-  // Length of the PS Plus Premium game trial, when its (localized) upsell
-  // text states one -- the text is Sony's, so this is best-effort.
-  minutes?: number;
-};
-
 export type PsStorePriceInfo = {
   // Null for a title with nothing to buy outright (PS Plus-exclusive).
   purchase: PsStorePurchasePrice | null;
-  // Null when the title has no PS Plus game trial.
-  trial: PsStoreTrial | null;
 };
 
 type RawCta = {
@@ -64,7 +56,6 @@ type RawCta = {
     endTime?: number | string | null;
     isFree?: boolean;
     isTiedToSubscription?: boolean;
-    upsellText?: string | null;
   };
 };
 
@@ -77,11 +68,9 @@ const parseDiscountPercent = (discountText?: string | null): number => {
 };
 
 // A concept can carry several CTAs side by side (confirmed live): a PS Plus
-// game trial ("UPSELL_PS_PLUS_TRIAL", service PS_PLUS, priced "free"), the
-// plain purchase ("ADD_TO_CART"/"PREORDER", service NONE), a PS Plus member
-// discount ("UPSELL_PS_PLUS_DISCOUNT") and, for EA titles, an EA Play trial
-// ("UPSELL_EA_ACCESS_PLAY_FIRST_TRIAL") or a demo download
-// ("DOWNLOAD_TRIAL"). Only the purchase ones are prices.
+// game trial, the plain purchase ("ADD_TO_CART"/"PREORDER", service NONE), a
+// PS Plus member discount ("UPSELL_PS_PLUS_DISCOUNT") and, for EA titles, an
+// EA Play trial or a demo download. Only the purchase ones are prices.
 const isTrialType = (c: RawCta): boolean => /TRIAL/i.test(c.type ?? '');
 
 // The plain, no-subscription-required purchase price -- the same thing
@@ -99,28 +88,6 @@ const pickPurchaseCta = (ctas: RawCta[]): RawCta | undefined => {
 const findMemberDiscountCta = (ctas: RawCta[]): RawCta | undefined =>
   ctas.find(c => c.type === 'UPSELL_PS_PLUS_DISCOUNT');
 
-// Only the PS Plus game trial: an EA Play trial or a demo download is a
-// different thing and is not playable through this app's PS Plus session.
-const findTrialCta = (ctas: RawCta[]): RawCta | undefined =>
-  ctas.find(c => isTrialType(c) && c.meta?.upSellService === 'PS_PLUS');
-
-// "2時間の製品版ゲームトライアルを..." / "0.5時間の..." / "a 2-hour ..." /
-// "30分の..." -- Sony localizes the sentence, so only the common unit words
-// are understood; anything else leaves the length unknown.
-const parseTrialMinutes = (text?: string | null): number | undefined => {
-  if (!text) {
-    return undefined;
-  }
-  const hours = /(\d+(?:\.\d+)?)\s*(?:時間|-?\s*hours?\b|-?\s*hrs?\b)/i.exec(
-    text,
-  );
-  if (hours) {
-    return Math.round(parseFloat(hours[1]) * 60);
-  }
-  const minutes = /(\d+)\s*(?:分|-?\s*minutes?\b|-?\s*mins?\b)/i.exec(text);
-  return minutes ? parseInt(minutes[1], 10) : undefined;
-};
-
 const toEndTime = (value?: number | string | null): number | undefined => {
   const ms = Number(value);
   return Number.isFinite(ms) && ms > 0 ? ms : undefined;
@@ -129,7 +96,6 @@ const toEndTime = (value?: number | string | null): number | undefined => {
 export const parsePsStoreCtas = (ctas: RawCta[]): PsStorePriceInfo => {
   const price = pickPurchaseCta(ctas)?.price;
   const member = findMemberDiscountCta(ctas)?.price;
-  const trialCta = findTrialCta(ctas);
 
   let purchase: PsStorePurchasePrice | null = null;
   if (price?.basePrice && price?.discountedPrice) {
@@ -159,12 +125,7 @@ export const parsePsStoreCtas = (ctas: RawCta[]): PsStorePriceInfo => {
     };
   }
 
-  return {
-    purchase,
-    trial: trialCta
-      ? {minutes: parseTrialMinutes(trialCta.price?.upsellText)}
-      : null,
-  };
+  return {purchase};
 };
 
 // One request for one concept. Resolves to null when the request itself
@@ -206,41 +167,12 @@ const requestPsStorePrice = async (
   }
 };
 
-// Fetch the purchase price and game-trial availability for one PS Store
-// concept (CatalogGame's own `conceptId`, the region-agnostic id -- unlike
+// Fetch the purchase price (and sale end) for one PS Store concept (CatalogGame's own `conceptId`, the region-agnostic id -- unlike
 // `storeProductId`, which is region-prefixed). Returns null on any failure.
 export const fetchPsStorePrice = async (
   conceptId: string,
 ): Promise<PsStorePriceInfo | null> =>
   conceptId ? requestPsStorePrice(conceptId) : null;
-
-// How many concept requests run at once for a whole-catalog fetch -- same
-// reasoning as steamPrice.ts's own cap.
-const BATCH_CONCURRENCY = 4;
-
-// Fetch many concepts through a small worker pool. `onResult` fires per
-// concept as each one lands (failed requests are skipped, not reported), so
-// the caller can batch its own state updates. Never rejects.
-export const fetchPsStorePrices = async (
-  conceptIds: string[],
-  onResult: (conceptId: string, info: PsStorePriceInfo) => void,
-): Promise<void> => {
-  const ids = Array.from(new Set(conceptIds.filter(Boolean)));
-  let next = 0;
-  const workers = Array.from(
-    {length: Math.min(BATCH_CONCURRENCY, ids.length)},
-    async () => {
-      while (next < ids.length) {
-        const id = ids[next++];
-        const info = await requestPsStorePrice(id);
-        if (info) {
-          onResult(id, info);
-        }
-      }
-    },
-  );
-  await Promise.all(workers);
-};
 
 export const isPsStoreSaleForDisplay = (
   info?: PsStorePriceInfo | null,
