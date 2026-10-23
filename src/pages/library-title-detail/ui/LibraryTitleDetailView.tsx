@@ -35,20 +35,6 @@ const DIM_ICON_BG = 'rgba(140,140,150,0.16)';
 const DIM_TEXT = '#8A9A92';
 const PS_MARK_COLOR = '#6DB4F5';
 
-// "up to 2h free" / "up to 30 min free" from the trial's length in minutes;
-// the length is parsed from Sony's own text and may be missing.
-const formatTrialNote = (
-  minutes: number | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string => {
-  if (!minutes) {
-    return t('PsStoreTrialUnknown');
-  }
-  return minutes % 60 === 0
-    ? t('PsStoreTrialHours', {n: minutes / 60})
-    : t('PsStoreTrialMinutes', {n: minutes});
-};
-
 const formatSaleEnd = (ms: number): string =>
   new Date(ms).toLocaleString(undefined, {
     month: 'numeric',
@@ -160,21 +146,13 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const psStoreUrl = catalogTitle.psplus
     ? getPsStoreUrl(psPlusGame?.conceptId, psPlusGame?.storeProductId)
     : null;
-  // A purchase price/sale and a game trial are both shown whenever they
-  // exist: the sale also for titles in the Plus catalog (it is still a
-  // discount on owning the game), the trial only when the title isn't
-  // already playable.
+  // The purchase price/sale is shown also for titles in the Plus catalog
+  // (it is still a discount on owning the game).
   const psPurchase =
     catalogTitle.psplus && !catalogTitle.psplus.isOwned
       ? psStorePrice?.purchase ?? null
       : null;
   const psStoreShowSale = !!psPurchase && isPsStoreSaleForDisplay(psStorePrice);
-  const psTrial =
-    catalogTitle.psplus &&
-    !catalogTitle.psplus.isOwned &&
-    !catalogTitle.psplus.inPlusCatalog
-      ? psStorePrice?.trial ?? null
-      : null;
 
   const favoriteBtn = (
     <Pressable
@@ -551,8 +529,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             ? t('LibraryFilterOwned')
             : catalogTitle.psplus.inPlusCatalog
             ? t('PsPlusIncludedDesc')
-            : psTrial
-            ? t('PsStoreTrialAvailable')
             : t('LibraryViewDetails');
           const subtitle = psStoreShowSale
             ? `${baseSubtitle} · ${t('PsStoreOnSale')}`
@@ -619,7 +595,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 )}
                 <Icon source="chevron-right" size={18} color="#8A9A92" />
               </Pressable>
-              {(showIncludedRow || psTrial || psPurchase) && (
+              {(showIncludedRow || psPurchase) && (
                 <View style={styles.stores}>
                   {showIncludedRow && (
                     <View style={styles.psInfoRow}>
@@ -636,25 +612,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                         </Text>
                         <Text style={styles.psInfoNote}>
                           {t('PsStoreIncludedNote')}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                  {psTrial && (
-                    <View style={styles.psInfoRow}>
-                      <View style={styles.storeMark}>
-                        <Icon
-                          source="clock-outline"
-                          size={14}
-                          color={PS_MARK_COLOR}
-                        />
-                      </View>
-                      <View style={styles.storeText}>
-                        <Text style={styles.storeName}>
-                          {t('PsStoreGameTrial')}
-                        </Text>
-                        <Text style={styles.psInfoNote}>
-                          {formatTrialNote(psTrial.minutes, t)}
                         </Text>
                       </View>
                     </View>

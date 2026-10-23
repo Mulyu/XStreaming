@@ -29,7 +29,6 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const PS_ACCENT = '#0070D1';
 const SALE_ACCENT = '#E67E22';
-const PS_MARK_COLOR = '#6DB4F5';
 // TV: 3 wide cards per row -- a dense single-column list had too little
 // information density, and a dense image-only grid was the original focus-
 // visibility problem (see `wideCard`'s own comment). numColumns itself still
@@ -77,7 +76,6 @@ const LibraryView: React.FC<Props> = ({
   openTitle,
   openTitleDetail,
   saleDiscount,
-  psAvailability,
   titleRating,
 }) => {
   // One chip cycles owned -> not owned -> all; its label names the state.
@@ -130,29 +128,17 @@ const LibraryView: React.FC<Props> = ({
     }, []),
   );
 
-  // Icon-only PS availability marks, shown right after the PS badge: a list
-  // check for "included in the PS Plus catalog", a clock for "a game trial
-  // exists". `size` matches the badge row they sit in.
+  // Icon-only mark shown right after the PS badge: a list check for
+  // "included in the PS Plus catalog". `size` matches the badge row it sits in.
   const renderPsMarks = (item: CatalogTitle, size: number) => {
-    const {included, trial} = psAvailability(item);
-    if (!included && !trial) {
+    if (!item.psplus?.inPlusCatalog) {
       return null;
     }
     return (
       <View
-        style={[
-          styles.psMark,
-          included ? styles.psMarkIncluded : styles.psMarkTrial,
-          {width: size, height: size},
-        ]}
-        accessibilityLabel={t(
-          included ? 'LibraryPsIncluded' : 'LibraryPsTrial',
-        )}>
-        <Icon
-          source={included ? 'playlist-check' : 'clock-outline'}
-          size={size - 4}
-          color={included ? '#FFFFFF' : PS_MARK_COLOR}
-        />
+        style={[styles.psMark, {width: size, height: size}]}
+        accessibilityLabel={t('LibraryPsIncluded')}>
+        <Icon source="playlist-check" size={size - 4} color="#FFFFFF" />
       </View>
     );
   };
@@ -1060,18 +1046,12 @@ const styles = StyleSheet.create({
   wideGenreText: {fontSize: 10.5, fontWeight: '600', color: DIM_BADGE_TEXT},
   // Shared between the 3-up grid's badges and the sale callout.
   cardBadgesLine: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  // In the Plus catalog: solid PS blue.
   psMark: {
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // In the Plus catalog: solid PS blue. Trial only: dark chip with a light-blue
-  // outline (opaque enough to read over cover art).
-  psMarkIncluded: {backgroundColor: PS_ACCENT},
-  psMarkTrial: {
-    backgroundColor: 'rgba(8,20,34,0.9)',
-    borderWidth: 1,
-    borderColor: PS_MARK_COLOR,
+    backgroundColor: PS_ACCENT,
   },
   cardBadge: {
     minWidth: 16,

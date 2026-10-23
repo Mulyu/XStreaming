@@ -31,7 +31,7 @@ const buyCta = (over: Record<string, unknown> = {}) => ({
 });
 
 describe('parsePsStoreCtas', () => {
-  it('reads the sale and the trial from the same concept', () => {
+  it('reads the sale next to a trial CTA', () => {
     const info = parsePsStoreCtas([
       trialCta('2時間の製品版ゲームトライアルをプレイするには...'),
       buyCta(),
@@ -43,23 +43,12 @@ describe('parsePsStoreCtas', () => {
       isFree: false,
       saleEndsAt: 1792594740000,
     });
-    expect(info.trial).toEqual({minutes: 120});
     expect(isPsStoreSaleForDisplay(info)).toBe(true);
   });
 
-  it('parses fractional hours, English hours and minutes', () => {
-    const minutes = (text: string) =>
-      parsePsStoreCtas([trialCta(text)]).trial?.minutes;
-    expect(minutes('0.5時間の製品版ゲームトライアル')).toBe(30);
-    expect(minutes('Subscribe to play a 2-hour full game trial')).toBe(120);
-    expect(minutes('30分の製品版ゲームトライアル')).toBe(30);
-    expect(minutes('no length here')).toBeUndefined();
-  });
-
-  it('reports a trial with no purchase CTA', () => {
+  it('has no purchase for a trial-only concept', () => {
     const info = parsePsStoreCtas([trialCta('2時間')]);
     expect(info.purchase).toBeNull();
-    expect(info.trial).not.toBeNull();
     expect(isPsStoreSaleForDisplay(info)).toBe(false);
   });
 
@@ -82,7 +71,6 @@ describe('parsePsStoreCtas', () => {
         discountText: '-58%',
       }),
     ]);
-    expect(info.trial).toBeNull();
     expect(info.purchase?.discountPercent).toBe(58);
   });
 
@@ -150,10 +138,9 @@ describe('parsePsStoreCtas', () => {
     ]);
     expect(info.purchase?.discountPercent).toBe(30);
     expect(info.purchase?.memberPrice).toBeUndefined();
-    expect(info.trial).toEqual({minutes: 120});
   });
 
-  it('does not treat an EA Play trial or a demo download as a PS Plus trial', () => {
+  it('does not take an EA Play trial or a demo download for the purchase', () => {
     const info = parsePsStoreCtas([
       buyCta(),
       {
@@ -177,7 +164,6 @@ describe('parsePsStoreCtas', () => {
         },
       },
     ]);
-    expect(info.trial).toBeNull();
     // The demo download must not be picked as the purchase price either.
     expect(info.purchase?.discountedPrice).toBe('¥2,380');
   });
