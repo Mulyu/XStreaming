@@ -122,6 +122,33 @@ export const gpStateToPsPlusInput = (gp: any): ControllerStateInput => {
   };
 };
 
+export const controllerInputEquals = (
+  a: ControllerStateInput,
+  b: ControllerStateInput,
+): boolean => {
+  if (
+    a.buttons !== b.buttons ||
+    a.l2State !== b.l2State ||
+    a.r2State !== b.r2State ||
+    a.leftX !== b.leftX ||
+    a.leftY !== b.leftY ||
+    a.rightX !== b.rightX ||
+    a.rightY !== b.rightY
+  ) {
+    return false;
+  }
+  const at = a.touches ?? [];
+  const bt = b.touches ?? [];
+  return (
+    at.length === bt.length &&
+    at.every((t, i) => t.id === bt[i].id && t.x === bt[i].x && t.y === bt[i].y)
+  );
+};
+
+// An idle controller is re-sent at least this often anyway, so a state the
+// native side somehow dropped can't stay stale.
+const INPUT_HEARTBEAT_MS = 250;
+
 export type PsPlusLaunchOptions = {
   npsso: string;
   serviceType: 'pscloud' | 'psnow';
@@ -183,6 +210,8 @@ export class PsPlusSession {
   private inputTimer: ReturnType<typeof setInterval> | null = null;
   private gpState: any = null;
   private touchpadCombo = createViewTouchpadCombo();
+  private lastSentInput: ControllerStateInput | null = null;
+  private lastSentAt = 0;
 
   constructor(private readonly handlers: PsPlusAdapterHandlers) {}
 
@@ -318,13 +347,24 @@ export class PsPlusSession {
     }
     // Matches native-stream's own default virtual-gamepad polling rate.
     this.inputTimer = setInterval(() => {
-      if (this.gpState) {
-        psPlusChiaki.setControllerState(
-          gpStateToPsPlusInput(
-            this.touchpadCombo.apply(this.gpState, Date.now()),
-          ),
-        );
+      if (!this.gpState) {
+        return;
       }
+      const now = Date.now();
+      const input = gpStateToPsPlusInput(
+        this.touchpadCombo.apply(this.gpState, now),
+      );
+      // Skip the native bridge call while nothing changed (most of the time).
+      if (
+        this.lastSentInput &&
+        now - this.lastSentAt < INPUT_HEARTBEAT_MS &&
+        controllerInputEquals(this.lastSentInput, input)
+      ) {
+        return;
+      }
+      this.lastSentInput = input;
+      this.lastSentAt = now;
+      psPlusChiaki.setControllerState(input);
     }, 16);
   }
 
@@ -333,6 +373,7 @@ export class PsPlusSession {
       clearInterval(this.inputTimer);
       this.inputTimer = null;
     }
+    this.lastSentInput = null;
   }
 
   setGamepadState(gpState: any): void {

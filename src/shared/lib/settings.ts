@@ -186,6 +186,23 @@ export const getSettings = (): Settings => {
   }
 };
 
+// Parsed settings memoised by the stored string, for per-input-event reads
+// (analog stick dead zone, swipe-aim gating) where getSettings()'s JSON.parse
+// of the whole blob on every event adds up. Always current -- the raw string
+// is compared on each call -- but the returned object is shared, so callers
+// must treat it as read-only (use getSettings() when building a save).
+let cachedRaw: string | undefined;
+let cachedSettings: Settings | undefined;
+export const getSettingsCached = (): Settings => {
+  const raw = storage.getString(STORE_KEY);
+  if (cachedSettings && raw === cachedRaw) {
+    return cachedSettings;
+  }
+  cachedSettings = getSettings();
+  cachedRaw = raw;
+  return cachedSettings;
+};
+
 export const resetSettings = () => {
   log.info('resetSettings');
   storage.set(STORE_KEY, JSON.stringify(defaultSettings));

@@ -45,7 +45,11 @@ import type {
   SensorConfig,
   SwipeConfig,
 } from '../../../features/controller-customization';
-import {getSettings, saveSettings} from '../../../shared/lib/settings';
+import {
+  getSettings,
+  getSettingsCached,
+  saveSettings,
+} from '../../../shared/lib/settings';
 import {
   createGamepadMapper,
   usePhysicalInput,
@@ -102,7 +106,7 @@ const buildKeyMap = (): Record<number, string> => {
 };
 
 const normaliseAxis = (value: number): number => {
-  const deadZone = getSettings().dead_zone;
+  const deadZone = getSettingsCached().dead_zone;
   if (!deadZone) {
     return value;
   }
@@ -650,7 +654,7 @@ export function usePsPlusStream(navigation: any, route: any) {
   // own isActive prop all agree with the current button state.
   const isSwipeAimActive = React.useCallback(() => {
     const activation = activeSwipe.activation;
-    const deadZone = getSettings().dead_zone || 0;
+    const deadZone = getSettingsCached().dead_zone || 0;
     if (activation === 4) {
       return true;
     }
