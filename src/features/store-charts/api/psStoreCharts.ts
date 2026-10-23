@@ -8,28 +8,15 @@
 import axios from 'axios';
 import {storage} from '../../../shared/lib/mmkv';
 import {debugFactory} from '../../../shared/lib/debug';
-import {getPsStoreLocale} from '../../../entities/catalog-title';
+import {
+  getPsStoreLocale,
+  PS_GRAPHQL_URL as GRAPHQL_URL,
+  PS_OP_CATEGORY_GRID as OP_CATEGORY_GRID,
+  PS_HASH_CATEGORY_GRID as HASH_CATEGORY_GRID,
+  PS5_GAMES_CATEGORY_ID,
+} from '../../../entities/catalog-title';
 
 const log = debugFactory('psStoreCharts');
-
-const GRAPHQL_URL = 'https://web.np.playstation.com/api/graphql/v1/op';
-const OP_CATEGORY_GRID = 'categoryGridRetrieve';
-// Same fragility note as psStorePrice.ts's own hash constant: a browser-
-// session artifact Sony's backend caches server-side, not a stable
-// documented API shape -- treat a sudden empty/failing response as "this
-// needs a fresh hash from a real store.playstation.com session's Network
-// tab", the same maintenance Steam's HTML scraper occasionally needs too.
-const HASH_CATEGORY_GRID =
-  '4ce7d410a4db2c8b635a48c1dcec375906ff63b19dadd87e073f8fd0c0481d35';
-
-// "All PS5 games" -- confirmed live via this category's own
-// `localizedName`/`reportingName` fields (cat.gma.x_All_PS5_games /
-// WM_EU_PS5_ALL_GAMES). Content-managed, like the persisted-query hash
-// above -- can go stale (the deals/SALES category id a reference PHP client
-// hardcodes returned totalCount 0 when tried live during this feature's own
-// research), so this one specific id is what's actually been verified, not
-// a guaranteed-permanent constant.
-const PS5_GAMES_CATEGORY_ID = '4cbf39e2-5749-4970-ba81-93a489e4570c';
 
 export type PsStoreChartKind = 'topsellers' | 'new';
 
