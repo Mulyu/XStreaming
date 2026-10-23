@@ -33,7 +33,7 @@ export type SteamChartPage = {
 };
 
 const cacheKey = (kind: SteamChartKind, cc: string): string =>
-  `store.steamChart.${kind}.${cc}`;
+  `store.steamChart.v2.${kind}.${cc}`;
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12h, same as the Xbox chart cache
 
 // Only the first page is worth caching for an instant paint -- deeper pages
@@ -60,14 +60,20 @@ export const parseResultsHtml = (html: string): SteamChartEntry[] => {
     const imageMatch = /<img src="([^"]+)"/.exec(row);
     const finalMatch = /discount_final_price[^"]*">([^<]+)<\/div>/.exec(row);
     const originalMatch = /discount_original_price">([^<]+)<\/div>/.exec(row);
-    const pctMatch = /discount_pct">-?(\d+)%<\/div>/.exec(row);
+    // Steam now puts attributes on the element (`class="discount_pct"
+    // aria-hidden="true">`), so don't require the tag to close right after the
+    // class; the block's own data-discount is the fallback.
+    const pctMatch =
+      /discount_pct"[^>]*>\s*-?(\d+)%/.exec(row) ??
+      /data-discount="(\d+)"/.exec(row);
     entries.push({
       appId: idMatch[1],
       title: titleMatch[1],
       imageUrl: imageMatch?.[1],
       price: finalMatch?.[1],
       originalPrice: originalMatch?.[1],
-      discountPercent: pctMatch ? Number(pctMatch[1]) : undefined,
+      discountPercent:
+        pctMatch && Number(pctMatch[1]) > 0 ? Number(pctMatch[1]) : undefined,
     });
   }
   return entries;
