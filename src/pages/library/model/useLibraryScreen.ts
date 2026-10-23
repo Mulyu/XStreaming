@@ -62,6 +62,7 @@ import {
   fetchUnifiedCatalog,
   CloudGame,
   getCachedCatalogGames,
+  getFreshCatalogGames,
   saveCatalogGames,
 } from '../../../features/ps-plus-session';
 import {fetchPsStoreRanking} from '../../../features/store-charts';
@@ -140,6 +141,10 @@ export function useLibraryScreen() {
   );
   const [keyword, setKeyword] = React.useState('');
   const [sortMode, setSortMode] = React.useState<SortMode>('recent');
+  // The popularity / release-date orders (an xCloud list, two GFN catalog
+  // crawls, ~14 pages of the PS Store) only matter to the non-default sorts,
+  // so they are fetched once one of those is picked, not at every launch.
+  const rankNeeded = sortMode !== 'recent';
   const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
   // Which tile currently has D-pad/remote focus -- Android TV moves this via
   // standard View focus as the user navigates with the remote, but nothing
@@ -283,6 +288,10 @@ export function useLibraryScreen() {
       if (cache.ratingMap) {
         setRatingMap(cache.ratingMap);
       }
+      // Still fresh and fetched for this very title set: nothing to refetch.
+      if (cache.sig === sig) {
+        return;
+      }
     }
 
     fetchPricesWithRetry(productIds, market, language).then(
@@ -305,6 +314,9 @@ export function useLibraryScreen() {
   // "Most popular on cloud" ranking, cached (24h) exactly like Cloud.tsx.
   const popularMarketRef = React.useRef('');
   React.useEffect(() => {
+    if (!rankNeeded) {
+      return;
+    }
     const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
     if (popularMarketRef.current === market) {
       return;
@@ -325,7 +337,7 @@ export function useLibraryScreen() {
       savePopularOrder(order, market);
       setPopularRank(buildPopularRank(order));
     });
-  }, [gameLanguage, deviceRegion]);
+  }, [gameLanguage, deviceRegion, rankNeeded]);
 
   // Release dates from the Microsoft display catalog (the Game Pass
   // hydration carries none), cached alongside the rest of the xCloud blob.
@@ -414,6 +426,13 @@ export function useLibraryScreen() {
     if (!npsso) {
       return;
     }
+    if (!force) {
+      const fresh = getFreshCatalogGames();
+      if (fresh && fresh.length > 0) {
+        setPsPlusGames(fresh);
+        return;
+      }
+    }
     fetchUnifiedCatalog(npsso, undefined, force)
       .then(result => {
         const games = result.games.filter(
@@ -434,7 +453,7 @@ export function useLibraryScreen() {
   // anonymously (same precondition as the owned-library query above) -- so
   // these two sorts simply stay xCloud-only while signed out.
   React.useEffect(() => {
-    if (!isSignedIn()) {
+    if (!rankNeeded || !isSignedIn()) {
       return;
     }
     const cachedPopular = getFreshGfnRankOrder('popular');
@@ -469,7 +488,7 @@ export function useLibraryScreen() {
         });
       }
     });
-  }, []);
+  }, [rankNeeded]);
 
   // Pull-to-refresh: re-runs the same fetches the mount-time effects above
   // do (xCloud entitlements/recent, GFN public+owned catalog, GFN rank
@@ -596,7 +615,7 @@ export function useLibraryScreen() {
   // known (cached 12h by the fetch itself).
   const psRankingLoadedRef = React.useRef(false);
   React.useEffect(() => {
-    if (psPlusGames.length === 0 || psRankingLoadedRef.current) {
+    if (!rankNeeded || psPlusGames.length === 0 || psRankingLoadedRef.current) {
       return;
     }
     psRankingLoadedRef.current = true;
@@ -621,7 +640,7 @@ export function useLibraryScreen() {
     return () => {
       cancelled = true;
     };
-  }, [psPlusGames]);
+  }, [psPlusGames, rankNeeded]);
 
   // xCloud release dates, turned into an ordinal rank (0 = newest known
   // date) so they combine fairly with GFN's ordinal "last added" rank --

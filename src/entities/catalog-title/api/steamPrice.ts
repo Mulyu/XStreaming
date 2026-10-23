@@ -1,5 +1,6 @@
 import axios from 'axios';
 import {debugFactory} from '../../../shared/lib/debug';
+import {runPool} from '../../../shared/lib/pool';
 
 const log = debugFactory('steamPrice');
 
@@ -9,14 +10,15 @@ const log = debugFactory('steamPrice');
 const APPDETAILS_URL = 'https://store.steampowered.com/api/appdetails';
 
 // Undocumented, but batching keeps well under the community-reported
-// ~200 req/5min per-IP throttle even for a title with many Steam-linked
-// GFN store variants (there's only ever a handful per title in practice).
-const BATCH_SIZE = 20;
+// ~200 req/5min per-IP throttle. 100 ids per call (with price_overview only)
+// was confirmed live (100 ids -> 98 results), so a full GFN catalog is a few
+// dozen requests instead of hundreds.
+const BATCH_SIZE = 100;
 // How many chunk requests run at once. The caller can pass thousands of ids
 // now that the GFN catalog covers the full browse list, not just the ~1500
 // public-JSON snapshot -- firing every chunk in parallel would mean hundreds
 // of simultaneous requests, well past that same throttle.
-const CHUNK_CONCURRENCY = 5;
+const CHUNK_CONCURRENCY = 3;
 
 export type SteamPriceInfo = {
   currencyCode: string;
@@ -74,19 +76,9 @@ export const fetchSteamPrices = async (
     }
   };
 
-  // A small worker pool instead of Promise.all(chunks.map(...)) -- caps how
-  // many chunk requests are ever in flight together, regardless of how many
-  // chunks there are.
-  let next = 0;
-  const workers = Array.from(
-    {length: Math.min(CHUNK_CONCURRENCY, chunks.length)},
-    async () => {
-      while (next < chunks.length) {
-        await fetchChunk(chunks[next++]);
-      }
-    },
-  );
-  await Promise.all(workers);
+  // Capped concurrency instead of Promise.all(chunks.map(...)) -- bounds how
+  // many chunk requests are ever in flight together.
+  await runPool(chunks, CHUNK_CONCURRENCY, fetchChunk);
 
   return result;
 };

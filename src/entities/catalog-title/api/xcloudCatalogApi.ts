@@ -1,8 +1,13 @@
 import axios from 'axios';
 import {getSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
+import {runPool} from '../../../shared/lib/pool';
 
 const log = debugFactory('catalog-title/xcloudCatalogApi.js');
+
+// Release-date chunks in flight at once -- the whole catalog is a few dozen
+// chunks, which used to all go out together.
+const RELEASE_DATE_CONCURRENCY = 3;
 
 // xCloud's catalog/title-browsing endpoints, split out of the old
 // xCloud/index.ts god-class -- these never shared XcloudSessionClient's
@@ -191,35 +196,32 @@ export default class XcloudCatalogApi {
     for (let i = 0; i < unique.length; i += 40) {
       chunks.push(unique.slice(i, i + 40));
     }
-    return new Promise(resolve => {
-      const result: Record<string, string> = {};
-      Promise.all(
-        chunks.map(chunk =>
-          axios
-            .get('https://displaycatalog.mp.microsoft.com/v7.0/products', {
-              params: {
-                bigIds: chunk.join(','),
-                market: 'US',
-                languages: 'en-US',
-                fieldsTemplate: 'details',
-              },
-              headers: {'MS-CV': '0'},
-              timeout: 30 * 1000,
-            })
-            .then(res => {
-              const products = res.data?.Products || [];
-              products.forEach((p: any) => {
-                const id = p.ProductId;
-                const date = p.MarketProperties?.[0]?.OriginalReleaseDate;
-                if (id && date) {
-                  result[id] = date;
-                }
-              });
-            })
-            .catch(() => {}),
-        ),
-      ).then(() => resolve(result));
-    });
+    const result: Record<string, string> = {};
+    return runPool(chunks, RELEASE_DATE_CONCURRENCY, async chunk => {
+      try {
+        const res = await axios.get(
+          'https://displaycatalog.mp.microsoft.com/v7.0/products',
+          {
+            params: {
+              bigIds: chunk.join(','),
+              market: 'US',
+              languages: 'en-US',
+              fieldsTemplate: 'details',
+            },
+            headers: {'MS-CV': '0'},
+            timeout: 30 * 1000,
+          },
+        );
+        const products = res.data?.Products || [];
+        products.forEach((p: any) => {
+          const id = p.ProductId;
+          const date = p.MarketProperties?.[0]?.OriginalReleaseDate;
+          if (id && date) {
+            result[id] = date;
+          }
+        });
+      } catch {}
+    }).then(() => result);
   }
 
   // Get recently play games of user

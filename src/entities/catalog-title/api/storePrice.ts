@@ -1,6 +1,7 @@
 import axios from 'axios';
 import {debugFactory} from '../../../shared/lib/debug';
 import {parseRegion} from '../../../shared/lib/locale';
+import {runPool} from '../../../shared/lib/pool';
 
 const log = debugFactory('storePrice');
 
@@ -12,6 +13,8 @@ const CATALOG_URL = 'https://displaycatalog.mp.microsoft.com/v7.0/products';
 // The API accepts many ids per request (verified with 400+ in one call); we
 // still chunk conservatively so a single oversized URL can't fail the batch.
 const BATCH_SIZE = 100;
+// Chunks in flight at once (a full catalog is a few dozen of them).
+const PRICE_CHUNK_CONCURRENCY = 3;
 
 // ISO 4217 currencies with zero minor units.
 const ZERO_DECIMAL_CURRENCIES = [
@@ -409,43 +412,41 @@ export const fetchPrices = async (
   }
 
   let ok = true;
-  await Promise.all(
-    chunks.map(async chunk => {
-      try {
-        const res = await axios.get(CATALOG_URL, {
-          params: {
-            bigIds: chunk.join(','),
-            market,
-            languages: language,
-            fieldsTemplate: 'details',
-          },
-          headers: {'MS-CV': '0'},
-          timeout: 15000,
+  await runPool(chunks, PRICE_CHUNK_CONCURRENCY, async chunk => {
+    try {
+      const res = await axios.get(CATALOG_URL, {
+        params: {
+          bigIds: chunk.join(','),
+          market,
+          languages: language,
+          fieldsTemplate: 'details',
+        },
+        headers: {'MS-CV': '0'},
+        timeout: 15000,
+      });
+      const products = res?.data?.Products;
+      if (Array.isArray(products)) {
+        products.forEach((product: any) => {
+          if (!product?.ProductId) {
+            return;
+          }
+          // Key by the canonical uppercase big-id so lookups are case-safe.
+          const key = String(product.ProductId).toUpperCase();
+          const info = extractPrice(product);
+          if (info) {
+            prices[key] = info;
+          }
+          const rating = extractRating(product);
+          if (rating) {
+            ratings[key] = rating;
+          }
         });
-        const products = res?.data?.Products;
-        if (Array.isArray(products)) {
-          products.forEach((product: any) => {
-            if (!product?.ProductId) {
-              return;
-            }
-            // Key by the canonical uppercase big-id so lookups are case-safe.
-            const key = String(product.ProductId).toUpperCase();
-            const info = extractPrice(product);
-            if (info) {
-              prices[key] = info;
-            }
-            const rating = extractRating(product);
-            if (rating) {
-              ratings[key] = rating;
-            }
-          });
-        }
-      } catch (e) {
-        ok = false;
-        log.info('fetchPrices batch failed:', e);
       }
-    }),
-  );
+    } catch (e) {
+      ok = false;
+      log.info('fetchPrices batch failed:', e);
+    }
+  });
 
   return {prices, ratings, ok};
 };
