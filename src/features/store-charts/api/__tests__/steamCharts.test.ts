@@ -49,6 +49,44 @@ describe('parseResultsHtml', () => {
     ]);
   });
 
+  // Steam's current markup: attributes on the percent element, and a
+  // data-discount="0" block on rows with no discount.
+  it('reads the discount percent when the element carries attributes', () => {
+    const html =
+      row(
+        '3259780/FF/">' +
+          '<span class="title">Resonance</span>' +
+          '<div class="discount_block search_discount_block no_discount" data-discount="0">' +
+          '<div class="discount_final_price">\u00a5767,800</div></div>',
+      ) +
+      row(
+        '3002650/Sale/">' +
+          '<span class="title">On Sale</span>' +
+          '<div class="discount_block search_discount_block" data-discount="70">' +
+          '<div class="discount_pct" aria-hidden="true">-70%</div>' +
+          '<div class="discount_prices" aria-hidden="true">' +
+          '<div class="discount_original_price">\u00a58,778</div>' +
+          '<div class="discount_final_price">\u00a52,633</div></div></div>',
+      );
+    const [full, sale] = parseResultsHtml(html);
+    expect(full.discountPercent).toBeUndefined();
+    expect(sale).toMatchObject({
+      price: '\u00a52,633',
+      originalPrice: '\u00a58,778',
+      discountPercent: 70,
+    });
+  });
+
+  it('falls back to data-discount when the percent element is missing', () => {
+    const html = row(
+      '1/X/">' +
+        '<span class="title">X</span>' +
+        '<div class="discount_block" data-discount="35">' +
+        '<div class="discount_final_price">$6.50</div></div>',
+    );
+    expect(parseResultsHtml(html)[0].discountPercent).toBe(35);
+  });
+
   it('parses a free game with no original price or discount', () => {
     const html = row(
       '440/Team_Fortress_2/">' +
