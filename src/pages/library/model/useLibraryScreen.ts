@@ -28,6 +28,8 @@ import {
   getPlayHistory,
   getXcloudData,
   saveXcloudData,
+  saveXcloudTitles,
+  isXcloudTitlesFresh,
   getFreshPriceCache,
   savePriceCache,
   getFreshPopularOrder,
@@ -260,11 +262,16 @@ export function useLibraryScreen() {
   // launch doesn't have to wait on the network for this list either.
   const persistXcloudTitles = React.useCallback((titles: any[]) => {
     setXcloudTitles(titles);
-    saveXcloudData({...getXcloudData(), titles});
+    saveXcloudTitles(titles);
   }, []);
 
   React.useEffect(() => {
     if (!streamingTokens?.xCloudToken) {
+      return;
+    }
+    // The list stored by an earlier visit (the initial state above already
+    // shows it) is recent enough: skip the full entitled-catalog fetch.
+    if (isXcloudTitlesFresh()) {
       return;
     }
     loadXcloudCatalog(streamingTokens.xCloudToken).then(({titles}) => {
@@ -379,6 +386,11 @@ export function useLibraryScreen() {
   // itself missed).
   React.useEffect(() => {
     if (!isSignedIn()) {
+      return;
+    }
+    // Already painted from the fresh (6h) owned-games cache; pull-to-refresh
+    // fetches again on demand.
+    if (getFreshOwnedGames()) {
       return;
     }
     getValidGfnJwt().then(token => {
