@@ -9,8 +9,7 @@ import {debugFactory} from '../../../shared/lib/debug';
 import {clearStreamToken, clearWebToken} from '../../../entities/xbox-token';
 import {
   clearXcloudData,
-  getXcloudData,
-  saveXcloudData,
+  saveXcloudTitles,
   loadXcloudCatalog,
   getXcloudCatalogStatus,
   clearXcloudCatalogStatus,
@@ -340,7 +339,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     loadXcloudCatalog(streamingTokens.xCloudToken)
       .then(({titles, status}) => {
         if (titles.length > 0) {
-          saveXcloudData({...getXcloudData(), titles});
+          saveXcloudTitles(titles);
         }
         setXcloudCatalogStatus(status);
       })

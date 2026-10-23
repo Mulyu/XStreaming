@@ -16,6 +16,11 @@ import {
   loadXcloudCatalog,
   deriveMarketLanguage,
   fetchPricesWithRetry,
+  getXcloudData,
+  saveXcloudTitles,
+  isXcloudTitlesFresh,
+  getFreshPriceCache,
+  savePriceCache,
   getPrice,
   isSaleForDisplay,
   PriceInfo,
@@ -186,7 +191,10 @@ function StoreScreen() {
   // The two catalogs a chart entry gets matched against -- the same raw
   // shapes buildUnifiedCatalog already knows how to turn into a launchable
   // CatalogTitle, just fetched here instead of merged into one grid.
-  const [xcloudTitles, setXcloudTitles] = React.useState<any[]>([]);
+  // Instant-paints from the list the Library stored (same blob).
+  const [xcloudTitles, setXcloudTitles] = React.useState<any[]>(
+    () => getXcloudData()?.titles || [],
+  );
   // The full, authenticated GFN browse catalog -- the ONLY source this
   // screen matches Steam chart entries against (see fetchGfnFullCatalog's
   // own comment: the small public JSON snapshot is no longer consulted here,
@@ -243,9 +251,14 @@ function StoreScreen() {
     if (!streamingTokens?.xCloudToken) {
       return;
     }
+    // Stored recently (by the Library or an earlier visit): no refetch.
+    if (isXcloudTitlesFresh()) {
+      return;
+    }
     loadXcloudCatalog(streamingTokens.xCloudToken).then(({titles}) => {
       if (titles.length > 0) {
         setXcloudTitles(titles);
+        saveXcloudTitles(titles);
       }
     });
   }, [streamingTokens?.xCloudToken]);
@@ -328,11 +341,26 @@ function StoreScreen() {
     if (productIds.length === 0) {
       return;
     }
-    fetchPricesWithRetry(productIds, market, language).then(({prices}) => {
-      if (Object.keys(prices).length > 0) {
-        setXboxPriceMap(prev => ({...prev, ...prices}));
+    // Same cache and signature the Library uses, so whichever tab is opened
+    // first warms the other and a fresh cache needs no request at all.
+    const sig = `${market}:${productIds.length}`;
+    const cache = getFreshPriceCache(market);
+    if (cache) {
+      setXboxPriceMap(prev => ({...cache.priceMap, ...prev}));
+      if (cache.sig === sig) {
+        return;
       }
-    });
+    }
+    fetchPricesWithRetry(productIds, market, language).then(
+      ({prices, ratings, ok}) => {
+        if (Object.keys(prices).length > 0) {
+          setXboxPriceMap(prev => ({...prev, ...prices}));
+        }
+        if (ok) {
+          savePriceCache(prices, ratings, market, sig);
+        }
+      },
+    );
   }, [xcloudTitles, market, language]);
 
   const loadChart = React.useCallback(

@@ -54,16 +54,24 @@ export const clearXcloudData = () => {
   storage.set(STORE_KEY, JSON.stringify({starTitles}));
 };
 
-export const isxCloudDataValid = (data: any) => {
-  if (!data) {
-    return false;
-  }
-  const {cacheTime} = data;
+// How long a stored title list is reused before the Library/Store fetch the
+// entitled catalog again (purchases and Game Pass changes show up within this;
+// pull-to-refresh and the Settings reload bypass it).
+export const XCLOUD_TITLES_TTL_MS = 6 * 60 * 60 * 1000;
 
-  if (!cacheTime) {
-    return false;
-  }
+// Stores the entitled title list together with when it was fetched --
+// `cacheTime` moves on every save of the blob (release dates too), so it can't
+// say how old the list itself is.
+export const saveXcloudTitles = (titles: any[]) => {
+  saveXcloudData({...getXcloudData(), titles, titlesAt: Date.now()});
+};
 
-  // Cache 15 days
-  return new Date().getTime() - cacheTime < 15 * 24 * 60 * 1000;
+export const isXcloudTitlesFresh = (): boolean => {
+  const data = getXcloudData();
+  return (
+    Array.isArray(data?.titles) &&
+    data.titles.length > 0 &&
+    typeof data.titlesAt === 'number' &&
+    Date.now() - data.titlesAt < XCLOUD_TITLES_TTL_MS
+  );
 };

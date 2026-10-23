@@ -29,7 +29,8 @@ export {
   saveXcloudData,
   getXcloudData,
   clearXcloudData,
-  isxCloudDataValid,
+  saveXcloudTitles,
+  isXcloudTitlesFresh,
 } from './model/xcloudCache';
 
 export type {PriceCache, PopularCache} from './model/priceCache';
