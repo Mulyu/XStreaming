@@ -11,10 +11,7 @@ import {
 import {useTranslation} from 'react-i18next';
 import type {LoadingPhase} from '../lib/loadingPhase';
 import {useTVFocus, tvFocusRing} from './tvFocus';
-
-const XBOX_ACCENT = '#107C10';
-const NVIDIA_ACCENT = '#76B900';
-const PS_ACCENT = '#0070CC';
+import {alpha, palette} from '../config/palette';
 
 // Per-provider chip look. streamType values come from NativeStream's own
 // route params ('cloud'/'gfn'/'home') and PsPlusStream's ('psplus'); any
@@ -24,12 +21,12 @@ const PROVIDER_META: Record<
   string,
   {accent: string; badge: string; label: string}
 > = {
-  gfn: {accent: NVIDIA_ACCENT, badge: 'N', label: 'GeForce Now'},
-  home: {accent: XBOX_ACCENT, badge: 'X', label: 'Xbox Console'},
-  psplus: {accent: PS_ACCENT, badge: 'P', label: 'PlayStation Plus'},
+  gfn: {accent: palette.provider.gfn, badge: 'N', label: 'GeForce Now'},
+  home: {accent: palette.provider.xbox, badge: 'X', label: 'Xbox Console'},
+  psplus: {accent: palette.provider.ps, badge: 'P', label: 'PlayStation Plus'},
 };
 const DEFAULT_PROVIDER_META = {
-  accent: XBOX_ACCENT,
+  accent: palette.accent,
   badge: 'X',
   label: 'Xbox Cloud Gaming',
 };
@@ -70,14 +67,6 @@ const PHASE_SUB_KEY: Partial<Record<LoadingPhase, string>> = {
   handshake: 'LoadingPhaseHandshakeSub',
   negotiating: 'LoadingPhaseNegotiatingSub',
   starting: 'LoadingPhaseStartingSub',
-};
-
-const withAlpha = (hex: string, alpha: number): string => {
-  const value = hex.replace('#', '');
-  const r = parseInt(value.substring(0, 2), 16);
-  const g = parseInt(value.substring(2, 4), 16);
-  const b = parseInt(value.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
 // A slow, endless ambient drift for one glow blob in the no-poster ("field")
@@ -147,13 +136,13 @@ const FieldBackdrop: React.FC<{accent: string}> = ({accent}) => (
     style={[StyleSheet.absoluteFill, styles.fieldBase]}
     pointerEvents="none">
     <GlowBlob
-      color={withAlpha(accent, 0.16)}
+      color={alpha(accent, 0.16)}
       size={340}
       durationMs={9000}
       positionStyle={styles.fieldBlobTopLeft}
     />
     <GlowBlob
-      color={withAlpha(accent, 0.1)}
+      color={alpha(accent, 0.1)}
       size={260}
       durationMs={11000}
       positionStyle={styles.fieldBlobBottomRight}
@@ -299,7 +288,7 @@ const StreamHandshakeOverlay: React.FC<StreamHandshakeOverlayProps> = ({
 
 const styles = StyleSheet.create({
   fieldBase: {
-    backgroundColor: '#0a0f0c',
+    backgroundColor: palette.onAccent,
     overflow: 'hidden',
   },
   fieldBlobTopLeft: {position: 'absolute', top: -80, left: -60},
@@ -318,7 +307,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 72,
-    backgroundColor: 'rgba(6,8,7,0.55)',
+    backgroundColor: alpha(palette.scrim, 0.55),
   },
   scrimBottom: {
     position: 'absolute',
@@ -326,7 +315,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 160,
-    backgroundColor: 'rgba(6,8,7,0.85)',
+    backgroundColor: alpha(palette.scrim, 0.85),
   },
   topBar: {
     position: 'absolute',
@@ -345,9 +334,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingRight: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(10,14,12,0.55)',
+    backgroundColor: alpha(palette.scrim, 0.55),
     borderWidth: 1,
-    borderColor: 'rgba(238,244,239,0.14)',
+    borderColor: alpha(palette.text, 0.14),
   },
   chipBadge: {
     width: 16,
@@ -356,23 +345,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipBadgeText: {fontSize: 9.5, fontWeight: '800', color: '#08130a'},
+  chipBadgeText: {fontSize: 9.5, fontWeight: '800', color: palette.onAccent},
   chipLabel: {
     fontSize: 10.5,
     fontWeight: '600',
     letterSpacing: 0.3,
-    color: '#eef4ef',
+    color: palette.text,
     textTransform: 'uppercase',
   },
   cancelBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: 'rgba(10,14,12,0.55)',
+    backgroundColor: alpha(palette.scrim, 0.55),
     borderWidth: 1,
-    borderColor: 'rgba(238,244,239,0.14)',
+    borderColor: alpha(palette.text, 0.14),
   },
-  cancelText: {fontSize: 11, fontWeight: '600', color: '#89998e'},
+  cancelText: {fontSize: 11, fontWeight: '600', color: palette.textSoft},
   hud: {
     position: 'absolute',
     left: 16,
@@ -382,12 +371,12 @@ const styles = StyleSheet.create({
   gameTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#eef4ef',
+    color: palette.text,
     marginBottom: 10,
   },
   rail: {
     height: 3,
-    backgroundColor: 'rgba(238,244,239,0.16)',
+    backgroundColor: alpha(palette.text, 0.16),
     marginBottom: 8,
   },
   railFill: {height: '100%'},
@@ -395,10 +384,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     letterSpacing: 0.3,
-    color: '#eef4ef',
+    color: palette.text,
     textTransform: 'uppercase',
   },
-  phaseSub: {fontSize: 12, color: '#89998e', marginTop: 2},
+  phaseSub: {fontSize: 12, color: palette.textSoft, marginTop: 2},
   telemetryRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -406,15 +395,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(238,244,239,0.14)',
+    borderTopColor: alpha(palette.text, 0.14),
   },
   telemetryDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#89998e',
+    backgroundColor: palette.textSoft,
   },
-  telemetryText: {flex: 1, fontSize: 11, color: '#89998e'},
+  telemetryText: {flex: 1, fontSize: 11, color: palette.textSoft},
 });
 
 export default StreamHandshakeOverlay;

@@ -3,13 +3,11 @@ import {View, StyleSheet, Pressable, ScrollView, TextInput} from 'react-native';
 import {Text, Switch, Menu, Divider} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import {useTVFocus, tvFocusRing} from './tvFocus';
+import {alpha, palette} from '../config/palette';
 
 // Xbox/GeForce NOW accent colors, matching Library.tsx's own tone -- reused
 // here so the "on" state of a switch/segmented/dropdown reads as the same
 // system as the availability dots and filter chips on the Library screen.
-export const XBOX_ACCENT = '#107C10';
-export const NVIDIA_ACCENT = '#76B900';
-export const PS_ACCENT = '#0070D1';
 
 export type SettingOption = {value: any; text: string};
 
@@ -113,7 +111,7 @@ export const InfoRow: React.FC<{
   title: string;
   value: string;
   accent?: string;
-}> = ({title, value, accent = XBOX_ACCENT}) => (
+}> = ({title, value, accent = palette.accent}) => (
   <RowShell
     title={title}
     tail={<Text style={[styles.infoValue, {color: accent}]}>{value}</Text>}
@@ -127,7 +125,7 @@ export const SwitchRow: React.FC<{
   onChange: (v: boolean) => void;
   flag?: string;
   accent?: string;
-}> = ({title, desc, value, onChange, flag, accent = XBOX_ACCENT}) => (
+}> = ({title, desc, value, onChange, flag, accent = palette.accent}) => (
   <RowShell
     title={title}
     desc={desc}
@@ -153,7 +151,15 @@ export const SegmentedRow: React.FC<{
   onChange: (v: any) => void;
   flag?: string;
   accent?: string;
-}> = ({title, desc, options, value, onChange, flag, accent = XBOX_ACCENT}) => (
+}> = ({
+  title,
+  desc,
+  options,
+  value,
+  onChange,
+  flag,
+  accent = palette.accent,
+}) => (
   <RowShell
     title={title}
     desc={desc}
@@ -193,7 +199,7 @@ export const DropdownRow: React.FC<{
   value,
   onChange,
   flag,
-  accent = XBOX_ACCENT,
+  accent = palette.accent,
   emptyLabel,
 }) => {
   const [open, setOpen] = React.useState(false);
@@ -267,7 +273,7 @@ export const TextInputRow: React.FC<{
   onChange,
   suggestions,
   flag,
-  accent = XBOX_ACCENT,
+  accent = palette.accent,
 }) => {
   const [text, setText] = React.useState(value);
   React.useEffect(() => setText(value), [value]);
@@ -282,7 +288,7 @@ export const TextInputRow: React.FC<{
           style={styles.textInputPill}
           value={text}
           placeholder={placeholder}
-          placeholderTextColor="rgba(140,140,150,0.5)"
+          placeholderTextColor={alpha(palette.text, 0.5)}
           autoCapitalize="none"
           autoCorrect={false}
           onChangeText={setText}
@@ -331,7 +337,7 @@ export const SliderRow: React.FC<{
   onChange,
   formatValue,
   flag,
-  accent = XBOX_ACCENT,
+  accent = palette.accent,
 }) => {
   const [live, setLive] = React.useState(value);
   React.useEffect(() => setLive(value), [value]);
@@ -354,7 +360,7 @@ export const SliderRow: React.FC<{
         onValueChange={setLive}
         onSlidingComplete={onChange}
         minimumTrackTintColor={accent}
-        maximumTrackTintColor="rgba(140,140,150,0.3)"
+        maximumTrackTintColor={alpha(palette.text, 0.3)}
         thumbTintColor={accent}
       />
     </RowShell>
@@ -413,8 +419,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   flexFill: {flex: 1},
-  rowDesc: {fontSize: 12, color: '#8A9A92', flex: 1, minWidth: 0},
-  rowFlag: {fontSize: 10.5, color: '#E67E22', marginTop: 1},
+  rowDesc: {fontSize: 12, color: palette.textSoft, flex: 1, minWidth: 0},
+  rowFlag: {fontSize: 10.5, color: palette.warning, marginTop: 1},
   switchTrim: {marginVertical: -6, marginRight: -6},
 
   segmented: {
@@ -428,12 +434,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 9,
     borderRadius: 999,
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderColor: alpha(palette.text, 0.24),
   },
-  chipText: {fontSize: 11, fontWeight: '700', color: '#8A9A92'},
-  chipTextOn: {color: '#0B0F0C'},
+  chipText: {fontSize: 11, fontWeight: '700', color: palette.textSoft},
+  chipTextOn: {color: palette.onAccent},
 
   dropdownPill: {
     flexDirection: 'row',
@@ -442,12 +448,16 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderColor: alpha(palette.text, 0.24),
     maxWidth: 190,
   },
-  dropdownPillText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
+  dropdownPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: palette.textSoft,
+  },
   dropdownCaret: {fontSize: 9},
   textInputPill: {
     minWidth: 90,
@@ -455,17 +465,17 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderColor: alpha(palette.text, 0.24),
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#0B0F0C',
+    color: palette.onAccent,
     textAlign: 'right',
   },
   dropdownMenuContent: {maxHeight: 320},
   dropdownMenuScroll: {maxHeight: 320},
-  dropdownOptText: {fontSize: 13, color: '#8A9A92'},
+  dropdownOptText: {fontSize: 13, color: palette.textSoft},
   dropdownOptTextOn: {fontSize: 13, fontWeight: '700'},
 
   infoValue: {
@@ -476,7 +486,7 @@ const styles = StyleSheet.create({
   sliderValue: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#8A9A92',
+    color: palette.textSoft,
     fontVariant: ['tabular-nums'],
   },
   sliderTrack: {width: '100%', height: 28, marginTop: -4},
@@ -486,7 +496,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.25)',
+    borderColor: alpha(palette.black, 0.25),
   },
   swatchStrip: {marginTop: 4},
   swatchStripContent: {gap: 8, paddingRight: 8},
@@ -495,10 +505,10 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.25)',
+    borderColor: alpha(palette.black, 0.25),
   },
   swatchOptActive: {
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: palette.white,
   },
 });

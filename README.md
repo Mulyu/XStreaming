@@ -32,7 +32,10 @@ npx tsc --noEmit
 npx eslint .
 npx jest
 node scripts/check-tv-focus.js
+node scripts/check-palette.js
 ```
+
+All colours come from [`src/shared/config/palette.ts`](./src/shared/config/palette.ts); `check-palette.js` fails if a colour literal appears anywhere else in `src/`.
 
 Architecture notes are in [`.claude/knowledge/architecture.md`](./.claude/knowledge/architecture.md). Protocol notes inherited from the original project are in [`docs/`](./docs).
 

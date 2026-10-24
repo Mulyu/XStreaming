@@ -1,4 +1,5 @@
 import React from 'react';
+import {palette} from '../config/palette';
 
 // Android TV / Google TV D-pad navigation has no visible "hover" the way a
 // mouse cursor does, and nothing in this app draws one for free: Pressable's
@@ -15,7 +16,7 @@ import React from 'react';
 // track focus itself (plain onFocus/onBlur props -- confirmed these work on
 // Android in this RN version despite the misleading "@platform macos
 // windows" comment on their .d.ts) and apply a visible style manually.
-export const TV_FOCUS_COLOR = '#FFD54A';
+export const TV_FOCUS_COLOR = palette.focusRing;
 
 // A 2px ring in the one color used for this across the app (ported from
 // native-stream's own StreamControlRail, the first place this pattern was

@@ -12,6 +12,7 @@ import {
 } from 'react-native-paper';
 import type {VirtualGamepadSettingsViewModel} from '../model/useVirtualGamepadSettings';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {palette} from '../../../shared/config/palette';
 
 type Props = VirtualGamepadSettingsViewModel;
 
@@ -55,10 +56,7 @@ const VirtualGamepadSettingsView: React.FC<Props> = ({
 
               <Button
                 mode="contained"
-                style={[
-                  {marginTop: 20},
-                  confirmFocus.focused && tvFocusRing,
-                ]}
+                style={[{marginTop: 20}, confirmFocus.focused && tvFocusRing]}
                 onPress={onConfirmAddModal}
                 onFocus={confirmFocus.onFocus}
                 onBlur={confirmFocus.onBlur}>
@@ -129,14 +127,14 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     margin: 12,
-    backgroundColor: '#16351c',
+    backgroundColor: palette.surfaceHigh,
   },
   heroDesc: {
-    color: '#C0D8BF',
+    color: palette.textSoft,
     lineHeight: 20,
   },
   heroHint: {
-    color: '#a5c6a3',
+    color: palette.textSoft,
     marginTop: 8,
     lineHeight: 18,
   },

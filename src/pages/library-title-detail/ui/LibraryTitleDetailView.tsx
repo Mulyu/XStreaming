@@ -28,13 +28,11 @@ import {
 import {getTitleProductId} from '../../../features/launch-title';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 import type {LibraryTitleDetailViewModel} from '../model/useLibraryTitleDetail';
+import {alpha, palette} from '../../../shared/config/palette';
 
-const XBOX_ACCENT = '#107C10';
-const NVIDIA_ACCENT = '#76B900';
-const PS_ACCENT = '#0070D1';
-const DIM_ICON_BG = 'rgba(140,140,150,0.16)';
-const DIM_TEXT = '#8A9A92';
-const PS_MARK_COLOR = '#6DB4F5';
+const DIM_ICON_BG = alpha(palette.text, 0.16);
+const DIM_TEXT = palette.textSoft;
+const PS_MARK_COLOR = palette.provider.psBright;
 
 const formatSaleEnd = (ms: number): string =>
   new Date(ms).toLocaleString(undefined, {
@@ -176,7 +174,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
       <Ionicons
         name={isFavorite ? 'heart' : 'heart-outline'}
         size={20}
-        color={isFavorite ? '#ff5347' : '#fff'}
+        color={isFavorite ? palette.sale : palette.white}
       />
     </Pressable>
   );
@@ -234,7 +232,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               <Text
                 style={[
                   styles.providerIconText,
-                  {color: xcloudEntitled ? XBOX_ACCENT : DIM_TEXT},
+                  {color: xcloudEntitled ? palette.provider.xbox : DIM_TEXT},
                 ]}>
                 X
               </Text>
@@ -263,7 +261,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     </Text>
                   )}
                   {inGamePass && (
-                    <Text style={[styles.psIncludedText, {color: XBOX_ACCENT}]}>
+                    <Text
+                      style={[
+                        styles.psIncludedText,
+                        {color: palette.provider.xbox},
+                      ]}>
                       {t('GamePassIncludedInCatalog')}
                     </Text>
                   )}
@@ -276,7 +278,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               )}
             </View>
             {isPreferredXcloud && (
-              <Icon source="check-circle" size={18} color={XBOX_ACCENT} />
+              <Icon
+                source="check-circle"
+                size={18}
+                color={palette.provider.xbox}
+              />
             )}
             {xcloudProductId && (
               <Pressable
@@ -288,7 +294,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 onPress={() => openStore(getStoreUrl(xcloudProductId))}
                 onFocus={xcloudStoreLinkFocus.onFocus}
                 onBlur={xcloudStoreLinkFocus.onBlur}>
-                <Icon source="open-in-new" size={16} color="#8A9A92" />
+                <Icon source="open-in-new" size={16} color={palette.textSoft} />
               </Pressable>
             )}
             {canAddShortcut && (
@@ -302,10 +308,14 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 onPress={addXcloudShortcut}
                 onFocus={xcloudShortcutFocus.onFocus}
                 onBlur={xcloudShortcutFocus.onBlur}>
-                <Icon source="plus-box-outline" size={16} color="#8A9A92" />
+                <Icon
+                  source="plus-box-outline"
+                  size={16}
+                  color={palette.textSoft}
+                />
               </Pressable>
             )}
-            <Icon source="chevron-right" size={18} color="#8A9A92" />
+            <Icon source="chevron-right" size={18} color={palette.textSoft} />
           </Pressable>
         </View>
       )}
@@ -333,7 +343,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               <Text
                 style={[
                   styles.providerIconText,
-                  {color: gfnAnyOwned ? NVIDIA_ACCENT : DIM_TEXT},
+                  {color: gfnAnyOwned ? palette.provider.gfn : DIM_TEXT},
                 ]}>
                 N
               </Text>
@@ -369,7 +379,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               )}
             </View>
             {preference?.provider === 'gfn' && (
-              <Icon source="check-circle" size={18} color={NVIDIA_ACCENT} />
+              <Icon
+                source="check-circle"
+                size={18}
+                color={palette.provider.gfn}
+              />
             )}
             {soleGfnVariant?.steamAppId && (
               <Pressable
@@ -385,7 +399,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 }
                 onFocus={gfnStoreLinkFocus.onFocus}
                 onBlur={gfnStoreLinkFocus.onBlur}>
-                <Icon source="open-in-new" size={16} color="#8A9A92" />
+                <Icon source="open-in-new" size={16} color={palette.textSoft} />
               </Pressable>
             )}
             {canAddShortcut && soleGfnVariant && (
@@ -399,7 +413,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 onPress={() => addGfnShortcut(soleGfnVariant)}
                 onFocus={gfnShortcutFocus.onFocus}
                 onBlur={gfnShortcutFocus.onBlur}>
-                <Icon source="plus-box-outline" size={16} color="#8A9A92" />
+                <Icon
+                  source="plus-box-outline"
+                  size={16}
+                  color={palette.textSoft}
+                />
               </Pressable>
             )}
             <Icon
@@ -411,7 +429,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                   : 'chevron-right'
               }
               size={18}
-              color="#8A9A92"
+              color={palette.textSoft}
             />
           </Pressable>
 
@@ -497,7 +515,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                           <Icon
                             source="open-in-new"
                             size={14}
-                            color="#8A9A92"
+                            color={palette.textSoft}
                           />
                         </Pressable>
                       )}
@@ -519,7 +537,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                           <Icon
                             source="plus-box-outline"
                             size={14}
-                            color="#8A9A92"
+                            color={palette.textSoft}
                           />
                         </Pressable>
                       )}
@@ -527,7 +545,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                         <Icon
                           source="check-circle"
                           size={16}
-                          color={NVIDIA_ACCENT}
+                          color={palette.provider.gfn}
                         />
                       )}
                     </View>
@@ -565,7 +583,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           const psPriceRow = (
             <View style={styles.psInfoRow}>
               <View style={styles.storeMark}>
-                <Icon source="cart-outline" size={14} color="#E67E22" />
+                <Icon source="cart-outline" size={14} color={palette.warning} />
               </View>
               <View style={styles.storeText}>
                 <View style={styles.priceRow}>
@@ -629,7 +647,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                   <Text
                     style={[
                       styles.providerIconText,
-                      {color: psplusAvailable ? PS_ACCENT : DIM_TEXT},
+                      {color: psplusAvailable ? palette.provider.ps : DIM_TEXT},
                     ]}>
                     PS
                   </Text>
@@ -639,7 +657,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                   <Text style={styles.providerSub}>{subtitle}</Text>
                 </View>
                 {preference?.provider === 'psplus' && (
-                  <Icon source="check-circle" size={18} color={PS_ACCENT} />
+                  <Icon
+                    source="check-circle"
+                    size={18}
+                    color={palette.provider.ps}
+                  />
                 )}
                 {psStoreUrl && (
                   <Pressable
@@ -651,7 +673,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     onPress={() => openStore(psStoreUrl)}
                     onFocus={psplusStoreLinkFocus.onFocus}
                     onBlur={psplusStoreLinkFocus.onBlur}>
-                    <Icon source="open-in-new" size={16} color="#8A9A92" />
+                    <Icon
+                      source="open-in-new"
+                      size={16}
+                      color={palette.textSoft}
+                    />
                   </Pressable>
                 )}
                 {canAddShortcut && (
@@ -665,10 +691,18 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     onPress={addPsPlusShortcut}
                     onFocus={psplusShortcutFocus.onFocus}
                     onBlur={psplusShortcutFocus.onBlur}>
-                    <Icon source="plus-box-outline" size={16} color="#8A9A92" />
+                    <Icon
+                      source="plus-box-outline"
+                      size={16}
+                      color={palette.textSoft}
+                    />
                   </Pressable>
                 )}
-                <Icon source="chevron-right" size={18} color="#8A9A92" />
+                <Icon
+                  source="chevron-right"
+                  size={18}
+                  color={palette.textSoft}
+                />
               </Pressable>
               {(includedInCatalog || psPurchase) && (
                 <View style={styles.stores}>
@@ -709,7 +743,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             <Ionicons
               name={CAP_META[id]?.icon || 'ellipse-outline'}
               size={13}
-              color="#3ad46b"
+              color={palette.success}
             />
             <Text style={styles.chipText}>{capLabel(t, id)}</Text>
           </View>
@@ -772,7 +806,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 <View style={[styles.mediaShot, styles.trailerFallback]} />
               )}
               <View style={styles.playBtn}>
-                <Ionicons name="play" size={18} color="#fff" />
+                <Ionicons name="play" size={18} color={palette.white} />
               </View>
             </>,
           )}
@@ -822,7 +856,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             <Icon
               source={descriptionExpanded ? 'chevron-up' : 'chevron-down'}
               size={16}
-              color="#8A9A92"
+              color={palette.textSoft}
             />
             <Text style={styles.descriptionMoreText}>
               {descriptionExpanded ? t('Collapse') : t('Expand')}
@@ -883,7 +917,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               <Ionicons
                 name={isFavorite ? 'heart' : 'heart-outline'}
                 size={22}
-                color={isFavorite ? '#ff5347' : '#fff'}
+                color={isFavorite ? palette.sale : palette.white}
               />
               <Text style={styles.tvFavoriteText}>
                 {t('LibraryFilterFavorite')}
@@ -991,16 +1025,16 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(5,6,8,0.55)',
+    backgroundColor: alpha(palette.scrim, 0.55),
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroOverlay: {
     padding: 16,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: alpha(palette.black, 0.35),
   },
-  heroTitle: {fontSize: 22, fontWeight: '800', color: '#fff'},
-  heroMeta: {fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 2},
+  heroTitle: {fontSize: 22, fontWeight: '800', color: palette.white},
+  heroMeta: {fontSize: 12, color: alpha(palette.white, 0.85), marginTop: 2},
   body: {padding: 16, gap: 16},
   // TV two-pane split: a fixed-width left column (art + identity, never
   // scrolls) beside a scrolling right column for everything else.
@@ -1012,42 +1046,46 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
   },
   tvIdentity: {gap: 10},
   tvTitle: {fontSize: 20, fontWeight: '800'},
-  tvGenres: {fontSize: 12, color: '#8A9A92'},
+  tvGenres: {fontSize: 12, color: palette.textSoft},
   tvRight: {flex: 1},
   tvRightContent: {gap: 16, paddingBottom: 32},
   ratingRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
   starsRow: {flexDirection: 'row'},
   ratingNum: {fontSize: 13, fontWeight: '700'},
-  ratingCount: {fontSize: 11.5, color: '#8A9A92'},
+  ratingCount: {fontSize: 11.5, color: palette.textSoft},
   metaRow: {flexDirection: 'row', gap: 24},
   metaCol: {gap: 1},
-  metaKey: {fontSize: 10.5, color: '#8A9A92', textTransform: 'uppercase'},
+  metaKey: {
+    fontSize: 10.5,
+    color: palette.textSoft,
+    textTransform: 'uppercase',
+  },
   metaVal: {fontSize: 13, fontWeight: '600'},
   sectionLabel: {
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: '#8A9A92',
+    color: palette.textSoft,
   },
   secTitle: {
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: '#8A9A92',
+    color: palette.textSoft,
     marginBottom: 8,
   },
   providerCard: {
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: 'rgba(140,140,150,0.1)',
+    backgroundColor: alpha(palette.text, 0.1),
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.2)',
+    borderColor: alpha(palette.text, 0.2),
   },
   providerCardSpaced: {marginTop: 8, marginBottom: 8},
   providerRow: {
@@ -1064,15 +1102,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  xcloudIconBg: {backgroundColor: 'rgba(16,124,16,0.18)'},
-  gfnIconBg: {backgroundColor: 'rgba(118,185,0,0.18)'},
-  psplusIconBg: {backgroundColor: 'rgba(0,112,209,0.18)'},
+  xcloudIconBg: {backgroundColor: alpha(palette.provider.xbox, 0.18)},
+  gfnIconBg: {backgroundColor: alpha(palette.provider.gfn, 0.18)},
+  psplusIconBg: {backgroundColor: alpha(palette.provider.ps, 0.18)},
   dimIconBg: {backgroundColor: DIM_ICON_BG},
   providerIconText: {fontWeight: '800', fontSize: 13},
   providerText: {flex: 1, gap: 1},
   // 10-foot viewing on TV gets a small bump over phone's own sizes.
   providerName: {fontSize: Platform.isTV ? 15 : 14, fontWeight: '700'},
-  providerSub: {fontSize: Platform.isTV ? 12.5 : 11.5, color: '#8A9A92'},
+  providerSub: {fontSize: Platform.isTV ? 12.5 : 11.5, color: palette.textSoft},
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -1080,22 +1118,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   priceNow: {fontSize: 12.5, fontWeight: '800'},
-  priceNowSale: {color: '#ff5347'},
+  priceNowSale: {color: palette.sale},
   // An included-in-catalog title's price: struck through, with the "included"
   // note beside it.
   priceStruck: {
-    color: '#8A9A92',
+    color: palette.textSoft,
     textDecorationLine: 'line-through',
   },
   psIncludedText: {fontSize: 11.5, fontWeight: '700', color: PS_MARK_COLOR},
   priceWas: {
     fontSize: 11,
-    color: '#8A9A92',
+    color: palette.textSoft,
     textDecorationLine: 'line-through',
   },
   stores: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(140,140,150,0.2)',
+    borderTopColor: alpha(palette.text, 0.2),
   },
   storeRow: {
     flexDirection: 'row',
@@ -1109,11 +1147,11 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 6,
-    backgroundColor: 'rgba(140,140,150,0.16)',
+    backgroundColor: alpha(palette.text, 0.16),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  storeMarkText: {fontSize: 9, fontWeight: '800', color: '#8A9A92'},
+  storeMarkText: {fontSize: 9, fontWeight: '800', color: palette.textSoft},
   storeText: {flex: 1, gap: 1},
   storeName: {fontSize: 13, fontWeight: '600'},
   // Informational PS rows under the PS card (included / trial / purchase) --
@@ -1131,12 +1169,12 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     paddingHorizontal: 6,
     borderRadius: 5,
-    backgroundColor: '#E67E22',
+    backgroundColor: palette.warning,
   },
-  salePillText: {fontSize: 10, fontWeight: '800', color: '#2B1400'},
-  saleUntil: {fontSize: 10.5, color: '#E67E22'},
+  salePillText: {fontSize: 10, fontWeight: '800', color: palette.onAccent},
+  saleUntil: {fontSize: 10.5, color: palette.warning},
   storeRowEnd: {flexDirection: 'row', alignItems: 'center', gap: 6},
-  ownedText: {fontSize: 11, fontWeight: '700', color: NVIDIA_ACCENT},
+  ownedText: {fontSize: 11, fontWeight: '700', color: palette.provider.gfn},
   // TV: a real button-sized target (the remote lands on it), not a bare icon.
   storeLinkBtn: Platform.isTV
     ? {
@@ -1144,7 +1182,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         borderWidth: 2,
         borderColor: 'transparent',
-        backgroundColor: 'rgba(255,255,255,0.07)',
+        backgroundColor: alpha(palette.white, 0.07),
       }
     : {padding: 2},
   tvInfoButton: {
@@ -1157,13 +1195,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: 'transparent',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: alpha(palette.white, 0.07),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  tvFavoriteText: {fontSize: 15, fontWeight: '700', color: '#E6ECE8'},
+  tvFavoriteText: {fontSize: 15, fontWeight: '700', color: palette.text},
   mediaShotButton: {
     padding: 4,
     borderRadius: 12,
@@ -1182,10 +1220,14 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 6,
   },
-  descriptionMoreText: {fontSize: 12.5, fontWeight: '700', color: '#8A9A92'},
+  descriptionMoreText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: palette.textSoft,
+  },
   viewerRoot: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
+    backgroundColor: alpha(palette.black, 0.92),
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -1193,7 +1235,7 @@ const styles = StyleSheet.create({
   viewerImage: {width: '100%', height: '100%'},
   rememberedNote: {
     fontSize: 11.5,
-    color: '#8A9A92',
+    color: palette.textSoft,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -1205,9 +1247,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(140,140,150,0.1)',
+    backgroundColor: alpha(palette.text, 0.1),
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.2)',
+    borderColor: alpha(palette.text, 0.2),
   },
   chipText: {fontSize: 11.5, fontWeight: '600'},
   mediaRail: {gap: 8},
@@ -1216,7 +1258,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 94,
     borderRadius: 8,
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
   },
   mediaSrc: {
     position: 'absolute',
@@ -1228,10 +1270,10 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     paddingHorizontal: 4,
     borderRadius: 4,
-    backgroundColor: 'rgba(5,6,8,0.6)',
-    color: 'rgba(255,255,255,0.85)',
+    backgroundColor: alpha(palette.scrim, 0.6),
+    color: alpha(palette.white, 0.85),
   },
-  trailerFallback: {backgroundColor: 'rgba(140,140,150,0.2)'},
+  trailerFallback: {backgroundColor: alpha(palette.text, 0.2)},
   playBtn: {
     position: 'absolute',
     top: '50%',
@@ -1241,11 +1283,11 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(16,124,16,0.92)',
+    backgroundColor: alpha(palette.provider.xbox, 0.92),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  description: {fontSize: 13, lineHeight: 19, color: '#B7C6BD'},
+  description: {fontSize: 13, lineHeight: 19, color: palette.textSoft},
 });
 
 export default LibraryTitleDetailView;

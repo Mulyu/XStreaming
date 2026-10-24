@@ -1,9 +1,10 @@
 import React from 'react';
 import {View, StyleSheet, Dimensions} from 'react-native';
+import {alpha, palette} from '../config/palette';
 
 const GridBackground = ({
   gridSize = 20,
-  gridColor = 'rgba(200, 200, 200, 0.2)',
+  gridColor = alpha(palette.text, 0.2),
 }) => {
   const {width, height} = Dimensions.get('window');
 

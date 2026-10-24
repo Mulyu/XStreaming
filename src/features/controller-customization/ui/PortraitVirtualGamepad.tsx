@@ -6,6 +6,7 @@ import {useTranslation} from 'react-i18next';
 import PreviewButton from './GamepadButtonPreview';
 import {getButtonBaseSize} from '../lib/gamepadLayout';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {alpha, palette} from '../../../shared/config/palette';
 
 export type PortraitGamepadControl = {
   name: string;
@@ -616,13 +617,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 59,
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    backgroundColor: alpha(palette.white, 0.28),
     overflow: 'hidden',
   },
   analogStickHandle: {
-    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    backgroundColor: alpha(palette.white, 0.82),
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.92)',
+    borderColor: alpha(palette.white, 0.92),
   },
   toolbar: {
     position: 'absolute',
@@ -636,20 +637,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 24,
-    backgroundColor: 'rgba(10, 10, 10, 0.78)',
+    backgroundColor: alpha(palette.scrim, 0.78),
   },
   editButton: {
-    backgroundColor: 'rgba(10, 10, 10, 0.68)',
+    backgroundColor: alpha(palette.scrim, 0.68),
   },
   editControl: {
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: alpha(palette.white, 0.16),
   },
   stickPreview: {
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    backgroundColor: alpha(palette.white, 0.35),
   },
   deleteButton: {
     position: 'absolute',
@@ -658,7 +659,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    backgroundColor: alpha(palette.black, 0.72),
   },
 });
 

@@ -4,6 +4,7 @@ import {Button, RadioButton, Text, Divider} from 'react-native-paper';
 import Slider from '@react-native-community/slider';
 import type {Ds5SettingsViewModel} from '../model/useDs5Settings';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {palette} from '../../../shared/config/palette';
 
 type Props = Ds5SettingsViewModel;
 
@@ -52,7 +53,7 @@ const Ds5SettingsView: React.FC<Props> = ({
               onValueChange={onStartPosChange}
               lowerLimit={0}
               minimumTrackTintColor={primaryColor}
-              maximumTrackTintColor="grey"
+              maximumTrackTintColor={palette.textDim}
             />
           </View>
         ) : null}
@@ -69,7 +70,7 @@ const Ds5SettingsView: React.FC<Props> = ({
               onValueChange={onEndPosChange}
               lowerLimit={0}
               minimumTrackTintColor={primaryColor}
-              maximumTrackTintColor="grey"
+              maximumTrackTintColor={palette.textDim}
             />
           </View>
         ) : null}
@@ -86,7 +87,7 @@ const Ds5SettingsView: React.FC<Props> = ({
               onValueChange={onForceChange}
               lowerLimit={0}
               minimumTrackTintColor={primaryColor}
-              maximumTrackTintColor="grey"
+              maximumTrackTintColor={palette.textDim}
             />
           </View>
         ) : null}
@@ -103,7 +104,7 @@ const Ds5SettingsView: React.FC<Props> = ({
               onValueChange={onFrequencyChange}
               lowerLimit={0}
               minimumTrackTintColor={primaryColor}
-              maximumTrackTintColor="grey"
+              maximumTrackTintColor={palette.textDim}
             />
           </View>
         ) : null}

@@ -5,8 +5,7 @@ import RNSlider from '@react-native-community/slider';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
 import {RailButton, SegOption} from '../../../shared/ui/RailControls';
 import {TV_FOCUS_COLOR as FOCUS_COLOR} from '../../../shared/ui/tvFocus';
-
-const PS_ACCENT = '#0070D1';
+import {alpha, palette} from '../../../shared/config/palette';
 
 // Grouped-section layout ported from native-stream's own StreamControlRail
 // (same group labels, segmented control, slider, and focus-ring styling),
@@ -126,14 +125,14 @@ const PsPlusControlRail: React.FC<Props> = ({
         onPress={onCloseControlRail}
         onFocus={() => setCloseFocused(true)}
         onBlur={() => setCloseFocused(false)}
-        android_ripple={{color: 'rgba(255,255,255,0.15)'}}>
-        <Icon source="close" size={16} color="#8a9a92" />
+        android_ripple={{color: alpha(palette.white, 0.15)}}>
+        <Icon source="close" size={16} color={palette.textSoft} />
       </Pressable>
 
       <View style={styles.group}>
         <Text style={styles.groupLabel}>{t('Input')}</Text>
         <RailButton
-          accent={PS_ACCENT}
+          accent={palette.provider.ps}
           icon={
             showVirtualGamepad ? 'gamepad-variant' : 'gamepad-variant-outline'
           }
@@ -142,20 +141,20 @@ const PsPlusControlRail: React.FC<Props> = ({
           onPress={onToggleVirtualGamepad}
         />
         <RailButton
-          accent={PS_ACCENT}
+          accent={palette.provider.ps}
           icon="gesture-swipe"
           label={t('Touchpad')}
           active={touchpadVisible}
           onPress={onToggleTouchpad}
         />
         <RailButton
-          accent={PS_ACCENT}
+          accent={palette.provider.ps}
           icon="pencil-outline"
           label={t('Edit Virtual Gamepad')}
           onPress={onEditGamepadLayout}
         />
         <RailButton
-          accent={PS_ACCENT}
+          accent={palette.provider.ps}
           icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
           label={t('Vibration')}
           active={vibrationEnabled}
@@ -178,9 +177,9 @@ const PsPlusControlRail: React.FC<Props> = ({
             value={audioGain}
             onValueChange={setLiveVolume}
             onSlidingComplete={onAudioGainChange}
-            minimumTrackTintColor={PS_ACCENT}
-            maximumTrackTintColor="rgba(255,255,255,0.14)"
-            thumbTintColor={PS_ACCENT}
+            minimumTrackTintColor={palette.provider.ps}
+            maximumTrackTintColor={alpha(palette.white, 0.14)}
+            thumbTintColor={palette.provider.ps}
           />
         </View>
       </View>
@@ -188,7 +187,7 @@ const PsPlusControlRail: React.FC<Props> = ({
       <View style={styles.group}>
         <Text style={styles.groupLabel}>{t('Display')}</Text>
         <RailButton
-          accent={PS_ACCENT}
+          accent={palette.provider.ps}
           icon="chart-line"
           label={t('Perf stats')}
           active={performanceVisible}
@@ -210,7 +209,7 @@ const PsPlusControlRail: React.FC<Props> = ({
         )}
         {coverAvailable && (
           <RailButton
-            accent={PS_ACCENT}
+            accent={palette.provider.ps}
             icon="image-outline"
             label={t('Cover controls')}
             active={coverPresented}
@@ -223,21 +222,21 @@ const PsPlusControlRail: React.FC<Props> = ({
         <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
         <View style={styles.segRow}>
           <SegOption
-            accent={PS_ACCENT}
+            accent={palette.provider.ps}
             icon="align-vertical-top"
             label={t('Top')}
             active={screenPosition === 'top'}
             onPress={() => onSetScreenPosition('top')}
           />
           <SegOption
-            accent={PS_ACCENT}
+            accent={palette.provider.ps}
             icon="align-vertical-center"
             label={t('Center')}
             active={screenPosition === 'center'}
             onPress={() => onSetScreenPosition('center')}
           />
           <SegOption
-            accent={PS_ACCENT}
+            accent={palette.provider.ps}
             icon="align-vertical-bottom"
             label={t('Bottom')}
             active={screenPosition === 'bottom'}
@@ -245,7 +244,7 @@ const PsPlusControlRail: React.FC<Props> = ({
           />
         </View>
         <RailButton
-          accent={PS_ACCENT}
+          accent={palette.provider.ps}
           icon="aspect-ratio"
           label={videoFormatLabel}
           onPress={onCycleVideoFormat}
@@ -255,7 +254,7 @@ const PsPlusControlRail: React.FC<Props> = ({
       <View style={[styles.group, styles.sessionGroup]}>
         <Text style={styles.groupLabel}>{t('Session')}</Text>
         <RailButton
-          accent={PS_ACCENT}
+          accent={palette.provider.ps}
           icon="power"
           label={t('Disconnect')}
           danger
@@ -272,9 +271,9 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     width: 200,
-    backgroundColor: 'rgba(8,11,10,0.92)',
+    backgroundColor: alpha(palette.scrim, 0.92),
     borderLeftWidth: 1,
-    borderLeftColor: 'rgba(238,244,239,0.14)',
+    borderLeftColor: alpha(palette.text, 0.14),
     paddingVertical: 14,
     paddingHorizontal: 10,
     gap: 14,
@@ -287,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(palette.white, 0.06),
   },
   closeBtnFocused: {
     borderWidth: 2,
@@ -303,12 +302,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: '#5c6963',
+    color: palette.textDim,
     paddingHorizontal: 4,
   },
   segRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: alpha(palette.black, 0.3),
     borderRadius: 9,
     padding: 2,
     gap: 2,
@@ -317,7 +316,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     gap: 2,
   },
-  metricLine: {fontSize: 11, color: '#8a9a92'},
+  metricLine: {fontSize: 11, color: palette.textSoft},
   sliderRow: {
     gap: 4,
     paddingHorizontal: 4,
@@ -328,11 +327,11 @@ const styles = StyleSheet.create({
   },
   sliderHeadLabel: {
     fontSize: 9.5,
-    color: '#8a9a92',
+    color: palette.textSoft,
   },
   sliderHeadValue: {
     fontSize: 9.5,
-    color: '#8a9a92',
+    color: palette.textSoft,
   },
   sliderTrack: {
     height: 28,

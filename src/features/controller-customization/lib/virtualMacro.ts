@@ -1,3 +1,4 @@
+import {palette} from '../../../shared/config/palette';
 // Three independent macro button slots. Each one's action sequence lives on
 // its own ButtonConfig entry (see gamepadLayout.ts) inside the active custom
 // gamepad profile's saved layout -- there is no shared/global macro sequence
@@ -25,9 +26,9 @@ export const isMacroButtonName = (name: any): name is VirtualMacroButtonName =>
 // mirrored here so other UI (the active-loop ring below) can match a slot's
 // own color without parsing its SVG string.
 export const MACRO_SLOT_COLORS: Record<VirtualMacroButtonName, string> = {
-  Macro1: '#2E7D32',
-  Macro2: '#1565C0',
-  Macro3: '#EF6C00',
+  Macro1: palette.pad.macro1,
+  Macro2: palette.pad.macro2,
+  Macro3: palette.pad.macro3,
 };
 
 export const VIRTUAL_MACRO_ALLOWED_BUTTONS = [

@@ -1,5 +1,6 @@
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
+import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = {
   label: string;
@@ -36,16 +37,16 @@ const KeyChip: React.FC<Props> = ({
 const styles = StyleSheet.create({
   chip: {
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(palette.white, 0.06),
     borderWidth: 1,
-    borderColor: 'rgba(238,244,239,0.16)',
+    borderColor: alpha(palette.text, 0.16),
     alignItems: 'center',
     justifyContent: 'center',
   },
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#eef4ef',
+    color: palette.text,
   },
 });
 

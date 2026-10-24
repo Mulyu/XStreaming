@@ -5,6 +5,7 @@ import {Text, Button} from 'react-native-paper';
 import Spinner from '../../../shared/ui/Spinner';
 import type {PsPlusLoginViewModel} from '../model/usePsPlusLogin';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = PsPlusLoginViewModel;
 
@@ -76,10 +77,10 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: alpha(palette.black, 0.75),
   },
   barText: {
-    color: '#fff',
+    color: palette.white,
     textAlign: 'center',
   },
 });

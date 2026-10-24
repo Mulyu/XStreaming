@@ -3,6 +3,7 @@ import {StyleSheet, View, Dimensions} from 'react-native';
 import AnalogStick from './AnalogStick';
 import ButtonView from './ButtonView';
 import SwipeAimZone, {SwipeAimRect} from '../../../shared/ui/SwipeAimZone';
+import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = {
   opacity: number;
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(255, 255, 255, .5)',
+    backgroundColor: alpha(palette.white, 0.5),
     overflow: 'hidden',
   },
 });

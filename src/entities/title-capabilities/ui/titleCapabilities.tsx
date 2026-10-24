@@ -1,5 +1,6 @@
 import React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import {palette} from '../../../shared/config/palette';
 
 // Canonical capability id -> icon + label. Labels are either translated
 // (t(...)) or kept as brand literals (4K, HDR, Dolby Atmos, ...). Used by
@@ -44,7 +45,9 @@ export const renderStars = (avg: number): React.ReactNode[] => {
     } else if (avg >= i - 0.5) {
       name = 'star-half';
     }
-    items.push(<Ionicons key={i} name={name} size={16} color="#ffc233" />);
+    items.push(
+      <Ionicons key={i} name={name} size={16} color={palette.warning} />,
+    );
   }
   return items;
 };

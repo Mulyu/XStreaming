@@ -5,8 +5,7 @@ import {useTranslation} from 'react-i18next';
 import {GfnDeviceChallenge} from '../model/auth';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
-
-const NVIDIA_ACCENT = '#76B900';
+import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = {
   visible: boolean;
@@ -43,20 +42,31 @@ function GfnSignInModal({
         <View
           style={[
             styles.modalCard,
-            {backgroundColor: theme.colors.elevation?.level3 || '#1b201d'},
+            {
+              backgroundColor:
+                theme.colors.elevation?.level3 || palette.surfaceHigh,
+            },
           ]}>
           <View style={styles.modalHeader}>
-            <Icon source="gamepad-variant" size={20} color={NVIDIA_ACCENT} />
+            <Icon
+              source="gamepad-variant"
+              size={20}
+              color={palette.provider.gfn}
+            />
             <Text style={styles.modalTitle}>{t('GfnLoginTitle')}</Text>
           </View>
 
           {status === 'starting' ? (
             <View style={styles.modalCentre}>
-              <InlineSpinner color={NVIDIA_ACCENT} />
+              <InlineSpinner color={palette.provider.gfn} />
             </View>
           ) : status === 'failed' ? (
             <View style={styles.modalCentre}>
-              <Icon source="alert-circle-outline" size={34} color="#E06666" />
+              <Icon
+                source="alert-circle-outline"
+                size={34}
+                color={palette.danger}
+              />
               <Text style={styles.modalMsg}>{t('GfnLoginFailed')}</Text>
               <Pressable
                 onPress={onRetry}
@@ -90,13 +100,13 @@ function GfnSignInModal({
                   styles.modalBtnPrimary,
                   openFocus.focused && tvFocusRing,
                 ]}>
-                <Icon source="open-in-new" size={16} color="#0B0F0C" />
+                <Icon source="open-in-new" size={16} color={palette.onAccent} />
                 <Text style={styles.modalBtnTextPrimary}>
                   {t('GfnLoginOpen')}
                 </Text>
               </Pressable>
               <View style={styles.waitingRow}>
-                <InlineSpinner size={14} color="#8A9A92" />
+                <InlineSpinner size={14} color={palette.textSoft} />
                 <Text style={styles.waitingText}>{t('GfnLoginWaiting')}</Text>
               </View>
             </>
@@ -118,7 +128,7 @@ function GfnSignInModal({
 const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: alpha(palette.black, 0.6),
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -138,21 +148,21 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
   },
-  modalMsg: {color: '#B7C6BD', fontSize: 14, textAlign: 'center'},
-  modalInstruction: {color: '#B7C6BD', fontSize: 13, lineHeight: 19},
+  modalMsg: {color: palette.textSoft, fontSize: 14, textAlign: 'center'},
+  modalInstruction: {color: palette.textSoft, fontSize: 13, lineHeight: 19},
   codeBox: {
     alignItems: 'center',
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: 'rgba(118,185,0,0.1)',
+    backgroundColor: alpha(palette.provider.gfn, 0.1),
     borderWidth: 1,
-    borderColor: 'rgba(118,185,0,0.4)',
+    borderColor: alpha(palette.provider.gfn, 0.4),
   },
   codeText: {
     fontSize: 30,
     fontWeight: '900',
     letterSpacing: 6,
-    color: '#E6ECE8',
+    color: palette.text,
   },
   modalBtn: {
     flexDirection: 'row',
@@ -162,16 +172,20 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 12,
   },
-  modalBtnPrimary: {backgroundColor: NVIDIA_ACCENT},
-  modalBtnText: {color: '#8A9A92', fontSize: 14, fontWeight: '700'},
-  modalBtnTextPrimary: {color: '#0B0F0C', fontSize: 14, fontWeight: '800'},
+  modalBtnPrimary: {backgroundColor: palette.provider.gfn},
+  modalBtnText: {color: palette.textSoft, fontSize: 14, fontWeight: '700'},
+  modalBtnTextPrimary: {
+    color: palette.onAccent,
+    fontSize: 14,
+    fontWeight: '800',
+  },
   waitingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  waitingText: {color: '#8A9A92', fontSize: 13},
+  waitingText: {color: palette.textSoft, fontSize: 13},
 });
 
 export default GfnSignInModal;

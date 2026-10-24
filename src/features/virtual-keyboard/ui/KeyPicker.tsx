@@ -4,8 +4,9 @@ import {Portal, Modal, Card, Icon} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {KEY_CATEGORIES, PickableKey} from '../lib/virtualKeys';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {alpha, palette} from '../../../shared/config/palette';
 
-const ACCENT = '#76B900';
+const ACCENT = palette.provider.gfn;
 
 export type KeyPickerProps = {
   visible: boolean;
@@ -40,7 +41,7 @@ const KeyPicker: React.FC<KeyPickerProps> = ({
                 onPress={onDismiss}
                 onFocus={closeFocus.onFocus}
                 onBlur={closeFocus.onBlur}>
-                <Icon source="close" size={14} color="#8a9a92" />
+                <Icon source="close" size={14} color={palette.textSoft} />
               </Pressable>
             </View>
 
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
     marginHorizontal: '12%',
   },
   card: {
-    backgroundColor: 'rgba(12,15,13,0.98)',
+    backgroundColor: alpha(palette.scrim, 0.98),
     borderRadius: 16,
   },
   header: {
@@ -119,14 +120,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#eef4ef',
+    color: palette.text,
   },
   closeBtn: {
     marginLeft: 'auto',
     width: 26,
     height: 26,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(palette.white, 0.06),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(238,244,239,0.16)',
+    borderColor: alpha(palette.text, 0.16),
     marginRight: 6,
   },
   tabActive: {
@@ -149,11 +150,11 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8a9a92',
+    color: palette.textSoft,
     letterSpacing: 0.3,
   },
   tabLabelActive: {
-    color: '#0a0f0c',
+    color: palette.onAccent,
   },
   grid: {
     maxHeight: 260,
@@ -167,16 +168,16 @@ const styles = StyleSheet.create({
     width: 52,
     height: 40,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: alpha(palette.white, 0.04),
     borderWidth: 1,
-    borderColor: 'rgba(238,244,239,0.1)',
+    borderColor: alpha(palette.text, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
   },
   keyLabel: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: '#eef4ef',
+    color: palette.text,
   },
 });
 

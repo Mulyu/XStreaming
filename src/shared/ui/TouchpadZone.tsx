@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {Icon} from 'react-native-paper';
 import {useTVFocus, tvFocusRing} from './tvFocus';
+import {alpha, palette} from '../config/palette';
 
 export type TouchpadFinger = {id: number; x: number; y: number};
 
@@ -92,7 +93,7 @@ const TouchpadZone: React.FC<TouchpadZoneProps> = ({
         onPress={onClose}
         onFocus={closeFocus.onFocus}
         onBlur={closeFocus.onBlur}>
-        <Icon source="close" size={16} color="#E6ECE8" />
+        <Icon source="close" size={16} color={palette.text} />
       </Pressable>
     </View>
   );
@@ -105,8 +106,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: alpha(palette.white, 0.35),
+    backgroundColor: alpha(palette.white, 0.1),
     overflow: 'hidden',
   },
   hintWrap: {
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hint: {
-    color: 'rgba(255,255,255,0.45)',
+    color: alpha(palette.white, 0.45),
     fontSize: 11,
     fontWeight: '600',
   },
@@ -126,9 +127,9 @@ const styles = StyleSheet.create({
     width: FINGER_SIZE,
     height: FINGER_SIZE,
     borderRadius: FINGER_SIZE / 2,
-    backgroundColor: 'rgba(0,112,209,0.55)',
+    backgroundColor: alpha(palette.provider.ps, 0.55),
     borderWidth: 2,
-    borderColor: '#6DB4F5',
+    borderColor: palette.provider.psBright,
   },
   close: {
     position: 'absolute',
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: alpha(palette.black, 0.5),
   },
 });
 

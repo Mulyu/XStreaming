@@ -10,9 +10,10 @@ import {
   VK,
 } from '../../../entities/gfn-input';
 import type {KeyboardModifiers} from '../lib/useKeyboardModifiers';
+import {alpha, palette} from '../../../shared/config/palette';
 
-const ACCENT = '#76B900'; // GFN-only feature -- always the NVIDIA accent.
-const FOCUS_COLOR = '#FFD54A';
+const ACCENT = palette.provider.gfn; // GFN-only feature -- always the NVIDIA accent.
+const FOCUS_COLOR = palette.focusRing;
 
 type KeyDef = {
   label: string;
@@ -179,7 +180,7 @@ const KeyButton: React.FC<{
       ]}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
-      android_ripple={{color: 'rgba(255,255,255,0.15)'}}
+      android_ripple={{color: alpha(palette.white, 0.15)}}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}>
       <Text
@@ -272,8 +273,8 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
           onPress={onClose}
           onFocus={() => setCloseFocused(true)}
           onBlur={() => setCloseFocused(false)}
-          android_ripple={{color: 'rgba(255,255,255,0.15)'}}>
-          <Icon source="close" size={14} color="#8a9a92" />
+          android_ripple={{color: alpha(palette.white, 0.15)}}>
+          <Icon source="close" size={14} color={palette.textSoft} />
         </Pressable>
       </View>
 
@@ -309,7 +310,11 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                 onPressOut={() =>
                   handleKeyPressOut({label: 'up', vk: VK.Up, flex: 1})
                 }>
-                <Icon source={ARROW_KEYS[0].icon} size={14} color="#eef4ef" />
+                <Icon
+                  source={ARROW_KEYS[0].icon}
+                  size={14}
+                  color={palette.text}
+                />
               </Pressable>
               <View style={styles.arrowGap} />
             </View>
@@ -324,7 +329,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                   onPressOut={() =>
                     handleKeyPressOut({label: a.label, vk: a.vk, flex: 1})
                   }>
-                  <Icon source={a.icon} size={14} color="#eef4ef" />
+                  <Icon source={a.icon} size={14} color={palette.text} />
                 </Pressable>
               ))}
             </View>
@@ -341,9 +346,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(8,11,10,0.94)',
+    backgroundColor: alpha(palette.scrim, 0.94),
     borderTopWidth: 1,
-    borderTopColor: 'rgba(238,244,239,0.14)',
+    borderTopColor: alpha(palette.text, 0.14),
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 14,
@@ -354,7 +359,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(238,244,239,0.18)',
+    backgroundColor: alpha(palette.text, 0.18),
     marginBottom: 8,
   },
   header: {
@@ -365,14 +370,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#eef4ef',
+    color: palette.text,
   },
   closeBtn: {
     marginLeft: 'auto',
     width: 26,
     height: 26,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(palette.white, 0.06),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -396,14 +401,14 @@ const styles = StyleSheet.create({
   key: {
     height: '100%',
     borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(palette.white, 0.05),
     borderWidth: 1,
-    borderColor: 'rgba(238,244,239,0.1)',
+    borderColor: alpha(palette.text, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
   },
   keyActive: {
-    backgroundColor: 'rgba(118,185,0,0.22)',
+    backgroundColor: alpha(palette.provider.gfn, 0.22),
     borderColor: ACCENT,
     borderWidth: 2,
   },
@@ -414,15 +419,15 @@ const styles = StyleSheet.create({
   keyLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#eef4ef',
+    color: palette.text,
   },
   keyLabelMono: {
     fontSize: 10.5,
     fontWeight: '600',
-    color: '#eef4ef',
+    color: palette.text,
   },
   keyLabelActive: {
-    color: '#a7e04a',
+    color: palette.provider.gfnBright,
   },
   navCluster: {
     width: 172,
@@ -455,9 +460,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(palette.white, 0.05),
     borderWidth: 1,
-    borderColor: 'rgba(238,244,239,0.1)',
+    borderColor: alpha(palette.text, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
   },

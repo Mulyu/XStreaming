@@ -90,6 +90,7 @@ import {
   VIRTUAL_MACRO_ALLOWED_BUTTONS,
   isMacroButtonName,
 } from '../../features/controller-customization';
+import {palette} from '../../shared/config/palette';
 
 const log = debugFactory('NativeStreamScreen');
 
@@ -3853,39 +3854,39 @@ export function NativeStreamScreenBase({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: palette.black,
   },
   playerContainer: {
     flex: 1,
     width: '100%',
-    backgroundColor: 'black',
+    backgroundColor: palette.black,
   },
   player: {
     flex: 1,
     width: '100%',
-    backgroundColor: 'black',
+    backgroundColor: palette.black,
   },
   portraitContainer: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: palette.black,
   },
   portraitVideoFrame: {
     width: '100%',
-    backgroundColor: 'black',
+    backgroundColor: palette.black,
   },
   portraitPlayerContainer: {
     flex: 1,
     width: '100%',
-    backgroundColor: 'black',
+    backgroundColor: palette.black,
   },
   portraitPlayer: {
     flex: 1,
     width: '100%',
-    backgroundColor: 'black',
+    backgroundColor: palette.black,
   },
   portraitControls: {
     flex: 1,
-    backgroundColor: '#050505',
+    backgroundColor: palette.bg,
   },
 });
 

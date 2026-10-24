@@ -4,6 +4,7 @@ import {Text} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {getSettings} from '../../../shared/lib/settings';
 import {getXcloudRegionFlag} from '../../../features/app-settings';
+import {alpha, palette} from '../../../shared/config/palette';
 
 const {BatteryModule} = NativeModules;
 
@@ -161,13 +162,13 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   wrapperH: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: alpha(palette.black, 0.5),
     padding: 2,
     flexDirection: 'row',
   },
   text: {
     fontSize: 10,
-    color: '#fff',
+    color: palette.white,
   },
 });
 

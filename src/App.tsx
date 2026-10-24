@@ -66,10 +66,6 @@ import HistoryScreen from './pages/history';
 import PsPlusLoginScreen from './pages/ps-plus-login';
 import PsPlusStreamScreen from './pages/ps-plus-stream';
 import updater from './shared/lib/updater';
-import {
-  applyPrimaryColorToPaperTheme,
-  DEFAULT_THEME_PRIMARY_COLOR,
-} from './shared/lib/themeColor';
 
 import {useTranslation} from 'react-i18next';
 
@@ -78,6 +74,7 @@ import {SystemBars} from 'react-native-edge-to-edge';
 import './i18n';
 import {HubTabBar, TV_RAIL_WIDTH} from './widgets/hub-tab-bar';
 import {useTVFocus, tvFocusRing} from './shared/ui/tvFocus';
+import {palette} from './shared/config/palette';
 
 const RootStack = createStackNavigator();
 const MainTab = createBottomTabNavigator();
@@ -101,7 +98,7 @@ const {DarkTheme} = adaptNavigationTheme({
   reactNavigationDark: NavigationDarkTheme,
 });
 
-const PAGE_BACKGROUND_DARK = '#0E0E10';
+const PAGE_BACKGROUND_DARK = palette.bg;
 
 const withPageBackground = (ScreenComponent: any) => {
   const WrappedScreen = (props: any) => {
@@ -438,14 +435,10 @@ function App() {
     });
   }, [settings.check_update, t]);
 
-  const paperDarkTheme = applyPrimaryColorToPaperTheme(
-    {
-      ...MD3DarkTheme,
-      colors: customDarkTheme.colors,
-    },
-    'dark',
-    DEFAULT_THEME_PRIMARY_COLOR,
-  );
+  const paperDarkTheme = {
+    ...MD3DarkTheme,
+    colors: customDarkTheme.colors,
+  };
   const CombinedDarkTheme = merge(paperDarkTheme, DarkTheme);
   CombinedDarkTheme.colors.background = PAGE_BACKGROUND_DARK;
   CombinedDarkTheme.colors.card = PAGE_BACKGROUND_DARK;

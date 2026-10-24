@@ -50,6 +50,7 @@ import {
   createDefaultSwipePad,
   ensureSwipePad,
 } from '../../../features/controller-customization';
+import {alpha, palette} from '../../../shared/config/palette';
 
 export type {ButtonConfig};
 
@@ -579,7 +580,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 step={1}
                 onValueChange={val => setSwipeSens(Math.round(val))}
                 minimumTrackTintColor={theme.colors.primary}
-                maximumTrackTintColor="grey"
+                maximumTrackTintColor={palette.textDim}
               />
               <View style={styles.title}>
                 <Text>
@@ -594,7 +595,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 step={1}
                 onValueChange={val => setSwipeAccel(Math.round(val))}
                 minimumTrackTintColor={theme.colors.primary}
-                maximumTrackTintColor="grey"
+                maximumTrackTintColor={palette.textDim}
               />
               <Text style={styles.swipeHint}>
                 {t('SwipeAimAccelerationDesc')}
@@ -705,7 +706,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     step={500}
                     onValueChange={val => setGyroSensitivityX(Math.round(val))}
                     minimumTrackTintColor={theme.colors.primary}
-                    maximumTrackTintColor="grey"
+                    maximumTrackTintColor={palette.textDim}
                   />
 
                   <View style={styles.title}>
@@ -721,7 +722,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     step={500}
                     onValueChange={val => setGyroSensitivityY(Math.round(val))}
                     minimumTrackTintColor={theme.colors.primary}
-                    maximumTrackTintColor="grey"
+                    maximumTrackTintColor={palette.textDim}
                   />
 
                   {/* Each toggle is independent, so any combination applies
@@ -808,7 +809,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                         handleChangeSize(_val);
                       }}
                       minimumTrackTintColor={theme.colors.primary}
-                      maximumTrackTintColor="grey"
+                      maximumTrackTintColor={palette.textDim}
                     />
                   </>
                 )}
@@ -856,7 +857,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                   />
                   <Button
                     mode="text"
-                    textColor="#D32F2F"
+                    textColor={palette.danger}
                     onPress={handleRemoveKey}
                     onFocus={removeKeyFocus.onFocus}
                     onBlur={removeKeyFocus.onBlur}
@@ -938,7 +939,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                       handleChangeMacroLoopIntervalMs(val, true)
                     }
                     minimumTrackTintColor={theme.colors.primary}
-                    maximumTrackTintColor="grey"
+                    maximumTrackTintColor={palette.textDim}
                   />
                 </>
               )}
@@ -1084,7 +1085,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     })
                   }
                   minimumTrackTintColor={theme.colors.primary}
-                  maximumTrackTintColor="grey"
+                  maximumTrackTintColor={palette.textDim}
                 />
 
                 <Text style={styles.title}>
@@ -1106,7 +1107,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                     })
                   }
                   minimumTrackTintColor={theme.colors.primary}
-                  maximumTrackTintColor="grey"
+                  maximumTrackTintColor={palette.textDim}
                 />
               </>
             ) : (
@@ -1168,7 +1169,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 })
               }
               minimumTrackTintColor={theme.colors.primary}
-              maximumTrackTintColor="grey"
+              maximumTrackTintColor={palette.textDim}
             />
 
             <Text style={styles.title}>
@@ -1192,14 +1193,14 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 })
               }
               minimumTrackTintColor={theme.colors.primary}
-              maximumTrackTintColor="grey"
+              maximumTrackTintColor={palette.textDim}
             />
 
             <View style={styles.macroModalActions}>
               {editingMacroStep?.index !== -1 && (
                 <Button
                   mode="text"
-                  textColor="#D32F2F"
+                  textColor={palette.danger}
                   onPress={deleteMacroStep}
                   onFocus={deleteMacroStepFocus.onFocus}
                   onBlur={deleteMacroStepFocus.onBlur}
@@ -1445,7 +1446,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               y={button.y}
               key={button.name + reloadKey}
               renderSize={100}
-              renderColor={hidden ? 'rgba(255,255,255,0.25)' : 'white'}
+              renderColor={hidden ? alpha(palette.white, 0.25) : palette.white}
               isCircle
               onShortPressRelease={() => {
                 setCurrentButton(button.name);
@@ -1670,11 +1671,11 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: alpha(palette.black, 0.55),
     zIndex: 999,
   },
   modal: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: alpha(palette.black, 0.5),
     marginLeft: '25%',
     marginRight: '25%',
   },
@@ -1700,7 +1701,7 @@ const styles = StyleSheet.create({
   toolbarInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: alpha(palette.black, 0.65),
     borderRadius: 12,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -1710,7 +1711,7 @@ const styles = StyleSheet.create({
     width: 1,
     height: 24,
     marginHorizontal: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: alpha(palette.white, 0.25),
   },
   toolbarIcon: {
     margin: 0,
@@ -1728,7 +1729,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -4,
   },
   chipText: {
-    color: '#fff',
+    color: palette.white,
     flexShrink: 1,
   },
   hiddenButton: {
@@ -1737,14 +1738,14 @@ const styles = StyleSheet.create({
   pad: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#2FD24B',
+    borderColor: palette.accent,
     borderRadius: 12,
-    backgroundColor: 'rgba(47,210,75,0.12)',
+    backgroundColor: alpha(palette.accent, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   padLabel: {
-    color: '#2FD24B',
+    color: palette.accent,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -1752,9 +1753,9 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 4,
-    backgroundColor: '#2FD24B',
+    backgroundColor: palette.accent,
     borderWidth: 2,
-    borderColor: '#04140a',
+    borderColor: palette.onAccent,
   },
   swipeHint: {
     marginTop: 8,

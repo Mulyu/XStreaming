@@ -7,6 +7,7 @@ import RNRestart from 'react-native-restart';
 import LinkText from '../../../shared/ui/LinkText';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {palette} from '../../../shared/config/palette';
 
 type Props = {
   data: any;
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   red: {
-    color: 'red',
+    color: palette.danger,
   },
   mt10: {
     marginTop: 10,
