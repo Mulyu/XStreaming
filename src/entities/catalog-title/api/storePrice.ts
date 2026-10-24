@@ -417,22 +417,15 @@ export const extractInGamePass = (product: any): boolean => {
 
 // Fetch prices for many Store ids, batched concurrently. Never rejects — a
 // failed batch contributes nothing and flips `ok` to false.
-export const fetchPrices = async (
-  storeIds: string[],
-  market = 'US',
-  language = 'en-US',
-): Promise<FetchPricesResult> => {
-  const ids = Array.from(
-    new Set((storeIds || []).filter(id => typeof id === 'string' && id)),
-  );
-  const prices: Record<string, PriceInfo> = {};
-  const ratings: Record<string, RatingInfo> = {};
-  const gamePass: Record<string, true> = {};
-
-  if (ids.length === 0) {
-    return {prices, ratings, gamePass, ok: true};
-  }
-
+// One DisplayCatalog request per BATCH_SIZE ids, a few in parallel; `handle`
+// sees every product that comes back. Resolves to whether every batch
+// succeeded.
+const fetchCatalogProducts = async (
+  ids: string[],
+  market: string,
+  language: string,
+  handle: (product: any) => void,
+): Promise<boolean> => {
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += BATCH_SIZE) {
     chunks.push(ids.slice(i, i + BATCH_SIZE));
@@ -454,31 +447,106 @@ export const fetchPrices = async (
       const products = res?.data?.Products;
       if (Array.isArray(products)) {
         products.forEach((product: any) => {
-          if (!product?.ProductId) {
-            return;
-          }
-          // Key by the canonical uppercase big-id so lookups are case-safe.
-          const key = String(product.ProductId).toUpperCase();
-          const info = extractPrice(product);
-          if (info) {
-            prices[key] = info;
-          }
-          const rating = extractRating(product);
-          if (rating) {
-            ratings[key] = rating;
-          }
-          if (extractInGamePass(product)) {
-            gamePass[key] = true;
+          if (product?.ProductId) {
+            handle(product);
           }
         });
       }
     } catch (e) {
       ok = false;
-      log.info('fetchPrices batch failed:', e);
+      log.info('catalog batch failed:', e);
+    }
+  });
+  return ok;
+};
+
+const uniqueIds = (storeIds: string[]): string[] =>
+  Array.from(
+    new Set((storeIds || []).filter(id => typeof id === 'string' && id)),
+  );
+
+export const fetchPrices = async (
+  storeIds: string[],
+  market = 'US',
+  language = 'en-US',
+): Promise<FetchPricesResult> => {
+  const ids = uniqueIds(storeIds);
+  const prices: Record<string, PriceInfo> = {};
+  const ratings: Record<string, RatingInfo> = {};
+  const gamePass: Record<string, true> = {};
+
+  if (ids.length === 0) {
+    return {prices, ratings, gamePass, ok: true};
+  }
+
+  const ok = await fetchCatalogProducts(ids, market, language, product => {
+    // Key by the canonical uppercase big-id so lookups are case-safe.
+    const key = String(product.ProductId).toUpperCase();
+    const info = extractPrice(product);
+    if (info) {
+      prices[key] = info;
+    }
+    const rating = extractRating(product);
+    if (rating) {
+      ratings[key] = rating;
+    }
+    if (extractInGamePass(product)) {
+      gamePass[key] = true;
     }
   });
 
   return {prices, ratings, gamePass, ok};
+};
+
+// What a Store row needs to be drawn for a title that isn't in the signed-in
+// account's own (entitled) catalog: just a name, a cover and the price.
+export type ProductBasics = {title: string; imageUrl?: string};
+
+export const extractBasics = (product: any): ProductBasics | null => {
+  const lp = product?.LocalizedProperties?.[0];
+  const title = lp?.ProductTitle;
+  if (!title || typeof title !== 'string') {
+    return null;
+  }
+  const images: any[] = Array.isArray(lp.Images) ? lp.Images : [];
+  const pick = (purpose: string): string => {
+    const found = images.find(im => im?.ImagePurpose === purpose && im?.Uri);
+    return found ? absUri(found.Uri) : '';
+  };
+  const imageUrl =
+    pick('BoxArt') || pick('Tile') || pick('Poster') || pick('Logo') || '';
+  return {title, imageUrl: imageUrl || undefined};
+};
+
+export type FetchBasicsResult = {
+  basics: Record<string, ProductBasics>;
+  prices: Record<string, PriceInfo>;
+  ok: boolean;
+};
+
+export const fetchProductBasics = async (
+  storeIds: string[],
+  market = 'US',
+  language = 'en-US',
+): Promise<FetchBasicsResult> => {
+  const ids = uniqueIds(storeIds);
+  const basics: Record<string, ProductBasics> = {};
+  const prices: Record<string, PriceInfo> = {};
+  if (ids.length === 0) {
+    return {basics, prices, ok: true};
+  }
+  const ok = await fetchCatalogProducts(ids, market, language, product => {
+    const key = String(product.ProductId).toUpperCase();
+    const info = extractBasics(product);
+    if (info) {
+      basics[key] = info;
+    }
+    const price = extractPrice(product);
+    if (price) {
+      prices[key] = price;
+    }
+  });
+  return {basics, prices, ok};
 };
 
 export const delay = (ms: number): Promise<void> =>

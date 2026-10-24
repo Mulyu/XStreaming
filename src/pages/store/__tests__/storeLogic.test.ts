@@ -80,6 +80,55 @@ describe('buildXboxStoreRows', () => {
     expect(rows.map(r => r.rank)).toEqual([1, 3]);
   });
 
+  it('keeps unmatched ids as non-launchable rows once their basics are known and the filter is off', () => {
+    const xcloudByProductId = new Map<string, any>([
+      ['AAA', item('AAA', 'Game A')],
+    ]);
+    const basics = {BBB: {title: 'Game B', imageUrl: 'https://img/b.jpg'}};
+    const rows = buildXboxStoreRows(
+      ['AAA', 'bbb', 'CCC'],
+      xcloudByProductId,
+      {},
+      basics,
+      false,
+    );
+    // CCC has no basics yet, so it waits; BBB is shown but not launchable.
+    expect(rows.map(r => [r.id, r.rank])).toEqual([
+      ['AAA', 1],
+      ['bbb', 2],
+    ]);
+    expect(rows[0].catalogTitle).not.toBeNull();
+    expect(rows[1].catalogTitle).toBeNull();
+    expect(rows[1].title).toBe('Game B');
+    expect(rows[1].imageUrl).toBe('https://img/b.jpg');
+  });
+
+  it('drops unmatched ids when availableOnly is on, even if basics exist', () => {
+    const rows = buildXboxStoreRows(
+      ['BBB'],
+      new Map<string, any>(),
+      {},
+      {BBB: {title: 'Game B'}},
+      true,
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it('prices an unmatched row from the price map', () => {
+    const priceMap: Record<string, PriceInfo> = {
+      BBB: {listPrice: 5, msrp: 10, currencyCode: 'USD', onSale: true},
+    };
+    const rows = buildXboxStoreRows(
+      ['BBB'],
+      new Map<string, any>(),
+      priceMap,
+      {BBB: {title: 'Game B'}},
+      false,
+    );
+    expect(rows[0].discountPercent).toBe(50);
+    expect(rows[0].originalPrice).toBeDefined();
+  });
+
   it('matches productIds case-insensitively against the catalog map', () => {
     const xcloudByProductId = new Map<string, any>([
       ['AAA', item('aaa', 'Game A')],

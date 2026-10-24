@@ -18,6 +18,8 @@ import {
   loadXcloudCatalog,
   deriveMarketLanguage,
   fetchPricesWithRetry,
+  fetchProductBasics,
+  ProductBasics,
   getXcloudData,
   saveXcloudTitles,
   isXcloudTitlesFresh,
@@ -104,13 +106,14 @@ function StoreScreen() {
   const [provider, setProvider] = React.useState<Provider>('xcloud');
   const [chartKind, setChartKind] = React.useState<ChartKind>('best');
   const [saleOnly, setSaleOnly] = React.useState(false);
-  // GFN/Steam-only: off by default, showing Steam's full chart (including
-  // titles not on GFN, with a null catalogTitle -- see buildGfnStoreRows).
-  // The Xbox/xCloud tab has no equivalent toggle: its browse endpoint only
-  // returns bare product ids with no display data of their own, so a row
-  // there only exists once matched against the entitled catalog in the first
-  // place (see storeLogic.ts's StoreRow comment).
+  // GFN/Steam: off by default, showing Steam's full chart (including titles
+  // not on GFN, with a null catalogTitle -- see buildGfnStoreRows).
   const [gfnAvailableOnly, setGfnAvailableOnly] = React.useState(false);
+  // Xbox: off shows Xbox's whole cloud-gaming chart (titles outside the
+  // signed-in account's own catalog are drawn, not launchable); on keeps only
+  // what the account can launch. Display data for the former is fetched on
+  // demand (xboxBasics below).
+  const [xboxAvailableOnly, setXboxAvailableOnly] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
   // Loading state is tracked per provider, not as one shared flag -- a
@@ -144,6 +147,12 @@ function StoreScreen() {
   const [xboxPriceMap, setXboxPriceMap] = React.useState<
     Record<string, PriceInfo>
   >({});
+  const [xboxBasics, setXboxBasics] = React.useState<
+    Record<string, ProductBasics>
+  >({});
+  // Ids whose basics were already requested this session (answered or not),
+  // so a failed lookup is not retried on every render.
+  const xboxBasicsRequestedRef = React.useRef(new Set<string>());
   // The chart kind ('best'/'new') each provider's currently-held entries
   // were loaded for, so switching tabs back to a provider that already has
   // *this* kind loaded reuses what's there instead of throwing away
@@ -362,6 +371,41 @@ function StoreScreen() {
       },
     );
   }, [xcloudTitles, market, language]);
+
+  // With the Xbox filter off, ids of the chart that are not in the account's
+  // own catalog have no display data yet (the browse endpoint returns bare
+  // ids): fetch name/cover/price for them from the same DisplayCatalog the
+  // prices come from. Only once, and only for ids not already covered.
+  React.useEffect(() => {
+    if (provider !== 'xcloud' || xboxAvailableOnly) {
+      return;
+    }
+    const wanted = xboxProductIds.filter(id => {
+      const key = id.toUpperCase();
+      return (
+        !xcloudByProductId.has(key) && !xboxBasicsRequestedRef.current.has(key)
+      );
+    });
+    if (wanted.length === 0) {
+      return;
+    }
+    wanted.forEach(id => xboxBasicsRequestedRef.current.add(id.toUpperCase()));
+    fetchProductBasics(wanted, market, language).then(({basics, prices}) => {
+      if (Object.keys(basics).length > 0) {
+        setXboxBasics(prev => ({...prev, ...basics}));
+      }
+      if (Object.keys(prices).length > 0) {
+        setXboxPriceMap(prev => ({...prev, ...prices}));
+      }
+    });
+  }, [
+    provider,
+    xboxAvailableOnly,
+    xboxProductIds,
+    xcloudByProductId,
+    market,
+    language,
+  ]);
 
   const loadChart = React.useCallback(
     (
@@ -626,7 +670,10 @@ function StoreScreen() {
       const isVisibleMatch = (id: string): boolean => {
         const item = xcloudByProductId.get(id.toUpperCase());
         if (!item) {
-          return false;
+          // Not in the account's catalog: a row only if the filter is off
+          // (its price is not known yet, so the sale filter can't exclude it
+          // here -- the list does that once it is).
+          return !xboxAvailableOnly;
         }
         if (!saleOnly) {
           return true;
@@ -794,6 +841,7 @@ function StoreScreen() {
   }, [
     provider,
     chartKind,
+    xboxAvailableOnly,
     steamCc,
     steamLanguage,
     steamEntries,
@@ -816,13 +864,37 @@ function StoreScreen() {
     loading,
   ]);
 
+  // The one "available" toggle each provider tab shares (a separate flag per
+  // provider, so switching tabs keeps each one's choice).
+  const availableOnly =
+    provider === 'xcloud'
+      ? xboxAvailableOnly
+      : provider === 'gfn'
+      ? gfnAvailableOnly
+      : psPlusAvailableOnly;
+  const toggleAvailableOnly = () => {
+    if (provider === 'xcloud') {
+      setXboxAvailableOnly(prev => !prev);
+    } else if (provider === 'gfn') {
+      setGfnAvailableOnly(prev => !prev);
+    } else {
+      setPsPlusAvailableOnly(prev => !prev);
+    }
+  };
+
   // Match this provider's raw chart against this provider's own catalog,
   // keeping the chart's own rank so a filtered-out title still leaves a
   // visible gap rather than silently compacting the list.
   const rows = React.useMemo(
     (): StoreRow[] =>
       provider === 'xcloud'
-        ? buildXboxStoreRows(xboxProductIds, xcloudByProductId, xboxPriceMap)
+        ? buildXboxStoreRows(
+            xboxProductIds,
+            xcloudByProductId,
+            xboxPriceMap,
+            xboxBasics,
+            xboxAvailableOnly,
+          )
         : provider === 'gfn'
         ? buildGfnStoreRows(steamEntries, gfnFullCatalog)
         : buildPsStoreRows(psStoreEntries, psPlusGames),
@@ -831,6 +903,8 @@ function StoreScreen() {
       xboxProductIds,
       xcloudByProductId,
       xboxPriceMap,
+      xboxBasics,
+      xboxAvailableOnly,
       steamEntries,
       gfnFullCatalog,
       psStoreEntries,
@@ -843,14 +917,11 @@ function StoreScreen() {
     if (saleOnly) {
       list = list.filter(row => !!row.originalPrice);
     }
-    if (provider === 'gfn' && gfnAvailableOnly) {
-      list = list.filter(row => !!row.catalogTitle);
-    }
-    if (provider === 'psstore' && psPlusAvailableOnly) {
+    if (availableOnly) {
       list = list.filter(row => !!row.catalogTitle);
     }
     return list;
-  }, [rows, saleOnly, provider, gfnAvailableOnly, psPlusAvailableOnly]);
+  }, [rows, saleOnly, availableOnly]);
 
   // The initial page-0 fetch above only ever tries one page, and it's common
   // for that single page to match few or zero cloud-playable titles --
@@ -873,7 +944,7 @@ function StoreScreen() {
   // whether the (much smaller, sign-in-gated) GFN catalog has loaded yet.
   const catalogReady =
     provider === 'xcloud'
-      ? xcloudTitles.length > 0
+      ? !xboxAvailableOnly || xcloudTitles.length > 0
       : provider === 'gfn'
       ? !gfnAvailableOnly || gfnFullCatalog.length > 0
       : !psPlusAvailableOnly || psPlusGames.length > 0;
@@ -985,8 +1056,7 @@ function StoreScreen() {
   const bestKindFocus = useTVFocus();
   const newKindFocus = useTVFocus();
   const saleKindFocus = useTVFocus();
-  const gfnAvailableFocus = useTVFocus();
-  const psPlusAvailableFocus = useTVFocus();
+  const availableFocus = useTVFocus();
   const reloadFocus = useTVFocus();
 
   const renderFooter = () =>
@@ -1055,7 +1125,7 @@ function StoreScreen() {
                 styles.tabText,
                 provider === 'psstore' && styles.tabTextOn,
               ]}>
-              {t('StoreTabPsStore')}
+              {t('StoreTabPlayStation')}
             </Text>
           </Pressable>
         </View>
@@ -1107,44 +1177,23 @@ function StoreScreen() {
               {t('LibraryFilterOnSale')}
             </Text>
           </Pressable>
-          {provider === 'gfn' && (
-            <Pressable
+          <Pressable
+            style={[
+              styles.kindChip,
+              availableOnly && styles.kindOnAvailable,
+              availableFocus.focused && tvFocusRing,
+            ]}
+            onPress={toggleAvailableOnly}
+            onFocus={availableFocus.onFocus}
+            onBlur={availableFocus.onBlur}>
+            <Text
               style={[
-                styles.kindChip,
-                gfnAvailableOnly && styles.kindOnGfnAvailable,
-                gfnAvailableFocus.focused && tvFocusRing,
-              ]}
-              onPress={() => setGfnAvailableOnly(prev => !prev)}
-              onFocus={gfnAvailableFocus.onFocus}
-              onBlur={gfnAvailableFocus.onBlur}>
-              <Text
-                style={[
-                  styles.kindText,
-                  gfnAvailableOnly && styles.kindTextOnGfnAvailable,
-                ]}>
-                {t('StoreFilterGfnAvailableOnly')}
-              </Text>
-            </Pressable>
-          )}
-          {provider === 'psstore' && (
-            <Pressable
-              style={[
-                styles.kindChip,
-                psPlusAvailableOnly && styles.kindOnPsPlusAvailable,
-                psPlusAvailableFocus.focused && tvFocusRing,
-              ]}
-              onPress={() => setPsPlusAvailableOnly(prev => !prev)}
-              onFocus={psPlusAvailableFocus.onFocus}
-              onBlur={psPlusAvailableFocus.onBlur}>
-              <Text
-                style={[
-                  styles.kindText,
-                  psPlusAvailableOnly && styles.kindTextOnPsPlusAvailable,
-                ]}>
-                {t('StoreFilterPsPlusAvailableOnly')}
-              </Text>
-            </Pressable>
-          )}
+                styles.kindText,
+                availableOnly && styles.kindTextOnAvailable,
+              ]}>
+              {t('StoreFilterAvailableOnly')}
+            </Text>
+          </Pressable>
           {Platform.isTV && (
             // TV has no pull-to-refresh gesture: a focusable button does it.
             <Pressable
@@ -1163,7 +1212,7 @@ function StoreScreen() {
             </Pressable>
           )}
         </View>
-        {(provider === 'xcloud' || gfnAvailableOnly || psPlusAvailableOnly) && (
+        {availableOnly && (
           <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
         )}
       </View>
@@ -1225,13 +1274,11 @@ const styles = StyleSheet.create({
   reloadChip: {flexDirection: 'row', gap: 4},
   kindOn: {backgroundColor: alpha(palette.warning, 0.9)},
   kindOnSale: {backgroundColor: palette.sale},
-  kindOnGfnAvailable: {backgroundColor: palette.provider.gfn},
-  kindOnPsPlusAvailable: {backgroundColor: palette.provider.ps},
+  kindOnAvailable: {backgroundColor: palette.accent},
   kindText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
   kindTextOn: {color: palette.onAccent},
   kindTextOnSale: {color: palette.onAccent},
-  kindTextOnGfnAvailable: {color: palette.onAccent},
-  kindTextOnPsPlusAvailable: {color: palette.text},
+  kindTextOnAvailable: {color: palette.onAccent},
   subnote: {fontSize: 11, color: palette.textDim},
   list: {paddingHorizontal: 14, paddingBottom: 24},
   row: {

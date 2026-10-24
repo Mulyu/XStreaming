@@ -71,6 +71,8 @@ export type {
   TitleDetails,
   FetchPricesResult,
   FetchTitleDetailsResult,
+  ProductBasics,
+  FetchBasicsResult,
 } from './api/storePrice';
 export {
   getStoreUrl,
@@ -79,6 +81,8 @@ export {
   extractRating,
   extractDetails,
   fetchPrices,
+  fetchProductBasics,
+  extractBasics,
   delay,
   fetchPricesWithRetry,
   extractInGamePass,
