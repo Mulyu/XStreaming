@@ -367,9 +367,6 @@ export default {
     'NAT failed': 'NAT失敗।ルーター設定を確認।',
     'Reconnected failed': '再接続失敗',
     Refresh: '更新',
-    'Clear Cache': 'キャッシュクリア',
-    'Clear XStreaming Cache Data(Keep login data)':
-      'キャッシュクリア (ログイン保持)',
     History: '履歴',
     HistoryTitle: '更新履歴',
     HistoryDesc: '履歴を表示',
