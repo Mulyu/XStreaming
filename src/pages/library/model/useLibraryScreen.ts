@@ -47,6 +47,7 @@ import {
   deriveMarketLanguage,
   fetchPricesWithRetry,
   isInGamePass,
+  hasGamePassIds,
   isInPsCatalog,
   fetchPsStoreSales,
   lookupPsSale,
@@ -331,7 +332,7 @@ export function useLibraryScreen() {
       }
       // Still fresh and fetched for this very title set: nothing to refetch.
       // (A cache written before Game Pass ids were stored has no map: refetch.)
-      if (cache.sig === sig && cache.gamePassMap) {
+      if (cache.sig === sig && hasGamePassIds(cache.gamePassMap)) {
         return;
       }
     }

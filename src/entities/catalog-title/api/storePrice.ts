@@ -467,6 +467,9 @@ export const fetchPrices = async (
           if (rating) {
             ratings[key] = rating;
           }
+          if (extractInGamePass(product)) {
+            gamePass[key] = true;
+          }
         });
       }
     } catch (e) {

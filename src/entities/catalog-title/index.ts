@@ -41,6 +41,7 @@ export {
   getPriceCache,
   getFreshPriceCache,
   savePriceCache,
+  hasGamePassIds,
   getFreshPopularOrder,
   savePopularOrder,
 } from './model/priceCache';
