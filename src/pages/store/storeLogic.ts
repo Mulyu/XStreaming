@@ -13,6 +13,9 @@ import {
   isSaleForDisplay,
   PriceInfo,
   ProductBasics,
+  WishlistRefs,
+  WishlistSnapshot,
+  normalizeTitle,
 } from '../../entities/catalog-title';
 import {SteamChartEntry, PsStoreChartEntry} from '../../features/store-charts';
 
@@ -215,3 +218,58 @@ export const buildPsStoreRows = (
     };
   });
 };
+
+export type StoreProvider = 'xcloud' | 'gfn' | 'psstore';
+
+// Which id a row's `id` is, per tab.
+const refsForRow = (provider: StoreProvider, id: string): WishlistRefs =>
+  provider === 'xcloud'
+    ? {xbox: id}
+    : provider === 'gfn'
+    ? {steam: id}
+    : {ps: id};
+
+// What the row was showing, saved with a wishlisted title as its last-seen
+// price.
+export const rowSnapshot = (row: StoreRow): WishlistSnapshot => ({
+  price: row.price,
+  originalPrice: row.originalPrice,
+  discountPercent: row.discountPercent || 0,
+});
+
+// The title a Store row opens and is saved as. A row only knows its own
+// service's entry (`row.catalogTitle`); `index` is every loaded streaming
+// catalog merged by normalized title (the same merge the Library grid uses), so
+// the detail screen can show the title across all services. A row no
+// catalog contains becomes a title with only its store id and price (nothing
+// to play) rather than being unopenable.
+export const resolveRowTitle = (
+  row: StoreRow,
+  provider: StoreProvider,
+  index: Map<string, CatalogTitle>,
+): CatalogTitle => {
+  const key = row.catalogTitle?.key ?? normalizeTitle(row.title);
+  const merged = index.get(key);
+  if (merged) {
+    return merged;
+  }
+  if (row.catalogTitle) {
+    return row.catalogTitle;
+  }
+  return {
+    key,
+    title: row.title,
+    imageUrl: row.imageUrl,
+    genres: [],
+    store: {refs: refsForRow(provider, row.id), snapshot: rowSnapshot(row)},
+  };
+};
+
+// The ids and price a Store row adds to the wishlist entry for its title.
+export const rowWishlistExtra = (
+  row: StoreRow,
+  provider: StoreProvider,
+): {refs: WishlistRefs; snapshot: WishlistSnapshot} => ({
+  refs: refsForRow(provider, row.id),
+  snapshot: rowSnapshot(row),
+});

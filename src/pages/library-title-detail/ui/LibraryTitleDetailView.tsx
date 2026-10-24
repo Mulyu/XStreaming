@@ -67,8 +67,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   steamPrices,
   psStorePrice,
   preference,
+  owned,
   isFavorite,
   toggleFavorite,
+  isWishlisted,
+  toggleWishlist,
   playXcloud,
   playPsPlus,
   playGfnVariant,
@@ -105,6 +108,9 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const [focusedVariantKey, setFocusedVariantKey] = React.useState<
     string | null
   >(null);
+  const [focusedStoreRow, setFocusedStoreRow] = React.useState<string | null>(
+    null,
+  );
 
   if (!catalogTitle) {
     return null;
@@ -164,18 +170,40 @@ const LibraryTitleDetailView: React.FC<Props> = ({
       : null;
   const psStoreShowSale = !!psPurchase && isPsStoreSaleForDisplay(psStorePrice);
 
+  // One save button per title: the heart (favorite) when it's owned, the
+  // bookmark (wishlist) when it isn't.
+  const saveOn = owned ? isFavorite : isWishlisted;
+  const saveLabel = t(
+    owned
+      ? saveOn
+        ? 'FavoriteRemove'
+        : 'FavoriteAdd'
+      : saveOn
+      ? 'WishlistRemove'
+      : 'WishlistAdd',
+  );
+  const saveIcon = owned
+    ? saveOn
+      ? 'heart'
+      : 'heart-outline'
+    : saveOn
+    ? 'bookmark'
+    : 'bookmark-outline';
+  const saveColor = saveOn
+    ? owned
+      ? palette.sale
+      : palette.accent
+    : palette.white;
+  const onSave = owned ? toggleFavorite : toggleWishlist;
+
   const favoriteBtn = (
     <Pressable
       style={[styles.favoriteBtn, favoriteFocus.focused && tvFocusRing]}
-      onPress={toggleFavorite}
+      onPress={onSave}
       onFocus={favoriteFocus.onFocus}
       onBlur={favoriteFocus.onBlur}
-      accessibilityLabel={t('LibraryFilterFavorite')}>
-      <Ionicons
-        name={isFavorite ? 'heart' : 'heart-outline'}
-        size={20}
-        color={isFavorite ? palette.sale : palette.white}
-      />
+      accessibilityLabel={saveLabel}>
+      <Ionicons name={saveIcon} size={20} color={saveColor} />
     </Pressable>
   );
 
@@ -209,7 +237,140 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   // (see `tvSplit`'s own comment) -- only the hero/identity above them and
   // the overall container differ, so this is built once and reused by both
   // layouts below.
-  const playOnSection = (
+  // A title none of the streaming catalogs contain (wishlisted from the
+  // Store, say): nothing to play, so the "Play on" list is replaced by the
+  // stores it can be bought from, each priced live where the service answers
+  // and from the price saved with it otherwise.
+  const isStoreOnly =
+    !!catalogTitle.store &&
+    !catalogTitle.xcloud &&
+    !catalogTitle.gfn &&
+    !catalogTitle.psplus;
+  const storeRefs = catalogTitle.store?.refs ?? {};
+  const storeSnapshot = catalogTitle.store?.snapshot;
+  const onlyOneStore = Object.values(storeRefs).filter(Boolean).length === 1;
+  type StoreOnlyRow = {
+    key: string;
+    letter: string;
+    iconStyle: object;
+    color: string;
+    name: string;
+    price?: string;
+    was?: string;
+    sale: boolean;
+    url: string | null;
+  };
+  const savedPrice = (live: boolean): Partial<StoreOnlyRow> =>
+    !live && (onlyOneStore || storeRefs.ps) && storeSnapshot
+      ? {
+          price: storeSnapshot.price,
+          was: storeSnapshot.originalPrice,
+          sale: (storeSnapshot.discountPercent || 0) > 0,
+        }
+      : {};
+  const storeOnlyRows: StoreOnlyRow[] = [];
+  if (storeRefs.xbox) {
+    storeOnlyRows.push({
+      key: 'xbox',
+      letter: 'X',
+      iconStyle: styles.xcloudIconBg,
+      color: palette.provider.xbox,
+      name: 'Microsoft Store',
+      sale: xcloudDiscount > 0,
+      price: price
+        ? formatPrice(price.listPrice, price.currencyCode)
+        : undefined,
+      was:
+        price && xcloudDiscount > 0
+          ? formatPrice(price.msrp, price.currencyCode)
+          : undefined,
+      url: getStoreUrl(storeRefs.xbox),
+      ...(price ? {} : savedPrice(false)),
+    });
+  }
+  if (storeRefs.steam) {
+    const steam = steamPrices[storeRefs.steam];
+    storeOnlyRows.push({
+      key: 'steam',
+      letter: 'N',
+      iconStyle: styles.gfnIconBg,
+      color: palette.provider.gfn,
+      name: 'Steam',
+      sale: isSteamSaleForDisplay(steam),
+      price: steam
+        ? formatPrice(steam.final / 100, steam.currencyCode)
+        : undefined,
+      was:
+        steam && isSteamSaleForDisplay(steam)
+          ? formatPrice(steam.initial / 100, steam.currencyCode)
+          : undefined,
+      url: `https://store.steampowered.com/app/${storeRefs.steam}`,
+      ...(steam ? {} : savedPrice(false)),
+    });
+  }
+  if (storeRefs.ps) {
+    storeOnlyRows.push({
+      key: 'ps',
+      letter: 'PS',
+      iconStyle: styles.psplusIconBg,
+      color: palette.provider.ps,
+      name: 'PlayStation Store',
+      sale: false,
+      url: getPsStoreUrl(undefined, storeRefs.ps),
+      ...savedPrice(false),
+    });
+  }
+
+  const storeOnlySection = (
+    <View>
+      <Text style={styles.sectionLabel}>{t('DetailStorePrices')}</Text>
+      <Text style={styles.storeOnlyNote}>{t('DetailNotStreamable')}</Text>
+      {storeOnlyRows.length > 0 && (
+        <View style={[styles.providerCard, styles.providerCardSpaced]}>
+          {storeOnlyRows.map(row => (
+            <Pressable
+              key={row.key}
+              style={[
+                styles.providerRow,
+                focusedStoreRow === row.key && tvFocusRing,
+              ]}
+              disabled={!row.url}
+              onPress={() => row.url && openStore(row.url)}
+              onFocus={() => setFocusedStoreRow(row.key)}
+              onBlur={() =>
+                setFocusedStoreRow(prev => (prev === row.key ? null : prev))
+              }>
+              <View style={[styles.providerIcon, row.iconStyle]}>
+                <Text style={[styles.providerIconText, {color: row.color}]}>
+                  {row.letter}
+                </Text>
+              </View>
+              <View style={styles.providerText}>
+                <Text style={styles.providerName}>{row.name}</Text>
+                {row.price ? (
+                  <View style={styles.priceRow}>
+                    <Text
+                      style={[
+                        styles.priceNow,
+                        row.sale && styles.priceNowSale,
+                      ]}>
+                      {row.price}
+                    </Text>
+                    {row.sale && row.was ? (
+                      <Text style={styles.priceWas}>{row.was}</Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+              <Icon source="open-in-new" size={16} color={palette.textSoft} />
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+
+  const streamPlayOnSection = (
     <View>
       <Text style={styles.sectionLabel}>{t('PlayOn')}</Text>
 
@@ -734,6 +895,8 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     </View>
   );
 
+  const playOnSection = isStoreOnly ? storeOnlySection : streamPlayOnSection;
+
   const featuresSection = details?.capabilities?.length ? (
     <View>
       <Text style={styles.secTitle}>{t('Features')}</Text>
@@ -909,18 +1072,14 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 styles.tvFavoriteBtn,
                 favoriteFocus.focused && tvFocusRing,
               ]}
-              onPress={toggleFavorite}
+              onPress={onSave}
               onFocus={favoriteFocus.onFocus}
               onBlur={favoriteFocus.onBlur}
               accessibilityRole="button"
-              accessibilityLabel={t('LibraryFilterFavorite')}>
-              <Ionicons
-                name={isFavorite ? 'heart' : 'heart-outline'}
-                size={22}
-                color={isFavorite ? palette.sale : palette.white}
-              />
+              accessibilityLabel={saveLabel}>
+              <Ionicons name={saveIcon} size={22} color={saveColor} />
               <Text style={styles.tvFavoriteText}>
-                {t('LibraryFilterFavorite')}
+                {t(owned ? 'LibraryFilterFavorite' : 'LibraryFilterWishlist')}
               </Text>
             </Pressable>
           </View>
@@ -1065,6 +1224,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   metaVal: {fontSize: 13, fontWeight: '600'},
+  storeOnlyNote: {
+    fontSize: 12.5,
+    color: palette.textSoft,
+    marginTop: 6,
+  },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '800',

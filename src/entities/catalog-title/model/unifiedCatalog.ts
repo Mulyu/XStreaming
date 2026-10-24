@@ -1,5 +1,10 @@
 import {GfnGame} from '../api/gfnPublicGames';
 import {normalizeTitle} from '../api/gfnCatalog';
+import type {
+  WishlistEntry,
+  WishlistRefs,
+  WishlistSnapshot,
+} from './wishlistLogic';
 
 // Merges xCloud's title list, GFN's (public + owned) game list, and PS
 // Plus's (pscloud) cloud-streaming catalog into one grid's worth of titles,
@@ -41,6 +46,14 @@ export type CatalogTitle = {
     // tier, independent of `isOwned` (an actual purchase/entitlement). A
     // title can be both (owned AND currently in the Plus catalog).
     inPlusCatalog: boolean;
+  };
+  // Only on a title the loaded catalogs don't contain (one that can't be
+  // streamed, or whose catalog isn't loaded): the ids and last-seen price it
+  // was wishlisted with, which is all the Library/detail screens have to show
+  // for it. Never set on a title built from a streaming catalog.
+  store?: {
+    refs: WishlistRefs;
+    snapshot?: WishlistSnapshot;
   };
 };
 
@@ -188,5 +201,48 @@ export const buildPsPlusCatalogTitle = (game: any): CatalogTitle | null => {
       isOwned: game?.isOwned === true,
       inPlusCatalog: game?.plusCatalog === true,
     },
+  };
+};
+
+// A wishlisted title that none of the loaded streaming catalogs contain,
+// drawn from what was saved when it was added.
+export const buildWishlistCatalogTitle = (
+  entry: WishlistEntry,
+): CatalogTitle => ({
+  key: entry.key,
+  title: entry.title,
+  imageUrl: entry.imageUrl,
+  genres: [],
+  store: {refs: entry.refs ?? {}, snapshot: entry.snapshot},
+});
+
+// What to save when `item` is added to the wishlist. `refs`/`snapshot` come
+// from the Store row it was added from; otherwise the ids are read off the
+// streaming entries the title already carries.
+export const buildWishlistEntry = (
+  item: CatalogTitle,
+  now: number,
+  extra: {refs?: WishlistRefs; snapshot?: WishlistSnapshot} = {},
+): WishlistEntry => {
+  const refs: WishlistRefs = {
+    xbox: item.xcloud?.raw?.productId || item.store?.refs.xbox,
+    steam:
+      item.gfn?.variants.find(v => v.steamAppId)?.steamAppId ||
+      item.store?.refs.steam,
+    ps: item.psplus?.raw?.productId || item.store?.refs.ps,
+    ...extra.refs,
+  };
+  (Object.keys(refs) as (keyof WishlistRefs)[]).forEach(k => {
+    if (!refs[k]) {
+      delete refs[k];
+    }
+  });
+  return {
+    key: item.key,
+    title: item.title,
+    imageUrl: item.imageUrl,
+    addedAt: now,
+    refs,
+    snapshot: extra.snapshot ?? item.store?.snapshot,
   };
 };

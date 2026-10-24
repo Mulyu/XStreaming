@@ -8,6 +8,8 @@ export {
   buildXcloudCatalogTitle,
   buildGfnCatalogTitle,
   buildPsPlusCatalogTitle,
+  buildWishlistCatalogTitle,
+  buildWishlistEntry,
 } from './model/unifiedCatalog';
 
 export {isInGamePass, isInPsCatalog} from './model/gamePass';
@@ -17,6 +19,27 @@ export {
   isCatalogTitleFavorite,
   setCatalogTitleFavorite,
 } from './model/favorites';
+
+export type {
+  WishlistEntry,
+  WishlistRefs,
+  WishlistSnapshot,
+} from './model/wishlistLogic';
+export {
+  splitAcquired,
+  favoritesToWishlist,
+  snapshotDiscount,
+} from './model/wishlistLogic';
+export {
+  getWishlist,
+  saveWishlist,
+  isCatalogTitleWishlisted,
+  addToWishlist,
+  removeFromWishlist,
+  getMigratedFavoriteKeys,
+  markFavoritesMigrated,
+} from './model/wishlist';
+export {refreshWishlistSnapshots} from './api/wishlistPrices';
 
 export type {CatalogPreference} from './model/preferences';
 export {getCatalogPreference, setCatalogPreference} from './model/preferences';

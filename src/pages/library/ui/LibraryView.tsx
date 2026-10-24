@@ -45,7 +45,51 @@ type CardCommon = {
   openTitleDetail: Props['openTitleDetail'];
   setFocusedKey: Props['setFocusedKey'];
 };
-type GridCardProps = CardCommon & {numColumns: number; inGamePass: boolean};
+type GridCardProps = CardCommon & {
+  numColumns: number;
+  inGamePass: boolean;
+  // Phone only: the one-tap button on the card's lower right -- the heart for
+  // a title that is owned, the bookmark (wishlist) for one that isn't. `on`
+  // is that button's current state.
+  action: 'favorite' | 'wishlist';
+  actionOn: boolean;
+  onToggleFavorite: (item: CatalogTitle) => void;
+  onToggleWishlist: (item: CatalogTitle) => void;
+};
+
+// The card's favorite / wishlist toggle. A sibling of the card's own
+// Pressable (not nested in it) so a tap on it never also opens the title.
+const CardAction: React.FC<{
+  item: CatalogTitle;
+  kind: 'favorite' | 'wishlist';
+  on: boolean;
+  label: string;
+  onToggle: (item: CatalogTitle) => void;
+}> = ({item, kind, on, label, onToggle}) => {
+  const focus = useTVFocus();
+  const icon =
+    kind === 'favorite'
+      ? on
+        ? 'heart'
+        : 'heart-outline'
+      : on
+      ? 'bookmark'
+      : 'bookmark-outline';
+  const onColor = kind === 'favorite' ? palette.sale : palette.accent;
+  return (
+    <Pressable
+      style={[styles.cardAction, focus.focused && tvFocusRing]}
+      hitSlop={6}
+      onPress={() => onToggle(item)}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      accessibilityRole="button"
+      accessibilityState={{selected: on}}
+      accessibilityLabel={label}>
+      <Icon source={icon} size={19} color={on ? onColor : palette.white} />
+    </Pressable>
+  );
+};
 
 // Icon-only mark shown right after a provider badge: a gift (the same icon as
 // the free-to-play filter) for "included in that service's catalog" (PS Plus
@@ -80,8 +124,10 @@ const CardArt: React.FC<{
   discount: number;
   inGamePass: boolean;
   big: boolean;
+  // Leave room at the title's right for the card's action button.
+  actionSpace?: boolean;
   t: Props['t'];
-}> = ({item, discount, inGamePass, big, t}) => {
+}> = ({item, discount, inGamePass, big, actionSpace, t}) => {
   // Cover art itself grays out when the title isn't playable via any of
   // its listed services today (no Game Pass entitlement, no owned GFN
   // store variant, no owned PS Plus game).
@@ -184,7 +230,11 @@ const CardArt: React.FC<{
       )}
 
       <Text
-        style={[styles.cardTitle, big && styles.cardTitleBig]}
+        style={[
+          styles.cardTitle,
+          big && styles.cardTitleBig,
+          actionSpace && styles.cardTitleWithAction,
+        ]}
         numberOfLines={2}>
         {item.title}
       </Text>
@@ -200,6 +250,10 @@ const GridCard = React.memo(function GridCard({
   discount,
   numColumns,
   inGamePass,
+  action,
+  actionOn,
+  onToggleFavorite,
+  onToggleWishlist,
   t,
   openTitle,
   openTitleDetail,
@@ -224,9 +278,25 @@ const GridCard = React.memo(function GridCard({
           discount={discount}
           inGamePass={inGamePass}
           big={false}
+          actionSpace
           t={t}
         />
       </Pressable>
+      <CardAction
+        item={item}
+        kind={action}
+        on={actionOn}
+        label={t(
+          action === 'favorite'
+            ? actionOn
+              ? 'FavoriteRemove'
+              : 'FavoriteAdd'
+            : actionOn
+            ? 'WishlistRemove'
+            : 'WishlistAdd',
+        )}
+        onToggle={action === 'favorite' ? onToggleFavorite : onToggleWishlist}
+      />
     </View>
   );
 });
@@ -293,6 +363,13 @@ const LibraryView: React.FC<Props> = ({
   setFilterPsPlus,
   filterFavorite,
   setFilterFavorite,
+  filterWishlist,
+  toggleFilterWishlist,
+  wishlistSaleCount,
+  favoriteKeys,
+  wishlistKeys,
+  toggleFavorite,
+  toggleWishlist,
   filterOwnership,
   cycleOwnership,
   filterOnSale,
@@ -412,9 +489,23 @@ const LibraryView: React.FC<Props> = ({
     [],
   );
 
+  const toggleFavoriteRef = React.useRef(toggleFavorite);
+  toggleFavoriteRef.current = toggleFavorite;
+  const toggleWishlistRef = React.useRef(toggleWishlist);
+  toggleWishlistRef.current = toggleWishlist;
+  const stableToggleFavorite = React.useCallback(
+    (item: CatalogTitle) => toggleFavoriteRef.current(item),
+    [],
+  );
+  const stableToggleWishlist = React.useCallback(
+    (item: CatalogTitle) => toggleWishlistRef.current(item),
+    [],
+  );
+
   const renderItem = React.useCallback(
     ({item}: {item: CatalogTitle}) => {
       const Cell = Platform.isTV ? TvTile : GridCard;
+      const owned = isCatalogTitleOwned(item);
       return (
         <Cell
           item={item}
@@ -422,6 +513,12 @@ const LibraryView: React.FC<Props> = ({
           discount={saleDiscount(item)}
           numColumns={numColumns}
           inGamePass={isInGamePass(item, gamePassMap)}
+          action={owned ? 'favorite' : 'wishlist'}
+          actionOn={
+            owned ? favoriteKeys.has(item.key) : wishlistKeys.has(item.key)
+          }
+          onToggleFavorite={stableToggleFavorite}
+          onToggleWishlist={stableToggleWishlist}
           t={t}
           openTitle={stableOpenTitle}
           openTitleDetail={stableOpenTitleDetail}
@@ -433,6 +530,10 @@ const LibraryView: React.FC<Props> = ({
       focusedKey,
       saleDiscount,
       gamePassMap,
+      favoriteKeys,
+      wishlistKeys,
+      stableToggleFavorite,
+      stableToggleWishlist,
       numColumns,
       t,
       stableOpenTitle,
@@ -644,6 +745,17 @@ const LibraryView: React.FC<Props> = ({
               accent={palette.accent}
               fill
               onPress={() => setFilterFavorite(v => !v)}
+            />
+            <RailButton
+              iconOnly
+              compact={!Platform.isTV}
+              icon={filterWishlist ? 'bookmark' : 'bookmark-outline'}
+              label={t('LibraryFilterWishlist')}
+              active={filterWishlist}
+              accent={palette.accent}
+              badge={wishlistSaleCount}
+              fill
+              onPress={toggleFilterWishlist}
             />
             <RailButton
               iconOnly
@@ -976,6 +1088,20 @@ const styles = StyleSheet.create({
     backgroundColor: palette.sale,
   },
   saleBadgeText: {fontSize: 8.5, fontWeight: '800', color: palette.onAccent},
+  cardAction: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: alpha(palette.black, 0.6),
+    borderWidth: 1,
+    borderColor: alpha(palette.white, 0.1),
+  },
+  cardTitleWithAction: {right: 44},
   cardTitle: {
     position: 'absolute',
     left: 6,
