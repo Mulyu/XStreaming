@@ -13,7 +13,7 @@ import {
   NativeModules,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
-import {Text, Icon, ActivityIndicator} from 'react-native-paper';
+import {Text, Icon} from 'react-native-paper';
 import {
   CatalogTitle,
   isCatalogTitleOwned,
@@ -26,6 +26,7 @@ import {
   TV_FOCUS_COLOR,
 } from '../../../shared/ui/tvFocus';
 import {RailButton} from '../../../shared/ui/RailControls';
+import {InlineSpinner} from '../../../shared/ui/Spinner';
 
 const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
@@ -452,9 +453,7 @@ const LibraryView: React.FC<Props> = ({
               {filtered.length}/{catalog.length}
             </Text>
           )}
-          {gfnFullCatalogLoading && (
-            <ActivityIndicator size={12} color="#8A9A92" />
-          )}
+          {gfnFullCatalogLoading && <InlineSpinner size={12} color="#8A9A92" />}
         </View>
         {Platform.isTV ? (
           <>
@@ -820,7 +819,7 @@ const LibraryView: React.FC<Props> = ({
 
       {catalog.length === 0 ? (
         <View style={styles.centre}>
-          <ActivityIndicator />
+          <InlineSpinner />
           <Text style={styles.centreText}>{t('Loading...')}</Text>
         </View>
       ) : (
