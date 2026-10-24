@@ -68,7 +68,6 @@ const SettingsView: React.FC<Props> = ({
   onXcloudAccountPress,
   onXcloudCatalogReload,
   onGfnCatalogReload,
-  onClearCache,
   onNavigateVirtualGamepadSettings,
   onNavigateHistory,
   onNavigateDs5Left,
@@ -169,11 +168,6 @@ const SettingsView: React.FC<Props> = ({
             desc={M('check_update').description}
             value={settings.check_update}
             onChange={v => updateSetting('check_update', v)}
-          />
-          <SettingItem
-            title={t('Clear Cache')}
-            description={t('Clear XStreaming Cache Data(Keep login data)')}
-            onPress={() => onClearCache()}
           />
           <SettingItem
             title={t('HistoryTitle')}

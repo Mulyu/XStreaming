@@ -492,6 +492,17 @@ const LibraryView: React.FC<Props> = ({
                 accent={XBOX_ACCENT}
                 onPress={() => setTvSearchOpen(true)}
               />
+              {/* TV has no pull-to-refresh gesture: same refresh, as a button. */}
+              <RailButton
+                icon="refresh"
+                label={refreshing ? t('Loading...') : t('Refresh')}
+                accent={XBOX_ACCENT}
+                onPress={() => {
+                  if (!refreshing) {
+                    onRefresh();
+                  }
+                }}
+              />
             </View>
             <Modal
               visible={tvSearchOpen}
@@ -864,7 +875,7 @@ const styles = StyleSheet.create({
   // gave it before. alignSelf keeps it content-sized -- `header`'s a column
   // flex container, which would otherwise stretch a bare RailButton (no
   // explicit width of its own) to the header's full width.
-  tvSearchChip: {alignSelf: 'flex-start'},
+  tvSearchChip: {alignSelf: 'flex-start', flexDirection: 'row', gap: 6},
   tvSearchOverlay: {
     flex: 1,
     backgroundColor: 'rgba(5,7,6,0.72)',

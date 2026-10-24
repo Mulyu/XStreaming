@@ -167,8 +167,6 @@ export default {
     'NAT failed': 'NAT 실패. 라우터 설정을 확인하세요.',
     'Reconnected failed': '재연결 실패',
     Refresh: '새로고침',
-    'Clear Cache': '캐시 삭제',
-    'Clear XStreaming Cache Data(Keep login data)': '캐시 삭제 (로그인 유지)',
     History: '기록',
     HistoryTitle: '업데이트 기록',
     HistoryDesc: '업데이트 내역 보기',

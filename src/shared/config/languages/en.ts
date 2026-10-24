@@ -374,9 +374,6 @@ export default {
     'Reconnected failed':
       'Network changed and reconnection failed. Please reconnect.',
     Refresh: 'Refresh',
-    'Clear Cache': 'Clear Cache',
-    'Clear XStreaming Cache Data(Keep login data)':
-      'Clear XStreaming cache data (keep login data)',
     History: 'History',
     HistoryTitle: 'Update log',
     HistoryDesc: 'View XStreaming update history',

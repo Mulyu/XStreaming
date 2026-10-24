@@ -6,6 +6,7 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import {Text, Icon, ActivityIndicator} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
@@ -987,6 +988,7 @@ function StoreScreen() {
   const saleKindFocus = useTVFocus();
   const gfnAvailableFocus = useTVFocus();
   const psPlusAvailableFocus = useTVFocus();
+  const reloadFocus = useTVFocus();
 
   const renderFooter = () =>
     loadingMore ? (
@@ -1144,6 +1146,23 @@ function StoreScreen() {
               </Text>
             </Pressable>
           )}
+          {Platform.isTV && (
+            // TV has no pull-to-refresh gesture: a focusable button does it.
+            <Pressable
+              style={[
+                styles.kindChip,
+                styles.reloadChip,
+                reloadFocus.focused && tvFocusRing,
+              ]}
+              onPress={onRefresh}
+              onFocus={reloadFocus.onFocus}
+              onBlur={reloadFocus.onBlur}
+              accessibilityRole="button"
+              accessibilityLabel={t('Refresh')}>
+              <Icon source="refresh" size={14} color="#8A9A92" />
+              <Text style={styles.kindText}>{t('Refresh')}</Text>
+            </Pressable>
+          )}
         </View>
         {(provider === 'xcloud' || gfnAvailableOnly || psPlusAvailableOnly) && (
           <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
@@ -1204,6 +1223,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  reloadChip: {flexDirection: 'row', gap: 4},
   kindOn: {backgroundColor: 'rgba(232,179,74,0.9)'},
   kindOnSale: {backgroundColor: SALE_ACCENT},
   kindOnGfnAvailable: {backgroundColor: NVIDIA_ACCENT},

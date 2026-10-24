@@ -180,9 +180,6 @@ export default {
       'NAT失败，如果你正在尝试远程串流，请保证已经正确配置路由器，并设置已经设置端口转发，如果无法解决远程串流，请使用官方Xbox应用。',
     'Reconnected failed': '网络发生了变化，重连失败，请重新连接',
     Refresh: '刷新',
-    'Clear Cache': '清除缓存',
-    'Clear XStreaming Cache Data(Keep login data)':
-      '清除XStreaming应用缓存(保留登录数据)',
     History: '历史',
     HistoryTitle: '更新日志',
     HistoryDesc: '查看XStreaming历史更新日志',

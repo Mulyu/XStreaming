@@ -36,11 +36,7 @@ import {
   GfnSubscriptionInfo,
   GfnRegionOption,
 } from '../../../features/gfn-session';
-import {
-  getSettings,
-  saveSettings,
-  resetSettings,
-} from '../../../shared/lib/settings';
+import {getSettings, saveSettings} from '../../../shared/lib/settings';
 import {
   basesSettings as bases,
   displaySettings as display,
@@ -557,15 +553,6 @@ export function useSettingsScreen(navigation: any, route: any) {
     return t('GfnPlaytimeLoading');
   };
 
-  const handleClearCache = () => {
-    clearXcloudData();
-    resetSettings();
-    ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
-    setTimeout(() => {
-      RNRestart.restart();
-    }, 1000);
-  };
-
   const gfnNoOpFlag = t('FlagGfnNoOp');
   const gfnRegionOptions = [
     {value: '', text: t('Auto')},
@@ -614,7 +601,6 @@ export function useSettingsScreen(navigation: any, route: any) {
     onXcloudAccountPress: handleXcloudAccountPress,
     onXcloudCatalogReload: handleXcloudCatalogReload,
     onGfnCatalogReload: handleGfnCatalogReload,
-    onClearCache: handleClearCache,
     onNavigateVirtualGamepadSettings: () =>
       navigation.navigate('VirtualGamepadSettings'),
     onNavigateHistory: () => navigation.navigate('History'),

@@ -174,9 +174,6 @@ export default {
     'NAT failed': 'NAT विफल। राउटर सेटिंग्स की जाँच करें।',
     'Reconnected failed': 'पुन: कनेक्शन विफल रहा।',
     Refresh: 'रिफ्रेश',
-    'Clear Cache': 'कैश साफ़ करें',
-    'Clear XStreaming Cache Data(Keep login data)':
-      'कैश साफ़ करें (लॉगिन डेटा रहेगा)',
     History: 'इतिहास',
     HistoryTitle: 'अपडेट इतिहास',
     HistoryDesc: 'अपडेट का इतिहास देखें।',

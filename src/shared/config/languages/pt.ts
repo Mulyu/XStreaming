@@ -183,9 +183,6 @@ export default {
     'Reconnected failed':
       'A rede mudou e a reconexão falhou. Por favor, reconecte.',
     Refresh: 'Atualizar',
-    'Clear Cache': 'Limpar cache',
-    'Clear XStreaming Cache Data(Keep login data)':
-      'Limpar dados de cache do XStreaming (mantém dados de login)',
     History: 'Histórico',
     HistoryTitle: 'Histórico de atualizações',
     HistoryDesc: 'Ver o histórico de atualizações do XStreaming',

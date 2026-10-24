@@ -173,9 +173,6 @@ export default {
     'NAT failed': 'Fallo de NAT. Revisa el router.',
     'Reconnected failed': 'Fallo al reconectar.',
     Refresh: 'Actualizar',
-    'Clear Cache': 'Limpiar caché',
-    'Clear XStreaming Cache Data(Keep login data)':
-      'Limpiar caché (mantiene login)',
     History: 'Historial',
     HistoryTitle: 'Historial de actualizaciones',
     HistoryDesc: 'Ver historial de cambios.',

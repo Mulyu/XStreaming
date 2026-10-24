@@ -176,9 +176,6 @@ export default {
       'NAT失敗，如果你正在嘗試遠端串流，請確認已正確設定路由器並完成連接埠轉發。如果仍無法解決遠端串流，請使用官方 Xbox 應用。',
     'Reconnected failed': '網絡發生了變化，重連失敗，請重新連接',
     Refresh: '刷新',
-    'Clear Cache': '清除快取',
-    'Clear XStreaming Cache Data(Keep login data)':
-      '清除 XStreaming 應用快取(保留登入資料)',
     History: '歷史',
     HistoryTitle: '更新日誌',
     HistoryDesc: '查看 XStreaming 歷史更新日誌',
