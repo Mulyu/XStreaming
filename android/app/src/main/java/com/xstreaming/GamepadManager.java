@@ -47,6 +47,10 @@ public class GamepadManager extends ReactContextBaseJavaModule {
     private final Handler vibrationHandler = new Handler(Looper.getMainLooper());
 
     private static String currentScreen = "";
+    // Set by a screen that wants a held remote OK button to mean "open the
+    // details" (the Library): MainActivity then reports a long press of
+    // OK/Enter as onDpadCenterLongPress and cancels the click it would end in.
+    private static boolean centerLongPressEnabled = false;
 
     private final ReactApplicationContext reactContext;
     public GamepadManager(ReactApplicationContext reactContext) {
@@ -306,6 +310,15 @@ public class GamepadManager extends ReactContextBaseJavaModule {
 
     public static String getCurrentScreen() {
         return currentScreen;
+    }
+
+    @ReactMethod
+    public void setCenterLongPressEnabled(boolean enabled) {
+        centerLongPressEnabled = enabled;
+    }
+
+    public static boolean isCenterLongPressEnabled() {
+        return centerLongPressEnabled;
     }
 
     private int clampVibration(int value) {

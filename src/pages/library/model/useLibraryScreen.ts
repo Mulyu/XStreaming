@@ -980,7 +980,8 @@ export function useLibraryScreen() {
   // decode at once, same reasoning as before.
   const isLandscape = screenWidth > screenHeight;
   const numColumns = React.useMemo(() => {
-    const target = Platform.isTV ? 220 : isLandscape ? 260 : 190;
+    // TV: 5 columns on a 1080p TV (960dp wide).
+    const target = Platform.isTV ? 170 : isLandscape ? 260 : 190;
     const maxColumns = Platform.isTV ? 5 : 8;
     return Math.max(2, Math.min(maxColumns, Math.floor(screenWidth / target)));
   }, [isLandscape, screenWidth]);

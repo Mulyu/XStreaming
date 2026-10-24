@@ -192,6 +192,42 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     }
   }
 
+  // Remote OK/Enter long-press -> onDpadCenterLongPress, for screens that
+  // enable it through GamepadManager.setCenterLongPressEnabled (the Library:
+  // a short press launches the title, a held press opens its details). Like
+  // the D-pad Down long-press above, the short press is untouched: the
+  // gesture is only recognised once the key has been held for the OS's own
+  // long-press timeout, and only then is the click that the release would
+  // have produced cancelled (see dispatchKeyEvent).
+  private final Handler dpadCenterLongPressHandler = new Handler(Looper.getMainLooper());
+  private Runnable dpadCenterLongPressRunnable;
+  private boolean dpadCenterLongPressFired = false;
+
+  private void armDpadCenterLongPress() {
+    disarmDpadCenterLongPress();
+    dpadCenterLongPressFired = false;
+    dpadCenterLongPressRunnable = () -> {
+      dpadCenterLongPressRunnable = null;
+      dpadCenterLongPressFired = true;
+      sendEvent("onDpadCenterLongPress", null);
+    };
+    dpadCenterLongPressHandler.postDelayed(
+            dpadCenterLongPressRunnable, ViewConfiguration.getLongPressTimeout());
+  }
+
+  private void disarmDpadCenterLongPress() {
+    if (dpadCenterLongPressRunnable != null) {
+      dpadCenterLongPressHandler.removeCallbacks(dpadCenterLongPressRunnable);
+      dpadCenterLongPressRunnable = null;
+    }
+  }
+
+  private static boolean isCenterKey(int keyCode) {
+    return keyCode == KeyEvent.KEYCODE_DPAD_CENTER
+            || keyCode == KeyEvent.KEYCODE_ENTER
+            || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER;
+  }
+
   private void resetStickFocusNavigation() {
     stickFocusHandler.removeCallbacks(stickFocusXRepeat);
     stickFocusHandler.removeCallbacks(stickFocusYRepeat);
@@ -822,6 +858,8 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     }
     resetStickFocusNavigation();
     disarmDpadDownLongPress();
+    disarmDpadCenterLongPress();
+    dpadCenterLongPressFired = false;
     super.onPause();
   }
 
@@ -854,6 +892,29 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
   public boolean dispatchKeyEvent(KeyEvent event) {
     if (PhysicalInput.handleKeyEvent(event)) {
       return true;
+    }
+    if (GamepadManager.isCenterLongPressEnabled()
+        && !GamepadManager.getCurrentScreen().equals("stream")
+        && isCenterKey(event.getKeyCode())) {
+      if (event.getAction() == KeyEvent.ACTION_DOWN) {
+        if (event.getRepeatCount() == 0) {
+          armDpadCenterLongPress();
+        }
+      } else if (event.getAction() == KeyEvent.ACTION_UP) {
+        disarmDpadCenterLongPress();
+        if (dpadCenterLongPressFired) {
+          dpadCenterLongPressFired = false;
+          // The long press already did its job: deliver the release as a
+          // cancelled key-up so the focused view un-presses without
+          // performing the click (View.onKeyUp skips it for cancelled events).
+          KeyEvent cancelled = new KeyEvent(
+                  event.getDownTime(), event.getEventTime(), KeyEvent.ACTION_UP,
+                  event.getKeyCode(), event.getRepeatCount(), event.getMetaState(),
+                  event.getDeviceId(), event.getScanCode(),
+                  event.getFlags() | KeyEvent.FLAG_CANCELED, event.getSource());
+          return super.dispatchKeyEvent(cancelled);
+        }
+      }
     }
     return super.dispatchKeyEvent(event);
   }
