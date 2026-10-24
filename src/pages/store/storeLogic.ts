@@ -12,6 +12,7 @@ import {
   getPrice,
   isSaleForDisplay,
   PriceInfo,
+  ProductBasics,
 } from '../../entities/catalog-title';
 import {SteamChartEntry, PsStoreChartEntry} from '../../features/store-charts';
 
@@ -91,23 +92,32 @@ export const buildXboxStoreRows = (
   productIds: string[],
   xcloudByProductId: Map<string, any>,
   priceMap: Record<string, PriceInfo>,
+  // Display data for ids that are not in the signed-in account's own catalog
+  // (see fetchProductBasics). With `availableOnly` off, such an id becomes a
+  // non-launchable row (null catalogTitle) once its basics have arrived,
+  // like the GFN/PS Store rows; with it on, or while the basics are missing,
+  // it is dropped as before.
+  basics: Record<string, ProductBasics> = {},
+  availableOnly = true,
 ): StoreRow[] => {
   const result: StoreRow[] = [];
   productIds.forEach((productId, index) => {
     const item = xcloudByProductId.get(productId.toUpperCase());
-    if (!item) {
-      return;
-    }
-    const catalogTitle = buildXcloudCatalogTitle(item);
-    if (!catalogTitle) {
+    const catalogTitle = item ? buildXcloudCatalogTitle(item) : null;
+    const extra = catalogTitle
+      ? undefined
+      : availableOnly
+      ? undefined
+      : basics[productId.toUpperCase()];
+    if (!catalogTitle && !extra) {
       return;
     }
     const priceInfo = getPrice(priceMap, productId);
     result.push({
       id: productId,
       rank: index + 1,
-      title: catalogTitle.title,
-      imageUrl: catalogTitle.imageUrl,
+      title: catalogTitle ? catalogTitle.title : extra!.title,
+      imageUrl: catalogTitle ? catalogTitle.imageUrl : extra!.imageUrl,
       price: priceInfo
         ? formatPrice(priceInfo.listPrice, priceInfo.currencyCode)
         : undefined,
