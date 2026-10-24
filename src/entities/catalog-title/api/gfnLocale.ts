@@ -5,7 +5,7 @@ import {getSettings} from '../../../shared/lib/settings';
 // spellings of "the same" locale -- gfnpc-ja-JP.json vs the GraphQL
 // `language`/`locale` variable's ja_JP -- both derived here from one table
 // so the whole GFN catalog (public list, owned library, popularity/newest
-// ranks, per-title details) follows XStreaming's own language setting
+// ranks, per-title details) follows AnyStreaming's own language setting
 // instead of always showing NVIDIA's English-region catalog and rankings.
 //
 // Confirmed live: gfnpc-{slug}.json exists for de-DE, en-US, es-ES, es-MX,

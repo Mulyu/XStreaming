@@ -31,7 +31,7 @@ export default {
     Newest: 'Añadidos recientemente',
     Search: 'Buscar',
     'App language': 'Idioma de la app',
-    'Set language of XStreaming': 'Configurar idioma de XStreaming',
+    'Set language of AnyStreaming': 'Configurar idioma de AnyStreaming',
     Resolution: 'Resolución',
     'Set resolution, support 720P/1080P/1080P(HQ)':
       'Configurar resolución (720P/1080P)',
@@ -75,7 +75,7 @@ export default {
     noAllow: 'Sin permiso para iniciar. Revisa el login y la suscripción.',
     homeNoAllow: 'Fallo en la comprobación de permisos. Reicia sesión.',
     'Auto check update': 'Actualización automática',
-    'Whether check XStreaming updates automatically':
+    'Whether check AnyStreaming updates automatically':
       '¿Buscar actualizaciones automáticamente?',
     BasesSettings: 'Ajustes básicos',
     DisplaySettings: 'Ajustes de pantalla',

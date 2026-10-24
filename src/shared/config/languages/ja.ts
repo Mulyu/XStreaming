@@ -40,7 +40,7 @@ export default {
     Newest: '最新',
     Search: '検索',
     'App language': 'アプリの言語',
-    'Set language of XStreaming': '言語設定',
+    'Set language of AnyStreaming': '言語設定',
     Resolution: '解像度',
     'Set resolution, support 720P/1080P/1080P(HQ)':
       '解像度設定 (720P/1080P対応)',
@@ -85,7 +85,7 @@ export default {
     noAllow: '権限がありません。ログインとサブスクを確認してください।',
     homeNoAllow: '確認に失敗しました।再ログインしてください।',
     'Auto check update': '自動更新',
-    'Whether check XStreaming updates automatically':
+    'Whether check AnyStreaming updates automatically':
       '自動更新を確認するかどうか',
     BasesSettings: '基本設定',
     DisplaySettings: 'ディスプレイ設定',

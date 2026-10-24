@@ -164,7 +164,7 @@ public class ConfigTransferModule extends ReactContextBaseJavaModule {
     private String buildSafeJsonName(String fileName) {
         String name = fileName == null ? "" : fileName.trim();
         if (name.isEmpty()) {
-            name = "xstreaming_export.json";
+            name = "anystreaming_export.json";
         }
         name = name.replaceAll("[^A-Za-z0-9._-]", "_");
         if (!name.toLowerCase().endsWith(".json")) {

@@ -32,7 +32,7 @@ export default {
     Newest: 'नवीनतम',
     Search: 'खोजें',
     'App language': 'ऐप की भाषा',
-    'Set language of XStreaming': 'XStreaming की भाषा सेट करें',
+    'Set language of AnyStreaming': 'AnyStreaming की भाषा सेट करें',
     Resolution: 'रिज़ॉल्यूशन',
     'Set resolution, support 720P/1080P/1080P(HQ)':
       'रिज़ॉल्यूशन सेट करें (720P/1080P समर्थित)',
@@ -76,7 +76,7 @@ export default {
       'गेम शुरू करने की अनुमति नहीं है। कृपया लॉगिन और सदस्यता की जाँच करें।',
     homeNoAllow: 'अनुमति जाँच विफल रही। फिर से लॉगिन करें।',
     'Auto check update': 'ऑटो अपडेट',
-    'Whether check XStreaming updates automatically':
+    'Whether check AnyStreaming updates automatically':
       'क्या अपडेट की स्वचालित रूप से जाँच करनी है?',
     BasesSettings: 'बुनियादी सेटिंग्स',
     DisplaySettings: 'डिस्प्ले सेटिंग्स',

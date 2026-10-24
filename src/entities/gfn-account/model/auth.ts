@@ -96,7 +96,7 @@ export const requestDeviceAuthorization =
       client_id: STEAM_DECK_CLIENT_ID,
       scope: SCOPES,
       device_id: deviceId,
-      display_name: 'XStreaming',
+      display_name: 'AnyStreaming',
       idp_id: DEFAULT_IDP_ID,
     });
 
