@@ -424,6 +424,7 @@ export default {
     LibraryFilterNotOwned: '非所有',
     LibraryFilterOwnershipAll: '所有: すべて',
     PsStoreOnSale: 'セール中',
+    LibraryPsIncluded: 'PS Plusカタログに含まれています',
     PsStoreIncludedInCatalog: 'カタログに含まれます',
     PsStoreSaleUntil: 'セール {{date}} まで',
     PsStoreMemberPrice: 'PS Plus会員価格',

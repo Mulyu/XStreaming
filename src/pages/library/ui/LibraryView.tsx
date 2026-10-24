@@ -45,14 +45,31 @@ type CardCommon = {
   item: CatalogTitle;
   isFocused: boolean;
   discount: number;
+  t: Props['t'];
   openTitle: Props['openTitle'];
   openTitleDetail: Props['openTitleDetail'];
   setFocusedKey: Props['setFocusedKey'];
 };
 type GridCardProps = CardCommon & {numColumns: number};
-type WideCardProps = CardCommon & {
-  rating: ReturnType<Props['titleRating']>;
-  t: Props['t'];
+type WideCardProps = CardCommon & {rating: ReturnType<Props['titleRating']>};
+
+// Icon-only mark shown right after the PS badge: a list check for "included
+// in the PS Plus catalog". `size` matches the badge row it sits in.
+const PsMark: React.FC<{item: CatalogTitle; size: number; t: Props['t']}> = ({
+  item,
+  size,
+  t,
+}) => {
+  if (!item.psplus?.inPlusCatalog) {
+    return null;
+  }
+  return (
+    <View
+      style={[styles.psMark, {width: size, height: size}]}
+      accessibilityLabel={t('LibraryPsIncluded')}>
+      <Icon source="playlist-check" size={size - 4} color="#FFFFFF" />
+    </View>
+  );
 };
 
 // The list cells are memoised so a focus move or a price update re-renders
@@ -62,6 +79,7 @@ const GridCard = React.memo(function GridCard({
   isFocused,
   discount,
   numColumns,
+  t,
   openTitle,
   openTitleDetail,
   setFocusedKey,
@@ -154,6 +172,7 @@ const GridCard = React.memo(function GridCard({
               </Text>
             </View>
           )}
+          <PsMark item={item} size={14} t={t} />
         </View>
 
         {discount > 0 && (
@@ -283,6 +302,7 @@ const WideCard = React.memo(function WideCard({
                 </Text>
               </View>
             )}
+            <PsMark item={item} size={13} t={t} />
             {discount > 0 && (
               <Text style={styles.cardDiscount}>
                 {t('LibraryRowDiscount', {percent: discount})}
@@ -431,6 +451,7 @@ const LibraryView: React.FC<Props> = ({
           isFocused={focusedKey === item.key}
           discount={saleDiscount(item)}
           numColumns={numColumns}
+          t={t}
           openTitle={stableOpenTitle}
           openTitleDetail={stableOpenTitleDetail}
           setFocusedKey={setFocusedKey}
@@ -1115,6 +1136,13 @@ const styles = StyleSheet.create({
   wideGenreText: {fontSize: 10.5, fontWeight: '600', color: DIM_BADGE_TEXT},
   // Shared between the 3-up grid's badges and the sale callout.
   cardBadgesLine: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  // In the Plus catalog: solid PS blue.
+  psMark: {
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PS_ACCENT,
+  },
   cardBadge: {
     minWidth: 16,
     height: 13,
