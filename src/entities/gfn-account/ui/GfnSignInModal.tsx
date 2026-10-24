@@ -1,9 +1,10 @@
 import React from 'react';
 import {StyleSheet, View, Modal, Linking, Pressable} from 'react-native';
-import {Text, Icon, ActivityIndicator, useTheme} from 'react-native-paper';
+import {Text, Icon, useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {GfnDeviceChallenge} from '../model/auth';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {InlineSpinner} from '../../../shared/ui/Spinner';
 
 const NVIDIA_ACCENT = '#76B900';
 
@@ -51,7 +52,7 @@ function GfnSignInModal({
 
           {status === 'starting' ? (
             <View style={styles.modalCentre}>
-              <ActivityIndicator color={NVIDIA_ACCENT} />
+              <InlineSpinner color={NVIDIA_ACCENT} />
             </View>
           ) : status === 'failed' ? (
             <View style={styles.modalCentre}>
@@ -95,7 +96,7 @@ function GfnSignInModal({
                 </Text>
               </Pressable>
               <View style={styles.waitingRow}>
-                <ActivityIndicator size={14} color="#8A9A92" />
+                <InlineSpinner size={14} color="#8A9A92" />
                 <Text style={styles.waitingText}>{t('GfnLoginWaiting')}</Text>
               </View>
             </>

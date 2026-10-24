@@ -8,9 +8,10 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import {Text, Icon, ActivityIndicator} from 'react-native-paper';
+import {Text, Icon} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {useTVFocus, tvFocusRing} from '../../shared/ui/tvFocus';
+import {InlineSpinner} from '../../shared/ui/Spinner';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import {
@@ -995,7 +996,7 @@ function StoreScreen() {
   const renderFooter = () =>
     loadingMore ? (
       <View style={styles.footer}>
-        <ActivityIndicator size="small" />
+        <InlineSpinner size="small" />
       </View>
     ) : null;
 
@@ -1173,7 +1174,7 @@ function StoreScreen() {
 
       {visibleRows.length === 0 && (loading || loadingMore) ? (
         <View style={styles.centre}>
-          <ActivityIndicator />
+          <InlineSpinner />
           <Text style={styles.centreText}>{t('Loading...')}</Text>
         </View>
       ) : visibleRows.length === 0 ? (
