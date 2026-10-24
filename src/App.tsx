@@ -41,6 +41,7 @@ import {
   findTitleByProductId,
   findPsPlusGameByProductId,
   getTitleStreamingId,
+  recordRecentLaunch,
 } from './features/launch-title';
 import {normalizeTitle, recordTitlePlayed} from './entities/catalog-title';
 import {appDebugLog} from './shared/lib/appDebugLog';
@@ -264,6 +265,12 @@ function App() {
         // streaming (see features/launch-title's TitleShortcutSnapshot).
         if (shortcut.titleName) {
           recordTitlePlayed(normalizeTitle(shortcut.titleName));
+          recordRecentLaunch({
+            provider: 'gfn',
+            appId: shortcut.gfnAppId,
+            store: shortcut.gfnStore || '',
+            title: shortcut.titleName,
+          });
         }
         navigationRef.navigate('NativeStream', {
           streamType: 'gfn',
@@ -281,6 +288,7 @@ function App() {
         }
         if (game.name) {
           recordTitlePlayed(normalizeTitle(game.name));
+          recordRecentLaunch({provider: 'psplus', game});
         }
         // Same params ps-plus-library's own onSelectGame and
         // launchWithProvider's normal (non-shortcut) PS Plus launch path
@@ -315,6 +323,7 @@ function App() {
         : '';
       if (titleItem.ProductTitle) {
         recordTitlePlayed(normalizeTitle(titleItem.ProductTitle));
+        recordRecentLaunch({provider: 'xcloud', titleItem});
       }
       navigationRef.navigate({
         name: getSettings().native_portrait_mode
