@@ -34,6 +34,10 @@ export const RailButton: React.FC<{
   // Icon (or letter) only, no visible label -- the label stays as the
   // accessibility label. For dense toolbars (Library's TV filter row).
   iconOnly?: boolean;
+  // Phone toolbars: a smaller (34dp) icon chip with the app's pill-chip
+  // look -- subtle fill and border when off, solid accent when on -- instead
+  // of the 46dp TV button. Only meaningful together with iconOnly.
+  compact?: boolean;
   // Layout overrides from the parent (e.g. flexGrow for a wide search button).
   style?: StyleProp<ViewStyle>;
 }> = ({
@@ -47,6 +51,7 @@ export const RailButton: React.FC<{
   accent,
   fill,
   iconOnly,
+  compact,
   style,
 }) => {
   const [focused, setFocused] = React.useState(false);
@@ -68,9 +73,13 @@ export const RailButton: React.FC<{
         styles.railBtn,
         focused && styles.railBtnFocused,
         iconOnly && styles.railBtnIconOnly,
+        compact && styles.railBtnCompact,
         active &&
           !danger &&
-          (fill ? {backgroundColor: accent} : styles.railBtnActive),
+          (fill
+            ? {backgroundColor: accent, borderColor: accent}
+            : styles.railBtnActive),
+        compact && focused && styles.railBtnFocused,
         style,
       ]}
       accessibilityLabel={label}
@@ -79,9 +88,20 @@ export const RailButton: React.FC<{
       onBlur={() => setFocused(false)}
       android_ripple={{color: alpha(palette.white, 0.15)}}>
       {letter ? (
-        <Text style={[styles.railBtnLetter, {color: iconColor}]}>{letter}</Text>
+        <Text
+          style={[
+            styles.railBtnLetter,
+            compact && styles.railBtnLetterCompact,
+            {color: iconColor},
+          ]}>
+          {letter}
+        </Text>
       ) : icon ? (
-        <Icon source={icon} size={iconOnly ? 22 : 18} color={iconColor} />
+        <Icon
+          source={icon}
+          size={compact ? 20 : iconOnly ? 22 : 18}
+          color={iconColor}
+        />
       ) : null}
       {!iconOnly && (
         <Text
@@ -156,6 +176,16 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     paddingHorizontal: 10,
   },
+  railBtnCompact: {
+    minWidth: 34,
+    height: 34,
+    borderRadius: 12,
+    gap: 2,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: alpha(palette.text, 0.24),
+    backgroundColor: alpha(palette.text, 0.14),
+  },
   railBtnFocused: {
     borderColor: TV_FOCUS_COLOR,
   },
@@ -165,6 +195,9 @@ const styles = StyleSheet.create({
   railBtnLetter: {
     fontSize: 13,
     fontWeight: '800',
+  },
+  railBtnLetterCompact: {
+    fontSize: 12,
   },
   railBtnLabel: {
     fontSize: 11.5,

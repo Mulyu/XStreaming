@@ -329,18 +329,11 @@ const LibraryView: React.FC<Props> = ({
   const searchFocus = useTVFocus();
   const tvSearchInputFocus = useTVFocus();
   const tvSearchCloseFocus = useTVFocus();
-  // Phone only -- TV's own chips are the shared RailButton (self-managed
-  // focus), but phone's plain pill chips still need their own onFocus/onBlur
-  // per this app's blanket rule (scripts/check-tv-focus.js) that every
-  // onPress element wires one up.
-  const xcloudChipFocus = useTVFocus();
-  const gfnChipFocus = useTVFocus();
-  const psPlusChipFocus = useTVFocus();
-  const favoriteChipFocus = useTVFocus();
-  const ownedOnlyChipFocus = useTVFocus();
-  const onSaleChipFocus = useTVFocus();
-  const freePlayChipFocus = useTVFocus();
-  const sortChipFocus = useTVFocus();
+  const clearSearchFocus = useTVFocus();
+  const cancelSearchFocus = useTVFocus();
+  const [phoneSearchOpen, setPhoneSearchOpen] = React.useState(
+    keyword.length > 0,
+  );
   const [focusedSortOption, setFocusedSortOption] = React.useState<
     string | null
   >(null);
@@ -451,17 +444,34 @@ const LibraryView: React.FC<Props> = ({
   return (
     <View style={[styles.root, {backgroundColor}]}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>{t('Library')}</Text>
-          {catalog.length > 0 && (
-            <Text style={styles.count}>
-              {filtered.length}/{catalog.length}
-            </Text>
-          )}
-          {gfnFullCatalogLoading && (
-            <InlineSpinner size={12} color={palette.textSoft} />
-          )}
-        </View>
+        {(Platform.isTV || !phoneSearchOpen) && (
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{t('Library')}</Text>
+            {catalog.length > 0 && (
+              <Text style={styles.count}>
+                {filtered.length}/{catalog.length}
+              </Text>
+            )}
+            {gfnFullCatalogLoading && (
+              <InlineSpinner size={12} color={palette.textSoft} />
+            )}
+            {!Platform.isTV && (
+              <>
+                <View style={styles.titleSpacer} />
+                <RailButton
+                  compact
+                  iconOnly
+                  icon="magnify"
+                  label={t('Search')}
+                  active={keyword.length > 0}
+                  accent={palette.accent}
+                  fill
+                  onPress={() => setPhoneSearchOpen(true)}
+                />
+              </>
+            )}
+          </View>
+        )}
         {Platform.isTV ? (
           <>
             <View style={styles.tvToolbarRow}>
@@ -539,262 +549,149 @@ const LibraryView: React.FC<Props> = ({
               </View>
             </Modal>
           </>
-        ) : (
-          <View
-            style={[
-              styles.searchBox,
-              searchFocus.focused && styles.searchBoxFocused,
-            ]}>
-            <Icon
-              source="magnify"
-              size={18}
-              color={searchFocus.focused ? TV_FOCUS_COLOR : palette.textSoft}
-            />
-            <TextInput
-              value={keyword}
-              onChangeText={setKeyword}
-              placeholder={t('Search')}
-              placeholderTextColor={palette.textSoft}
-              style={styles.searchInput}
-              onFocus={searchFocus.onFocus}
-              onBlur={searchFocus.onBlur}
-            />
+        ) : phoneSearchOpen ? (
+          <View style={styles.phoneSearchRow}>
+            <View
+              style={[
+                styles.searchBox,
+                styles.phoneSearchBox,
+                searchFocus.focused && styles.searchBoxFocused,
+              ]}>
+              <Icon
+                source="magnify"
+                size={18}
+                color={searchFocus.focused ? TV_FOCUS_COLOR : palette.textSoft}
+              />
+              <TextInput
+                value={keyword}
+                onChangeText={setKeyword}
+                placeholder={t('Search')}
+                placeholderTextColor={palette.textSoft}
+                style={styles.searchInput}
+                onFocus={searchFocus.onFocus}
+                onBlur={searchFocus.onBlur}
+                autoFocus
+              />
+              {keyword.length > 0 && (
+                <Pressable
+                  style={[
+                    styles.searchClear,
+                    clearSearchFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={() => setKeyword('')}
+                  onFocus={clearSearchFocus.onFocus}
+                  onBlur={clearSearchFocus.onBlur}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Close')}>
+                  <Icon source="close" size={18} color={palette.textSoft} />
+                </Pressable>
+              )}
+            </View>
+            <Pressable
+              style={[
+                styles.searchCancel,
+                cancelSearchFocus.focused && tvFocusRing,
+              ]}
+              onPress={() => {
+                setKeyword('');
+                setPhoneSearchOpen(false);
+              }}
+              onFocus={cancelSearchFocus.onFocus}
+              onBlur={cancelSearchFocus.onBlur}
+              accessibilityRole="button">
+              <Text style={styles.searchCancelText}>{t('Cancel')}</Text>
+            </Pressable>
           </View>
-        )}
+        ) : null}
         <View style={styles.filterRow}>
           <View style={styles.chipsRow}>
-            {Platform.isTV ? (
-              <>
-                <RailButton
-                  iconOnly
-                  letter="X"
-                  label={t('LibraryFilterXcloud')}
-                  active={filterXcloud}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterXcloud(v => !v)}
-                />
-                <RailButton
-                  iconOnly
-                  letter="N"
-                  label={t('LibraryFilterGfn')}
-                  active={filterGfn}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterGfn(v => !v)}
-                />
-                <RailButton
-                  iconOnly
-                  letter="PS"
-                  label={t('LibraryFilterPsPlus')}
-                  active={filterPsPlus}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterPsPlus(v => !v)}
-                />
-                <RailButton
-                  iconOnly
-                  icon="heart-outline"
-                  label={t('LibraryFilterFavorite')}
-                  active={filterFavorite}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterFavorite(v => !v)}
-                />
-                <RailButton
-                  iconOnly
-                  icon={
-                    filterOwnership === 'notOwned'
-                      ? 'close-circle-outline'
-                      : 'check-circle-outline'
-                  }
-                  label={ownershipLabel}
-                  active={filterOwnership !== 'all'}
-                  accent={palette.accent}
-                  fill
-                  onPress={cycleOwnership}
-                />
-                <RailButton
-                  iconOnly
-                  icon="tag-outline"
-                  label={t('LibraryFilterOnSale')}
-                  active={filterOnSale}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterOnSale(v => !v)}
-                />
-                <RailButton
-                  iconOnly
-                  icon="gift-outline"
-                  label={freePlayLabel}
-                  active={filterFreePlay !== 'off'}
-                  accent={palette.accent}
-                  fill
-                  onPress={cycleFreePlay}
-                />
-                <View style={styles.sortChipTv}>
-                  <RailButton
-                    iconOnly
-                    icon="sort"
-                    trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
-                    label={`${t('Sort')}: ${activeSortLabel}`}
-                    active={sortMode !== 'recent'}
-                    accent={palette.accent}
-                    fill
-                    onPress={() => setSortMenuOpen(v => !v)}
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <Pressable
-                  style={[
-                    styles.filterChip,
-                    filterXcloud && styles.filterChipOn,
-                    xcloudChipFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={() => setFilterXcloud(v => !v)}
-                  onFocus={xcloudChipFocus.onFocus}
-                  onBlur={xcloudChipFocus.onBlur}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      filterXcloud && styles.filterChipTextOn,
-                    ]}>
-                    {t('LibraryFilterXcloud')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.filterChip,
-                    filterGfn && styles.filterChipOn,
-                    gfnChipFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={() => setFilterGfn(v => !v)}
-                  onFocus={gfnChipFocus.onFocus}
-                  onBlur={gfnChipFocus.onBlur}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      filterGfn && styles.filterChipTextOn,
-                    ]}>
-                    {t('LibraryFilterGfn')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.filterChip,
-                    filterPsPlus && styles.filterChipOn,
-                    psPlusChipFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={() => setFilterPsPlus(v => !v)}
-                  onFocus={psPlusChipFocus.onFocus}
-                  onBlur={psPlusChipFocus.onBlur}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      filterPsPlus && styles.filterChipTextOn,
-                    ]}>
-                    {t('LibraryFilterPsPlus')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.filterChip,
-                    filterFavorite && styles.filterChipOn,
-                    favoriteChipFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={() => setFilterFavorite(v => !v)}
-                  onFocus={favoriteChipFocus.onFocus}
-                  onBlur={favoriteChipFocus.onBlur}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      filterFavorite && styles.filterChipTextOn,
-                    ]}>
-                    {t('LibraryFilterFavorite')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.filterChip,
-                    filterOwnership !== 'all' && styles.filterChipOn,
-                    ownedOnlyChipFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={cycleOwnership}
-                  onFocus={ownedOnlyChipFocus.onFocus}
-                  onBlur={ownedOnlyChipFocus.onBlur}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      filterOwnership !== 'all' && styles.filterChipTextOn,
-                    ]}>
-                    {ownershipLabel}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.filterChip,
-                    filterOnSale && styles.filterChipOn,
-                    onSaleChipFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={() => setFilterOnSale(v => !v)}
-                  onFocus={onSaleChipFocus.onFocus}
-                  onBlur={onSaleChipFocus.onBlur}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      filterOnSale && styles.filterChipTextOn,
-                    ]}>
-                    {t('LibraryFilterOnSale')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.filterChip,
-                    filterFreePlay !== 'off' && styles.filterChipOn,
-                    freePlayChipFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={cycleFreePlay}
-                  onFocus={freePlayChipFocus.onFocus}
-                  onBlur={freePlayChipFocus.onBlur}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      filterFreePlay !== 'off' && styles.filterChipTextOn,
-                    ]}>
-                    {freePlayLabel}
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  style={[
-                    styles.sortChip,
-                    sortMode !== 'recent' && styles.sortChipOn,
-                    sortChipFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={() => setSortMenuOpen(v => !v)}
-                  onFocus={sortChipFocus.onFocus}
-                  onBlur={sortChipFocus.onBlur}>
-                  <Text
-                    style={[
-                      styles.sortChipText,
-                      sortMode !== 'recent' && styles.sortChipTextOn,
-                    ]}>
-                    {`${t('Sort')}: ${activeSortLabel}`}
-                  </Text>
-                  <Icon
-                    source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
-                    size={14}
-                    color={
-                      sortMode !== 'recent'
-                        ? palette.onAccent
-                        : palette.textSoft
-                    }
-                  />
-                </Pressable>
-              </>
-            )}
+            <RailButton
+              iconOnly
+              compact={!Platform.isTV}
+              letter="X"
+              label={t('LibraryFilterXcloud')}
+              active={filterXcloud}
+              accent={palette.accent}
+              fill
+              onPress={() => setFilterXcloud(v => !v)}
+            />
+            <RailButton
+              iconOnly
+              compact={!Platform.isTV}
+              letter="N"
+              label={t('LibraryFilterGfn')}
+              active={filterGfn}
+              accent={palette.accent}
+              fill
+              onPress={() => setFilterGfn(v => !v)}
+            />
+            <RailButton
+              iconOnly
+              compact={!Platform.isTV}
+              letter="PS"
+              label={t('LibraryFilterPsPlus')}
+              active={filterPsPlus}
+              accent={palette.accent}
+              fill
+              onPress={() => setFilterPsPlus(v => !v)}
+            />
+            <RailButton
+              iconOnly
+              compact={!Platform.isTV}
+              icon="heart-outline"
+              label={t('LibraryFilterFavorite')}
+              active={filterFavorite}
+              accent={palette.accent}
+              fill
+              onPress={() => setFilterFavorite(v => !v)}
+            />
+            <RailButton
+              iconOnly
+              compact={!Platform.isTV}
+              icon={
+                filterOwnership === 'notOwned'
+                  ? 'close-circle-outline'
+                  : 'check-circle-outline'
+              }
+              label={ownershipLabel}
+              active={filterOwnership !== 'all'}
+              accent={palette.accent}
+              fill
+              onPress={cycleOwnership}
+            />
+            <RailButton
+              iconOnly
+              compact={!Platform.isTV}
+              icon="tag-outline"
+              label={t('LibraryFilterOnSale')}
+              active={filterOnSale}
+              accent={palette.accent}
+              fill
+              onPress={() => setFilterOnSale(v => !v)}
+            />
+            <RailButton
+              iconOnly
+              compact={!Platform.isTV}
+              icon="gift-outline"
+              label={freePlayLabel}
+              active={filterFreePlay !== 'off'}
+              accent={palette.accent}
+              fill
+              onPress={cycleFreePlay}
+            />
+            <View style={styles.sortChipTv}>
+              <RailButton
+                iconOnly
+                compact={!Platform.isTV}
+                icon="sort"
+                trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
+                label={`${t('Sort')}: ${activeSortLabel}`}
+                active={sortMode !== 'recent'}
+                accent={palette.accent}
+                fill
+                onPress={() => setSortMenuOpen(v => !v)}
+              />
+            </View>
           </View>
 
           {sortMenuOpen && (
@@ -958,39 +855,15 @@ const styles = StyleSheet.create({
     gap: 6,
     alignItems: 'center',
   },
-  // Phone only now -- TV uses the shared RailButton (see shared/ui/
-  // RailControls.tsx) instead of its own lookalike chip, after this file's
-  // own hand-rolled version turned out to be the third near-identical copy
-  // of that same box across the app.
-  filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: alpha(palette.text, 0.14),
-    borderWidth: 1,
-    borderColor: alpha(palette.text, 0.24),
-  },
-  filterChipOn: {backgroundColor: palette.accent, borderColor: palette.accent},
-  filterChipText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
-  filterChipTextOn: {color: palette.onAccent},
-  sortChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginLeft: 'auto',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: alpha(palette.text, 0.14),
-    borderWidth: 1,
-    borderColor: alpha(palette.text, 0.24),
-  },
-  sortChipOn: {backgroundColor: palette.accent, borderColor: palette.accent},
-  sortChipText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
-  sortChipTextOn: {color: palette.onAccent},
   // TV only -- pushes the sort RailButton to the row's far end, same as
   // phone's sortChip's own marginLeft:'auto'.
   sortChipTv: {marginLeft: 'auto'},
+  titleSpacer: {flex: 1},
+  phoneSearchRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  phoneSearchBox: {flex: 1, height: 36, borderRadius: 12},
+  searchClear: {padding: 2, borderRadius: 999},
+  searchCancel: {paddingHorizontal: 6, paddingVertical: 8, borderRadius: 8},
+  searchCancelText: {fontSize: 13, fontWeight: '700', color: palette.textSoft},
   sortMenu: {
     position: 'absolute',
     top: '100%',
