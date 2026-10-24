@@ -10,6 +10,7 @@ import {
   Pressable,
   Modal,
   DeviceEventEmitter,
+  NativeModules,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import {Text, Icon, ActivityIndicator} from 'react-native-paper';
@@ -30,11 +31,6 @@ const XBOX_ACCENT = '#107C10';
 const NVIDIA_ACCENT = '#76B900';
 const PS_ACCENT = '#0070D1';
 const SALE_ACCENT = '#E67E22';
-// TV: 3 wide cards per row -- a dense single-column list had too little
-// information density, and a dense image-only grid was the original focus-
-// visibility problem (see `wideCard`'s own comment). numColumns itself still
-// comes from the view-model for phone's own grid; this is TV-only and fixed.
-const TV_GRID_COLUMNS = 3;
 // Same dim treatment library-title-detail's own per-provider rows use for a
 // service a title isn't actually owned on.
 const DIM_BADGE_BG = 'rgba(140,140,150,0.3)';
@@ -52,13 +48,10 @@ type CardCommon = {
   setFocusedKey: Props['setFocusedKey'];
 };
 type GridCardProps = CardCommon & {numColumns: number; inGamePass: boolean};
-type WideCardProps = CardCommon & {
-  rating: ReturnType<Props['titleRating']>;
-  inGamePass: boolean;
-};
 
-// Icon-only mark shown right after a provider badge: a list check for
-// "included in that service's catalog" (PS Plus catalog / Game Pass). `size`
+// Icon-only mark shown right after a provider badge: a gift (the same icon as
+// the free-to-play filter) for "included in that service's catalog" (PS Plus
+// catalog / Game Pass). `size`
 // matches the badge row it sits in.
 const CatalogMark: React.FC<{
   show: boolean;
@@ -76,8 +69,120 @@ const CatalogMark: React.FC<{
         {width: size, height: size, backgroundColor: color},
       ]}
       accessibilityLabel={label}>
-      <Icon source="playlist-check" size={size - 4} color="#FFFFFF" />
+      <Icon source="gift-outline" size={size - 4} color="#FFFFFF" />
     </View>
+  );
+};
+
+// The art of one library cell -- cover, dim, badges, sale and title -- shared
+// by the phone grid card and the TV tile (each wraps it in its own pressable).
+// `big` scales the badges up for the TV's viewing distance.
+const CardArt: React.FC<{
+  item: CatalogTitle;
+  discount: number;
+  inGamePass: boolean;
+  big: boolean;
+  t: Props['t'];
+}> = ({item, discount, inGamePass, big, t}) => {
+  // Cover art itself grays out when the title isn't playable via any of
+  // its listed services today (no Game Pass entitlement, no owned GFN
+  // store variant, no owned PS Plus game).
+  const isPlayable = isCatalogTitleOwned(item);
+  // Each badge answers "owned on this service" individually -- a title
+  // supported by all three but owned on only one (e.g. Xbox/xCloud) must
+  // only light up that one, not every service it merely appears under.
+  const xcloudOwned = !!item.xcloud?.hasEntitlement;
+  const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
+  const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
+  const dotStyle = big
+    ? [styles.availDot, styles.availDotBig]
+    : styles.availDot;
+  const dotText = big
+    ? [styles.availDotText, styles.availDotTextBig]
+    : styles.availDotText;
+  const markSize = big ? 19 : 14;
+
+  return (
+    <>
+      {item.imageUrl ? (
+        <Image
+          source={{uri: item.imageUrl}}
+          resizeMode="cover"
+          style={styles.thumb}
+        />
+      ) : (
+        <View style={styles.thumbEmpty}>
+          <Text style={styles.thumbEmptyText} numberOfLines={3}>
+            {item.title}
+          </Text>
+        </View>
+      )}
+
+      {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
+      <View style={styles.bottomScrim} pointerEvents="none" />
+
+      <View style={[styles.availOverlay, big && styles.availOverlayBig]}>
+        {item.xcloud && (
+          <View
+            style={[
+              dotStyle,
+              {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
+            ]}>
+            <Text style={[dotText, !xcloudOwned && {color: DIM_BADGE_TEXT}]}>
+              X
+            </Text>
+          </View>
+        )}
+        <CatalogMark
+          show={inGamePass}
+          color={XBOX_ACCENT}
+          label={t('LibraryGamePassIncluded')}
+          size={markSize}
+        />
+        {item.gfn && (
+          <View
+            style={[
+              dotStyle,
+              {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
+            ]}>
+            <Text style={[dotText, !gfnOwned && {color: DIM_BADGE_TEXT}]}>
+              N
+            </Text>
+          </View>
+        )}
+        {item.psplus && (
+          <View
+            style={[
+              dotStyle,
+              {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
+            ]}>
+            <Text style={[dotText, !psplusOwned && {color: DIM_BADGE_TEXT}]}>
+              PS
+            </Text>
+          </View>
+        )}
+        <CatalogMark
+          show={!!item.psplus?.inPlusCatalog}
+          color={PS_ACCENT}
+          label={t('LibraryPsIncluded')}
+          size={markSize}
+        />
+      </View>
+
+      {discount > 0 && (
+        <View style={[styles.saleBadge, big && styles.saleBadgeBig]}>
+          <Text style={[styles.saleBadgeText, big && styles.saleBadgeTextBig]}>
+            -{discount}%
+          </Text>
+        </View>
+      )}
+
+      <Text
+        style={[styles.cardTitle, big && styles.cardTitleBig]}
+        numberOfLines={2}>
+        {item.title}
+      </Text>
+    </>
   );
 };
 
@@ -94,17 +199,6 @@ const GridCard = React.memo(function GridCard({
   openTitleDetail,
   setFocusedKey,
 }: GridCardProps) {
-  // Cover art itself grays out when the title isn't playable via any of
-  // its listed services today (no Game Pass entitlement, no owned GFN
-  // store variant, no owned PS Plus game).
-  const isPlayable = isCatalogTitleOwned(item);
-  // Each badge answers "owned on this service" individually -- a title
-  // supported by all three but owned on only one (e.g. Xbox/xCloud) must
-  // only light up that one, not every service it merely appears under.
-  const xcloudOwned = !!item.xcloud?.hasEntitlement;
-  const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
-  const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
-
   return (
     <View
       style={[
@@ -119,244 +213,54 @@ const GridCard = React.memo(function GridCard({
         onFocus={() => setFocusedKey(item.key)}
         onBlur={() => setFocusedKey(prev => (prev === item.key ? null : prev))}
         android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
-        {item.imageUrl ? (
-          <Image
-            source={{uri: item.imageUrl}}
-            resizeMode="cover"
-            style={styles.thumb}
-          />
-        ) : (
-          <View style={styles.thumbEmpty}>
-            <Text style={styles.thumbEmptyText} numberOfLines={3}>
-              {item.title}
-            </Text>
-          </View>
-        )}
-
-        {!isPlayable && <View style={styles.coverDim} pointerEvents="none" />}
-        <View style={styles.bottomScrim} pointerEvents="none" />
-
-        <View style={styles.availOverlay}>
-          {item.xcloud && (
-            <View
-              style={[
-                styles.availDot,
-                {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
-              ]}>
-              <Text
-                style={[
-                  styles.availDotText,
-                  !xcloudOwned && {color: DIM_BADGE_TEXT},
-                ]}>
-                X
-              </Text>
-            </View>
-          )}
-          <CatalogMark
-            show={inGamePass}
-            color={XBOX_ACCENT}
-            label={t('LibraryGamePassIncluded')}
-            size={14}
-          />
-          {item.gfn && (
-            <View
-              style={[
-                styles.availDot,
-                {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
-              ]}>
-              <Text
-                style={[
-                  styles.availDotText,
-                  !gfnOwned && {color: DIM_BADGE_TEXT},
-                ]}>
-                N
-              </Text>
-            </View>
-          )}
-          {item.psplus && (
-            <View
-              style={[
-                styles.availDot,
-                {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
-              ]}>
-              <Text
-                style={[
-                  styles.availDotText,
-                  !psplusOwned && {color: DIM_BADGE_TEXT},
-                ]}>
-                PS
-              </Text>
-            </View>
-          )}
-          <CatalogMark
-            show={!!item.psplus?.inPlusCatalog}
-            color={PS_ACCENT}
-            label={t('LibraryPsIncluded')}
-            size={14}
-          />
-        </View>
-
-        {discount > 0 && (
-          <View style={styles.saleBadge}>
-            <Text style={styles.saleBadgeText}>-{discount}%</Text>
-          </View>
-        )}
-
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
+        <CardArt
+          item={item}
+          discount={discount}
+          inGamePass={inGamePass}
+          big={false}
+          t={t}
+        />
       </Pressable>
     </View>
   );
 });
 
-// TV only: 3 wide cards per row instead of the dense image-only grid
-// above. A single-column list (this screen's own earlier history) had too
-// little information density; this keeps that list's layout -- a bigger
-// (84x84) but still non-focus-conditional thumbnail with plain exposed
-// mat around it, title/badges beside it -- just 3 across instead of 1, so
-// the focus ring (and Android's own default per-view focus highlight,
-// which paints behind opaque children and only shows through exposed
-// background) still has plain background to land on instead of fighting
-// with box art the way the old dense square-image grid did.
-const WideCard = React.memo(function WideCard({
+// TV only: the same square art as the phone grid, but inside a padded tile.
+// The generous padding is deliberate -- the tile itself is what takes focus,
+// so Android's own default focus highlight (which paints behind opaque
+// children and only shows through exposed background) and our focus ring
+// have plain mat all around the cover to land on, instead of fighting with
+// box art. Constant 2px transparent border so gaining the ring never
+// resizes the tile. A short OK press launches; a held OK (or a touch long
+// press) opens the details.
+const TvTile = React.memo(function TvTile({
   item,
   isFocused,
   discount,
-  rating,
+  numColumns,
   inGamePass,
   t,
   openTitle,
   openTitleDetail,
   setFocusedKey,
-}: WideCardProps) {
-  const xcloudOwned = !!item.xcloud?.hasEntitlement;
-  const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
-  const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
-  // Owned/not-owned already reads from the X/N/PS badges' own color (lit
-  // vs dimmed) -- this line used to just repeat that as text, so it's
-  // genre + rating instead now, the same two things Title Detail already
-  // shows. Genre comes from the catalog itself (every provider has it by
-  // the time a title reaches this grid); rating only ever covers xCloud
-  // titles the Store price fetch has reached (see titleRating's own
-  // comment), so it's simply left out rather than faked when absent.
-  const genreLabel = item.genres.slice(0, 2).join(' · ');
-
+}: GridCardProps) {
   return (
-    <View
-      style={[
-        styles.wideCell,
-        {width: `${100 / TV_GRID_COLUMNS}%`},
-        isFocused && styles.cellFocused,
-      ]}>
+    <View style={[styles.tvCell, {width: `${100 / numColumns}%`}]}>
       <Pressable
-        style={[styles.wideCard, isFocused && styles.wideCardFocused]}
+        style={[styles.tvTile, isFocused && styles.tvTileFocused]}
         onPress={() => openTitle(item)}
         onLongPress={() => openTitleDetail(item)}
         onFocus={() => setFocusedKey(item.key)}
         onBlur={() => setFocusedKey(prev => (prev === item.key ? null : prev))}
         android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
-        <View style={styles.wideThumb}>
-          {item.imageUrl ? (
-            <Image
-              source={{uri: item.imageUrl}}
-              resizeMode="cover"
-              style={styles.thumb}
-            />
-          ) : (
-            <View style={styles.wideThumbEmpty}>
-              <Text style={styles.wideThumbEmptyText} numberOfLines={2}>
-                {item.title}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.wideBody}>
-          <Text
-            style={[styles.wideTitle, isFocused && styles.wideTitleFocused]}
-            numberOfLines={1}>
-            {item.title}
-          </Text>
-          <View style={styles.cardBadgesLine}>
-            {item.xcloud && (
-              <View
-                style={[
-                  styles.cardBadge,
-                  {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.cardBadgeText,
-                    !xcloudOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  X
-                </Text>
-              </View>
-            )}
-            <CatalogMark
-              show={inGamePass}
-              color={XBOX_ACCENT}
-              label={t('LibraryGamePassIncluded')}
-              size={13}
-            />
-            {item.gfn && (
-              <View
-                style={[
-                  styles.cardBadge,
-                  {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.cardBadgeText,
-                    !gfnOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  N
-                </Text>
-              </View>
-            )}
-            {item.psplus && (
-              <View
-                style={[
-                  styles.cardBadge,
-                  {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
-                ]}>
-                <Text
-                  style={[
-                    styles.cardBadgeText,
-                    !psplusOwned && {color: DIM_BADGE_TEXT},
-                  ]}>
-                  PS
-                </Text>
-              </View>
-            )}
-            <CatalogMark
-              show={!!item.psplus?.inPlusCatalog}
-              color={PS_ACCENT}
-              label={t('LibraryPsIncluded')}
-              size={13}
-            />
-            {discount > 0 && (
-              <Text style={styles.cardDiscount}>
-                {t('LibraryRowDiscount', {percent: discount})}
-              </Text>
-            )}
-          </View>
-          <View style={styles.wideMetaLine}>
-            {rating && (
-              <View style={styles.wideRating}>
-                <Icon source="star" size={10} color="#E6ECE8" />
-                <Text style={styles.wideRatingText}>
-                  {rating.average.toFixed(1)}
-                </Text>
-              </View>
-            )}
-            {!!genreLabel && (
-              <Text style={styles.wideGenreText} numberOfLines={1}>
-                {genreLabel}
-              </Text>
-            )}
-          </View>
+        <View style={styles.tvArt}>
+          <CardArt
+            item={item}
+            discount={discount}
+            inGamePass={inGamePass}
+            big
+            t={t}
+          />
         </View>
       </Pressable>
     </View>
@@ -401,7 +305,6 @@ const LibraryView: React.FC<Props> = ({
   openTitle,
   openTitleDetail,
   saleDiscount,
-  titleRating,
 }) => {
   // One chip cycles owned -> not owned -> all; its label names the state.
   const ownershipLabel = t(
@@ -460,6 +363,41 @@ const LibraryView: React.FC<Props> = ({
     }, []),
   );
 
+  // Holding OK on the remote opens the focused tile's details (a plain OK
+  // press launches). MainActivity.java reports the held press as
+  // onDpadCenterLongPress, but only while this screen has asked for it
+  // through GamepadManager.setCenterLongPressEnabled -- elsewhere a held OK
+  // stays an ordinary press. Refs keep the listener from re-subscribing on
+  // every focus move.
+  const focusedKeyRef = React.useRef(focusedKey);
+  focusedKeyRef.current = focusedKey;
+  const sortedRef = React.useRef(sorted);
+  sortedRef.current = sorted;
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!Platform.isTV) {
+        return;
+      }
+      NativeModules.GamepadManager?.setCenterLongPressEnabled?.(true);
+      const sub = DeviceEventEmitter.addListener(
+        'onDpadCenterLongPress',
+        () => {
+          const key = focusedKeyRef.current;
+          const item = key
+            ? sortedRef.current.find(entry => entry.key === key)
+            : undefined;
+          if (item) {
+            openTitleDetailRef.current(item);
+          }
+        },
+      );
+      return () => {
+        sub.remove();
+        NativeModules.GamepadManager?.setCenterLongPressEnabled?.(false);
+      };
+    }, []),
+  );
+
   // Held in refs so the memoised cells get stable handlers even when the
   // view-model hands out new function identities.
   const openTitleRef = React.useRef(openTitle);
@@ -476,21 +414,10 @@ const LibraryView: React.FC<Props> = ({
   );
 
   const renderItem = React.useCallback(
-    ({item}: {item: CatalogTitle}) =>
-      Platform.isTV ? (
-        <WideCard
-          item={item}
-          isFocused={focusedKey === item.key}
-          discount={saleDiscount(item)}
-          rating={titleRating(item)}
-          inGamePass={isInGamePass(item, gamePassMap)}
-          t={t}
-          openTitle={stableOpenTitle}
-          openTitleDetail={stableOpenTitleDetail}
-          setFocusedKey={setFocusedKey}
-        />
-      ) : (
-        <GridCard
+    ({item}: {item: CatalogTitle}) => {
+      const Cell = Platform.isTV ? TvTile : GridCard;
+      return (
+        <Cell
           item={item}
           isFocused={focusedKey === item.key}
           discount={saleDiscount(item)}
@@ -501,11 +428,11 @@ const LibraryView: React.FC<Props> = ({
           openTitleDetail={stableOpenTitleDetail}
           setFocusedKey={setFocusedKey}
         />
-      ),
+      );
+    },
     [
       focusedKey,
       saleDiscount,
-      titleRating,
       gamePassMap,
       numColumns,
       t,
@@ -531,15 +458,17 @@ const LibraryView: React.FC<Props> = ({
         </View>
         {Platform.isTV ? (
           <>
-            <View style={styles.tvSearchChip}>
+            <View style={styles.tvToolbarRow}>
               <RailButton
                 icon="magnify"
                 label={t('Search')}
                 accent={XBOX_ACCENT}
+                style={styles.tvSearchGrow}
                 onPress={() => setTvSearchOpen(true)}
               />
               {/* TV has no pull-to-refresh gesture: same refresh, as a button. */}
               <RailButton
+                iconOnly
                 icon="refresh"
                 label={refreshing ? t('Loading...') : t('Refresh')}
                 accent={XBOX_ACCENT}
@@ -627,6 +556,7 @@ const LibraryView: React.FC<Props> = ({
             {Platform.isTV ? (
               <>
                 <RailButton
+                  iconOnly
                   letter="X"
                   label={t('LibraryFilterXcloud')}
                   active={filterXcloud}
@@ -635,6 +565,7 @@ const LibraryView: React.FC<Props> = ({
                   onPress={() => setFilterXcloud(v => !v)}
                 />
                 <RailButton
+                  iconOnly
                   letter="N"
                   label={t('LibraryFilterGfn')}
                   active={filterGfn}
@@ -643,6 +574,7 @@ const LibraryView: React.FC<Props> = ({
                   onPress={() => setFilterGfn(v => !v)}
                 />
                 <RailButton
+                  iconOnly
                   letter="PS"
                   label={t('LibraryFilterPsPlus')}
                   active={filterPsPlus}
@@ -651,6 +583,7 @@ const LibraryView: React.FC<Props> = ({
                   onPress={() => setFilterPsPlus(v => !v)}
                 />
                 <RailButton
+                  iconOnly
                   icon="heart-outline"
                   label={t('LibraryFilterFavorite')}
                   active={filterFavorite}
@@ -659,6 +592,7 @@ const LibraryView: React.FC<Props> = ({
                   onPress={() => setFilterFavorite(v => !v)}
                 />
                 <RailButton
+                  iconOnly
                   icon={
                     filterOwnership === 'notOwned'
                       ? 'close-circle-outline'
@@ -671,6 +605,7 @@ const LibraryView: React.FC<Props> = ({
                   onPress={cycleOwnership}
                 />
                 <RailButton
+                  iconOnly
                   icon="tag-outline"
                   label={t('LibraryFilterOnSale')}
                   active={filterOnSale}
@@ -679,6 +614,7 @@ const LibraryView: React.FC<Props> = ({
                   onPress={() => setFilterOnSale(v => !v)}
                 />
                 <RailButton
+                  iconOnly
                   icon="gift-outline"
                   label={freePlayLabel}
                   active={filterFreePlay !== 'off'}
@@ -688,6 +624,7 @@ const LibraryView: React.FC<Props> = ({
                 />
                 <View style={styles.sortChipTv}>
                   <RailButton
+                    iconOnly
                     icon="sort"
                     trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
                     label={`${t('Sort')}: ${activeSortLabel}`}
@@ -889,8 +826,8 @@ const LibraryView: React.FC<Props> = ({
       ) : (
         <FlatList
           data={sorted}
-          key={Platform.isTV ? `tv-wide-${TV_GRID_COLUMNS}` : numColumns}
-          numColumns={Platform.isTV ? TV_GRID_COLUMNS : numColumns}
+          key={Platform.isTV ? `tv-${numColumns}` : numColumns}
+          numColumns={numColumns}
           keyExtractor={item => item.key}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
@@ -898,13 +835,28 @@ const LibraryView: React.FC<Props> = ({
           // smoothness for a lot less concurrently-decoded image memory --
           // worth it on TV, where the wider screen already means more tiles
           // per row (see numColumns above) on hardware with less headroom.
-          initialNumToRender={Platform.isTV ? 10 : 18}
+          initialNumToRender={Platform.isTV ? 15 : 18}
           windowSize={Platform.isTV ? 5 : 11}
           removeClippedSubviews
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         />
+      )}
+
+      {Platform.isTV && catalog.length > 0 && (
+        <View style={styles.tvHintBar}>
+          <Text style={styles.tvHintText}>
+            <Text style={styles.tvHintKey}>{t('LibraryTvHintOk')}</Text>
+            {'  '}
+            {t('LibraryTvHintLaunch')}
+          </Text>
+          <Text style={styles.tvHintText}>
+            <Text style={styles.tvHintKey}>{t('LibraryTvHintOkHold')}</Text>
+            {'  '}
+            {t('LibraryTvHintDetail')}
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -946,7 +898,6 @@ const styles = StyleSheet.create({
   // gave it before. alignSelf keeps it content-sized -- `header`'s a column
   // flex container, which would otherwise stretch a bare RailButton (no
   // explicit width of its own) to the header's full width.
-  tvSearchChip: {alignSelf: 'flex-start', flexDirection: 'row', gap: 6},
   tvSearchOverlay: {
     flex: 1,
     backgroundColor: 'rgba(5,7,6,0.72)',
@@ -1145,84 +1096,63 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 3,
   },
-  // TV 3-up grid: each cell is a 3-way split of the row, same gutter as the
-  // phone grid's own `cell`.
-  wideCell: {padding: 4},
-  // Plain mat, always present (not conditional on focus) -- the thumbnail
-  // is a fixed 84x84, so most of the card is exposed background for a
-  // focus ring and Android's own default focus highlight to land on,
-  // unlike the dense image-only grid this replaced. Constant 2px border
-  // (transparent when idle) so gaining the ring never resizes the card,
-  // same technique as the filter chips.
-  wideCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(140,140,150,0.10)',
+  // TV tile grid (5 columns): each cell is an even split of the row, same
+  // gutter as the phone grid's own `cell`.
+  tvCell: {padding: 4},
+  // The tile is the focusable thing and is deliberately much bigger than the
+  // cover it holds (generous padding), so Android's default focus highlight
+  // and our ring have plain mat to show on. Constant 2px border (transparent
+  // when idle) so gaining the ring never resizes the tile.
+  tvTile: {
+    padding: 14,
+    borderRadius: 20,
     borderWidth: 2,
     borderColor: 'transparent',
-    padding: 10,
   },
-  wideCardFocused: {
+  tvTileFocused: {
     borderColor: TV_FOCUS_COLOR,
     backgroundColor: 'rgba(255,213,74,0.12)',
   },
-  wideThumb: {
-    width: 84,
-    height: 84,
-    borderRadius: 10,
+  tvArt: {
+    aspectRatio: 1,
+    borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: 'rgba(140,140,150,0.2)',
-    flexShrink: 0,
+    backgroundColor: 'rgba(140,140,150,0.14)',
   },
-  wideThumbEmpty: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4,
+  // The TV-size variants of the phone card's badges/sale/title.
+  availOverlayBig: {left: 8, top: 8, gap: 4},
+  availDotBig: {
+    minWidth: 19,
+    height: 19,
+    borderRadius: 5,
+    paddingHorizontal: 3,
   },
-  wideThumbEmptyText: {
-    color: '#B7C6BD',
-    fontSize: 10,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  wideBody: {flex: 1, gap: 4, minWidth: 0},
-  wideTitle: {fontSize: 13, fontWeight: '800', color: '#E6ECE8'},
-  wideTitleFocused: {color: TV_FOCUS_COLOR},
-  // Replaces the old owned/not-owned text line -- that was redundant with
-  // the X/N/PS badges' own lit/dimmed color just above it. height keeps
-  // every row the same height in the grid even on a title with neither
-  // genre nor a cached rating (rare, but real -- see titleRating's comment).
-  wideMetaLine: {
+  availDotTextBig: {fontSize: 10.5},
+  saleBadgeBig: {right: 8, top: 8, borderRadius: 6, paddingHorizontal: 7},
+  saleBadgeTextBig: {fontSize: 12},
+  cardTitleBig: {left: 10, right: 10, bottom: 9, fontSize: 14},
+  // Key hints under the grid (TV only).
+  tvHintBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 14,
+    gap: 28,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  wideRating: {flexDirection: 'row', alignItems: 'center', gap: 3},
-  wideRatingText: {fontSize: 10.5, fontWeight: '700', color: '#E6ECE8'},
-  wideGenreText: {fontSize: 10.5, fontWeight: '600', color: DIM_BADGE_TEXT},
-  // Shared between the 3-up grid's badges and the sale callout.
-  cardBadgesLine: {flexDirection: 'row', alignItems: 'center', gap: 4},
-  // In a service's catalog (PS Plus / Game Pass): solid service colour (set inline).
+  tvHintText: {fontSize: 13, color: '#9AA9A1'},
+  tvHintKey: {fontWeight: '800', color: '#EEF4EF'},
+  // In a service's catalog (PS Plus / Game Pass): solid service colour (set
+  // inline).
   catalogMark: {
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardBadge: {
-    minWidth: 16,
-    height: 13,
-    paddingHorizontal: 2,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardBadgeText: {fontSize: 7, fontWeight: '800', color: '#0B0F0C'},
-  cardDiscount: {fontSize: 9.5, fontWeight: '800', color: SALE_ACCENT},
+  // Search (grows) + refresh, side by side above the filter row.
+  tvToolbarRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  tvSearchGrow: {flex: 1},
 });
 
 export default LibraryView;

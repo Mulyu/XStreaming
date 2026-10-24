@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, StyleSheet} from 'react-native';
+import {Pressable, StyleSheet, StyleProp, ViewStyle} from 'react-native';
 import {Text, Icon} from 'react-native-paper';
 import {TV_FOCUS_COLOR} from './tvFocus';
 
@@ -30,6 +30,11 @@ export const RailButton: React.FC<{
   // existing app convention stronger than this rail's own subtle highlight.
   // The in-stream rails keep their original tint by leaving this unset.
   fill?: boolean;
+  // Icon (or letter) only, no visible label -- the label stays as the
+  // accessibility label. For dense toolbars (Library's TV filter row).
+  iconOnly?: boolean;
+  // Layout overrides from the parent (e.g. flexGrow for a wide search button).
+  style?: StyleProp<ViewStyle>;
 }> = ({
   icon,
   letter,
@@ -40,6 +45,8 @@ export const RailButton: React.FC<{
   danger,
   accent,
   fill,
+  iconOnly,
+  style,
 }) => {
   const [focused, setFocused] = React.useState(false);
   const iconColor = danger
@@ -59,10 +66,13 @@ export const RailButton: React.FC<{
       style={[
         styles.railBtn,
         focused && styles.railBtnFocused,
+        iconOnly && styles.railBtnIconOnly,
         active &&
           !danger &&
           (fill ? {backgroundColor: accent} : styles.railBtnActive),
+        style,
       ]}
+      accessibilityLabel={label}
       onPress={onPress}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
@@ -70,13 +80,15 @@ export const RailButton: React.FC<{
       {letter ? (
         <Text style={[styles.railBtnLetter, {color: iconColor}]}>{letter}</Text>
       ) : icon ? (
-        <Icon source={icon} size={18} color={iconColor} />
+        <Icon source={icon} size={iconOnly ? 22 : 18} color={iconColor} />
       ) : null}
-      <Text
-        style={[styles.railBtnLabel, {color: labelColor}]}
-        numberOfLines={1}>
-        {label}
-      </Text>
+      {!iconOnly && (
+        <Text
+          style={[styles.railBtnLabel, {color: labelColor}]}
+          numberOfLines={1}>
+          {label}
+        </Text>
+      )}
       {trailingIcon && (
         <Icon source={trailingIcon} size={14} color={iconColor} />
       )}
@@ -131,6 +143,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  railBtnIconOnly: {
+    minWidth: 46,
+    height: 46,
+    justifyContent: 'center',
+    paddingVertical: 0,
+    paddingHorizontal: 10,
   },
   railBtnFocused: {
     borderColor: TV_FOCUS_COLOR,
