@@ -438,6 +438,7 @@ export default {
     PsStoreOnSale: 'On sale',
     LibraryPsIncluded: 'Included in PS Plus catalog',
     PsStoreIncludedInCatalog: 'Included in the catalog',
+    GamePassIncludedInCatalog: 'Included in Game Pass',
     PsStoreSaleUntil: 'Sale until {{date}}',
     PsStoreMemberPrice: 'PS Plus member price',
     Store: 'Store',

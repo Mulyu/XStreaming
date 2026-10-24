@@ -68,6 +68,7 @@ export function useLibraryTitleDetail() {
   const [price, setPrice] = React.useState<PriceInfo | null>(null);
   const [rating, setRating] = React.useState<RatingInfo | null>(null);
   const [details, setDetails] = React.useState<TitleDetails | null>(null);
+  const [inGamePass, setInGamePass] = React.useState(false);
   const [gfnDetails, setGfnDetails] = React.useState<GfnAppDetails | null>(
     null,
   );
@@ -108,6 +109,7 @@ export function useLibraryTitleDetail() {
   React.useEffect(() => {
     const productId = getTitleProductId(catalogTitle?.xcloud?.raw);
     setDetails(null);
+    setInGamePass(false);
     if (!productId) {
       setPrice(null);
       setRating(null);
@@ -118,17 +120,21 @@ export function useLibraryTitleDetail() {
     if (cache) {
       setPrice(getPrice(cache.priceMap, productId));
       setRating(cache.ratingMap?.[String(productId).toUpperCase()] || null);
+      setInGamePass(
+        cache.gamePassMap?.[String(productId).toUpperCase()] === true,
+      );
     }
     let cancelled = false;
     fetchTitleDetails(productId, market, language, {
       isCancelled: () => cancelled,
-    }).then(({price: p, rating: r, details: d, ok}) => {
+    }).then(({price: p, rating: r, details: d, inGamePass: gp, ok}) => {
       if (cancelled || !ok) {
         return;
       }
       setPrice(p);
       setRating(r);
       setDetails(d);
+      setInGamePass(gp);
     });
     return () => {
       cancelled = true;
@@ -298,6 +304,7 @@ export function useLibraryTitleDetail() {
     price,
     rating,
     details,
+    inGamePass,
     gfnDetails,
     steamPrices,
     psStorePrice,
