@@ -54,6 +54,13 @@ export const getFreshPriceCache = (market: string): PriceCache | null => {
   return null;
 };
 
+// Whether a cache entry actually carries Game Pass ids. A map written by the
+// first release of this field was always empty (a bug), so an empty map counts
+// as "not stored" and is refetched once rather than trusted for a day.
+export const hasGamePassIds = (
+  map: Record<string, true> | undefined,
+): map is Record<string, true> => !!map && Object.keys(map).length > 0;
+
 export const savePriceCache = (
   priceMap: Record<string, PriceInfo>,
   ratingMap: Record<string, RatingInfo>,

@@ -22,6 +22,7 @@ import {
   isXcloudTitlesFresh,
   getFreshPriceCache,
   savePriceCache,
+  hasGamePassIds,
   getPrice,
   isSaleForDisplay,
   PriceInfo,
@@ -349,7 +350,7 @@ function StoreScreen() {
     if (cache) {
       setXboxPriceMap(prev => ({...cache.priceMap, ...prev}));
       // (A cache written before Game Pass ids were stored has no map.)
-      if (cache.sig === sig && cache.gamePassMap) {
+      if (cache.sig === sig && hasGamePassIds(cache.gamePassMap)) {
         return;
       }
     }
