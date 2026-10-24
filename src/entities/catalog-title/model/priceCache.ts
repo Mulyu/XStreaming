@@ -9,6 +9,9 @@ const POPULAR_KEY = 'user.xcloud.popular';
 export type PriceCache = {
   priceMap: Record<string, PriceInfo>;
   ratingMap?: Record<string, RatingInfo>;
+  // Store ids included with Game Pass (absent in caches written before this
+  // existed, which is how callers know to refetch).
+  gamePassMap?: Record<string, true>;
   market: string;
   // Signature of the title set the map was fetched for, so the list can tell
   // whether the cache still covers the current catalog (see Cloud).
@@ -56,10 +59,12 @@ export const savePriceCache = (
   ratingMap: Record<string, RatingInfo>,
   market: string,
   sig?: string,
+  gamePassMap?: Record<string, true>,
 ) => {
   const cache: PriceCache = {
     priceMap,
     ratingMap,
+    gamePassMap,
     market,
     sig,
     updatedAt: new Date().getTime(),

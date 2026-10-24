@@ -10,6 +10,8 @@ export {
   buildPsPlusCatalogTitle,
 } from './model/unifiedCatalog';
 
+export {isInGamePass, isInPsCatalog} from './model/gamePass';
+
 export {
   getFavoriteKeys,
   isCatalogTitleFavorite,
@@ -78,6 +80,7 @@ export {
   fetchPrices,
   delay,
   fetchPricesWithRetry,
+  extractInGamePass,
   fetchTitleDetails,
   getPrice,
   getRating,

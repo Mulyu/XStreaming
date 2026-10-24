@@ -384,9 +384,35 @@ export type FetchPricesResult = {
   prices: Record<string, PriceInfo>;
   // Store ratings keyed by the same uppercase Store id.
   ratings: Record<string, RatingInfo>;
+  // Store ids (same uppercase keys) of the products included with a Game
+  // Pass subscription in this market -- from the same DisplayCatalog response
+  // as the prices, so it costs no extra request.
+  gamePass: Record<string, true>;
   // true only when every batch responded, so callers can tell "this market
   // genuinely has no store prices" from "the network failed" and retry.
   ok: boolean;
+};
+
+// A product is included with Game Pass when a subscription entitlement can
+// satisfy it ("xbx:Subscription:<pass id>:Full" in its availabilities'
+// SatisfyingEntitlementKeys). Checked against Microsoft's own "All games"
+// Game Pass list for ~930 cloud titles: every list member carries such a key
+// (and only a handful of just-added/just-removed titles differ); the
+// "with your Game Pass membership" eligibility text, by contrast, also
+// appears on editions of Game Pass games and was not used.
+export const extractInGamePass = (product: any): boolean => {
+  const skus: any[] = product?.DisplaySkuAvailabilities ?? [];
+  return skus.some(sku =>
+    (sku?.Availabilities ?? []).some((availability: any) =>
+      (availability?.LicensingData?.SatisfyingEntitlementKeys ?? []).some(
+        (entry: any) =>
+          (entry?.EntitlementKeys ?? []).some(
+            (key: unknown) =>
+              typeof key === 'string' && key.startsWith('xbx:Subscription:'),
+          ),
+      ),
+    ),
+  );
 };
 
 // Fetch prices for many Store ids, batched concurrently. Never rejects — a
@@ -401,9 +427,10 @@ export const fetchPrices = async (
   );
   const prices: Record<string, PriceInfo> = {};
   const ratings: Record<string, RatingInfo> = {};
+  const gamePass: Record<string, true> = {};
 
   if (ids.length === 0) {
-    return {prices, ratings, ok: true};
+    return {prices, ratings, gamePass, ok: true};
   }
 
   const chunks: string[][] = [];
@@ -448,7 +475,7 @@ export const fetchPrices = async (
     }
   });
 
-  return {prices, ratings, ok};
+  return {prices, ratings, gamePass, ok};
 };
 
 export const delay = (ms: number): Promise<void> =>

@@ -16,6 +16,7 @@ import {Text, Icon, ActivityIndicator} from 'react-native-paper';
 import {
   CatalogTitle,
   isCatalogTitleOwned,
+  isInGamePass,
 } from '../../../entities/catalog-title';
 import type {LibraryScreenViewModel} from '../model/useLibraryScreen';
 import {
@@ -50,23 +51,31 @@ type CardCommon = {
   openTitleDetail: Props['openTitleDetail'];
   setFocusedKey: Props['setFocusedKey'];
 };
-type GridCardProps = CardCommon & {numColumns: number};
-type WideCardProps = CardCommon & {rating: ReturnType<Props['titleRating']>};
+type GridCardProps = CardCommon & {numColumns: number; inGamePass: boolean};
+type WideCardProps = CardCommon & {
+  rating: ReturnType<Props['titleRating']>;
+  inGamePass: boolean;
+};
 
-// Icon-only mark shown right after the PS badge: a list check for "included
-// in the PS Plus catalog". `size` matches the badge row it sits in.
-const PsMark: React.FC<{item: CatalogTitle; size: number; t: Props['t']}> = ({
-  item,
-  size,
-  t,
-}) => {
-  if (!item.psplus?.inPlusCatalog) {
+// Icon-only mark shown right after a provider badge: a list check for
+// "included in that service's catalog" (PS Plus catalog / Game Pass). `size`
+// matches the badge row it sits in.
+const CatalogMark: React.FC<{
+  show: boolean;
+  color: string;
+  label: string;
+  size: number;
+}> = ({show, color, label, size}) => {
+  if (!show) {
     return null;
   }
   return (
     <View
-      style={[styles.psMark, {width: size, height: size}]}
-      accessibilityLabel={t('LibraryPsIncluded')}>
+      style={[
+        styles.catalogMark,
+        {width: size, height: size, backgroundColor: color},
+      ]}
+      accessibilityLabel={label}>
       <Icon source="playlist-check" size={size - 4} color="#FFFFFF" />
     </View>
   );
@@ -79,6 +88,7 @@ const GridCard = React.memo(function GridCard({
   isFocused,
   discount,
   numColumns,
+  inGamePass,
   t,
   openTitle,
   openTitleDetail,
@@ -142,6 +152,12 @@ const GridCard = React.memo(function GridCard({
               </Text>
             </View>
           )}
+          <CatalogMark
+            show={inGamePass}
+            color={XBOX_ACCENT}
+            label={t('LibraryGamePassIncluded')}
+            size={14}
+          />
           {item.gfn && (
             <View
               style={[
@@ -172,7 +188,12 @@ const GridCard = React.memo(function GridCard({
               </Text>
             </View>
           )}
-          <PsMark item={item} size={14} t={t} />
+          <CatalogMark
+            show={!!item.psplus?.inPlusCatalog}
+            color={PS_ACCENT}
+            label={t('LibraryPsIncluded')}
+            size={14}
+          />
         </View>
 
         {discount > 0 && (
@@ -203,6 +224,7 @@ const WideCard = React.memo(function WideCard({
   isFocused,
   discount,
   rating,
+  inGamePass,
   t,
   openTitle,
   openTitleDetail,
@@ -272,6 +294,12 @@ const WideCard = React.memo(function WideCard({
                 </Text>
               </View>
             )}
+            <CatalogMark
+              show={inGamePass}
+              color={XBOX_ACCENT}
+              label={t('LibraryGamePassIncluded')}
+              size={13}
+            />
             {item.gfn && (
               <View
                 style={[
@@ -302,7 +330,12 @@ const WideCard = React.memo(function WideCard({
                 </Text>
               </View>
             )}
-            <PsMark item={item} size={13} t={t} />
+            <CatalogMark
+              show={!!item.psplus?.inPlusCatalog}
+              color={PS_ACCENT}
+              label={t('LibraryPsIncluded')}
+              size={13}
+            />
             {discount > 0 && (
               <Text style={styles.cardDiscount}>
                 {t('LibraryRowDiscount', {percent: discount})}
@@ -354,6 +387,9 @@ const LibraryView: React.FC<Props> = ({
   cycleOwnership,
   filterOnSale,
   setFilterOnSale,
+  filterFreePlay,
+  cycleFreePlay,
+  gamePassMap,
   focusedKey,
   setFocusedKey,
   gfnFullCatalogLoading,
@@ -375,6 +411,12 @@ const LibraryView: React.FC<Props> = ({
       ? 'LibraryFilterNotOwned'
       : 'LibraryFilterOwnershipAll',
   );
+  const freePlayLabel =
+    filterFreePlay === 'gamepass'
+      ? t('LibraryFilterFreePlayGamePass')
+      : filterFreePlay === 'ps'
+      ? t('LibraryFilterFreePlayPs')
+      : t('LibraryFilterFreePlay');
   const searchFocus = useTVFocus();
   const tvSearchInputFocus = useTVFocus();
   const tvSearchCloseFocus = useTVFocus();
@@ -388,6 +430,7 @@ const LibraryView: React.FC<Props> = ({
   const favoriteChipFocus = useTVFocus();
   const ownedOnlyChipFocus = useTVFocus();
   const onSaleChipFocus = useTVFocus();
+  const freePlayChipFocus = useTVFocus();
   const sortChipFocus = useTVFocus();
   const [focusedSortOption, setFocusedSortOption] = React.useState<
     string | null
@@ -440,6 +483,7 @@ const LibraryView: React.FC<Props> = ({
           isFocused={focusedKey === item.key}
           discount={saleDiscount(item)}
           rating={titleRating(item)}
+          inGamePass={isInGamePass(item, gamePassMap)}
           t={t}
           openTitle={stableOpenTitle}
           openTitleDetail={stableOpenTitleDetail}
@@ -451,6 +495,7 @@ const LibraryView: React.FC<Props> = ({
           isFocused={focusedKey === item.key}
           discount={saleDiscount(item)}
           numColumns={numColumns}
+          inGamePass={isInGamePass(item, gamePassMap)}
           t={t}
           openTitle={stableOpenTitle}
           openTitleDetail={stableOpenTitleDetail}
@@ -461,6 +506,7 @@ const LibraryView: React.FC<Props> = ({
       focusedKey,
       saleDiscount,
       titleRating,
+      gamePassMap,
       numColumns,
       t,
       stableOpenTitle,
@@ -632,6 +678,14 @@ const LibraryView: React.FC<Props> = ({
                   fill
                   onPress={() => setFilterOnSale(v => !v)}
                 />
+                <RailButton
+                  icon="gift-outline"
+                  label={freePlayLabel}
+                  active={filterFreePlay !== 'off'}
+                  accent={XBOX_ACCENT}
+                  fill
+                  onPress={cycleFreePlay}
+                />
                 <View style={styles.sortChipTv}>
                   <RailButton
                     icon="sort"
@@ -746,6 +800,23 @@ const LibraryView: React.FC<Props> = ({
                       filterOnSale && styles.filterChipTextOn,
                     ]}>
                     {t('LibraryFilterOnSale')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.filterChip,
+                    filterFreePlay !== 'off' && styles.filterChipOn,
+                    freePlayChipFocus.focused && tvFocusRing,
+                  ]}
+                  onPress={cycleFreePlay}
+                  onFocus={freePlayChipFocus.onFocus}
+                  onBlur={freePlayChipFocus.onBlur}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filterFreePlay !== 'off' && styles.filterChipTextOn,
+                    ]}>
+                    {freePlayLabel}
                   </Text>
                 </Pressable>
 
@@ -1136,12 +1207,11 @@ const styles = StyleSheet.create({
   wideGenreText: {fontSize: 10.5, fontWeight: '600', color: DIM_BADGE_TEXT},
   // Shared between the 3-up grid's badges and the sale callout.
   cardBadgesLine: {flexDirection: 'row', alignItems: 'center', gap: 4},
-  // In the Plus catalog: solid PS blue.
-  psMark: {
+  // In a service's catalog (PS Plus / Game Pass): solid service colour (set inline).
+  catalogMark: {
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: PS_ACCENT,
   },
   cardBadge: {
     minWidth: 16,
