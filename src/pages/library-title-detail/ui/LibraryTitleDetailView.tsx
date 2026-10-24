@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  Modal,
 } from 'react-native';
 import {Text, Icon} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -93,6 +94,16 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const psplusRowFocus = useTVFocus();
   const psplusStoreLinkFocus = useTVFocus();
   const psplusShortcutFocus = useTVFocus();
+  // TV-only buttons: the PS price row, the description toggle, the favorite
+  // button, and the media thumbnails (focused-key pattern, they repeat).
+  const psPriceFocus = useTVFocus();
+  const viewerFocus = useTVFocus();
+  const descriptionFocus = useTVFocus();
+  const [descriptionExpanded, setDescriptionExpanded] = React.useState(false);
+  const [mediaFocusedKey, setMediaFocusedKey] = React.useState<string | null>(
+    null,
+  );
+  const [viewerUri, setViewerUri] = React.useState<string | null>(null);
   const [focusedVariantKey, setFocusedVariantKey] = React.useState<
     string | null
   >(null);
@@ -551,6 +562,54 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           const includedInCatalog =
             catalogTitle.psplus.inPlusCatalog && !catalogTitle.psplus.isOwned;
           const showPsSale = psStoreShowSale && !includedInCatalog;
+          const psPriceRow = (
+            <View style={styles.psInfoRow}>
+              <View style={styles.storeMark}>
+                <Icon source="cart-outline" size={14} color="#E67E22" />
+              </View>
+              <View style={styles.storeText}>
+                <View style={styles.priceRow}>
+                  {psPurchase && (
+                    <Text
+                      style={[
+                        styles.priceNow,
+                        showPsSale && styles.priceNowSale,
+                        includedInCatalog && styles.priceStruck,
+                      ]}>
+                      {psPurchase.discountedPrice}
+                    </Text>
+                  )}
+                  {includedInCatalog && (
+                    <Text style={styles.psIncludedText}>
+                      {t('PsStoreIncludedInCatalog')}
+                    </Text>
+                  )}
+                  {psPurchase && showPsSale && (
+                    <Text style={styles.priceWas}>{psPurchase.basePrice}</Text>
+                  )}
+                  {psPurchase && showPsSale && (
+                    <View style={styles.salePill}>
+                      <Text style={styles.salePillText}>
+                        -{psPurchase.discountPercent}%
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {psPurchase && showPsSale && psPurchase.memberPrice && (
+                  <Text style={styles.saleUntil}>
+                    {t('PsStoreMemberPrice')}
+                  </Text>
+                )}
+                {psPurchase && showPsSale && !!psPurchase.saleEndsAt && (
+                  <Text style={styles.saleUntil}>
+                    {t('PsStoreSaleUntil', {
+                      date: formatSaleEnd(psPurchase.saleEndsAt),
+                    })}
+                  </Text>
+                )}
+              </View>
+            </View>
+          );
           return (
             <View style={styles.providerCard}>
               <Pressable
@@ -613,54 +672,22 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               </Pressable>
               {(includedInCatalog || psPurchase) && (
                 <View style={styles.stores}>
-                  <View style={styles.psInfoRow}>
-                    <View style={styles.storeMark}>
-                      <Icon source="cart-outline" size={14} color="#E67E22" />
-                    </View>
-                    <View style={styles.storeText}>
-                      <View style={styles.priceRow}>
-                        {psPurchase && (
-                          <Text
-                            style={[
-                              styles.priceNow,
-                              showPsSale && styles.priceNowSale,
-                              includedInCatalog && styles.priceStruck,
-                            ]}>
-                            {psPurchase.discountedPrice}
-                          </Text>
-                        )}
-                        {includedInCatalog && (
-                          <Text style={styles.psIncludedText}>
-                            {t('PsStoreIncludedInCatalog')}
-                          </Text>
-                        )}
-                        {psPurchase && showPsSale && (
-                          <Text style={styles.priceWas}>
-                            {psPurchase.basePrice}
-                          </Text>
-                        )}
-                        {psPurchase && showPsSale && (
-                          <View style={styles.salePill}>
-                            <Text style={styles.salePillText}>
-                              -{psPurchase.discountPercent}%
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      {psPurchase && showPsSale && psPurchase.memberPrice && (
-                        <Text style={styles.saleUntil}>
-                          {t('PsStoreMemberPrice')}
-                        </Text>
-                      )}
-                      {psPurchase && showPsSale && !!psPurchase.saleEndsAt && (
-                        <Text style={styles.saleUntil}>
-                          {t('PsStoreSaleUntil', {
-                            date: formatSaleEnd(psPurchase.saleEndsAt),
-                          })}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
+                  {Platform.isTV && psStoreUrl ? (
+                    <Pressable
+                      style={[
+                        styles.tvInfoButton,
+                        psPriceFocus.focused && tvFocusRing,
+                      ]}
+                      onPress={() => openStore(psStoreUrl)}
+                      onFocus={psPriceFocus.onFocus}
+                      onBlur={psPriceFocus.onBlur}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('PsStoreOpenStore')}>
+                      {psPriceRow}
+                    </Pressable>
+                  ) : (
+                    psPriceRow
+                  )}
                 </View>
               )}
             </View>
@@ -691,6 +718,36 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     </View>
   ) : null;
 
+  // TV: each thumbnail is a focusable button (the trailer opens in the
+  // system player, a screenshot in a full-screen viewer); on the phone they
+  // stay plain images.
+  const mediaItem = (
+    key: string,
+    label: string,
+    onPress: () => void,
+    children: React.ReactNode,
+  ) =>
+    Platform.isTV ? (
+      <Pressable
+        key={key}
+        style={[
+          styles.mediaShotWrap,
+          styles.mediaShotButton,
+          mediaFocusedKey === key && tvFocusRing,
+        ]}
+        onPress={onPress}
+        onFocus={() => setMediaFocusedKey(key)}
+        onBlur={() => setMediaFocusedKey(prev => (prev === key ? null : prev))}
+        accessibilityRole="button"
+        accessibilityLabel={label}>
+        {children}
+      </Pressable>
+    ) : (
+      <View key={key} style={styles.mediaShotWrap}>
+        {children}
+      </View>
+    );
+
   const mediaSection = hasMedia ? (
     <View>
       <Text style={styles.secTitle}>{t('Media')}</Text>
@@ -698,33 +755,46 @@ const LibraryTitleDetailView: React.FC<Props> = ({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.mediaRail}>
-        {trailer && (
-          <View style={styles.mediaShotWrap}>
-            <Text style={styles.mediaSrc}>MSFT STORE</Text>
-            {trailer.preview ? (
+        {trailer &&
+          mediaItem(
+            'trailer',
+            t('Trailer'),
+            () => openStore(trailer.url),
+            <>
+              <Text style={styles.mediaSrc}>MSFT STORE</Text>
+              {trailer.preview ? (
+                <Image
+                  source={{uri: trailer.preview}}
+                  resizeMode="cover"
+                  style={styles.mediaShot}
+                />
+              ) : (
+                <View style={[styles.mediaShot, styles.trailerFallback]} />
+              )}
+              <View style={styles.playBtn}>
+                <Ionicons name="play" size={18} color="#fff" />
+              </View>
+            </>,
+          )}
+        {screenshots.map((uri, idx) =>
+          mediaItem(
+            uri || String(idx),
+            t('Media'),
+            () => setViewerUri(uri),
+            <>
+              {idx === 0 && (
+                <Text style={styles.mediaSrc}>
+                  {details?.screenshots?.length ? 'MSFT STORE' : 'GFN'}
+                </Text>
+              )}
               <Image
-                source={{uri: trailer.preview}}
+                source={{uri}}
                 resizeMode="cover"
                 style={styles.mediaShot}
               />
-            ) : (
-              <View style={[styles.mediaShot, styles.trailerFallback]} />
-            )}
-            <View style={styles.playBtn}>
-              <Ionicons name="play" size={18} color="#fff" />
-            </View>
-          </View>
+            </>,
+          ),
         )}
-        {screenshots.map((uri, idx) => (
-          <View style={styles.mediaShotWrap} key={uri || idx}>
-            {idx === 0 && (
-              <Text style={styles.mediaSrc}>
-                {details?.screenshots?.length ? 'MSFT STORE' : 'GFN'}
-              </Text>
-            )}
-            <Image source={{uri}} resizeMode="cover" style={styles.mediaShot} />
-          </View>
-        ))}
       </ScrollView>
     </View>
   ) : null;
@@ -732,9 +802,38 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const descriptionSection = description ? (
     <View>
       <Text style={styles.secTitle}>{t('Description')}</Text>
-      <Text style={styles.description} numberOfLines={6}>
-        {description}
-      </Text>
+      {Platform.isTV ? (
+        // A button on TV: OK expands/collapses the full text.
+        <Pressable
+          style={[
+            styles.descriptionButton,
+            descriptionFocus.focused && tvFocusRing,
+          ]}
+          onPress={() => setDescriptionExpanded(v => !v)}
+          onFocus={descriptionFocus.onFocus}
+          onBlur={descriptionFocus.onBlur}
+          accessibilityRole="button">
+          <Text
+            style={styles.description}
+            numberOfLines={descriptionExpanded ? undefined : 6}>
+            {description}
+          </Text>
+          <View style={styles.descriptionMore}>
+            <Icon
+              source={descriptionExpanded ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color="#8A9A92"
+            />
+            <Text style={styles.descriptionMoreText}>
+              {descriptionExpanded ? t('Collapse') : t('Expand')}
+            </Text>
+          </View>
+        </Pressable>
+      ) : (
+        <Text style={styles.description} numberOfLines={6}>
+          {description}
+        </Text>
+      )}
     </View>
   ) : null;
 
@@ -758,7 +857,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                   style={styles.heroImage}
                 />
               ) : null}
-              {favoriteBtn}
             </View>
             <View style={styles.tvIdentity}>
               <Text style={styles.tvTitle} numberOfLines={2}>
@@ -772,6 +870,25 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               {ratingSection}
               {metaSection}
             </View>
+            <Pressable
+              style={[
+                styles.tvFavoriteBtn,
+                favoriteFocus.focused && tvFocusRing,
+              ]}
+              onPress={toggleFavorite}
+              onFocus={favoriteFocus.onFocus}
+              onBlur={favoriteFocus.onBlur}
+              accessibilityRole="button"
+              accessibilityLabel={t('LibraryFilterFavorite')}>
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={22}
+                color={isFavorite ? '#ff5347' : '#fff'}
+              />
+              <Text style={styles.tvFavoriteText}>
+                {t('LibraryFilterFavorite')}
+              </Text>
+            </Pressable>
           </View>
 
           <ScrollView
@@ -791,6 +908,29 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           onRetry={retryLogin}
           onCancel={cancelLogin}
         />
+
+        <Modal
+          visible={!!viewerUri}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setViewerUri(null)}>
+          <Pressable
+            style={[styles.viewerRoot, viewerFocus.focused && tvFocusRing]}
+            onPress={() => setViewerUri(null)}
+            onFocus={viewerFocus.onFocus}
+            onBlur={viewerFocus.onBlur}
+            accessibilityRole="button"
+            accessibilityLabel={t('Close')}
+            hasTVPreferredFocus>
+            {viewerUri ? (
+              <Image
+                source={{uri: viewerUri}}
+                resizeMode="contain"
+                style={styles.viewerImage}
+              />
+            ) : null}
+          </Pressable>
+        </Modal>
       </View>
     );
   }
@@ -997,7 +1137,60 @@ const styles = StyleSheet.create({
   saleUntil: {fontSize: 10.5, color: '#E67E22'},
   storeRowEnd: {flexDirection: 'row', alignItems: 'center', gap: 6},
   ownedText: {fontSize: 11, fontWeight: '700', color: NVIDIA_ACCENT},
-  storeLinkBtn: {padding: 2},
+  // TV: a real button-sized target (the remote lands on it), not a bare icon.
+  storeLinkBtn: Platform.isTV
+    ? {
+        padding: 10,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: 'transparent',
+        backgroundColor: 'rgba(255,255,255,0.07)',
+      }
+    : {padding: 2},
+  tvInfoButton: {
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  tvFavoriteBtn: {
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  tvFavoriteText: {fontSize: 15, fontWeight: '700', color: '#E6ECE8'},
+  mediaShotButton: {
+    padding: 4,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  descriptionButton: {
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 6,
+  },
+  descriptionMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  descriptionMoreText: {fontSize: 12.5, fontWeight: '700', color: '#8A9A92'},
+  viewerRoot: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  viewerImage: {width: '100%', height: '100%'},
   rememberedNote: {
     fontSize: 11.5,
     color: '#8A9A92',
