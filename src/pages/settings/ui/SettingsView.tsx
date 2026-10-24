@@ -1,7 +1,8 @@
 import React from 'react';
-import {StyleSheet, ScrollView, View} from 'react-native';
+import {StyleSheet, ScrollView, View, Pressable, Platform} from 'react-native';
 import {Text, SegmentedButtons, Portal, Modal, Card} from 'react-native-paper';
 import Spinner from '../../../shared/ui/Spinner';
+import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 import SettingItem from '../../../shared/ui/SettingItem';
 import {
   SwitchRow,
@@ -21,6 +22,38 @@ import type {Lane, SettingsScreenViewModel} from '../model/useSettingsScreen';
 import pkg from '../../../../package.json';
 
 type Props = SettingsScreenViewModel;
+
+// TV only: react-native-paper's SegmentedButtons segments take no D-pad focus
+// (they never show a focus state), so the lane switch is a row of ordinary
+// buttons there instead.
+function LaneButton({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const focus = useTVFocus();
+  return (
+    <Pressable
+      style={[
+        styles.laneButton,
+        active && styles.laneButtonActive,
+        focus.focused && tvFocusRing,
+      ]}
+      onPress={onPress}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      accessibilityRole="button"
+      accessibilityState={{selected: active}}>
+      <Text style={[styles.laneButtonText, active && styles.laneButtonTextOn]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
 function SectionLabel({title}: {title: string}) {
   return <Text style={styles.sectionLabel}>{title}</Text>;
@@ -73,6 +106,12 @@ const SettingsView: React.FC<Props> = ({
   onNavigateDs5Left,
   onNavigateDs5Right,
 }) => {
+  const laneButtons: {value: Lane; label: string}[] = [
+    {value: 'common', label: t('CommonSettings')},
+    {value: 'xbox', label: t('XcloudSettings')},
+    {value: 'gfn', label: t('GfnSettings')},
+    {value: 'psplus', label: t('PsPlusSettings')},
+  ];
   return (
     <View style={styles.container}>
       <Spinner
@@ -82,16 +121,24 @@ const SettingsView: React.FC<Props> = ({
 
       <View style={styles.header}>
         <Text style={styles.title}>{t('Settings')}</Text>
-        <SegmentedButtons
-          value={lane}
-          onValueChange={value => onChangeLane(value as Lane)}
-          buttons={[
-            {value: 'common', label: t('CommonSettings')},
-            {value: 'xbox', label: t('XcloudSettings')},
-            {value: 'gfn', label: t('GfnSettings')},
-            {value: 'psplus', label: t('PsPlusSettings')},
-          ]}
-        />
+        {Platform.isTV ? (
+          <View style={styles.laneRow}>
+            {laneButtons.map(button => (
+              <LaneButton
+                key={button.value}
+                label={button.label}
+                active={lane === button.value}
+                onPress={() => onChangeLane(button.value)}
+              />
+            ))}
+          </View>
+        ) : (
+          <SegmentedButtons
+            value={lane}
+            onValueChange={value => onChangeLane(value as Lane)}
+            buttons={laneButtons}
+          />
+        )}
       </View>
 
       {lane === 'common' && (
@@ -458,6 +505,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6, gap: 10},
+  laneRow: {flexDirection: 'row', gap: 10, flexWrap: 'wrap'},
+  // Constant 2px transparent border so gaining the focus ring never resizes
+  // the button.
+  laneButton: {
+    minHeight: 48,
+    paddingHorizontal: 22,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  laneButtonActive: {backgroundColor: XBOX_ACCENT},
+  laneButtonText: {fontSize: 15, fontWeight: '700', color: '#C7D2CC'},
+  laneButtonTextOn: {color: '#0B0F0C'},
   title: {fontSize: 18, fontWeight: '800'},
   sectionLabel: {
     fontSize: 11,
