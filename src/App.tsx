@@ -48,7 +48,6 @@ import {appDebugLog} from './shared/lib/appDebugLog';
 import customDarkTheme from './shared/config/theme';
 import SplashScreen from 'react-native-splash-screen';
 import {useXboxAuthBootstrap} from './features/xbox-auth';
-import HarmonyNotice from './widgets/harmony-notice';
 
 import LoginScreen from './pages/login';
 import NativeStreamScreen from './pages/native-stream';
@@ -477,7 +476,6 @@ function App() {
     <GestureHandlerRootView style={styles.gestureRoot}>
       <Provider store={store}>
         <PaperProvider theme={paperTheme}>
-          <HarmonyNotice />
           <NavigationContainer
             ref={navigationRef}
             theme={navigationTheme}

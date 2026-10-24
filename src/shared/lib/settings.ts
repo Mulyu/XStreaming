@@ -23,7 +23,6 @@ export type Settings = {
   signaling_cloud_name: string;
   codec: string;
   vibration: boolean;
-  show_harmony_modal: boolean;
   dead_zone: number;
   video_format: string;
   screen_position: string;
@@ -94,7 +93,6 @@ const defaultSettings: Settings = {
   signaling_cloud_name: '',
   codec: '',
   vibration: true,
-  show_harmony_modal: true,
   dead_zone: 0.1,
   video_format: '',
   screen_position: 'center',
