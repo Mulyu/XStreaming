@@ -533,8 +533,11 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           const subtitle = psStoreShowSale
             ? `${baseSubtitle} · ${t('PsStoreOnSale')}`
             : baseSubtitle;
-          const showIncludedRow =
+          // In the Plus catalog but not bought: playable at no extra cost, so
+          // the price below is shown struck through with that said next to it.
+          const includedInCatalog =
             catalogTitle.psplus.inPlusCatalog && !catalogTitle.psplus.isOwned;
+          const showPsSale = psStoreShowSale && !includedInCatalog;
           return (
             <View style={styles.providerCard}>
               <Pressable
@@ -595,69 +598,56 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 )}
                 <Icon source="chevron-right" size={18} color="#8A9A92" />
               </Pressable>
-              {(showIncludedRow || psPurchase) && (
+              {(includedInCatalog || psPurchase) && (
                 <View style={styles.stores}>
-                  {showIncludedRow && (
-                    <View style={styles.psInfoRow}>
-                      <View style={styles.storeMark}>
-                        <Icon
-                          source="playlist-check"
-                          size={14}
-                          color={PS_MARK_COLOR}
-                        />
-                      </View>
-                      <View style={styles.storeText}>
-                        <Text style={styles.storeName}>
-                          {t('PsStoreIncludedRow')}
-                        </Text>
-                        <Text style={styles.psInfoNote}>
-                          {t('PsStoreIncludedNote')}
-                        </Text>
-                      </View>
+                  <View style={styles.psInfoRow}>
+                    <View style={styles.storeMark}>
+                      <Icon source="cart-outline" size={14} color="#E67E22" />
                     </View>
-                  )}
-                  {psPurchase && (
-                    <View style={styles.psInfoRow}>
-                      <View style={styles.storeMark}>
-                        <Icon source="cart-outline" size={14} color="#E67E22" />
-                      </View>
-                      <View style={styles.storeText}>
-                        <View style={styles.priceRow}>
+                    <View style={styles.storeText}>
+                      <View style={styles.priceRow}>
+                        {psPurchase && (
                           <Text
                             style={[
                               styles.priceNow,
-                              psStoreShowSale && styles.priceNowSale,
+                              showPsSale && styles.priceNowSale,
+                              includedInCatalog && styles.priceStruck,
                             ]}>
                             {psPurchase.discountedPrice}
                           </Text>
-                          {psStoreShowSale && (
-                            <Text style={styles.priceWas}>
-                              {psPurchase.basePrice}
-                            </Text>
-                          )}
-                          {psStoreShowSale && (
-                            <View style={styles.salePill}>
-                              <Text style={styles.salePillText}>
-                                -{psPurchase.discountPercent}%
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        {psStoreShowSale && psPurchase.memberPrice && (
-                          <Text style={styles.saleUntil}>
-                            {t('PsStoreMemberPrice')}
+                        )}
+                        {includedInCatalog && (
+                          <Text style={styles.psIncludedText}>
+                            {t('PsStoreIncludedInCatalog')}
                           </Text>
                         )}
-                        {psStoreShowSale && !!psPurchase.saleEndsAt && (
-                          <Text style={styles.saleUntil}>
-                            {t('PsStoreSaleUntil', {
-                              date: formatSaleEnd(psPurchase.saleEndsAt),
-                            })}
+                        {psPurchase && showPsSale && (
+                          <Text style={styles.priceWas}>
+                            {psPurchase.basePrice}
                           </Text>
+                        )}
+                        {psPurchase && showPsSale && (
+                          <View style={styles.salePill}>
+                            <Text style={styles.salePillText}>
+                              -{psPurchase.discountPercent}%
+                            </Text>
+                          </View>
                         )}
                       </View>
+                      {psPurchase && showPsSale && psPurchase.memberPrice && (
+                        <Text style={styles.saleUntil}>
+                          {t('PsStoreMemberPrice')}
+                        </Text>
+                      )}
+                      {psPurchase && showPsSale && !!psPurchase.saleEndsAt && (
+                        <Text style={styles.saleUntil}>
+                          {t('PsStoreSaleUntil', {
+                            date: formatSaleEnd(psPurchase.saleEndsAt),
+                          })}
+                        </Text>
+                      )}
                     </View>
-                  )}
+                  </View>
                 </View>
               )}
             </View>
@@ -938,6 +928,13 @@ const styles = StyleSheet.create({
   },
   priceNow: {fontSize: 12.5, fontWeight: '800'},
   priceNowSale: {color: '#ff5347'},
+  // An included-in-catalog title's price: struck through, with the "included"
+  // note beside it.
+  priceStruck: {
+    color: '#8A9A92',
+    textDecorationLine: 'line-through',
+  },
+  psIncludedText: {fontSize: 11.5, fontWeight: '700', color: PS_MARK_COLOR},
   priceWas: {
     fontSize: 11,
     color: '#8A9A92',
