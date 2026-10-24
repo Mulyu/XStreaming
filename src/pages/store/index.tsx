@@ -348,17 +348,18 @@ function StoreScreen() {
     const cache = getFreshPriceCache(market);
     if (cache) {
       setXboxPriceMap(prev => ({...cache.priceMap, ...prev}));
-      if (cache.sig === sig) {
+      // (A cache written before Game Pass ids were stored has no map.)
+      if (cache.sig === sig && cache.gamePassMap) {
         return;
       }
     }
     fetchPricesWithRetry(productIds, market, language).then(
-      ({prices, ratings, ok}) => {
+      ({prices, ratings, gamePass, ok}) => {
         if (Object.keys(prices).length > 0) {
           setXboxPriceMap(prev => ({...prev, ...prices}));
         }
         if (ok) {
-          savePriceCache(prices, ratings, market, sig);
+          savePriceCache(prices, ratings, market, sig, gamePass);
         }
       },
     );

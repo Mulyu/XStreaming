@@ -46,6 +46,8 @@ import {
   RatingInfo,
   deriveMarketLanguage,
   fetchPricesWithRetry,
+  isInGamePass,
+  isInPsCatalog,
   fetchPsStoreSales,
   lookupPsSale,
   getFreshPsSales,
@@ -87,6 +89,15 @@ import {
 } from './rankSort';
 
 export type OwnershipFilter = 'owned' | 'notOwned' | 'all';
+// "Free to play" chip, cycled: off -> Game Pass or the PS catalog ('any') ->
+// Game Pass only -> PS catalog only -> off.
+export type FreePlayFilter = 'off' | 'any' | 'gamepass' | 'ps';
+const FREE_PLAY_NEXT: Record<FreePlayFilter, FreePlayFilter> = {
+  off: 'any',
+  any: 'gamepass',
+  gamepass: 'ps',
+  ps: 'off',
+};
 const OWNERSHIP_NEXT: Record<OwnershipFilter, OwnershipFilter> = {
   owned: 'notOwned',
   notOwned: 'all',
@@ -171,6 +182,11 @@ export function useLibraryScreen() {
   // rating line.
   const [ratingMap, setRatingMap] =
     React.useState<Record<string, RatingInfo>>(EMPTY_RATING_MAP);
+  // Store ids included with Game Pass (collected by the same Store fetch as the
+  // prices), for the list mark and the free-to-play filter.
+  const [gamePassMap, setGamePassMap] = React.useState<Record<string, true>>(
+    {},
+  );
   // GFN's linked Steam store variants, for the sale badge/filter -- GFN's own
   // catalog has no price data of its own, but a title backed by Steam can
   // still be on sale there, same as an xCloud title can be on Game Pass.
@@ -220,6 +236,12 @@ export function useLibraryScreen() {
     [],
   );
   const [filterOnSale, setFilterOnSale] = React.useState(false);
+  const [filterFreePlay, setFilterFreePlay] =
+    React.useState<FreePlayFilter>('off');
+  const cycleFreePlay = React.useCallback(
+    () => setFilterFreePlay(v => FREE_PLAY_NEXT[v]),
+    [],
+  );
 
   // Favorites live in their own catalog-key-based store (not tied to one
   // provider) so a GFN-only title can be favorited too -- reloaded on focus
@@ -304,22 +326,29 @@ export function useLibraryScreen() {
       if (cache.ratingMap) {
         setRatingMap(cache.ratingMap);
       }
+      if (cache.gamePassMap) {
+        setGamePassMap(cache.gamePassMap);
+      }
       // Still fresh and fetched for this very title set: nothing to refetch.
-      if (cache.sig === sig) {
+      // (A cache written before Game Pass ids were stored has no map: refetch.)
+      if (cache.sig === sig && cache.gamePassMap) {
         return;
       }
     }
 
     fetchPricesWithRetry(productIds, market, language).then(
-      ({prices, ratings, ok}) => {
+      ({prices, ratings, gamePass, ok}) => {
         if (Object.keys(prices).length > 0) {
           setPriceMap(prev => ({...prev, ...prices}));
         }
         if (Object.keys(ratings).length > 0) {
           setRatingMap(prev => ({...prev, ...ratings}));
         }
+        if (Object.keys(gamePass).length > 0) {
+          setGamePassMap(prev => ({...prev, ...gamePass}));
+        }
         if (ok) {
-          savePriceCache(prices, ratings, market, sig);
+          savePriceCache(prices, ratings, market, sig, gamePass);
         } else {
           priceSigRef.current = '';
         }
@@ -812,6 +841,17 @@ export function useLibraryScreen() {
     if (filterOnSale) {
       list = list.filter(item => saleDiscount(item) > 0);
     }
+    if (filterFreePlay !== 'off') {
+      list = list.filter(item => {
+        const gamePass = isInGamePass(item, gamePassMap);
+        const psCatalog = isInPsCatalog(item);
+        return filterFreePlay === 'gamepass'
+          ? gamePass
+          : filterFreePlay === 'ps'
+          ? psCatalog
+          : gamePass || psCatalog;
+      });
+    }
     return list;
   }, [
     catalog,
@@ -822,6 +862,8 @@ export function useLibraryScreen() {
     favoriteKeys,
     filterOwnership,
     filterOnSale,
+    filterFreePlay,
+    gamePassMap,
     saleDiscount,
   ]);
 
@@ -988,6 +1030,9 @@ export function useLibraryScreen() {
     cycleOwnership,
     filterOnSale,
     setFilterOnSale,
+    filterFreePlay,
+    cycleFreePlay,
+    gamePassMap,
     focusedKey,
     setFocusedKey,
     gfnFullCatalogLoading,
