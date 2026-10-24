@@ -1,5 +1,5 @@
 As of the introduction of PS Plus cloud streaming support (which vendors AGPL-3.0-licensed
-code from chiaki-ng/Pylux), XStreaming as a whole is licensed under the GNU Affero General
+code from chiaki-ng/Pylux), AnyStreaming (a fork of Geocld/XStreaming) as a whole is licensed under the GNU Affero General
 Public License v3.0, with an OpenSSL linking exception -- see ./COPYING for the full license
 text. Any distribution or modification of this project, in whole or in part, must comply
 with the terms in ./COPYING.

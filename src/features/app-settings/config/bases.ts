@@ -7,7 +7,7 @@ const bases = [
     name: 'locale',
     type: 'radio',
     title: t('App language'),
-    description: t('Set language of XStreaming'),
+    description: t('Set language of AnyStreaming'),
     data: [
       {value: 'en', text: 'English'},
       {value: 'de', text: 'Deutsch'},

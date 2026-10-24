@@ -85,7 +85,7 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
             return;
         }
         if (TextUtils.isEmpty(titleName)) {
-            titleName = "XStreaming";
+            titleName = "AnyStreaming";
         }
 
         final Context context = reactContext.getApplicationContext();

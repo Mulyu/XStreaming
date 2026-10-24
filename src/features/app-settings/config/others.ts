@@ -7,7 +7,7 @@ const others = [
     name: 'check_update',
     type: 'radio',
     title: t('Auto check update'),
-    description: t('Whether check XStreaming updates automatically'),
+    description: t('Whether check AnyStreaming updates automatically'),
     data: [
       {value: true, text: t('Enable')},
       {value: false, text: t('Disable')},

@@ -17,9 +17,9 @@ export default {
     Copied: '已复制',
     Warning: '提示',
     WaitingForServerToRegister:
-      '无法在主机上建立串流，原因是主机没有连接到Xbox服务器。当你看到这个错误时，不是XStreaming发生了错误，这通常发生在主机系统异常或主机正在更新或主机未登录账号，请尝试长按电源键或断开电源(断开至少10秒)重启主机修复此问题。',
+      '无法在主机上建立串流，原因是主机没有连接到Xbox服务器。当你看到这个错误时，不是AnyStreaming发生了错误，这通常发生在主机系统异常或主机正在更新或主机未登录账号，请尝试长按电源键或断开电源(断开至少10秒)重启主机修复此问题。',
     XboxstreaminghelperErr:
-      '主机串流功能无法正常运行，当你看到这个错误时，不是XStreaming发生了错误，而是主机的串流功能由于某些原因已经无法正常工作，你需要长按电源键或断开电源(断开至少10秒)重启主机修复此问题，具体错误：',
+      '主机串流功能无法正常运行，当你看到这个错误时，不是AnyStreaming发生了错误，而是主机的串流功能由于某些原因已经无法正常工作，你需要长按电源键或断开电源(断开至少10秒)重启主机修复此问题，具体错误：',
     DisabledStreamingErr:
       '主机端已禁用串流功能。出现此问题可能原因如下：\n1. Xbox主机-设置-设备和连接-远程功能没有启用; \n 2.你可能正在使用中国大陆版Xbox，该版本Xbox无法使用串流功能。',
     AuthFailDesc: '认证失败，请重新登录，错误:',
@@ -30,7 +30,7 @@ export default {
     Newest: '新入库',
     Search: '搜索',
     'App language': '应用语言',
-    'Set language of XStreaming': '设置XStreaming应用语言',
+    'Set language of AnyStreaming': '设置AnyStreaming应用语言',
     Resolution: '分辨率',
     'Set resolution, support 720P/1080P/1080P(HQ)':
       '设置串流分辨率，支持720P/1080P/1080P(HQ)切换',
@@ -79,8 +79,8 @@ export default {
       '你没有权限开始云游戏，请检查登录是否过期并尝试重新登录，如果你正在尝试游玩云游戏，请确保你是XGPU，如果你正在尝试游玩非XGPU游戏，请确保你已经购买此游戏',
     homeNoAllow: '串流权限检查失败，请检查登录是否过期并尝试重新登录',
     'Auto check update': '自动检查更新',
-    'Whether check XStreaming updates automatically':
-      '是否自动检查XStreaming更新',
+    'Whether check AnyStreaming updates automatically':
+      '是否自动检查AnyStreaming更新',
     BasesSettings: '基础',
     DisplaySettings: '显示',
     GamepadSettings: '手柄及震动',
@@ -143,7 +143,7 @@ export default {
     'Auto install': '自动安装',
     'Manual download': '手动下载',
     InstallPermissionRequired:
-      '需要允许 XStreaming 安装未知应用。请在系统设置中授权后重新点击自动安装。',
+      '需要允许 AnyStreaming 安装未知应用。请在系统设置中授权后重新点击自动安装。',
     AutoInstallFailed: '自动下载安装失败，请尝试手动下载。',
     'Game screen position': '游戏画面位置',
     Top: '靠上',
@@ -182,7 +182,7 @@ export default {
     Refresh: '刷新',
     History: '历史',
     HistoryTitle: '更新日志',
-    HistoryDesc: '查看XStreaming历史更新日志',
+    HistoryDesc: '查看AnyStreaming历史更新日志',
     fsr_sharpness_title: 'FSR锐化',
     fsr_sharpness_desc: '调整FSR锐化',
     useMsalLoginTitle: '授权码登录',

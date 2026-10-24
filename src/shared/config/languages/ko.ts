@@ -19,7 +19,7 @@ export default {
     WaitingForServerToRegister:
       '콘솔이 Xbox 서버에 연결되지 않아 스트리밍을 시작할 수 없습니다. 콘솔 상태 이상, 업데이트 중 또는 로그인되지 않은 상태일 수 있습니다. 전원 버튼을 길게 누르거나 전원을 10초 이상 차단해 보세요.',
     XboxstreaminghelperErr:
-      '콘솔 스트리밍 기능이 제대로 작동하지 않습니다. 이는 XStreaming의 오류가 아니라 콘솔 스트리밍 서비스의 문제입니다. 콘솔을 재부팅해 보세요. 오류:',
+      '콘솔 스트리밍 기능이 제대로 작동하지 않습니다. 이는 AnyStreaming의 오류가 아니라 콘솔 스트리밍 서비스의 문제입니다. 콘솔을 재부팅해 보세요. 오류:',
     DisabledStreamingErr:
       '콘솔에서 스트리밍이 비활성화되어 있습니다. 가능한 원인:\n1. Xbox 설정 - 장치 및 연결 - 원격 기능이 활성화되지 않았습니다.\n2. 스트리밍을 지원하지 않는 중국 본토판 Xbox일 수 있습니다.',
     AuthFailDesc: '인증에 실패했습니다. 다시 로그인하세요. 오류:',
@@ -30,7 +30,7 @@ export default {
     Newest: '최신순',
     Search: '검색',
     'App language': '앱 언어',
-    'Set language of XStreaming': 'XStreaming 언어 설정',
+    'Set language of AnyStreaming': 'AnyStreaming 언어 설정',
     Resolution: '해상도',
     'Set resolution, support 720P/1080P/1080P(HQ)':
       '해상도 설정 (720P/1080P 지원)',
@@ -72,7 +72,8 @@ export default {
     noAllow: '권한이 없습니다. 로그인 및 구독을 확인하세요.',
     homeNoAllow: '권한 확인 실패. 다시 로그인하세요.',
     'Auto check update': '자동 업데이트',
-    'Whether check XStreaming updates automatically': '업데이트 자동 확인 여부',
+    'Whether check AnyStreaming updates automatically':
+      '업데이트 자동 확인 여부',
     BasesSettings: '기본 설정',
     DisplaySettings: '디스플레이 설정',
     GamepadSettings: '게임패드 설정',

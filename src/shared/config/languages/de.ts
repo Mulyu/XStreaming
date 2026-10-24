@@ -20,7 +20,7 @@ export default {
     WaitingForServerToRegister:
       'Streaming kann auf der Konsole nicht eingerichtet werden, weil sie nicht mit den Xbox-Servern verbunden ist. Das liegt meist an einem fehlerhaften Konsolenzustand, einem Update oder einem nicht angemeldeten Konto. Halte den Netzschalter gedrückt oder trenne die Stromversorgung mindestens 10 Sekunden lang.',
     XboxstreaminghelperErr:
-      'Die Streaming-Funktion der Konsole funktioniert nicht richtig. Das ist kein XStreaming-Fehler; der Streaming-Dienst der Konsole wurde beendet. Starte die Konsole neu. Fehler: ',
+      'Die Streaming-Funktion der Konsole funktioniert nicht richtig. Das ist kein AnyStreaming-Fehler; der Streaming-Dienst der Konsole wurde beendet. Starte die Konsole neu. Fehler: ',
     DisabledStreamingErr:
       'Streaming ist auf der Konsole deaktiviert. Mögliche Ursachen:\n1. Xbox Einstellungen - Geräte und Verbindungen - Remotefunktionen ist nicht aktiviert;\n2. Du verwendest möglicherweise eine chinesische Xbox-Konsole, die Streaming nicht unterstützt.',
     AuthFailDesc: 'Authentication failed. Please log in again. Error:',
@@ -31,7 +31,7 @@ export default {
     Newest: 'Neu hinzugefügt',
     Search: 'Suchen',
     'App language': 'App-Sprache',
-    'Set language of XStreaming': 'Sprache von XStreaming festlegen',
+    'Set language of AnyStreaming': 'Sprache von AnyStreaming festlegen',
     Resolution: 'Auflösung',
     'Set resolution, support 720P/1080P/1080P(HQ)':
       'Auflösung festlegen, unterstützt 720P/1080P/1080P(HQ)',
@@ -78,8 +78,8 @@ export default {
     homeNoAllow:
       'Streaming permission check failed. Check whether login has expired and try logging in again.',
     'Auto check update': 'Automatisch nach Updates suchen',
-    'Whether check XStreaming updates automatically':
-      'Whether to check XStreaming updates automatically',
+    'Whether check AnyStreaming updates automatically':
+      'Whether to check AnyStreaming updates automatically',
     BasesSettings: 'Basis',
     DisplaySettings: 'Anzeige',
     GamepadSettings: 'Gamepad und Vibration',
@@ -143,7 +143,7 @@ export default {
     'Auto install': 'Automatisch installieren',
     'Manual download': 'Manuell herunterladen',
     InstallPermissionRequired:
-      'XStreaming needs permission to install unknown apps. Grant it in system settings, then tap auto install again.',
+      'AnyStreaming needs permission to install unknown apps. Grant it in system settings, then tap auto install again.',
     AutoInstallFailed:
       'Automatic download and installation failed. Try manual download.',
     'Game screen position': 'Position des Spielbilds',
@@ -186,7 +186,7 @@ export default {
     Refresh: 'Aktualisieren',
     History: 'Verlauf',
     HistoryTitle: 'Update-Verlauf',
-    HistoryDesc: 'View XStreaming update history',
+    HistoryDesc: 'View AnyStreaming update history',
     fsr_sharpness_title: 'FSR sharpness',
     fsr_sharpness_desc: 'Adjust FSR sharpness',
     useMsalLoginTitle: 'Auth code login',

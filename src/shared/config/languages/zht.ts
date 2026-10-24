@@ -17,9 +17,9 @@ export default {
     Copied: '已複製',
     Warning: '提示',
     WaitingForServerToRegister:
-      '無法在主機上建立串流，原因是主機沒有連接到Xbox伺服器。當你看到這個錯誤時，並非XStreaming發生錯誤，這通常發生在主機系統異常、主機正在更新或主機未登入帳號時。請嘗試長按電源鍵或斷開電源（斷開至少10秒）重啟主機以修復此問題。',
+      '無法在主機上建立串流，原因是主機沒有連接到Xbox伺服器。當你看到這個錯誤時，並非AnyStreaming發生錯誤，這通常發生在主機系統異常、主機正在更新或主機未登入帳號時。請嘗試長按電源鍵或斷開電源（斷開至少10秒）重啟主機以修復此問題。',
     XboxstreaminghelperErr:
-      '主機串流功能無法正常運行。當您看到此錯誤時，並非 XStreaming 發生問題，而是主機的串流功能因某些原因已無法正常工作。您需要長按電源鍵或斷開電源(至少10s)以重啟主機來修復此問題。具體錯誤:',
+      '主機串流功能無法正常運行。當您看到此錯誤時，並非 AnyStreaming 發生問題，而是主機的串流功能因某些原因已無法正常工作。您需要長按電源鍵或斷開電源(至少10s)以重啟主機來修復此問題。具體錯誤:',
     DisabledStreamingErr:
       '主机端已禁用串流功能。出現此問題可能原因如下：\n1. Xbox主機-設定-裝置和連線-遠端功能沒有啟用;\n2. 你可能正在使用中國大陸版Xbox，該版本Xbox無法使用串流功能。',
     AuthFailDesc: '認證失敗，請重新登入，錯誤:',
@@ -30,7 +30,7 @@ export default {
     Newest: '新入庫',
     Search: '搜索',
     'App language': '應用語言',
-    'Set language of XStreaming': '設置XStreaming應用語言',
+    'Set language of AnyStreaming': '設置AnyStreaming應用語言',
     Resolution: '分辨率',
     'Set resolution, support 720P/1080P/1080P(HQ)':
       '設置串流分辨率，支持720P/1080P切換',
@@ -75,8 +75,8 @@ export default {
       'Permission denied for streaming or cloud gaming. Please verify your login status and try logging in again. For cloud gaming, ensure you have an active XGPU subscription. For non-XGPU games, verify that you own the game',
     homeNoAllow: '串流權限檢查失敗，請檢查登入是否過期並嘗試重新登入',
     'Auto check update': '自動检查更新',
-    'Whether check XStreaming updates automatically':
-      '是否自動检查XStreaming更新',
+    'Whether check AnyStreaming updates automatically':
+      '是否自動检查AnyStreaming更新',
     BasesSettings: '基礎',
     DisplaySettings: '顯示',
     GamepadSettings: '手把及震動',
@@ -139,7 +139,7 @@ export default {
     'Auto install': '自動安裝',
     'Manual download': '手動下載',
     InstallPermissionRequired:
-      '需要允許 XStreaming 安裝未知應用。請在系統設置中授權後重新點擊自動安裝。',
+      '需要允許 AnyStreaming 安裝未知應用。請在系統設置中授權後重新點擊自動安裝。',
     AutoInstallFailed: '自動下載安裝失敗，請嘗試手動下載。',
     'Game screen position': '遊戲畫面位置',
     Top: '靠上',
@@ -178,7 +178,7 @@ export default {
     Refresh: '刷新',
     History: '歷史',
     HistoryTitle: '更新日誌',
-    HistoryDesc: '查看 XStreaming 歷史更新日誌',
+    HistoryDesc: '查看 AnyStreaming 歷史更新日誌',
     fsr_sharpness_title: 'FSR銳化',
     fsr_sharpness_desc: '調整FSR銳化',
     useMsalLoginTitle: '授權碼登錄',

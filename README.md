@@ -1,151 +1,41 @@
-<p align="center">
-  <a href="https://github.com/Geocld/XStreaming">
-    <img src="https://raw.githubusercontent.com/Geocld/XStreaming/main/images/logo.png" width="258">
-  </a>
-</p>
+# AnyStreaming
 
-<p align="center">
-  Open source Xbox streaming client that allows you to stream Xbox and play xCloud anytime, supporting Android/iOS.
-</p>
+An Android (and Android TV) client for cloud and console game streaming: Xbox Cloud Gaming and Xbox console streaming, GeForce NOW, and PS Plus cloud streaming, with one library across all of them.
 
-**English** | [中文](./README.zh_CN.md)
+> **Fork notice.** AnyStreaming is a fork of [Geocld/XStreaming](https://github.com/Geocld/XStreaming) (MIT), which was itself inspired by [Greenlight](https://github.com/unknownskl/greenlight). It is an independent project and is not affiliated with or endorsed by the original author.
 
-## Intro
-
-XStreaming is an open-source mobile client for xCloud and Xbox home streaming, great inspired by [Greenlight](https://github.com/unknownskl/greenlight).
-
-> DISCLAIMER: XStreaming is not affiliated with Microsoft, Xbox. All rights and trademarks are property of their respective owners.
-
-## iOS
-
-`XStreaming` is now available on the Apple Store! Due to listing restrictions, it is named `PeaSyo` in the store. If you like this app, you can support us by purchasing it for the price of a cup of coffee.
-
-<a href="https://apps.apple.com/us/app/peasyo/id6743263824">
-    <img alt="Download on the App Store" src="https://raw.githubusercontent.com/Geocld/XStreaming/main/images/apple-store-badge.svg" style="height: 64px">
-</a>
-
-> XStreaming's code is fully open-source. You can build your own iOS version directly from the source code—simply fetch the code from the `ios` branch and compile it.
-
-## HarmonyOS
-`XStreaming` is now available on the HUAWEI App Gallery!
-
-<a href="https://appgallery.huawei.com/app/detail?id=com.lijiahao.xstreamingoh" target="_blank">
-    <img alt="Explore on App Gallery" src="https://raw.githubusercontent.com/Geocld/XStreaming/main/images/Huawei_AppGallery.png" style="height: 64px">
-</a>
-
-
-## Windows/MacOS/Linux(steamOS)
-
-If you are looking for Windows/MacOS/Linux(steamOS) Xbox streaming application, you can use [XStreaming-desktop](https://github.com/Geocld/XStreaming-desktop) or [Greenlight](https://github.com/unknownskl/greenlight).
-
-## Atmosphere on Nintendo Switch
-The outstanding open-source project [LunarNX](https://github.com/thinkzhou/LunarNX) is highly recommended. It operates natively within the Atmosphere environment, offering support for both console streaming and xCloud, with a maximum output of 1080p HQ. The developer is currently in active iteration; contributions and interest are warmly welcomed.
+> **Disclaimer.** AnyStreaming is not affiliated with Microsoft, Sony Interactive Entertainment, or NVIDIA. Xbox, PlayStation, and GeForce NOW are trademarks of their respective owners.
 
 ## Features
 
-- Stream video and audio from the Xbox One and Xbox Series S/X
-- Support for 1080P/1080P(HQ) resolution
-- AMD FidelityFX super resolution v1 [FSR 1]
-- Support for virtual\OTG\bluetooth gamepad controls
-- Support controller rumble
-- Support Android TV
-- Support rumble on xCloud without any proxy in some regions
-- Dual render engines
-- Archivements system
-- IPv6
+- Xbox Cloud Gaming (xCloud) and Xbox console streaming
+- GeForce NOW and PS Plus cloud streaming
+- One library across services: ownership, Game Pass / PS Plus catalog marks, store prices and sales
+- Android TV support (D-pad navigation, long-press OK for details)
+- Virtual, USB, and Bluetooth gamepads, rumble, physical keyboard and mouse
 
-<img src="https://raw.githubusercontent.com/Geocld/XStreaming/main/images/game.png" width="400" />
-<img src="https://github.com/Geocld/XStreaming/blob/main/images/home.png" width="400" /> <img src="https://raw.githubusercontent.com/Geocld/XStreaming/main/images/xcloud.png" width="400" /><img src="https://raw.githubusercontent.com/Geocld/XStreaming/main/images/settings1.png" width="400" />
+## Build
 
-## Compatibility
-
-XStreaming v2 introduces a dual-rendering engine mechanism, ensuring compatibility with devices running WebView versions below 91. If the streaming interface displays a blank screen or becomes unresponsive, navigate to `Settings > Rendering Engine > Select Native` to switch to the Android native rendering engine for video playback.
-
-## Local Development
-
-### Requirements
-- [React Native](https://reactnative.dev/) = 0.72.14
-- [NodeJs](https://nodejs.org/) >= 20
-- [Yarn](https://yarnpkg.com/) >= 1.22
-
-### Steps to get up and running
-
-Clone the repository:
+Requirements: [Node.js](https://nodejs.org/) 20 or later, [Yarn](https://yarnpkg.com/) 1.22 or later, and the Android SDK (React Native 0.72).
 
 ```
-git clone https://github.com/Geocld/XStreaming
+git clone https://github.com/Mulyu/XStreaming
 cd XStreaming
-```
-
-Install dependencies:
-
-```
 yarn
-```
-
-Run development build:
-
-```
 npm run android
 ```
 
-## Development document
+Checks that CI and contributors run:
 
-1. [Auth](/docs/1.Auth.md)
-2. [Web API](./docs/2.Web.md)
-3. [Stream](./docs/3.Stream.md)
+```
+npx tsc --noEmit
+npx eslint .
+npx jest
+node scripts/check-tv-focus.js
+```
 
-## Developers
+Architecture notes are in [`.claude/knowledge/architecture.md`](./.claude/knowledge/architecture.md). Protocol notes inherited from the original project are in [`docs/`](./docs).
 
-XStreaming's development can not be without these Hackers. They contributed a lot of capabilities for XStreaming. Also, welcome to follow them! ❤️
+## License
 
-<!-- readme: contributors -start -->
-<table>
-<tr>
-    <td align="center">
-        <a href="https://github.com/Geocld">
-            <img src="https://avatars.githubusercontent.com/u/13679095?v=4" width="90;" alt="Geocld"/>
-            <br />
-            <sub><b>Geocld</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/wtlucky">
-            <img src="https://avatars.githubusercontent.com/u/2265430?v=4" width="90;" alt="wtlucky"/>
-            <br />
-            <sub><b>wtlucky</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/TigerBeanst">
-            <img src="https://avatars.githubusercontent.com/u/3889846?v=4" width="90;" alt="TigerBeanst"/>
-            <br />
-            <sub><b>TigerBeanst</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/Sirherobrine23">
-            <img src="https://avatars.githubusercontent.com/u/50121801?v=4" width="90;" alt="Sirherobrine23"/>
-            <br />
-            <sub><b>Sirherobrine23</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/rabin-HE">
-            <img src="https://avatars.githubusercontent.com/u/96038890?v=4" width="90;" alt="rabin-HE"/>
-            <br />
-            <sub><b>rabin-HE</b></sub>
-        </a>
-    </td>
-  </tr>
-</table>
-<!-- readme: contributors -end -->
-
-### License
-
-XStreaming is licensed under the [GNU Affero General Public License v3.0](./COPYING), with an
-OpenSSL linking exception. This project moved off its original MIT license (still preserved in
-[LICENSE](./LICENSE) for the portions it covers, as MIT requires) to bring in AGPL-3.0-licensed
-PS Plus cloud streaming code adapted from [chiaki-ng](https://github.com/streetpea/chiaki-ng) /
-[Pylux](https://github.com/ForWard-Technologies-LLC/Pylux). See [LICENSE](./LICENSE) for how the
-two licenses apply to this project's code.
+AnyStreaming is licensed under the [GNU Affero General Public License v3.0](./COPYING) with an OpenSSL linking exception. The project moved from the original MIT license to AGPL-3.0 to include PS Plus streaming code adapted from [chiaki-ng](https://github.com/streetpea/chiaki-ng) and [Pylux](https://github.com/ForWard-Technologies-LLC/Pylux). The original MIT license and copyright notice of XStreaming (Copyright (c) 2024 Geocld) are preserved in [LICENSE](./LICENSE), which also explains how the two licenses apply to the code.

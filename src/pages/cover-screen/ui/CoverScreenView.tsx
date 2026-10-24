@@ -14,7 +14,7 @@ const CoverScreenView: React.FC<Props> = ({
   if (!active) {
     return (
       <View style={styles.idleWrap}>
-        <Text style={styles.brand}>XStreaming</Text>
+        <Text style={styles.brand}>AnyStreaming</Text>
         <Text style={styles.idleText}>Start a game to use cover controls</Text>
       </View>
     );

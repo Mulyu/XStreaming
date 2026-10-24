@@ -99,7 +99,7 @@ public class StreamKeepAliveService extends Service {
      */
     public static void notifyReady(Context context, String title, String text) {
         if (title == null) {
-            title = "XStreaming";
+            title = "AnyStreaming";
         }
         if (text == null) {
             text = "Ready";
@@ -176,7 +176,7 @@ public class StreamKeepAliveService extends Service {
                 intent != null ? intent.getStringExtra(EXTRA_DISCONNECT_LABEL) : null;
         long deadlineEpochMs = intent != null ? intent.getLongExtra(EXTRA_DEADLINE, 0L) : 0L;
         if (title == null) {
-            title = "XStreaming";
+            title = "AnyStreaming";
         }
         if (text == null) {
             text = "Keeping the game session alive";
@@ -349,7 +349,7 @@ public class StreamKeepAliveService extends Service {
                 NOTIFICATION_ID,
                 buildOngoingNotification(
                         context,
-                        title != null ? title : "XStreaming",
+                        title != null ? title : "AnyStreaming",
                         text != null ? text : "",
                         disconnectLabel,
                         0L));
