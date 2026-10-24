@@ -54,6 +54,42 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
         return MODULE_NAME;
     }
 
+    // The intent a pinned shortcut or a home-screen widget tile fires: it
+    // opens MainActivity, whose JS side (App.tsx openTitleShortcut) resolves
+    // the title and goes straight into its stream.
+    public static Intent buildOpenTitleIntent(
+            Context context,
+            String provider,
+            @Nullable String productId,
+            @Nullable String titleId,
+            @Nullable String xCloudTitleId,
+            @Nullable String gfnAppId,
+            @Nullable String gfnStore,
+            String titleName) {
+        Intent intent = new Intent(context, MainActivity.class);
+        intent.setAction(ACTION_OPEN_TITLE_DETAIL);
+        intent.putExtra(EXTRA_PROVIDER, provider);
+        intent.putExtra(EXTRA_TITLE_NAME, titleName);
+        if (PROVIDER_GFN.equals(provider)) {
+            intent.putExtra(EXTRA_GFN_APP_ID, gfnAppId);
+            intent.putExtra(EXTRA_GFN_STORE, gfnStore);
+        } else if (PROVIDER_PSPLUS.equals(provider)) {
+            // PS Plus carries only its productId here -- like xCloud (and
+            // unlike GFN), the rest of what's needed to relaunch (service
+            // type, platform, entitlement, ...) is more than fits comfortably
+            // as Intent extras, so the JS side resolves the full CloudGame via
+            // its own persisted snapshot at open time (see
+            // features/launch-title/model/shortcut.ts).
+            intent.putExtra(EXTRA_PRODUCT_ID, productId);
+        } else {
+            intent.putExtra(EXTRA_PRODUCT_ID, productId);
+            intent.putExtra(EXTRA_TITLE_ID, titleId);
+            intent.putExtra(EXTRA_XCLOUD_TITLE_ID, xCloudTitleId);
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return intent;
+    }
+
     @ReactMethod
     public void addTitleShortcut(ReadableMap options, Promise promise) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
@@ -89,27 +125,15 @@ public class TitleShortcutManagerModule extends ReactContextBaseJavaModule {
         }
 
         final Context context = reactContext.getApplicationContext();
-        final Intent intent = new Intent(context, MainActivity.class);
-        intent.setAction(ACTION_OPEN_TITLE_DETAIL);
-        intent.putExtra(EXTRA_PROVIDER, provider);
-        intent.putExtra(EXTRA_TITLE_NAME, titleName);
-        if (PROVIDER_GFN.equals(provider)) {
-            intent.putExtra(EXTRA_GFN_APP_ID, gfnAppId);
-            intent.putExtra(EXTRA_GFN_STORE, getString(options, EXTRA_GFN_STORE));
-        } else if (PROVIDER_PSPLUS.equals(provider)) {
-            // PS Plus carries only its productId here -- like xCloud (and
-            // unlike GFN), the rest of what's needed to relaunch (service
-            // type, platform, entitlement, ...) is more than fits comfortably
-            // as Intent extras, so the JS side resolves the full CloudGame via
-            // its own persisted snapshot at open time (see
-            // features/launch-title/model/shortcut.ts).
-            intent.putExtra(EXTRA_PRODUCT_ID, productId);
-        } else {
-            intent.putExtra(EXTRA_PRODUCT_ID, productId);
-            intent.putExtra(EXTRA_TITLE_ID, getString(options, EXTRA_TITLE_ID));
-            intent.putExtra(EXTRA_XCLOUD_TITLE_ID, getString(options, EXTRA_XCLOUD_TITLE_ID));
-        }
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        final Intent intent = buildOpenTitleIntent(
+                context,
+                provider,
+                productId,
+                getString(options, EXTRA_TITLE_ID),
+                getString(options, EXTRA_XCLOUD_TITLE_ID),
+                gfnAppId,
+                getString(options, EXTRA_GFN_STORE),
+                titleName);
 
         // Provider-prefixed so titles from different providers that happen to
         // share an id (different stores, different id spaces) never collide.

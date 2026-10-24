@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Picker thumbnail: four rounded tiles laid out like the widget itself
+     (corner radius 0.24 of the tile, gap 0.38, in a 100-unit square). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="160dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:fillColor="#2C7BD1"
+        android:pathData="M11.16,1.35h21.26a9.81,9.81 0 0 1 9.81,9.81v21.26a9.81,9.81 0 0 1 -9.81,9.81h-21.26a9.81,9.81 0 0 1 -9.81,-9.81v-21.26a9.81,9.81 0 0 1 9.81,-9.81z" />
+    <path
+        android:fillColor="#E0892F"
+        android:pathData="M67.58,1.35h21.26a9.81,9.81 0 0 1 9.81,9.81v21.26a9.81,9.81 0 0 1 -9.81,9.81h-21.26a9.81,9.81 0 0 1 -9.81,-9.81v-21.26a9.81,9.81 0 0 1 9.81,-9.81z" />
+    <path
+        android:fillColor="#5A3A9D"
+        android:pathData="M11.16,57.77h21.26a9.81,9.81 0 0 1 9.81,9.81v21.26a9.81,9.81 0 0 1 -9.81,9.81h-21.26a9.81,9.81 0 0 1 -9.81,-9.81v-21.26a9.81,9.81 0 0 1 9.81,-9.81z" />
+    <path
+        android:fillColor="#1E8F8A"
+        android:pathData="M67.58,57.77h21.26a9.81,9.81 0 0 1 9.81,9.81v21.26a9.81,9.81 0 0 1 -9.81,9.81h-21.26a9.81,9.81 0 0 1 -9.81,-9.81v-21.26a9.81,9.81 0 0 1 9.81,-9.81z" />
+</vector>

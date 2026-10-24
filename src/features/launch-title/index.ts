@@ -17,3 +17,5 @@ export {
   buildShortcutRequest,
   requestTitleShortcut,
 } from './model/shortcut';
+
+export {recordRecentLaunch} from './model/recentLaunches';

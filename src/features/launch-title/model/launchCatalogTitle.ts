@@ -5,6 +5,7 @@ import {
   CatalogTitle,
 } from '../../../entities/catalog-title';
 import {getTitleStreamingId} from './shortcut';
+import {recordRecentLaunch} from './recentLaunches';
 import {getSettings} from '../../../shared/lib/settings';
 
 // Launches a merged catalog title via a specific provider (and, for GFN, a
@@ -30,6 +31,7 @@ export const launchWithProvider = (
       ? `https:${raw.Image_Poster.URL}`
       : '';
     recordTitlePlayed(catalogTitle.key);
+    recordRecentLaunch({provider: 'xcloud', titleItem: raw});
     navigation.navigate({
       name: getSettings().native_portrait_mode
         ? 'NativePortraitStream'
@@ -54,6 +56,7 @@ export const launchWithProvider = (
     // stream screen, so it gets its own route -- same params
     // ps-plus-library's own onSelectGame already builds for this screen.
     recordTitlePlayed(catalogTitle.key);
+    recordRecentLaunch({provider: 'psplus', game});
     navigation.navigate('PsPlusStream', {
       productId: game.productId,
       name: game.name,
@@ -68,6 +71,13 @@ export const launchWithProvider = (
   }
 
   recordTitlePlayed(catalogTitle.key);
+  recordRecentLaunch({
+    provider: 'gfn',
+    appId: preference.gfnId,
+    store: preference.store,
+    title: catalogTitle.title,
+    imageUrl: catalogTitle.imageUrl ?? '',
+  });
   navigation.navigate('NativeStream', {
     streamType: 'gfn',
     appId: preference.gfnId,

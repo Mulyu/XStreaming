@@ -1,0 +1,4 @@
+<resources>
+    <string name="widget_recent_label">直近のゲーム</string>
+    <string name="widget_recent_description">直近で起動した4本のゲーム。タップすると、そのゲームのストリームに直接入ります。</string>
+</resources>
