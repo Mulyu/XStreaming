@@ -11,7 +11,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.DashPathEffect;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
@@ -35,7 +34,7 @@ import java.util.Set;
 
 /**
  * The 2x2 "recently played" home-screen widget: the last four launched games
- * as icon tiles; a tap on one relaunches it straight into its stream through
+ * as icon tiles (unused slots stay empty); a tap on one relaunches it straight into its stream through
  * the same intent a pinned shortcut uses.
  *
  * The list is pushed from JS (HomeWidgetModule) whenever a game is launched and
@@ -267,14 +266,8 @@ final class RecentTitlesWidget {
         float gap = GAP * s;
         float margin = MARGIN * s;
         float radius = RADIUS * s;
-        float stroke = Math.max(2f, s * 0.03f);
 
         Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
-        Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
-        outline.setStyle(Paint.Style.STROKE);
-        outline.setStrokeWidth(stroke);
-        outline.setColor(placeholder);
-        outline.setPathEffect(new DashPathEffect(new float[] {stroke * 3f, stroke * 2.5f}, 0f));
 
         for (int i = 0; i < MAX_ITEMS; i++) {
             float left = margin + (i % 2) * (s + gap);
@@ -283,17 +276,7 @@ final class RecentTitlesWidget {
 
             JSONObject item = items.optJSONObject(i);
             if (item == null) {
-                // Empty slot: dashed outline with a plus.
-                canvas.drawRoundRect(inset(rect, stroke / 2f), radius, radius, outline);
-                float cx = rect.centerX();
-                float cy = rect.centerY();
-                float arm = s * 0.14f;
-                Paint plus = new Paint(Paint.ANTI_ALIAS_FLAG);
-                plus.setColor(placeholder);
-                plus.setStrokeWidth(stroke);
-                plus.setStrokeCap(Paint.Cap.ROUND);
-                canvas.drawLine(cx - arm, cy, cx + arm, cy, plus);
-                canvas.drawLine(cx, cy - arm, cx, cy + arm, plus);
+                // Empty slot: draw nothing (it still opens the app when tapped).
                 continue;
             }
 
@@ -322,9 +305,5 @@ final class RecentTitlesWidget {
             }
         }
         return bitmap;
-    }
-
-    private static RectF inset(RectF rect, float amount) {
-        return new RectF(rect.left + amount, rect.top + amount, rect.right - amount, rect.bottom - amount);
     }
 }
