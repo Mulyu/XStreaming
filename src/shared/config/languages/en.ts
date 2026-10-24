@@ -432,6 +432,7 @@ export default {
     LibraryFilterNotOwned: 'Not owned',
     LibraryFilterOwnershipAll: 'Ownership: all',
     PsStoreOnSale: 'On sale',
+    LibraryPsIncluded: 'Included in PS Plus catalog',
     PsStoreIncludedInCatalog: 'Included in the catalog',
     PsStoreSaleUntil: 'Sale until {{date}}',
     PsStoreMemberPrice: 'PS Plus member price',
