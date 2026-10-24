@@ -27,15 +27,12 @@ import {
 } from '../../../shared/ui/tvFocus';
 import {RailButton} from '../../../shared/ui/RailControls';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
+import {alpha, palette} from '../../../shared/config/palette';
 
-const XBOX_ACCENT = '#107C10';
-const NVIDIA_ACCENT = '#76B900';
-const PS_ACCENT = '#0070D1';
-const SALE_ACCENT = '#E67E22';
 // Same dim treatment library-title-detail's own per-provider rows use for a
 // service a title isn't actually owned on.
-const DIM_BADGE_BG = 'rgba(140,140,150,0.3)';
-const DIM_BADGE_TEXT = '#8A9A92';
+const DIM_BADGE_BG = alpha(palette.text, 0.3);
+const DIM_BADGE_TEXT = palette.textSoft;
 
 type Props = LibraryScreenViewModel;
 
@@ -70,7 +67,7 @@ const CatalogMark: React.FC<{
         {width: size, height: size, backgroundColor: color},
       ]}
       accessibilityLabel={label}>
-      <Icon source="gift-outline" size={size - 4} color="#FFFFFF" />
+      <Icon source="gift-outline" size={size - 4} color={palette.white} />
     </View>
   );
 };
@@ -127,7 +124,11 @@ const CardArt: React.FC<{
           <View
             style={[
               dotStyle,
-              {backgroundColor: xcloudOwned ? XBOX_ACCENT : DIM_BADGE_BG},
+              {
+                backgroundColor: xcloudOwned
+                  ? palette.provider.xbox
+                  : DIM_BADGE_BG,
+              },
             ]}>
             <Text style={[dotText, !xcloudOwned && {color: DIM_BADGE_TEXT}]}>
               X
@@ -136,7 +137,7 @@ const CardArt: React.FC<{
         )}
         <CatalogMark
           show={inGamePass}
-          color={XBOX_ACCENT}
+          color={palette.provider.xbox}
           label={t('LibraryGamePassIncluded')}
           size={markSize}
         />
@@ -144,7 +145,7 @@ const CardArt: React.FC<{
           <View
             style={[
               dotStyle,
-              {backgroundColor: gfnOwned ? NVIDIA_ACCENT : DIM_BADGE_BG},
+              {backgroundColor: gfnOwned ? palette.provider.gfn : DIM_BADGE_BG},
             ]}>
             <Text style={[dotText, !gfnOwned && {color: DIM_BADGE_TEXT}]}>
               N
@@ -155,7 +156,11 @@ const CardArt: React.FC<{
           <View
             style={[
               dotStyle,
-              {backgroundColor: psplusOwned ? PS_ACCENT : DIM_BADGE_BG},
+              {
+                backgroundColor: psplusOwned
+                  ? palette.provider.ps
+                  : DIM_BADGE_BG,
+              },
             ]}>
             <Text style={[dotText, !psplusOwned && {color: DIM_BADGE_TEXT}]}>
               PS
@@ -164,7 +169,7 @@ const CardArt: React.FC<{
         )}
         <CatalogMark
           show={!!item.psplus?.inPlusCatalog}
-          color={PS_ACCENT}
+          color={palette.provider.ps}
           label={t('LibraryPsIncluded')}
           size={markSize}
         />
@@ -213,7 +218,7 @@ const GridCard = React.memo(function GridCard({
         onLongPress={() => openTitleDetail(item)}
         onFocus={() => setFocusedKey(item.key)}
         onBlur={() => setFocusedKey(prev => (prev === item.key ? null : prev))}
-        android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
+        android_ripple={{color: alpha(palette.text, 0.15)}}>
         <CardArt
           item={item}
           discount={discount}
@@ -253,7 +258,7 @@ const TvTile = React.memo(function TvTile({
         onLongPress={() => openTitleDetail(item)}
         onFocus={() => setFocusedKey(item.key)}
         onBlur={() => setFocusedKey(prev => (prev === item.key ? null : prev))}
-        android_ripple={{color: 'rgba(150,150,150,0.15)'}}>
+        android_ripple={{color: alpha(palette.text, 0.15)}}>
         <View style={styles.tvArt}>
           <CardArt
             item={item}
@@ -453,7 +458,9 @@ const LibraryView: React.FC<Props> = ({
               {filtered.length}/{catalog.length}
             </Text>
           )}
-          {gfnFullCatalogLoading && <InlineSpinner size={12} color="#8A9A92" />}
+          {gfnFullCatalogLoading && (
+            <InlineSpinner size={12} color={palette.textSoft} />
+          )}
         </View>
         {Platform.isTV ? (
           <>
@@ -461,7 +468,7 @@ const LibraryView: React.FC<Props> = ({
               <RailButton
                 icon="magnify"
                 label={t('Search')}
-                accent={XBOX_ACCENT}
+                accent={palette.accent}
                 style={styles.tvSearchGrow}
                 onPress={() => setTvSearchOpen(true)}
               />
@@ -470,7 +477,7 @@ const LibraryView: React.FC<Props> = ({
                 iconOnly
                 icon="refresh"
                 label={refreshing ? t('Loading...') : t('Refresh')}
-                accent={XBOX_ACCENT}
+                accent={palette.accent}
                 onPress={() => {
                   if (!refreshing) {
                     onRefresh();
@@ -493,14 +500,16 @@ const LibraryView: React.FC<Props> = ({
                     source="magnify"
                     size={20}
                     color={
-                      tvSearchInputFocus.focused ? TV_FOCUS_COLOR : '#8A9A92'
+                      tvSearchInputFocus.focused
+                        ? TV_FOCUS_COLOR
+                        : palette.textSoft
                     }
                   />
                   <TextInput
                     value={keyword}
                     onChangeText={setKeyword}
                     placeholder={t('Search')}
-                    placeholderTextColor="#8A9A92"
+                    placeholderTextColor={palette.textSoft}
                     style={styles.tvSearchInput}
                     onFocus={tvSearchInputFocus.onFocus}
                     onBlur={tvSearchInputFocus.onBlur}
@@ -520,7 +529,9 @@ const LibraryView: React.FC<Props> = ({
                       source="close"
                       size={18}
                       color={
-                        tvSearchCloseFocus.focused ? TV_FOCUS_COLOR : '#E6ECE8'
+                        tvSearchCloseFocus.focused
+                          ? TV_FOCUS_COLOR
+                          : palette.text
                       }
                     />
                   </Pressable>
@@ -537,13 +548,13 @@ const LibraryView: React.FC<Props> = ({
             <Icon
               source="magnify"
               size={18}
-              color={searchFocus.focused ? TV_FOCUS_COLOR : '#8A9A92'}
+              color={searchFocus.focused ? TV_FOCUS_COLOR : palette.textSoft}
             />
             <TextInput
               value={keyword}
               onChangeText={setKeyword}
               placeholder={t('Search')}
-              placeholderTextColor="#8A9A92"
+              placeholderTextColor={palette.textSoft}
               style={styles.searchInput}
               onFocus={searchFocus.onFocus}
               onBlur={searchFocus.onBlur}
@@ -559,7 +570,7 @@ const LibraryView: React.FC<Props> = ({
                   letter="X"
                   label={t('LibraryFilterXcloud')}
                   active={filterXcloud}
-                  accent={XBOX_ACCENT}
+                  accent={palette.accent}
                   fill
                   onPress={() => setFilterXcloud(v => !v)}
                 />
@@ -568,7 +579,7 @@ const LibraryView: React.FC<Props> = ({
                   letter="N"
                   label={t('LibraryFilterGfn')}
                   active={filterGfn}
-                  accent={XBOX_ACCENT}
+                  accent={palette.accent}
                   fill
                   onPress={() => setFilterGfn(v => !v)}
                 />
@@ -577,7 +588,7 @@ const LibraryView: React.FC<Props> = ({
                   letter="PS"
                   label={t('LibraryFilterPsPlus')}
                   active={filterPsPlus}
-                  accent={XBOX_ACCENT}
+                  accent={palette.accent}
                   fill
                   onPress={() => setFilterPsPlus(v => !v)}
                 />
@@ -586,7 +597,7 @@ const LibraryView: React.FC<Props> = ({
                   icon="heart-outline"
                   label={t('LibraryFilterFavorite')}
                   active={filterFavorite}
-                  accent={XBOX_ACCENT}
+                  accent={palette.accent}
                   fill
                   onPress={() => setFilterFavorite(v => !v)}
                 />
@@ -599,7 +610,7 @@ const LibraryView: React.FC<Props> = ({
                   }
                   label={ownershipLabel}
                   active={filterOwnership !== 'all'}
-                  accent={XBOX_ACCENT}
+                  accent={palette.accent}
                   fill
                   onPress={cycleOwnership}
                 />
@@ -608,7 +619,7 @@ const LibraryView: React.FC<Props> = ({
                   icon="tag-outline"
                   label={t('LibraryFilterOnSale')}
                   active={filterOnSale}
-                  accent={XBOX_ACCENT}
+                  accent={palette.accent}
                   fill
                   onPress={() => setFilterOnSale(v => !v)}
                 />
@@ -617,7 +628,7 @@ const LibraryView: React.FC<Props> = ({
                   icon="gift-outline"
                   label={freePlayLabel}
                   active={filterFreePlay !== 'off'}
-                  accent={XBOX_ACCENT}
+                  accent={palette.accent}
                   fill
                   onPress={cycleFreePlay}
                 />
@@ -628,7 +639,7 @@ const LibraryView: React.FC<Props> = ({
                     trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
                     label={`${t('Sort')}: ${activeSortLabel}`}
                     active={sortMode !== 'recent'}
-                    accent={NVIDIA_ACCENT}
+                    accent={palette.accent}
                     fill
                     onPress={() => setSortMenuOpen(v => !v)}
                   />
@@ -775,7 +786,11 @@ const LibraryView: React.FC<Props> = ({
                   <Icon
                     source={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
                     size={14}
-                    color={sortMode !== 'recent' ? '#0B0F0C' : '#8A9A92'}
+                    color={
+                      sortMode !== 'recent'
+                        ? palette.onAccent
+                        : palette.textSoft
+                    }
                   />
                 </Pressable>
               </>
@@ -803,7 +818,11 @@ const LibraryView: React.FC<Props> = ({
                   }>
                   <View style={styles.sortItemLabelRow}>
                     {sortMode === option.value && (
-                      <Icon source="check" size={13} color={NVIDIA_ACCENT} />
+                      <Icon
+                        source="check"
+                        size={13}
+                        color={palette.provider.gfn}
+                      />
                     )}
                     <Text style={styles.sortItemLabel}>{option.label}</Text>
                   </View>
@@ -866,7 +885,7 @@ const styles = StyleSheet.create({
   header: {paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6, gap: 10},
   titleRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
   title: {fontSize: 18, fontWeight: '800'},
-  count: {fontSize: 12, fontWeight: '700', color: '#8A9A92'},
+  count: {fontSize: 12, fontWeight: '700', color: palette.textSoft},
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -874,12 +893,12 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
     // Constant width (only the color changes on focus) so gaining a focus
     // ring never shifts this box's size the way the 1px->2px jump on the
     // filter chips below does.
     borderWidth: 2,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderColor: alpha(palette.text, 0.24),
   },
   // TextInput has no onPress, so this was invisible to
   // scripts/check-tv-focus.js's static check and had no focus indicator at
@@ -887,9 +906,9 @@ const styles = StyleSheet.create({
   // indications (developer.android.com/design/ui/tv/guides/styles/focus-system).
   searchBoxFocused: {
     borderColor: TV_FOCUS_COLOR,
-    backgroundColor: 'rgba(255,213,74,0.1)',
+    backgroundColor: alpha(palette.focusRing, 0.1),
   },
-  searchInput: {flex: 1, padding: 0, fontSize: 14, color: '#E6ECE8'},
+  searchInput: {flex: 1, padding: 0, fontSize: 14, color: palette.text},
   // TV: the search box above collapses to this RailButton -- same shape as
   // the filter chips below it (icon + label, not an icon-only square) so
   // Android's own per-view focus highlight has the same exposed mat area to
@@ -899,7 +918,7 @@ const styles = StyleSheet.create({
   // explicit width of its own) to the header's full width.
   tvSearchOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(5,7,6,0.72)',
+    backgroundColor: alpha(palette.scrim, 0.72),
     alignItems: 'center',
     paddingTop: 90,
   },
@@ -912,25 +931,25 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 14,
     paddingHorizontal: 18,
-    backgroundColor: '#1B2120',
+    backgroundColor: palette.surfaceHigh,
     // Plain until the input itself actually has focus -- this used to be a
     // permanent TV_FOCUS_COLOR border regardless of real focus state, which
     // made it look focused even when, say, the close button had the
     // remote's attention instead.
     borderWidth: 2,
-    borderColor: 'rgba(140,140,150,0.3)',
+    borderColor: alpha(palette.text, 0.3),
   },
   tvSearchBoxFocused: {
     borderColor: TV_FOCUS_COLOR,
   },
-  tvSearchInput: {flex: 1, padding: 0, fontSize: 18, color: '#E6ECE8'},
+  tvSearchInput: {flex: 1, padding: 0, fontSize: 18, color: palette.text},
   tvSearchCloseButton: {
     width: 34,
     height: 34,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(140,140,150,0.18)',
+    backgroundColor: alpha(palette.text, 0.18),
   },
   filterRow: {position: 'relative'},
   chipsRow: {
@@ -947,13 +966,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderColor: alpha(palette.text, 0.24),
   },
-  filterChipOn: {backgroundColor: XBOX_ACCENT, borderColor: XBOX_ACCENT},
-  filterChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
-  filterChipTextOn: {color: '#0B0F0C'},
+  filterChipOn: {backgroundColor: palette.accent, borderColor: palette.accent},
+  filterChipText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
+  filterChipTextOn: {color: palette.onAccent},
   sortChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -962,13 +981,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderColor: alpha(palette.text, 0.24),
   },
-  sortChipOn: {backgroundColor: NVIDIA_ACCENT, borderColor: NVIDIA_ACCENT},
-  sortChipText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
-  sortChipTextOn: {color: '#0B0F0C'},
+  sortChipOn: {backgroundColor: palette.accent, borderColor: palette.accent},
+  sortChipText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
+  sortChipTextOn: {color: palette.onAccent},
   // TV only -- pushes the sort RailButton to the row's far end, same as
   // phone's sortChip's own marginLeft:'auto'.
   sortChipTv: {marginLeft: 'auto'},
@@ -980,9 +999,9 @@ const styles = StyleSheet.create({
     width: 230,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: 'rgba(30,32,36,0.98)',
+    backgroundColor: palette.elevation.l3,
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.24)',
+    borderColor: alpha(palette.text, 0.24),
     zIndex: 10,
     elevation: 10,
   },
@@ -990,14 +1009,14 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(140,140,150,0.16)',
+    borderBottomColor: alpha(palette.text, 0.16),
     gap: 2,
   },
   sortItemLabelRow: {flexDirection: 'row', alignItems: 'center', gap: 5},
   sortItemLabel: {fontSize: 13, fontWeight: '700'},
-  sortItemScope: {fontSize: 10, color: '#8A9A92', paddingLeft: 18},
+  sortItemScope: {fontSize: 10, color: palette.textSoft, paddingLeft: 18},
   centre: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10},
-  centreText: {color: '#8A9A92', fontSize: 14},
+  centreText: {color: palette.textSoft, fontSize: 14},
   list: {paddingHorizontal: 6, paddingBottom: 20},
   cell: {padding: 4},
   // Raises the whole cell (and the card's focus scale-up inside it) above
@@ -1018,7 +1037,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
   },
   // D-pad/remote focus indicator (Android TV navigates by moving View focus,
   // not touch) -- without this every tile looked identical regardless of
@@ -1039,7 +1058,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   thumbEmptyText: {
-    color: '#B7C6BD',
+    color: palette.textSoft,
     fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
@@ -1048,7 +1067,7 @@ const styles = StyleSheet.create({
   // via any of its listed services right now.
   coverDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15,16,18,0.8)',
+    backgroundColor: alpha(palette.scrim, 0.8),
   },
   bottomScrim: {
     position: 'absolute',
@@ -1056,7 +1075,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: '28%',
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: alpha(palette.black, 0.55),
   },
   availOverlay: {
     position: 'absolute',
@@ -1073,7 +1092,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  availDotText: {fontSize: 7.5, fontWeight: '800', color: '#0B0F0C'},
+  availDotText: {fontSize: 7.5, fontWeight: '800', color: palette.onAccent},
   saleBadge: {
     position: 'absolute',
     right: 5,
@@ -1081,9 +1100,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 5,
     borderRadius: 5,
-    backgroundColor: SALE_ACCENT,
+    backgroundColor: palette.sale,
   },
-  saleBadgeText: {fontSize: 8.5, fontWeight: '800', color: '#2B1400'},
+  saleBadgeText: {fontSize: 8.5, fontWeight: '800', color: palette.onAccent},
   cardTitle: {
     position: 'absolute',
     left: 6,
@@ -1091,8 +1110,8 @@ const styles = StyleSheet.create({
     bottom: 5,
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.6)',
+    color: palette.white,
+    textShadowColor: alpha(palette.black, 0.6),
     textShadowRadius: 3,
   },
   // TV tile grid (5 columns): each cell is an even split of the row, same
@@ -1110,14 +1129,14 @@ const styles = StyleSheet.create({
   },
   tvTileFocused: {
     borderColor: TV_FOCUS_COLOR,
-    backgroundColor: 'rgba(255,213,74,0.12)',
+    backgroundColor: alpha(palette.focusRing, 0.12),
   },
   tvArt: {
     aspectRatio: 1,
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
   },
   // The TV-size variants of the phone card's badges/sale/title.
   availOverlayBig: {left: 8, top: 8, gap: 4},
@@ -1138,10 +1157,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: alpha(palette.white, 0.08),
   },
-  tvHintText: {fontSize: 13, color: '#9AA9A1'},
-  tvHintKey: {fontWeight: '800', color: '#EEF4EF'},
+  tvHintText: {fontSize: 13, color: palette.textSoft},
+  tvHintKey: {fontWeight: '800', color: palette.text},
   // In a service's catalog (PS Plus / Game Pass): solid service colour (set
   // inline).
   catalogMark: {

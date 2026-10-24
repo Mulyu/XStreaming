@@ -1,6 +1,7 @@
 import React from 'react';
 import {Text, TouchableOpacity, Linking, StyleSheet} from 'react-native';
 import {useTVFocus, tvFocusRing} from './tvFocus';
+import {palette} from '../config/palette';
 
 type Props = {
   url: string;
@@ -26,7 +27,7 @@ const LinkText: React.FC<Props> = ({url, children}) => {
 
 const styles = StyleSheet.create({
   text: {
-    color: '#0081f1',
+    color: palette.accent,
     textDecorationLine: 'underline',
   },
 });

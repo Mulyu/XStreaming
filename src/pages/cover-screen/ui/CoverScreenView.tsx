@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
 import type {CoverScreenViewModel} from '../model/useCoverScreen';
+import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = CoverScreenViewModel;
 
@@ -60,29 +61,39 @@ const CoverScreenView: React.FC<Props> = ({
 const styles = StyleSheet.create({
   idleWrap: {
     flex: 1,
-    backgroundColor: '#0E1512',
+    backgroundColor: palette.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
   },
-  brand: {color: '#2FD24B', fontSize: 22, fontWeight: '700', letterSpacing: 1},
-  idleText: {color: '#8A9A92', fontSize: 13, marginTop: 8, textAlign: 'center'},
-  wrap: {flex: 1, backgroundColor: '#0E1512'},
+  brand: {
+    color: palette.accent,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  idleText: {
+    color: palette.textSoft,
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  wrap: {flex: 1, backgroundColor: palette.bg},
   button: {
     position: 'absolute',
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: alpha(palette.white, 0.08),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: alpha(palette.white, 0.18),
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonDown: {
-    backgroundColor: 'rgba(47,210,75,0.28)',
-    borderColor: '#2FD24B',
+    backgroundColor: alpha(palette.accent, 0.28),
+    borderColor: palette.accent,
   },
-  buttonLabel: {color: '#E6ECE8', fontSize: 22, fontWeight: '800'},
-  buttonLabelDown: {color: '#FFFFFF'},
+  buttonLabel: {color: palette.text, fontSize: 22, fontWeight: '800'},
+  buttonLabelDown: {color: palette.white},
 });
 
 export default CoverScreenView;

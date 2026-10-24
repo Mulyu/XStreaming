@@ -2,6 +2,7 @@ import React from 'react';
 import {Pressable, StyleSheet, StyleProp, ViewStyle} from 'react-native';
 import {Text, Icon} from 'react-native-paper';
 import {TV_FOCUS_COLOR} from './tvFocus';
+import {alpha, palette} from '../config/palette';
 
 // The in-stream control rails' (StreamControlRail/PsPlusControlRail) icon +
 // label button and segmented-control option, pulled out here after Library
@@ -50,17 +51,17 @@ export const RailButton: React.FC<{
 }) => {
   const [focused, setFocused] = React.useState(false);
   const iconColor = danger
-    ? '#ff5347'
+    ? palette.sale
     : active
     ? fill
-      ? '#0B0F0C'
+      ? palette.onAccent
       : accent
-    : '#8a9a92';
+    : palette.textSoft;
   const labelColor = danger
-    ? '#ff5347'
+    ? palette.sale
     : active && fill
-    ? '#0B0F0C'
-    : '#eef4ef';
+    ? palette.onAccent
+    : palette.text;
   return (
     <Pressable
       style={[
@@ -76,7 +77,7 @@ export const RailButton: React.FC<{
       onPress={onPress}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      android_ripple={{color: 'rgba(255,255,255,0.15)'}}>
+      android_ripple={{color: alpha(palette.white, 0.15)}}>
       {letter ? (
         <Text style={[styles.railBtnLetter, {color: iconColor}]}>{letter}</Text>
       ) : icon ? (
@@ -115,8 +116,12 @@ export const SegOption: React.FC<{
       onPress={onPress}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      android_ripple={{color: 'rgba(255,255,255,0.2)'}}>
-      <Icon source={icon} size={18} color={active ? '#0a0f0c' : '#8a9a92'} />
+      android_ripple={{color: alpha(palette.white, 0.2)}}>
+      <Icon
+        source={icon}
+        size={18}
+        color={active ? palette.onAccent : palette.textSoft}
+      />
     </Pressable>
   );
 };
@@ -140,7 +145,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 8,
     borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: alpha(palette.white, 0.03),
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -155,7 +160,7 @@ const styles = StyleSheet.create({
     borderColor: TV_FOCUS_COLOR,
   },
   railBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: alpha(palette.white, 0.07),
   },
   railBtnLetter: {
     fontSize: 13,

@@ -30,6 +30,7 @@ import {
   CoverButton,
 } from '../model/coverLayout';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {alpha, palette} from '../../../shared/config/palette';
 
 const {CoverDisplayManager} = NativeModules;
 
@@ -225,7 +226,7 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
                   step={0.01}
                   onValueChange={val => handleSize(Math.round(val * 100) / 100)}
                   minimumTrackTintColor={theme.colors.primary}
-                  maximumTrackTintColor="grey"
+                  maximumTrackTintColor={palette.textDim}
                 />
                 <View style={styles.title}>
                   <Text style={styles.modalText}>{t('ShowTitle')}</Text>
@@ -257,7 +258,7 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0B110E',
+    backgroundColor: palette.bg,
     zIndex: 1200,
   },
   toolbar: {
@@ -271,20 +272,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   enableRow: {flexDirection: 'row', alignItems: 'center', flexShrink: 1},
-  enableLabel: {color: '#E6ECE8', fontSize: 13, marginLeft: 8},
+  enableLabel: {color: palette.text, fontSize: 13, marginLeft: 8},
   toolbarBtns: {flexDirection: 'row', alignItems: 'center'},
   tbtn: {marginLeft: 6},
   padButton: {
     borderRadius: 16,
-    backgroundColor: 'rgba(47,210,75,0.14)',
+    backgroundColor: alpha(palette.accent, 0.14),
     borderWidth: 1.5,
-    borderColor: '#2FD24B',
+    borderColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  padLabel: {color: '#E6ECE8', fontSize: 20, fontWeight: '800'},
+  padLabel: {color: palette.text, fontSize: 20, fontWeight: '800'},
   modal: {marginLeft: '25%', marginRight: '25%'},
-  modalText: {color: '#E6ECE8'},
+  modalText: {color: palette.text},
   title: {paddingTop: 10, paddingBottom: 10},
   divider: {marginTop: 10},
 });

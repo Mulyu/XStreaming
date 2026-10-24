@@ -10,8 +10,9 @@ import {Text, Icon, useTheme} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 import {TV_FOCUS_COLOR} from '../../../shared/ui/tvFocus';
+import {alpha, palette} from '../../../shared/config/palette';
 
-const ACCENT = '#2FD24B';
+const ACCENT = palette.accent;
 
 // Width of the TV rail (see render() below) -- exported so the app layer can
 // reserve this much left padding on the tab screens it wraps, since the rail
@@ -49,7 +50,7 @@ function HubTabBar({state, navigation}: any) {
   const {t} = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const inactiveColor = theme.dark ? '#8A9A92' : '#6b7770';
+  const inactiveColor = theme.dark ? palette.textSoft : palette.textDim;
   // Only a handful of tabs ever render -- a focused-key is simpler here than
   // extracting a per-tab sub-component (see tvFocus.ts's own doc comment).
   const [focusedKey, setFocusedKey] = React.useState<string | null>(null);
@@ -101,7 +102,7 @@ function HubTabBar({state, navigation}: any) {
             backgroundColor:
               theme.colors.elevation?.level2 || theme.colors.surface,
             borderRightColor:
-              theme.colors.outlineVariant || 'rgba(120,180,140,0.2)',
+              theme.colors.outlineVariant || alpha(palette.text, 0.2),
             paddingTop: 22 + insets.top,
             paddingBottom: 16 + insets.bottom,
           },
@@ -124,7 +125,7 @@ function HubTabBar({state, navigation}: any) {
                 setFocusedKey(prev => (prev === route.key ? null : prev))
               }
               android_ripple={{
-                color: 'rgba(150,150,150,0.15)',
+                color: alpha(palette.text, 0.15),
                 borderless: true,
               }}
               style={styles.railTab}
@@ -157,7 +158,7 @@ function HubTabBar({state, navigation}: any) {
           backgroundColor:
             theme.colors.elevation?.level2 || theme.colors.surface,
           borderTopColor:
-            theme.colors.outlineVariant || 'rgba(120,180,140,0.2)',
+            theme.colors.outlineVariant || alpha(palette.text, 0.2),
           paddingBottom: 9 + insets.bottom,
         },
       ]}>
@@ -176,7 +177,10 @@ function HubTabBar({state, navigation}: any) {
             onBlur={() =>
               setFocusedKey(prev => (prev === route.key ? null : prev))
             }
-            android_ripple={{color: 'rgba(150,150,150,0.15)', borderless: true}}
+            android_ripple={{
+              color: alpha(palette.text, 0.15),
+              borderless: true,
+            }}
             style={[styles.tab, focusedKey === route.key && styles.tabFocused]}
             accessibilityRole="button"
             accessibilityState={isActive ? {selected: true} : {}}
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
   // chip's background to show "selected".
   tabFocused: {
     borderColor: TV_FOCUS_COLOR,
-    backgroundColor: 'rgba(255,213,74,0.14)',
+    backgroundColor: alpha(palette.focusRing, 0.14),
   },
   label: {
     fontSize: 10.5,
@@ -276,7 +280,7 @@ const styles = StyleSheet.create({
     height: 34,
     paddingHorizontal: 12,
     borderRadius: 17,
-    backgroundColor: 'rgba(255,213,74,0.16)',
+    backgroundColor: alpha(palette.focusRing, 0.16),
     borderWidth: 2,
     borderColor: TV_FOCUS_COLOR,
   },

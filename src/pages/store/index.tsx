@@ -64,11 +64,7 @@ import {
   hasMorePages,
   StoreRow,
 } from './storeLogic';
-
-const XBOX_ACCENT = '#107C10';
-const NVIDIA_ACCENT = '#76B900';
-const PS_ACCENT = '#0070D1';
-const SALE_ACCENT = '#E67E22';
+import {alpha, palette} from '../../shared/config/palette';
 
 // Both Xbox's and Steam's charts are live search scans, not curated top-N
 // lists -- deeper pages exist for as long as the caller wants to scroll. Cap
@@ -947,7 +943,7 @@ function StoreScreen() {
         onPress={() => openRow(item)}
         onFocus={() => setFocusedRowId(item.id)}
         onBlur={() => setFocusedRowId(prev => (prev === item.id ? null : prev))}
-        android_ripple={{color: 'rgba(150,150,150,0.12)'}}>
+        android_ripple={{color: alpha(palette.text, 0.12)}}>
         <Text style={styles.rank}>#{item.rank}</Text>
         {item.imageUrl ? (
           <Image source={{uri: item.imageUrl}} style={styles.cover} />
@@ -1009,8 +1005,8 @@ function StoreScreen() {
             style={[
               styles.tab,
               provider === 'xcloud' && {
-                backgroundColor: XBOX_ACCENT,
-                borderColor: XBOX_ACCENT,
+                backgroundColor: palette.provider.xbox,
+                borderColor: palette.provider.xbox,
               },
               xcloudTabFocus.focused && tvFocusRing,
             ]}
@@ -1029,8 +1025,8 @@ function StoreScreen() {
             style={[
               styles.tab,
               provider === 'gfn' && {
-                backgroundColor: NVIDIA_ACCENT,
-                borderColor: NVIDIA_ACCENT,
+                backgroundColor: palette.provider.gfn,
+                borderColor: palette.provider.gfn,
               },
               gfnTabFocus.focused && tvFocusRing,
             ]}
@@ -1046,8 +1042,8 @@ function StoreScreen() {
             style={[
               styles.tab,
               provider === 'psstore' && {
-                backgroundColor: PS_ACCENT,
-                borderColor: PS_ACCENT,
+                backgroundColor: palette.provider.ps,
+                borderColor: palette.provider.ps,
               },
               psstoreTabFocus.focused && tvFocusRing,
             ]}
@@ -1162,7 +1158,7 @@ function StoreScreen() {
               onBlur={reloadFocus.onBlur}
               accessibilityRole="button"
               accessibilityLabel={t('Refresh')}>
-              <Icon source="refresh" size={14} color="#8A9A92" />
+              <Icon source="refresh" size={14} color={palette.textSoft} />
               <Text style={styles.kindText}>{t('Refresh')}</Text>
             </Pressable>
           )}
@@ -1179,7 +1175,7 @@ function StoreScreen() {
         </View>
       ) : visibleRows.length === 0 ? (
         <View style={styles.centre}>
-          <Icon source="cart-off" size={34} color="#5C6963" />
+          <Icon source="cart-off" size={34} color={palette.textDim} />
           <Text style={styles.centreText}>{t('StoreEmpty')}</Text>
         </View>
       ) : (
@@ -1210,33 +1206,33 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(140,140,150,0.3)',
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    borderColor: alpha(palette.text, 0.3),
+    backgroundColor: alpha(palette.text, 0.14),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabText: {fontSize: 12.5, fontWeight: '700', color: '#8A9A92'},
-  tabTextOn: {color: '#EAFFF0'},
+  tabText: {fontSize: 12.5, fontWeight: '700', color: palette.textSoft},
+  tabTextOn: {color: palette.text},
   kindRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6},
   kindChip: {
     height: 28,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: 'rgba(140,140,150,0.14)',
+    backgroundColor: alpha(palette.text, 0.14),
     alignItems: 'center',
     justifyContent: 'center',
   },
   reloadChip: {flexDirection: 'row', gap: 4},
-  kindOn: {backgroundColor: 'rgba(232,179,74,0.9)'},
-  kindOnSale: {backgroundColor: SALE_ACCENT},
-  kindOnGfnAvailable: {backgroundColor: NVIDIA_ACCENT},
-  kindOnPsPlusAvailable: {backgroundColor: PS_ACCENT},
-  kindText: {fontSize: 11.5, fontWeight: '700', color: '#8A9A92'},
-  kindTextOn: {color: '#2B1D02'},
-  kindTextOnSale: {color: '#2B1200'},
-  kindTextOnGfnAvailable: {color: '#0B2B00'},
-  kindTextOnPsPlusAvailable: {color: '#EAFFF0'},
-  subnote: {fontSize: 11, color: '#5C6963'},
+  kindOn: {backgroundColor: alpha(palette.warning, 0.9)},
+  kindOnSale: {backgroundColor: palette.sale},
+  kindOnGfnAvailable: {backgroundColor: palette.provider.gfn},
+  kindOnPsPlusAvailable: {backgroundColor: palette.provider.ps},
+  kindText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
+  kindTextOn: {color: palette.onAccent},
+  kindTextOnSale: {color: palette.onAccent},
+  kindTextOnGfnAvailable: {color: palette.onAccent},
+  kindTextOnPsPlusAvailable: {color: palette.text},
+  subnote: {fontSize: 11, color: palette.textDim},
   list: {paddingHorizontal: 14, paddingBottom: 24},
   row: {
     flexDirection: 'row',
@@ -1252,29 +1248,38 @@ const styles = StyleSheet.create({
     width: 28,
     fontSize: 14,
     fontWeight: '700',
-    color: '#5C6963',
+    color: palette.textDim,
     fontVariant: ['tabular-nums'],
     textAlign: 'right',
   },
-  cover: {width: 48, height: 48, borderRadius: 8, backgroundColor: '#222'},
-  coverPlaceholder: {backgroundColor: 'rgba(140,140,150,0.2)'},
+  cover: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: palette.surfaceHigh,
+  },
+  coverPlaceholder: {backgroundColor: alpha(palette.text, 0.2)},
   rowBody: {flex: 1, minWidth: 0, gap: 3},
   rowTitle: {fontSize: 13.5, fontWeight: '600'},
   priceRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
-  price: {fontSize: 12, color: '#8A9A92'},
+  price: {fontSize: 12, color: palette.textSoft},
   originalPrice: {
     fontSize: 11,
-    color: '#5C6963',
+    color: palette.textDim,
     textDecorationLine: 'line-through',
   },
-  onSale: {color: SALE_ACCENT, fontWeight: '700'},
+  onSale: {color: palette.sale, fontWeight: '700'},
   discountPill: {
     paddingVertical: 1,
     paddingHorizontal: 5,
     borderRadius: 5,
-    backgroundColor: SALE_ACCENT,
+    backgroundColor: palette.sale,
   },
-  discountPillText: {fontSize: 10.5, fontWeight: '800', color: '#2B1400'},
+  discountPillText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: palette.onAccent,
+  },
   footer: {paddingVertical: 16, alignItems: 'center'},
   centre: {
     flex: 1,
@@ -1283,7 +1288,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 60,
   },
-  centreText: {fontSize: 13, color: '#8A9A92'},
+  centreText: {fontSize: 13, color: palette.textSoft},
 });
 
 export default StoreScreen;

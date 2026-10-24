@@ -10,9 +10,6 @@ import {
   DropdownRow,
   SliderRow,
   InfoRow,
-  XBOX_ACCENT,
-  NVIDIA_ACCENT,
-  PS_ACCENT,
 } from '../../../shared/ui/InlineSettingRows';
 import {GfnSignInModal} from '../../../entities/gfn-account';
 import {MsalAuth} from '../../../entities/xbox-token';
@@ -20,6 +17,7 @@ import {M} from '../model/useSettingsScreen';
 import type {Lane, SettingsScreenViewModel} from '../model/useSettingsScreen';
 
 import pkg from '../../../../package.json';
+import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = SettingsScreenViewModel;
 
@@ -280,7 +278,7 @@ const SettingsView: React.FC<Props> = ({
             desc={M('native_portrait_mode').description}
             value={settings.native_portrait_mode}
             onChange={v => updateSetting('native_portrait_mode', v)}
-            accent={XBOX_ACCENT}
+            accent={palette.accent}
           />
 
           <SectionLabel title={t('SectionRegionSignaling')} />
@@ -347,7 +345,7 @@ const SettingsView: React.FC<Props> = ({
           <InfoRow
             title={t('GfnPlaytimeTitle')}
             value={gfnPlaytimeDescription}
-            accent={NVIDIA_ACCENT}
+            accent={palette.provider.gfn}
           />
 
           <SectionLabel title={t('SectionVideo')} />
@@ -357,7 +355,7 @@ const SettingsView: React.FC<Props> = ({
             options={M('gfn_resolution').data}
             value={settings.gfn_resolution}
             onChange={v => updateSetting('gfn_resolution', v)}
-            accent={NVIDIA_ACCENT}
+            accent={palette.provider.gfn}
           />
           <SegmentedRow
             title={M('gfn_fps').title}
@@ -365,7 +363,7 @@ const SettingsView: React.FC<Props> = ({
             options={M('gfn_fps').data}
             value={settings.gfn_fps}
             onChange={v => updateSetting('gfn_fps', v)}
-            accent={NVIDIA_ACCENT}
+            accent={palette.provider.gfn}
           />
           <SegmentedRow
             title={M('gfn_bitrate_mode').title}
@@ -373,7 +371,7 @@ const SettingsView: React.FC<Props> = ({
             options={M('gfn_bitrate_mode').data}
             value={settings.gfn_bitrate_mode}
             onChange={v => updateSetting('gfn_bitrate_mode', v)}
-            accent={NVIDIA_ACCENT}
+            accent={palette.provider.gfn}
           />
           {settings.gfn_bitrate_mode === 'custom' && (
             <SliderRow
@@ -384,7 +382,7 @@ const SettingsView: React.FC<Props> = ({
               value={settings.gfn_bitrate}
               onChange={v => updateSetting('gfn_bitrate', v)}
               formatValue={v => `${v} Mbps`}
-              accent={NVIDIA_ACCENT}
+              accent={palette.provider.gfn}
             />
           )}
           <DropdownRow
@@ -393,7 +391,7 @@ const SettingsView: React.FC<Props> = ({
             options={gfnRegionOptions}
             value={settings.gfn_region}
             onChange={v => updateSetting('gfn_region', v)}
-            accent={NVIDIA_ACCENT}
+            accent={palette.provider.gfn}
             emptyLabel={t('Auto')}
           />
 
@@ -430,7 +428,7 @@ const SettingsView: React.FC<Props> = ({
             options={M('psplus_resolution').data}
             value={settings.psplus_resolution}
             onChange={v => updateSetting('psplus_resolution', v)}
-            accent={PS_ACCENT}
+            accent={palette.provider.ps}
           />
           <SegmentedRow
             title={M('psplus_fps').title}
@@ -438,7 +436,7 @@ const SettingsView: React.FC<Props> = ({
             options={M('psplus_fps').data}
             value={settings.psplus_fps}
             onChange={v => updateSetting('psplus_fps', v)}
-            accent={PS_ACCENT}
+            accent={palette.provider.ps}
           />
           <SegmentedRow
             title={M('psplus_bitrate_mode').title}
@@ -446,7 +444,7 @@ const SettingsView: React.FC<Props> = ({
             options={M('psplus_bitrate_mode').data}
             value={settings.psplus_bitrate_mode}
             onChange={v => updateSetting('psplus_bitrate_mode', v)}
-            accent={PS_ACCENT}
+            accent={palette.provider.ps}
           />
           {settings.psplus_bitrate_mode === 'custom' && (
             <SliderRow
@@ -457,7 +455,7 @@ const SettingsView: React.FC<Props> = ({
               value={settings.psplus_bitrate_kbps}
               onChange={v => updateSetting('psplus_bitrate_kbps', v)}
               formatValue={v => `${(v / 1000).toFixed(1)} Mbps`}
-              accent={PS_ACCENT}
+              accent={palette.provider.ps}
             />
           )}
 
@@ -514,20 +512,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: 'transparent',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: alpha(palette.white, 0.07),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  laneButtonActive: {backgroundColor: XBOX_ACCENT},
-  laneButtonText: {fontSize: 15, fontWeight: '700', color: '#C7D2CC'},
-  laneButtonTextOn: {color: '#0B0F0C'},
+  laneButtonActive: {backgroundColor: palette.accent},
+  laneButtonText: {fontSize: 15, fontWeight: '700', color: palette.textSoft},
+  laneButtonTextOn: {color: palette.onAccent},
   title: {fontSize: 18, fontWeight: '800'},
   sectionLabel: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    color: '#8A9A92',
+    color: palette.textSoft,
     marginTop: 18,
     marginBottom: 2,
     marginHorizontal: 16,

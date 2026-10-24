@@ -1,4 +1,4 @@
-export const DEFAULT_THEME_PRIMARY_COLOR = '#107C10';
+import {palette} from '../config/palette';
 
 type Rgb = {
   r: number;
@@ -58,7 +58,7 @@ const mixColor = (sourceColor: string, targetColor: string, ratio: number) => {
 
 export const normalizeHexColor = (
   color: string | undefined,
-  fallback = DEFAULT_THEME_PRIMARY_COLOR,
+  fallback: string = palette.accent,
 ) => {
   if (!color || typeof color !== 'string') {
     return fallback;
@@ -80,111 +80,7 @@ export const normalizeHexColor = (
 export const shiftColor = (hexColor: string, amount: number) => {
   const normalized = normalizeHexColor(hexColor);
   if (amount >= 0) {
-    return mixColor(normalized, '#FFFFFF', amount);
+    return mixColor(normalized, palette.white, amount);
   }
-  return mixColor(normalized, '#000000', -amount);
-};
-
-export const getContrastTextColor = (
-  hexColor: string,
-  light = '#FFFFFF',
-  dark = '#101010',
-) => {
-  const {r, g, b} = hexToRgb(normalizeHexColor(hexColor));
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 150 ? dark : light;
-};
-
-export const applyPrimaryColorToPaperTheme = (
-  baseTheme: any,
-  mode: 'light' | 'dark',
-  primaryColor: string,
-) => {
-  const seed = normalizeHexColor(primaryColor);
-  const surface =
-    baseTheme.colors?.surface || (mode === 'light' ? '#FCFDF6' : '#1A1C18');
-  const onSurface =
-    baseTheme.colors?.onSurface || (mode === 'light' ? '#1A1C18' : '#E2E3DD');
-
-  if (mode === 'light') {
-    const lightPrimary = seed;
-    const primaryContainer = shiftColor(seed, 0.68);
-    const secondary = shiftColor(seed, -0.18);
-    const secondaryContainer = mixColor(surface, seed, 0.2);
-    const tertiary = shiftColor(seed, -0.32);
-    const tertiaryContainer = mixColor(surface, seed, 0.26);
-    const surfaceVariant = mixColor(surface, seed, 0.1);
-    const outline = mixColor(onSurface, seed, 0.35);
-
-    return {
-      ...baseTheme,
-      colors: {
-        ...baseTheme.colors,
-        primary: lightPrimary,
-        onPrimary: getContrastTextColor(lightPrimary),
-        primaryContainer,
-        onPrimaryContainer: getContrastTextColor(primaryContainer),
-        secondary,
-        onSecondary: getContrastTextColor(secondary),
-        secondaryContainer,
-        onSecondaryContainer: getContrastTextColor(secondaryContainer),
-        tertiary,
-        onTertiary: getContrastTextColor(tertiary),
-        tertiaryContainer,
-        onTertiaryContainer: getContrastTextColor(tertiaryContainer),
-        surfaceVariant,
-        outline,
-        inversePrimary: shiftColor(seed, 0.28),
-        elevation: {
-          ...baseTheme.colors?.elevation,
-          level0: 'transparent',
-          level1: mixColor(surface, seed, 0.05),
-          level2: mixColor(surface, seed, 0.08),
-          level3: mixColor(surface, seed, 0.11),
-          level4: mixColor(surface, seed, 0.13),
-          level5: mixColor(surface, seed, 0.16),
-        },
-      },
-    };
-  }
-
-  const darkPrimary = shiftColor(seed, 0.25);
-  const primaryContainer = shiftColor(seed, -0.45);
-  const secondary = shiftColor(seed, 0.38);
-  const secondaryContainer = mixColor(surface, seed, 0.24);
-  const tertiary = shiftColor(seed, 0.5);
-  const tertiaryContainer = mixColor(surface, seed, 0.3);
-  const surfaceVariant = mixColor(surface, seed, 0.16);
-  const outline = mixColor(onSurface, seed, 0.42);
-
-  return {
-    ...baseTheme,
-    colors: {
-      ...baseTheme.colors,
-      primary: darkPrimary,
-      onPrimary: getContrastTextColor(darkPrimary),
-      primaryContainer,
-      onPrimaryContainer: getContrastTextColor(primaryContainer),
-      secondary,
-      onSecondary: getContrastTextColor(secondary),
-      secondaryContainer,
-      onSecondaryContainer: getContrastTextColor(secondaryContainer),
-      tertiary,
-      onTertiary: getContrastTextColor(tertiary),
-      tertiaryContainer,
-      onTertiaryContainer: getContrastTextColor(tertiaryContainer),
-      surfaceVariant,
-      outline,
-      inversePrimary: seed,
-      elevation: {
-        ...baseTheme.colors?.elevation,
-        level0: 'transparent',
-        level1: mixColor(surface, seed, 0.1),
-        level2: mixColor(surface, seed, 0.14),
-        level3: mixColor(surface, seed, 0.18),
-        level4: mixColor(surface, seed, 0.22),
-        level5: mixColor(surface, seed, 0.26),
-      },
-    },
-  };
+  return mixColor(normalized, palette.black, -amount);
 };

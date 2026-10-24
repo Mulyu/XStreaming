@@ -3,6 +3,7 @@ import {StyleSheet, View, ScrollView} from 'react-native';
 import {Text} from 'react-native-paper';
 import {SvgXml} from 'react-native-svg';
 import type {GameMapDetailViewModel} from '../model/useGameMapDetail';
+import {palette} from '../../../shared/config/palette';
 
 type Props = GameMapDetailViewModel;
 
@@ -28,12 +29,12 @@ const GameMapDetailView: React.FC<Props> = ({t, buttonIconXml}) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: palette.pad.paper,
     flex: 1,
     padding: 10,
   },
   text: {
-    color: '#333',
+    color: palette.pad.ink,
     marginTop: 10,
     marginBottom: 10,
   },

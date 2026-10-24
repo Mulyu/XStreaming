@@ -9,6 +9,7 @@ import {
   VK_TO_MOD_BIT,
   KeyboardModifiers,
 } from '../../../features/virtual-keyboard';
+import {alpha, palette} from '../../../shared/config/palette';
 
 export type CustomKeyButtonsProps = {
   layout: ButtonConfig[];
@@ -143,8 +144,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   active: {
-    backgroundColor: 'rgba(118,185,0,0.35)',
-    borderColor: '#76B900',
+    backgroundColor: alpha(palette.provider.gfn, 0.35),
+    borderColor: palette.provider.gfn,
   },
 });
 

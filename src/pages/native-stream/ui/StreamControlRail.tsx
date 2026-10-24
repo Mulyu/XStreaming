@@ -5,11 +5,9 @@ import RNSlider from '@react-native-community/slider';
 import {useTranslation} from 'react-i18next';
 import {RailButton, SegOption} from '../../../shared/ui/RailControls';
 import {TV_FOCUS_COLOR as FOCUS_COLOR} from '../../../shared/ui/tvFocus';
+import {alpha, palette} from '../../../shared/config/palette';
 
 export type StreamInputMode = 'off' | 'gamepad' | 'mouse' | 'touch';
-
-const XBOX_ACCENT = '#107C10';
-const NVIDIA_ACCENT = '#76B900';
 
 export interface StreamControlRailProps {
   visible: boolean;
@@ -98,7 +96,8 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   onDisconnect,
 }) => {
   const {t} = useTranslation();
-  const accent = streamType === 'gfn' ? NVIDIA_ACCENT : XBOX_ACCENT;
+  const accent =
+    streamType === 'gfn' ? palette.provider.gfn : palette.provider.xbox;
   const videoFormatLabel =
     videoFormat === ''
       ? t('Aspect ratio')
@@ -153,8 +152,8 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
         onPress={onClose}
         onFocus={() => setCloseFocused(true)}
         onBlur={() => setCloseFocused(false)}
-        android_ripple={{color: 'rgba(255,255,255,0.15)'}}>
-        <Icon source="close" size={16} color="#8a9a92" />
+        android_ripple={{color: alpha(palette.white, 0.15)}}>
+        <Icon source="close" size={16} color={palette.textSoft} />
       </Pressable>
 
       {connected && (
@@ -220,7 +219,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   onValueChange={setLiveMouseSensitivity}
                   onSlidingComplete={onMouseSensitivityChange}
                   minimumTrackTintColor={accent}
-                  maximumTrackTintColor="rgba(255,255,255,0.14)"
+                  maximumTrackTintColor={alpha(palette.white, 0.14)}
                   thumbTintColor={accent}
                 />
               </View>
@@ -270,7 +269,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                 onValueChange={setLiveVolume}
                 onSlidingComplete={onVolumeChange}
                 minimumTrackTintColor={accent}
-                maximumTrackTintColor="rgba(255,255,255,0.14)"
+                maximumTrackTintColor={alpha(palette.white, 0.14)}
                 thumbTintColor={accent}
               />
             </View>
@@ -376,9 +375,9 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     width: 200,
-    backgroundColor: 'rgba(8,11,10,0.92)',
+    backgroundColor: alpha(palette.scrim, 0.92),
     borderLeftWidth: 1,
-    borderLeftColor: 'rgba(238,244,239,0.14)',
+    borderLeftColor: alpha(palette.text, 0.14),
     paddingVertical: 14,
     paddingHorizontal: 10,
     gap: 14,
@@ -391,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(palette.white, 0.06),
   },
   closeBtnFocused: {
     borderWidth: 2,
@@ -407,12 +406,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: '#5c6963',
+    color: palette.textDim,
     paddingHorizontal: 4,
   },
   segRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: alpha(palette.black, 0.3),
     borderRadius: 9,
     padding: 2,
     gap: 2,
@@ -427,11 +426,11 @@ const styles = StyleSheet.create({
   },
   sliderHeadLabel: {
     fontSize: 9.5,
-    color: '#8a9a92',
+    color: palette.textSoft,
   },
   sliderHeadValue: {
     fontSize: 9.5,
-    color: '#8a9a92',
+    color: palette.textSoft,
   },
   sliderTrack: {
     height: 28,

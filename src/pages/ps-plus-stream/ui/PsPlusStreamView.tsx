@@ -10,6 +10,7 @@ import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 import StreamHandshakeOverlay from '../../../shared/ui/StreamHandshakeOverlay';
 import TouchpadZone from '../../../shared/ui/TouchpadZone';
+import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = PsPlusStreamViewModel;
 
@@ -264,7 +265,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: palette.black,
   },
   video: {
     flex: 1,
@@ -278,19 +279,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: alpha(palette.black, 0.85),
   },
   overlayText: {
-    color: '#fff',
+    color: palette.white,
     fontSize: 16,
     fontWeight: '700',
   },
   overlaySubText: {
-    color: '#ccc',
+    color: palette.textSoft,
     fontSize: 13,
   },
   pinInput: {
-    backgroundColor: '#fff',
+    backgroundColor: palette.white,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
