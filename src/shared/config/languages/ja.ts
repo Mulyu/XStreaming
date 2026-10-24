@@ -415,6 +415,16 @@ export default {
     LibraryFilterGfn: 'GeForce NOW',
     LibraryFilterPsPlus: 'PS Plus',
     LibraryFilterFavorite: 'お気に入り',
+    LibraryFilterWishlist: 'ウィッシュリスト',
+    FavoriteAdd: 'お気に入りに追加',
+    FavoriteRemove: 'お気に入りから外す',
+    WishlistAdd: 'ウィッシュリストに追加',
+    WishlistRemove: 'ウィッシュリストから外す',
+    WishlistAcquired:
+      '入手済みになりました（ウィッシュリストから外しました）：{{title}}',
+    DetailStorePrices: 'ストアの価格',
+    DetailNotStreamable:
+      'ストリーミングでは遊べません。次のストアで購入できます。',
     LibraryFilterOwned: '所有済み',
     LibraryFilterOnSale: 'セール中',
     LibraryFilterFreePlay: 'フリープレイ',

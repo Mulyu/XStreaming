@@ -12,7 +12,7 @@ import {Text, Icon} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {useTVFocus, tvFocusRing} from '../../shared/ui/tvFocus';
 import {InlineSpinner} from '../../shared/ui/Spinner';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import {
   loadXcloudCatalog,
@@ -34,6 +34,18 @@ import {
   getFreshFullCatalog,
   getCachedFullCatalog,
   getPsStoreLocale,
+  buildUnifiedCatalog,
+  mergeOwnedGames,
+  getFreshOwnedGames,
+  isCatalogTitleOwned,
+  getFavoriteKeys,
+  isCatalogTitleFavorite,
+  setCatalogTitleFavorite,
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  isCatalogTitleWishlisted,
+  buildWishlistEntry,
 } from '../../entities/catalog-title';
 import {isSignedIn, getValidGfnJwt} from '../../entities/gfn-account';
 import {
@@ -65,6 +77,8 @@ import {
   dedupeByKey,
   hasMorePages,
   StoreRow,
+  resolveRowTitle,
+  rowWishlistExtra,
 } from './storeLogic';
 import {alpha, palette} from '../../shared/config/palette';
 
@@ -979,16 +993,76 @@ function StoreScreen() {
     loadMore,
   ]);
 
+  // Every loaded streaming catalog merged by title, so a row (which knows only
+  // its own service) opens the same all-services detail the Library does. The
+  // GFN side is merged with the owned list for the same ownership marks the
+  // Library shows.
+  const catalogIndex = React.useMemo(() => {
+    const gfnGames = mergeOwnedGames(
+      gfnFullCatalog,
+      getFreshOwnedGames() || [],
+    );
+    return new Map(
+      buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames).map(item => [
+        item.key,
+        item,
+      ]),
+    );
+  }, [xcloudTitles, gfnFullCatalog, psPlusGames]);
+
+  // Favorites (owned titles) and the wishlist (the rest) shown on each row's
+  // button; reloaded on focus since the detail screen toggles them too.
+  const [favoriteKeys, setFavoriteKeys] = React.useState<Set<string>>(
+    () => new Set(getFavoriteKeys()),
+  );
+  const [wishlistKeys, setWishlistKeys] = React.useState<Set<string>>(
+    () => new Set(getWishlist().map(entry => entry.key)),
+  );
+  useFocusEffect(
+    React.useCallback(() => {
+      setFavoriteKeys(new Set(getFavoriteKeys()));
+      setWishlistKeys(new Set(getWishlist().map(entry => entry.key)));
+    }, []),
+  );
+
   const openRow = React.useCallback(
     (row: StoreRow) => {
-      if (!row.catalogTitle) {
-        return;
-      }
       navigation.navigate('LibraryTitleDetail', {
-        catalogTitle: row.catalogTitle,
+        catalogTitle: resolveRowTitle(row, provider, catalogIndex),
       });
     },
-    [navigation],
+    [navigation, provider, catalogIndex],
+  );
+
+  const toggleRowSaved = React.useCallback(
+    (row: StoreRow) => {
+      const title = resolveRowTitle(row, provider, catalogIndex);
+      if (isCatalogTitleOwned(title)) {
+        setFavoriteKeys(
+          new Set(
+            setCatalogTitleFavorite(
+              title.key,
+              !isCatalogTitleFavorite(title.key),
+            ),
+          ),
+        );
+        return;
+      }
+      const list = isCatalogTitleWishlisted(title.key)
+        ? removeFromWishlist(title.key)
+        : addToWishlist(
+            buildWishlistEntry(
+              title,
+              Date.now(),
+              rowWishlistExtra(row, provider),
+            ),
+          );
+      setWishlistKeys(new Set(list.map(entry => entry.key)));
+    },
+    [provider, catalogIndex],
+  );
+  const [focusedActionId, setFocusedActionId] = React.useState<string | null>(
+    null,
   );
 
   // One focused row id shared across the whole chart instead of a hook per
@@ -1003,25 +1077,47 @@ function StoreScreen() {
     // ranking, just dimmed and inert since there's nothing to launch.
     const unavailable = !item.catalogTitle;
     const isFocused = focusedRowId === item.id;
+    const rowTitle = resolveRowTitle(item, provider, catalogIndex);
+    const owned = isCatalogTitleOwned(rowTitle);
+    const saved = owned
+      ? favoriteKeys.has(rowTitle.key)
+      : wishlistKeys.has(rowTitle.key);
+    const actionIcon = owned
+      ? saved
+        ? 'heart'
+        : 'heart-outline'
+      : saved
+      ? 'bookmark'
+      : 'bookmark-outline';
+    const actionLabel = t(
+      owned
+        ? saved
+          ? 'FavoriteRemove'
+          : 'FavoriteAdd'
+        : saved
+        ? 'WishlistRemove'
+        : 'WishlistAdd',
+    );
+    const actionOnColor = owned ? palette.sale : palette.accent;
     return (
       <Pressable
-        style={[
-          styles.row,
-          unavailable && styles.rowUnavailable,
-          isFocused && tvFocusRing,
-        ]}
-        disabled={unavailable}
+        style={[styles.row, isFocused && tvFocusRing]}
         onPress={() => openRow(item)}
         onFocus={() => setFocusedRowId(item.id)}
         onBlur={() => setFocusedRowId(prev => (prev === item.id ? null : prev))}
         android_ripple={{color: alpha(palette.text, 0.12)}}>
-        <Text style={styles.rank}>#{item.rank}</Text>
+        <Text style={[styles.rank, unavailable && styles.rowUnavailable]}>
+          #{item.rank}
+        </Text>
         {item.imageUrl ? (
-          <Image source={{uri: item.imageUrl}} style={styles.cover} />
+          <Image
+            source={{uri: item.imageUrl}}
+            style={[styles.cover, unavailable && styles.rowUnavailable]}
+          />
         ) : (
           <View style={[styles.cover, styles.coverPlaceholder]} />
         )}
-        <View style={styles.rowBody}>
+        <View style={[styles.rowBody, unavailable && styles.rowUnavailable]}>
           <Text style={styles.rowTitle} numberOfLines={2}>
             {item.title}
           </Text>
@@ -1044,6 +1140,23 @@ function StoreScreen() {
             </View>
           )}
         </View>
+        <Pressable
+          style={[styles.rowAction, focusedActionId === item.id && tvFocusRing]}
+          hitSlop={4}
+          onPress={() => toggleRowSaved(item)}
+          onFocus={() => setFocusedActionId(item.id)}
+          onBlur={() =>
+            setFocusedActionId(prev => (prev === item.id ? null : prev))
+          }
+          accessibilityRole="button"
+          accessibilityState={{selected: saved}}
+          accessibilityLabel={actionLabel}>
+          <Icon
+            source={actionIcon}
+            size={22}
+            color={saved ? actionOnColor : palette.textSoft}
+          />
+        </Pressable>
       </Pressable>
     );
   };
@@ -1291,6 +1404,13 @@ const styles = StyleSheet.create({
   // still reads as Steam's real, complete ranking instead of silently
   // dropping titles the way the Xbox tab's API constraints force it to.
   rowUnavailable: {opacity: 0.45},
+  rowAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   rank: {
     width: 28,
     fontSize: 14,

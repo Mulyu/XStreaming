@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, StyleSheet, StyleProp, ViewStyle} from 'react-native';
+import {Pressable, StyleSheet, StyleProp, View, ViewStyle} from 'react-native';
 import {Text, Icon} from 'react-native-paper';
 import {TV_FOCUS_COLOR} from './tvFocus';
 import {alpha, palette} from '../config/palette';
@@ -38,6 +38,10 @@ export const RailButton: React.FC<{
   // look -- subtle fill and border when off, solid accent when on -- instead
   // of the 46dp TV button. Only meaningful together with iconOnly.
   compact?: boolean;
+  // A small count balloon on the button's corner (hidden at 0 or unset) --
+  // Library's wishlist chip uses it for "this many wishlisted titles are on
+  // sale".
+  badge?: number;
   // Layout overrides from the parent (e.g. flexGrow for a wide search button).
   style?: StyleProp<ViewStyle>;
 }> = ({
@@ -52,6 +56,7 @@ export const RailButton: React.FC<{
   fill,
   iconOnly,
   compact,
+  badge,
   style,
 }) => {
   const [focused, setFocused] = React.useState(false);
@@ -112,6 +117,11 @@ export const RailButton: React.FC<{
       )}
       {trailingIcon && (
         <Icon source={trailingIcon} size={14} color={iconColor} />
+      )}
+      {!!badge && badge > 0 && (
+        <View style={styles.railBadge} pointerEvents="none">
+          <Text style={styles.railBadgeText}>{badge > 99 ? '99+' : badge}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -185,6 +195,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: alpha(palette.text, 0.24),
     backgroundColor: alpha(palette.text, 0.14),
+  },
+  railBadge: {
+    position: 'absolute',
+    top: -9,
+    right: -9,
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 2,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.sale,
+    borderWidth: 2,
+    borderColor: palette.bg,
+  },
+  railBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: palette.onAccent,
+    lineHeight: 14,
   },
   railBtnFocused: {
     borderColor: TV_FOCUS_COLOR,

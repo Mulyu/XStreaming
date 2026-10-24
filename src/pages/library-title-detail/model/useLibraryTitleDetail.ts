@@ -19,6 +19,11 @@ import {
   getFreshPriceCache,
   isCatalogTitleFavorite,
   setCatalogTitleFavorite,
+  isCatalogTitleOwned,
+  isCatalogTitleWishlisted,
+  addToWishlist,
+  removeFromWishlist,
+  buildWishlistEntry,
   PriceInfo,
   RatingInfo,
   TitleDetails,
@@ -86,28 +91,48 @@ export function useLibraryTitleDetail() {
     [catalogTitle],
   );
 
-  // Favorites are keyed by the catalog's own normalized-title key, not tied
-  // to one provider -- a GFN-only title can be favorited exactly like an
-  // xCloud one. See entities/catalog-title/model/favorites.ts.
+  // Favorites (owned titles) and the wishlist (titles that aren't) are keyed
+  // by the catalog's own normalized-title key, not tied to one provider. See
+  // entities/catalog-title/model/{favorites,wishlist}.ts.
+  const owned = !!catalogTitle && isCatalogTitleOwned(catalogTitle);
   const [isFavorite, setIsFavorite] = React.useState(
     () => !!catalogTitle && isCatalogTitleFavorite(catalogTitle.key),
   );
+  const [isWishlisted, setIsWishlisted] = React.useState(
+    () => !!catalogTitle && isCatalogTitleWishlisted(catalogTitle.key),
+  );
   React.useEffect(() => {
     setIsFavorite(!!catalogTitle && isCatalogTitleFavorite(catalogTitle.key));
+    setIsWishlisted(
+      !!catalogTitle && isCatalogTitleWishlisted(catalogTitle.key),
+    );
   }, [catalogTitle]);
   const toggleFavorite = () => {
-    if (!catalogTitle) {
+    if (!catalogTitle || !owned) {
       return;
     }
     setCatalogTitleFavorite(catalogTitle.key, !isFavorite);
     setIsFavorite(!isFavorite);
+  };
+  const toggleWishlist = () => {
+    if (!catalogTitle || owned) {
+      return;
+    }
+    if (isWishlisted) {
+      removeFromWishlist(catalogTitle.key);
+    } else {
+      addToWishlist(buildWishlistEntry(catalogTitle, Date.now()));
+    }
+    setIsWishlisted(!isWishlisted);
   };
 
   // xCloud's own rich detail: rating, capabilities, trailer/screenshots,
   // full description -- reuses the exact fetch TitleDetail.tsx already uses,
   // seeded from the Library grid's cached price/rating for an instant paint.
   React.useEffect(() => {
-    const productId = getTitleProductId(catalogTitle?.xcloud?.raw);
+    const productId =
+      getTitleProductId(catalogTitle?.xcloud?.raw) ||
+      catalogTitle?.store?.refs.xbox;
     setDetails(null);
     setInGamePass(false);
     if (!productId) {
@@ -139,7 +164,12 @@ export function useLibraryTitleDetail() {
     return () => {
       cancelled = true;
     };
-  }, [catalogTitle?.xcloud?.raw, gameLanguage, deviceRegion]);
+  }, [
+    catalogTitle?.xcloud?.raw,
+    catalogTitle?.store?.refs.xbox,
+    gameLanguage,
+    deviceRegion,
+  ]);
 
   // GFN's own rich detail (description/screenshots), used only as a
   // fallback/supplement to xCloud's richer data -- e.g. a GFN-only title, or
@@ -175,6 +205,7 @@ export function useLibraryTitleDetail() {
   React.useEffect(() => {
     const steamAppIds = (catalogTitle?.gfn?.variants ?? [])
       .map(v => v.steamAppId)
+      .concat(catalogTitle?.store?.refs.steam)
       .filter((id): id is string => !!id);
     if (steamAppIds.length === 0) {
       setSteamPrices({});
@@ -189,7 +220,7 @@ export function useLibraryTitleDetail() {
     return () => {
       cancelled = true;
     };
-  }, [catalogTitle?.gfn, deviceRegion]);
+  }, [catalogTitle?.gfn, catalogTitle?.store?.refs.steam, deviceRegion]);
 
   // PS Store's purchase price for this title, confirmed live against
   // store.playstation.com's own web GraphQL API -- no auth needed (see
@@ -309,8 +340,11 @@ export function useLibraryTitleDetail() {
     steamPrices,
     psStorePrice,
     preference,
+    owned,
     isFavorite,
     toggleFavorite,
+    isWishlisted,
+    toggleWishlist,
     playXcloud,
     playPsPlus,
     playGfnVariant,

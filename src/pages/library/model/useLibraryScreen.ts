@@ -1,5 +1,5 @@
 import React from 'react';
-import {Platform, useWindowDimensions} from 'react-native';
+import {Platform, ToastAndroid, useWindowDimensions} from 'react-native';
 import {useTheme} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {
@@ -25,6 +25,21 @@ import {
   CatalogTitle,
   getCatalogPreference,
   getFavoriteKeys,
+  isCatalogTitleFavorite,
+  setCatalogTitleFavorite,
+  WishlistEntry,
+  getWishlist,
+  saveWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  isCatalogTitleWishlisted,
+  getMigratedFavoriteKeys,
+  markFavoritesMigrated,
+  splitAcquired,
+  favoritesToWishlist,
+  buildWishlistCatalogTitle,
+  buildWishlistEntry,
+  refreshWishlistSnapshots,
   getPlayHistory,
   getXcloudData,
   saveXcloudData,
@@ -228,6 +243,7 @@ export function useLibraryScreen() {
   const [filterGfn, setFilterGfn] = React.useState(false);
   const [filterPsPlus, setFilterPsPlus] = React.useState(false);
   const [filterFavorite, setFilterFavorite] = React.useState(false);
+  const [filterWishlist, setFilterWishlist] = React.useState(false);
   // Three states, cycled by one chip: only titles playable now ('owned',
   // the default), only the ones that aren't ('notOwned'), or everything.
   const [filterOwnership, setFilterOwnership] =
@@ -236,6 +252,14 @@ export function useLibraryScreen() {
     () => setFilterOwnership(v => OWNERSHIP_NEXT[v]),
     [],
   );
+  // The wishlist is by definition titles that aren't owned, so turning it on
+  // widens the default "owned only" view to everything.
+  const toggleFilterWishlist = React.useCallback(() => {
+    if (!filterWishlist) {
+      setFilterOwnership('all');
+    }
+    setFilterWishlist(!filterWishlist);
+  }, [filterWishlist]);
   const [filterOnSale, setFilterOnSale] = React.useState(false);
   const [filterFreePlay, setFilterFreePlay] =
     React.useState<FreePlayFilter>('off');
@@ -251,6 +275,15 @@ export function useLibraryScreen() {
   const [favoriteKeys, setFavoriteKeys] = React.useState<Set<string>>(
     () => new Set(getFavoriteKeys()),
   );
+  // Titles the user wants but doesn't own (favorites are owned-only). Same
+  // reload-on-focus reasoning as favorites.
+  const [wishlist, setWishlist] = React.useState<WishlistEntry[]>(() =>
+    getWishlist(),
+  );
+  const wishlistKeys = React.useMemo(
+    () => new Set(wishlist.map(entry => entry.key)),
+    [wishlist],
+  );
   // Local play-history timestamps for "Recently played" (see
   // entities/catalog-title/model/playHistory.ts) -- recorded on-device at
   // launch time instead of read from a provider API, since PS Plus has no
@@ -263,6 +296,7 @@ export function useLibraryScreen() {
   useFocusEffect(
     React.useCallback(() => {
       setFavoriteKeys(new Set(getFavoriteKeys()));
+      setWishlist(getWishlist());
       setPlayHistory(getPlayHistory());
     }, []),
   );
@@ -598,6 +632,7 @@ export function useLibraryScreen() {
       loadPsPlusGames(true);
 
       setFavoriteKeys(new Set(getFavoriteKeys()));
+      setWishlist(getWishlist());
       setPlayHistory(getPlayHistory());
 
       await Promise.all(tasks);
@@ -788,7 +823,16 @@ export function useLibraryScreen() {
             })
           : 0;
 
-      return Math.max(xcloudDiscount, steamDiscount, psDiscount);
+      // A wishlisted title outside every loaded catalog is priced from the
+      // snapshot saved with it (refreshed below).
+      const snapshotDiscount = item.store?.snapshot?.discountPercent || 0;
+
+      return Math.max(
+        xcloudDiscount,
+        steamDiscount,
+        psDiscount,
+        snapshotDiscount,
+      );
     },
     [priceMap, steamPriceMap, psSaleMap],
   );
@@ -805,8 +849,148 @@ export function useLibraryScreen() {
     [ratingMap],
   );
 
+  const catalogByKey = React.useMemo(
+    () => new Map(catalog.map(item => [item.key, item])),
+    [catalog],
+  );
+
+  // Wishlisted titles none of the loaded catalogs contain (can't be
+  // streamed, or their catalog isn't loaded): drawn from what was saved when
+  // they were added, and shown only while the wishlist filter is on.
+  const wishlistOutsideCatalog = React.useMemo(
+    () => wishlist.filter(entry => !catalogByKey.has(entry.key)),
+    [wishlist, catalogByKey],
+  );
+  const wishlistStubs = React.useMemo(
+    () => wishlistOutsideCatalog.map(buildWishlistCatalogTitle),
+    [wishlistOutsideCatalog],
+  );
+
+  // Owned-only favorites: favorites that aren't owned are copied onto the
+  // wishlist once, and a wishlisted title that has become owned is taken off
+  // it (with a note) -- both whenever the catalog changes, since ownership is
+  // only known once the catalogs have loaded.
+  React.useEffect(() => {
+    if (catalog.length === 0) {
+      return;
+    }
+    const migrated = new Set(getMigratedFavoriteKeys());
+    const pending = getFavoriteKeys().filter(key => !migrated.has(key));
+    if (pending.length > 0) {
+      const lookup = new Map<
+        string,
+        {title: string; imageUrl?: string; owned: boolean}
+      >();
+      pending.forEach(key => {
+        const item = catalogByKey.get(key);
+        if (item) {
+          lookup.set(key, {
+            title: item.title,
+            imageUrl: item.imageUrl,
+            owned: isCatalogTitleOwned(item),
+          });
+        }
+      });
+      if (lookup.size > 0) {
+        saveWishlist(
+          favoritesToWishlist(pending, getWishlist(), lookup, Date.now()),
+        );
+        markFavoritesMigrated(Array.from(lookup.keys()));
+      }
+    }
+
+    const ownedByKey = new Map<string, boolean>();
+    getWishlist().forEach(entry => {
+      const item = catalogByKey.get(entry.key);
+      if (item) {
+        ownedByKey.set(entry.key, isCatalogTitleOwned(item));
+      }
+    });
+    const {kept, acquired} = splitAcquired(getWishlist(), ownedByKey);
+    if (acquired.length > 0) {
+      saveWishlist(kept);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(
+          t('WishlistAcquired', {
+            title: acquired.map(entry => entry.title).join(', '),
+          }),
+          ToastAndroid.LONG,
+        );
+      }
+    }
+    setWishlist(getWishlist());
+  }, [catalog, catalogByKey, t]);
+
+  // Keep the prices of the out-of-catalog wishlisted titles current: Xbox and
+  // Steam by their own ids, PS from the daily sale crawl. Re-runs when the set
+  // of such titles (or the PS sale list) changes, not on every snapshot write.
+  const outsideSig = wishlistOutsideCatalog
+    .map(entry => `${entry.key}:${JSON.stringify(entry.refs || {})}`)
+    .join('|');
+  React.useEffect(() => {
+    if (wishlistOutsideCatalog.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
+    refreshWishlistSnapshots(wishlistOutsideCatalog, {
+      market,
+      language,
+      steamCc: deviceRegion || 'US',
+      psSaleMap,
+    }).then(snapshots => {
+      if (cancelled || Object.keys(snapshots).length === 0) {
+        return;
+      }
+      const next = getWishlist().map(entry =>
+        snapshots[entry.key]
+          ? {...entry, snapshot: snapshots[entry.key]}
+          : entry,
+      );
+      saveWishlist(next);
+      setWishlist(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // wishlistOutsideCatalog is represented by outsideSig on purpose.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outsideSig, psSaleMap, gameLanguage, deviceRegion]);
+
+  // The balloon next to the wishlist chip: how many wishlisted titles are on
+  // sale right now.
+  const wishlistSaleCount = React.useMemo(
+    () =>
+      wishlist.filter(entry => {
+        const item = catalogByKey.get(entry.key);
+        return (
+          (item ? saleDiscount(item) : entry.snapshot?.discountPercent || 0) > 0
+        );
+      }).length,
+    [wishlist, catalogByKey, saleDiscount],
+  );
+
+  const toggleFavorite = React.useCallback((item: CatalogTitle) => {
+    if (!isCatalogTitleOwned(item)) {
+      return;
+    }
+    setFavoriteKeys(
+      new Set(
+        setCatalogTitleFavorite(item.key, !isCatalogTitleFavorite(item.key)),
+      ),
+    );
+  }, []);
+
+  const toggleWishlist = React.useCallback((item: CatalogTitle) => {
+    setWishlist(
+      isCatalogTitleWishlisted(item.key)
+        ? removeFromWishlist(item.key)
+        : addToWishlist(buildWishlistEntry(item, Date.now())),
+    );
+  }, []);
+
   const providerOwnedFiltered = React.useMemo(() => {
-    let list = catalog;
+    let list = filterWishlist ? [...catalog, ...wishlistStubs] : catalog;
     if (filterXcloud || filterGfn || filterPsPlus) {
       list = list.filter(
         item =>
@@ -815,8 +999,14 @@ export function useLibraryScreen() {
           (filterPsPlus && item.psplus),
       );
     }
+    if (filterWishlist) {
+      list = list.filter(item => wishlistKeys.has(item.key));
+    }
     if (filterFavorite) {
-      list = list.filter(item => favoriteKeys.has(item.key));
+      // Favorites are owned-only.
+      list = list.filter(
+        item => favoriteKeys.has(item.key) && isCatalogTitleOwned(item),
+      );
     }
     if (filterOwnership !== 'all') {
       // Plain "Owned" (no provider filter) means playable via any service --
@@ -861,6 +1051,9 @@ export function useLibraryScreen() {
     filterGfn,
     filterFavorite,
     favoriteKeys,
+    filterWishlist,
+    wishlistKeys,
+    wishlistStubs,
     filterOwnership,
     filterOnSale,
     filterFreePlay,
@@ -1028,6 +1221,13 @@ export function useLibraryScreen() {
     setFilterPsPlus,
     filterFavorite,
     setFilterFavorite,
+    filterWishlist,
+    toggleFilterWishlist,
+    wishlistSaleCount,
+    favoriteKeys,
+    wishlistKeys,
+    toggleFavorite,
+    toggleWishlist,
     filterOwnership,
     cycleOwnership,
     filterOnSale,

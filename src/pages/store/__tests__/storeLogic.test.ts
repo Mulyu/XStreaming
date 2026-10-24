@@ -4,8 +4,15 @@ import {
   buildPsStoreRows,
   dedupeByKey,
   hasMorePages,
+  resolveRowTitle,
+  rowWishlistExtra,
+  StoreRow,
 } from '../storeLogic';
-import {GfnGame, PriceInfo} from '../../../entities/catalog-title';
+import {
+  CatalogTitle,
+  GfnGame,
+  PriceInfo,
+} from '../../../entities/catalog-title';
 import {
   SteamChartEntry,
   PsStoreChartEntry,
@@ -291,5 +298,55 @@ describe('buildPsStoreRows', () => {
     const rows = buildPsStoreRows([entry('UP1', 'Game A')], [streamableGame]);
     expect(rows[0].catalogTitle).not.toBeNull();
     expect(rows[0].catalogTitle?.psplus?.inPlusCatalog).toBe(true);
+  });
+});
+
+describe('resolveRowTitle', () => {
+  const row = (extra: Partial<StoreRow> = {}): StoreRow => ({
+    id: 'P1',
+    rank: 1,
+    title: 'Hollow Knight',
+    imageUrl: 'row.png',
+    price: '¥1,480',
+    originalPrice: '¥1,980',
+    discountPercent: 25,
+    catalogTitle: null,
+    ...extra,
+  });
+  const merged: CatalogTitle = {
+    key: 'hollow knight',
+    title: 'Hollow Knight',
+    genres: [],
+    xcloud: {raw: {}, hasEntitlement: false},
+    gfn: {variants: []},
+  };
+
+  it('uses the all-services title when the catalogs know the name', () => {
+    const index = new Map([[merged.key, merged]]);
+    expect(resolveRowTitle(row(), 'psstore', index)).toBe(merged);
+  });
+
+  it("falls back to the row's own single-service title", () => {
+    const own: CatalogTitle = {key: 'x', title: 'X', genres: []};
+    expect(resolveRowTitle(row({catalogTitle: own}), 'xcloud', new Map())).toBe(
+      own,
+    );
+  });
+
+  it('builds a store-only title for a row no catalog contains', () => {
+    const t = resolveRowTitle(row(), 'gfn', new Map());
+    expect(t.key).toBe('hollow knight');
+    expect(t.store?.refs).toEqual({steam: 'P1'});
+    expect(t.store?.snapshot).toEqual({
+      price: '¥1,480',
+      originalPrice: '¥1,980',
+      discountPercent: 25,
+    });
+    expect(t.xcloud).toBeUndefined();
+  });
+
+  it('names the row id by the tab it came from', () => {
+    expect(rowWishlistExtra(row(), 'xcloud').refs).toEqual({xbox: 'P1'});
+    expect(rowWishlistExtra(row(), 'psstore').refs).toEqual({ps: 'P1'});
   });
 });
