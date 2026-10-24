@@ -61,6 +61,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   retryLogin,
   cancelLogin,
   price,
+  inGamePass,
   rating,
   details,
   gfnDetails,
@@ -234,16 +235,28 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                   ? t('IncludedWithGamePass')
                   : t('LibraryViewDetails')}
               </Text>
-              {!xcloudEntitled && price && (
+              {!xcloudEntitled && (price || inGamePass) && (
                 <View style={styles.priceRow}>
-                  <Text
-                    style={[
-                      styles.priceNow,
-                      xcloudDiscount > 0 && styles.priceNowSale,
-                    ]}>
-                    {formatPrice(price.listPrice, price.currencyCode)}
-                  </Text>
-                  {xcloudDiscount > 0 && (
+                  {price && (
+                    <Text
+                      style={[
+                        styles.priceNow,
+                        xcloudDiscount > 0 &&
+                          !inGamePass &&
+                          styles.priceNowSale,
+                        // Same as the PS catalog: a Game Pass title's price is
+                        // struck through, with the inclusion said beside it.
+                        inGamePass && styles.priceStruck,
+                      ]}>
+                      {formatPrice(price.listPrice, price.currencyCode)}
+                    </Text>
+                  )}
+                  {inGamePass && (
+                    <Text style={[styles.psIncludedText, {color: XBOX_ACCENT}]}>
+                      {t('GamePassIncludedInCatalog')}
+                    </Text>
+                  )}
+                  {price && xcloudDiscount > 0 && !inGamePass && (
                     <Text style={styles.priceWas}>
                       {formatPrice(price.msrp, price.currencyCode)}
                     </Text>

@@ -517,6 +517,8 @@ export type FetchTitleDetailsResult = {
   price: PriceInfo | null;
   rating: RatingInfo | null;
   details: TitleDetails | null;
+  // Included with a Game Pass subscription in this market (see extractInGamePass).
+  inGamePass: boolean;
   ok: boolean; // false only when the request failed (so callers can retry)
 };
 
@@ -541,6 +543,7 @@ export const fetchTitleDetails = async (
     price: null,
     rating: null,
     details: null,
+    inGamePass: false,
     ok: false,
   };
   if (!storeId) {
@@ -570,6 +573,7 @@ export const fetchTitleDetails = async (
         price: extractPrice(product),
         rating: extractRating(product),
         details: extractDetails(product, market),
+        inGamePass: extractInGamePass(product),
         ok: true,
       };
     } catch (e) {

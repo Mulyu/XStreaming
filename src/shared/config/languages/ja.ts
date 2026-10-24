@@ -430,6 +430,7 @@ export default {
     PsStoreOnSale: 'セール中',
     LibraryPsIncluded: 'PS Plusカタログに含まれています',
     PsStoreIncludedInCatalog: 'カタログに含まれます',
+    GamePassIncludedInCatalog: 'Game Passに含まれます',
     PsStoreSaleUntil: 'セール {{date}} まで',
     PsStoreMemberPrice: 'PS Plus会員価格',
     Store: 'ストア',
