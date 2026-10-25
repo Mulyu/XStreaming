@@ -272,8 +272,6 @@ export function useSettingsScreen(navigation: any, route: any) {
           },
         },
       ]);
-    } else if (id === 'maping') {
-      navigation.navigate('NativeGameMap');
     }
   };
 
@@ -552,15 +550,13 @@ export function useSettingsScreen(navigation: any, route: any) {
     onPreferredLanguageChange: handlePreferredLanguageChange,
     onLowLatencyDecoderChange: handleLowLatencyDecoderChange,
     onSignalingCloudChange: handleSignalingCloudChange,
-    onItemPress: handleItemPress,
     onGfnAccountPress: handleGfnAccountPress,
     onCopyGfnDebugInfo: handleCopyGfnDebugInfo,
     onCopyPsPlusDebugInfo: handleCopyPsPlusDebugInfo,
     onCopyAppDebugInfo: handleCopyAppDebugInfo,
     onPsPlusAccountPress: handlePsPlusAccountPress,
     onXcloudAccountPress: handleXcloudAccountPress,
-    onNavigateVirtualGamepadSettings: () =>
-      navigation.navigate('VirtualGamepadSettings'),
+    onNavigateInputMapping: () => navigation.navigate('InputMapping'),
     onNavigateHistory: () => navigation.navigate('History'),
     onNavigateDs5Left: () =>
       navigation.navigate({name: 'Ds5', params: {type: 'left'}}),

@@ -8,3 +8,10 @@ const PhysicalInputNative = NativeModules.PhysicalInput;
 export const setPhysicalInputEnabled = (enabled: boolean): void => {
   PhysicalInputNative?.setEnabled?.(enabled);
 };
+
+// Key-capture mode: while on, physical keyboard keys are reported to JS
+// (as onPhysicalKey) and swallowed, on any screen -- see
+// PhysicalInput.setKeyCapture.
+export const setKeyCaptureEnabled = (enabled: boolean): void => {
+  PhysicalInputNative?.setKeyCapture?.(enabled);
+};

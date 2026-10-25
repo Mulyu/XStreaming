@@ -52,6 +52,7 @@ import {
 } from '../../../shared/lib/settings';
 import {
   createGamepadMapper,
+  getInputBindings,
   usePhysicalInput,
 } from '../../../features/physical-input';
 import {debugFactory} from '../../../shared/lib/debug';
@@ -1076,11 +1077,15 @@ export function usePsPlusStream(navigation: any, route: any) {
   };
   const physicalMapper = React.useMemo(
     () =>
-      createGamepadMapper({
-        press: name => physicalSinkRef.current.press(name),
-        release: name => physicalSinkRef.current.release(name),
-        moveLeftStick: (x, y) => physicalSinkRef.current.stick('left', {x, y}),
-      }),
+      createGamepadMapper(
+        {
+          press: name => physicalSinkRef.current.press(name),
+          release: name => physicalSinkRef.current.release(name),
+          moveLeftStick: (x, y) =>
+            physicalSinkRef.current.stick('left', {x, y}),
+        },
+        getInputBindings(),
+      ),
     [],
   );
   const physicalEnabled = connectState === 'connected';
