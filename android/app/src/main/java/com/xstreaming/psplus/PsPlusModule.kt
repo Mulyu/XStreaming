@@ -389,6 +389,23 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 		session?.setAudioGain(gain.toFloat())
 	}
 
+	// Resolves whether the microphone is now being sent. Runtime permission is
+	// requested by JS beforehand; false covers a missing permission too.
+	@ReactMethod
+	fun setMicEnabled(enabled: Boolean, promise: Promise) {
+		val s = session
+		if (s == null) {
+			promise.resolve(false)
+			return
+		}
+		if (enabled) {
+			promise.resolve(s.startMic())
+		} else {
+			s.stopMic()
+			promise.resolve(false)
+		}
+	}
+
 	@ReactMethod
 	fun getMetrics(promise: Promise) {
 		val metrics = session?.getMetrics()

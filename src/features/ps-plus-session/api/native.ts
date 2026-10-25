@@ -205,6 +205,15 @@ class PsPlusChiakiClient {
     PsPlusChiakiNative?.setAudioGain?.(gain);
   }
 
+  // Start/stop sending the microphone. Resolves whether it is now sending
+  // (false: record permission missing, no cloud mic encoder, or capture
+  // failed). The caller requests RECORD_AUDIO first.
+  setMicEnabled(enabled: boolean): Promise<boolean> {
+    return (
+      PsPlusChiakiNative?.setMicEnabled?.(enabled) ?? Promise.resolve(false)
+    );
+  }
+
   getMetrics(): Promise<StreamMetrics | null> {
     return PsPlusChiakiNative.getMetrics();
   }

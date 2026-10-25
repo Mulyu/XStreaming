@@ -3,6 +3,7 @@ import {
   RTCSessionDescription,
   RTCIceCandidate,
   MediaStream,
+  mediaDevices,
 } from 'react-native-webrtc';
 import {GfnSession, parseResolution} from '../api/session';
 import {
@@ -16,6 +17,7 @@ import {
   mungeAnswerSdp,
   preferVideoCodec,
 } from './nvstSdp';
+import {describeMedia, findMicSection, parseSdpMedia} from './micSdp';
 import {
   GfnInputEncoder,
   GamepadInput,
@@ -58,6 +60,9 @@ export class GfnWebRtcClient {
   private partialReliableThresholdMs = DEFAULT_PARTIAL_RELIABLE_MS;
   private queuedLocalIce: GfnIceCandidate[] = [];
   private queuedRemoteIce: GfnIceCandidate[] = [];
+  // Transceiver the server offered for receiving our microphone, if any.
+  private micTransceiver: any = null;
+  private micStream: MediaStream | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private stream: MediaStream | null = null;
 
@@ -175,6 +180,8 @@ export class GfnWebRtcClient {
       new RTCSessionDescription({type: 'offer', sdp: offerSdp}),
     );
 
+    this.prepareMicTransceiver(pc, offerSdp);
+
     // Match the encoder settings this session was actually requested with
     // (CloudMatch was told the same resolution/fps/bitrate/codec) rather than
     // an independent, possibly-stale hardcoded copy.
@@ -196,6 +203,11 @@ export class GfnWebRtcClient {
     await pc.setLocalDescription(answer);
 
     const finalSdp = (pc as any).localDescription?.sdp ?? answer.sdp;
+    if (finalSdp) {
+      console.log(
+        'GFN mic: answer m-lines\n' + describeMedia(parseSdpMedia(finalSdp)),
+      );
+    }
     const credentials = extractIceCredentials(finalSdp);
     const {width, height} = parseResolution(settings.resolution);
     const nvstSdp = buildNvstSdp({
@@ -218,6 +230,114 @@ export class GfnWebRtcClient {
     for (const c of this.queuedRemoteIce.splice(0)) {
       this.addRemoteCandidate(c).catch(() => {});
     }
+  }
+
+  // Locate the audio line the server offers for our microphone and make the
+  // answer send on it (recvonly -> sendonly). Done between setRemoteDescription
+  // and createAnswer, like the official client, so no renegotiation is needed.
+  // The line is picked from the offer SDP; the first audio transceiver would be
+  // the game audio.
+  private prepareMicTransceiver(pc: RTCPeerConnection, offerSdp: string): void {
+    const media = parseSdpMedia(offerSdp);
+    console.log('GFN mic: offer m-lines\n' + describeMedia(media));
+    const section = findMicSection(media);
+    if (!section) {
+      console.log('GFN mic: the offer has no microphone line');
+      return;
+    }
+    const transceivers: any[] = (pc as any).getTransceivers?.() ?? [];
+    const transceiver =
+      transceivers.find(t => section.mid != null && t.mid === section.mid) ??
+      transceivers[section.index];
+    if (!transceiver) {
+      console.log(
+        `GFN mic: no transceiver for mid=${section.mid} index=${section.index}`,
+      );
+      return;
+    }
+    try {
+      transceiver.direction =
+        section.direction === 'inactive' ? 'sendonly' : 'sendrecv';
+      this.micTransceiver = transceiver;
+      console.log(
+        `GFN mic: using mid=${section.mid} (transceiver mid=${transceiver.mid})`,
+      );
+    } catch (e) {
+      console.log('GFN mic: could not set the transceiver direction', e);
+    }
+  }
+
+  // True when the server offered a microphone line this session.
+  get micAvailable(): boolean {
+    return this.micTransceiver != null;
+  }
+
+  // Start sending the microphone. Resolves false (never throws) when the
+  // server offered no mic line, permission is denied or capture fails.
+  async startMic(): Promise<boolean> {
+    const sender = this.micTransceiver?.sender;
+    if (!sender || this.disposed) {
+      return false;
+    }
+    if (this.micStream) {
+      this.micStream.getAudioTracks().forEach(t => (t.enabled = true));
+      return true;
+    }
+    try {
+      const stream = await mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: false,
+          autoGainControl: false,
+        } as any,
+        video: false,
+      });
+      const track = stream.getAudioTracks()[0];
+      if (!track) {
+        stream.getTracks().forEach(t => t.stop());
+        return false;
+      }
+      if (this.disposed) {
+        stream.getTracks().forEach(t => t.stop());
+        return false;
+      }
+      track.enabled = true;
+      await sender.replaceTrack(track);
+      this.micStream = stream;
+      console.log(`GFN mic: sending "${(track as any).label ?? ''}"`);
+      this.logMicStats();
+      return true;
+    } catch (e) {
+      console.log('GFN mic: start failed', e);
+      return false;
+    }
+  }
+
+  stopMic(): void {
+    const stream = this.micStream;
+    this.micStream = null;
+    this.micTransceiver?.sender?.replaceTrack(null).catch(() => {});
+    stream?.getTracks().forEach(t => t.stop());
+  }
+
+  // One-off check a few seconds after the mic starts: bytesSent on the audio
+  // outbound-rtp that is not the (receive-only) game audio tells whether the
+  // server line is really being fed.
+  private logMicStats(): void {
+    setTimeout(async () => {
+      try {
+        const report: any = await this.getStats();
+        const lines: string[] = [];
+        report?.forEach?.((r: any) => {
+          if (r.type === 'outbound-rtp' && r.kind === 'audio') {
+            lines.push(
+              `ssrc=${r.ssrc} packetsSent=${r.packetsSent} bytesSent=${r.bytesSent}`,
+            );
+          }
+        });
+        console.log('GFN mic: outbound audio ' + (lines.join('; ') || 'none'));
+      } catch {}
+    }, 4000);
   }
 
   private createDataChannels(pc: RTCPeerConnection): void {
@@ -433,6 +553,8 @@ export class GfnWebRtcClient {
 
   dispose(): void {
     this.disposed = true;
+    this.stopMic();
+    this.micTransceiver = null;
     this.stopInputHeartbeat();
     this.signaling.disconnect();
     if (this.reliableInput) {

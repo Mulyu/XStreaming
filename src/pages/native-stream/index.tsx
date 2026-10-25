@@ -3605,7 +3605,10 @@ export function NativeStreamScreenBase({
         showMouseOption={route.params?.streamType === 'gfn'}
         showEditGamepadLayout={inputMode === 'gamepad'}
         onEditGamepadLayout={handleRailEditGamepad}
-        showMicrophone={route.params?.streamType !== 'gfn'}
+        showMicrophone={
+          route.params?.streamType !== 'gfn' ||
+          Boolean((webrtcClient as any)?.micAvailable)
+        }
         microphoneOpen={openMicro}
         onToggleMicrophone={handleToggleMic}
         volume={audioGain}

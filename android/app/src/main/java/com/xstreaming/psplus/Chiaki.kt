@@ -152,6 +152,8 @@ private class ChiakiNative
 		@JvmStatic external fun sessionJoin(ptr: Long): Int
 		@JvmStatic external fun sessionSetSurface(ptr: Long, surface: Surface?)
 		@JvmStatic external fun sessionSetAudioGain(ptr: Long, gain: Float)
+		@JvmStatic external fun sessionSendMicFrame(ptr: Long, pcm: ShortArray): Boolean
+		@JvmStatic external fun sessionMicReady(ptr: Long): Boolean
 		@JvmStatic external fun sessionGetMetrics(ptr: Long): DoubleArray
 		@JvmStatic external fun sessionSetControllerState(ptr: Long, controllerState: ControllerState)
 		@JvmStatic external fun sessionSetPsChord(ptr: Long, enabled: Boolean, holdMs: Int)
@@ -694,10 +696,15 @@ class Session(connectInfo: ConnectInfo, logFile: String?, logVerbose: Boolean)
 	fun start() = if(nativePtr == 0L) disposedErrorCode else ErrorCode(ChiakiNative.sessionStart(nativePtr))
 	fun stop() = if(nativePtr == 0L) disposedErrorCode else ErrorCode(ChiakiNative.sessionStop(nativePtr))
 
+	// Capture thread is joined by stop(), so no frame can reach native after
+	// sessionFree.
+	private var mic: MicCapture? = null
+
 	fun dispose()
 	{
 		if(nativePtr == 0L)
 			return
+		stopMic()
 		ChiakiNative.sessionJoin(nativePtr)
 		ChiakiNative.sessionFree(nativePtr)
 		nativePtr = 0L
@@ -760,6 +767,29 @@ class Session(connectInfo: ConnectInfo, logFile: String?, logVerbose: Boolean)
 		if(nativePtr == 0L)
 			return
 		ChiakiNative.sessionSetAudioGain(nativePtr, gain)
+	}
+
+	/**
+	 * Start sending the microphone. False when the native encoder is not
+	 * available (non-cloud session) or capture could not start.
+	 */
+	@Synchronized
+	fun startMic(): Boolean
+	{
+		val ptr = nativePtr
+		if(ptr == 0L || !ChiakiNative.sessionMicReady(ptr))
+			return false
+		val capture = mic ?: MicCapture { pcm ->
+			val p = nativePtr
+			p != 0L && ChiakiNative.sessionSendMicFrame(p, pcm)
+		}.also { mic = it }
+		return capture.start()
+	}
+
+	@Synchronized
+	fun stopMic()
+	{
+		mic?.stop()
 	}
 
 	/** Latest live stream metrics for the stats overlay, or null if the session is gone. */

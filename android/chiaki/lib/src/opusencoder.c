@@ -51,6 +51,11 @@ CHIAKI_EXPORT void chiaki_opus_encoder_header(ChiakiAudioHeader *header, ChiakiO
 		return;
 	}
 
+	// The console's audio sender accepts only 40-byte frames (3 per packet):
+	// 32 kbit/s constant bitrate gives exactly 40 bytes per 10 ms frame.
+	opus_encoder_ctl(encoder->opus_encoder, OPUS_SET_BITRATE(32000));
+	opus_encoder_ctl(encoder->opus_encoder, OPUS_SET_VBR(0));
+
 	CHIAKI_LOGI(encoder->log, "ChiakiOpusEncoder initialized");
 
 	size_t opus_frame_buf_size_required = 40;
