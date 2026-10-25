@@ -374,8 +374,8 @@ const LibraryView: React.FC<Props> = ({
   cycleOwnership,
   filterOnSale,
   setFilterOnSale,
-  filterFreePlay,
-  cycleFreePlay,
+  filterCatalog,
+  toggleCatalog,
   gamePassMap,
   focusedKey,
   setFocusedKey,
@@ -397,12 +397,6 @@ const LibraryView: React.FC<Props> = ({
       ? 'LibraryFilterNotOwned'
       : 'LibraryFilterOwnershipAll',
   );
-  const freePlayLabel =
-    filterFreePlay === 'gamepass'
-      ? t('LibraryFilterFreePlayGamePass')
-      : filterFreePlay === 'ps'
-      ? t('LibraryFilterFreePlayPs')
-      : t('LibraryFilterFreePlay');
   const searchFocus = useTVFocus();
   const tvSearchInputFocus = useTVFocus();
   const tvSearchCloseFocus = useTVFocus();
@@ -810,6 +804,27 @@ const LibraryView: React.FC<Props> = ({
                 />
               </>
             )}
+            {!Platform.isTV && (
+              <RailSegment
+                accent={palette.accent}
+                options={[
+                  {
+                    key: 'sale',
+                    icon: 'tag-outline',
+                    label: t('LibraryFilterOnSale'),
+                    active: filterOnSale,
+                    onPress: () => setFilterOnSale(v => !v),
+                  },
+                  {
+                    key: 'catalog',
+                    icon: 'gift-outline',
+                    label: t('LibraryFilterCatalog'),
+                    active: filterCatalog,
+                    onPress: toggleCatalog,
+                  },
+                ]}
+              />
+            )}
             <RailButton
               iconOnly
               compact={!Platform.isTV}
@@ -824,26 +839,30 @@ const LibraryView: React.FC<Props> = ({
               fill
               onPress={cycleOwnership}
             />
-            <RailButton
-              iconOnly
-              compact={!Platform.isTV}
-              icon="tag-outline"
-              label={t('LibraryFilterOnSale')}
-              active={filterOnSale}
-              accent={palette.accent}
-              fill
-              onPress={() => setFilterOnSale(v => !v)}
-            />
-            <RailButton
-              iconOnly
-              compact={!Platform.isTV}
-              icon="gift-outline"
-              label={freePlayLabel}
-              active={filterFreePlay !== 'off'}
-              accent={palette.accent}
-              fill
-              onPress={cycleFreePlay}
-            />
+            {Platform.isTV && (
+              <>
+                <RailButton
+                  iconOnly
+                  compact={!Platform.isTV}
+                  icon="tag-outline"
+                  label={t('LibraryFilterOnSale')}
+                  active={filterOnSale}
+                  accent={palette.accent}
+                  fill
+                  onPress={() => setFilterOnSale(v => !v)}
+                />
+                <RailButton
+                  iconOnly
+                  compact={!Platform.isTV}
+                  icon="gift-outline"
+                  label={t('LibraryFilterCatalog')}
+                  active={filterCatalog}
+                  accent={palette.accent}
+                  fill
+                  onPress={toggleCatalog}
+                />
+              </>
+            )}
             <View style={styles.sortChipTv}>
               <RailButton
                 iconOnly

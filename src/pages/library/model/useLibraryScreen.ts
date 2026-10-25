@@ -105,15 +105,6 @@ import {
 } from './rankSort';
 
 export type OwnershipFilter = 'owned' | 'notOwned' | 'all';
-// "Free to play" chip, cycled: off -> Game Pass or the PS catalog ('any') ->
-// Game Pass only -> PS catalog only -> off.
-export type FreePlayFilter = 'off' | 'any' | 'gamepass' | 'ps';
-const FREE_PLAY_NEXT: Record<FreePlayFilter, FreePlayFilter> = {
-  off: 'any',
-  any: 'gamepass',
-  gamepass: 'ps',
-  ps: 'off',
-};
 const OWNERSHIP_NEXT: Record<OwnershipFilter, OwnershipFilter> = {
   owned: 'notOwned',
   notOwned: 'all',
@@ -261,12 +252,9 @@ export function useLibraryScreen() {
     setFilterWishlist(!filterWishlist);
   }, [filterWishlist]);
   const [filterOnSale, setFilterOnSale] = React.useState(false);
-  const [filterFreePlay, setFilterFreePlay] =
-    React.useState<FreePlayFilter>('off');
-  const cycleFreePlay = React.useCallback(
-    () => setFilterFreePlay(v => FREE_PLAY_NEXT[v]),
-    [],
-  );
+  // On or off: only titles in Game Pass or the PS catalog.
+  const [filterCatalog, setFilterCatalog] = React.useState(false);
+  const toggleCatalog = React.useCallback(() => setFilterCatalog(v => !v), []);
 
   // Favorites live in their own catalog-key-based store (not tied to one
   // provider) so a GFN-only title can be favorited too -- reloaded on focus
@@ -1032,16 +1020,10 @@ export function useLibraryScreen() {
     if (filterOnSale) {
       list = list.filter(item => saleDiscount(item) > 0);
     }
-    if (filterFreePlay !== 'off') {
-      list = list.filter(item => {
-        const gamePass = isInGamePass(item, gamePassMap);
-        const psCatalog = isInPsCatalog(item);
-        return filterFreePlay === 'gamepass'
-          ? gamePass
-          : filterFreePlay === 'ps'
-          ? psCatalog
-          : gamePass || psCatalog;
-      });
+    if (filterCatalog) {
+      list = list.filter(
+        item => isInGamePass(item, gamePassMap) || isInPsCatalog(item),
+      );
     }
     return list;
   }, [
@@ -1056,7 +1038,7 @@ export function useLibraryScreen() {
     wishlistStubs,
     filterOwnership,
     filterOnSale,
-    filterFreePlay,
+    filterCatalog,
     gamePassMap,
     saleDiscount,
   ]);
@@ -1232,8 +1214,8 @@ export function useLibraryScreen() {
     cycleOwnership,
     filterOnSale,
     setFilterOnSale,
-    filterFreePlay,
-    cycleFreePlay,
+    filterCatalog,
+    toggleCatalog,
     gamePassMap,
     focusedKey,
     setFocusedKey,
