@@ -482,7 +482,14 @@ const LibraryTitleDetailView: React.FC<Props> = ({
       )}
 
       {catalogTitle.gfn && (
-        <View style={styles.providerCard}>
+        <View
+          style={[
+            styles.providerCard,
+            // The Xbox card carries its own spacing; without it this card
+            // sits under the section label, and a PS card below needs room.
+            !catalogTitle.xcloud && styles.providerCardTop,
+            !!catalogTitle.psplus && styles.providerCardBottom,
+          ]}>
           <Pressable
             style={[
               styles.providerRow,
@@ -790,7 +797,13 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             </View>
           );
           return (
-            <View style={styles.providerCard}>
+            <View
+              style={[
+                styles.providerCard,
+                !catalogTitle.xcloud &&
+                  !catalogTitle.gfn &&
+                  styles.providerCardTop,
+              ]}>
               <Pressable
                 style={[
                   styles.providerRow,
@@ -1252,6 +1265,8 @@ const styles = StyleSheet.create({
     borderColor: alpha(palette.text, 0.2),
   },
   providerCardSpaced: {marginTop: 8, marginBottom: 8},
+  providerCardTop: {marginTop: 8},
+  providerCardBottom: {marginBottom: 8},
   providerRow: {
     flexDirection: 'row',
     alignItems: 'center',
