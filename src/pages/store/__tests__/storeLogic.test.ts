@@ -4,6 +4,7 @@ import {
   buildPsStoreRows,
   dedupeByKey,
   hasMorePages,
+  mergeXcloudLookup,
   resolveRowTitle,
   rowWishlistExtra,
   StoreRow,
@@ -348,5 +349,40 @@ describe('resolveRowTitle', () => {
   it('names the row id by the tab it came from', () => {
     expect(rowWishlistExtra(row(), 'xcloud').refs).toEqual({xbox: 'P1'});
     expect(rowWishlistExtra(row(), 'psstore').refs).toEqual({ps: 'P1'});
+  });
+});
+
+describe('mergeXcloudLookup', () => {
+  const catalogItem = {
+    productId: 'AAA',
+    ProductTitle: 'Call of Duty',
+    XCloudTitleId: 'CALLOFDUTYHQ',
+    details: {hasEntitlement: true},
+  };
+  const catalog = new Map([['AAA', catalogItem]]);
+
+  it('returns the catalog untouched when nothing else is known', () => {
+    expect(mergeXcloudLookup(catalog, {})).toBe(catalog);
+  });
+
+  it("resolves another edition's id to the account's own catalog entry", () => {
+    const merged = mergeXcloudLookup(catalog, {
+      BBB: {productId: 'BBB', XCloudTitleId: 'CALLOFDUTYHQ'},
+    });
+    expect(merged.get('BBB')).toBe(catalogItem);
+  });
+
+  it("uses Microsoft's catalog item for a streamable title the account lacks", () => {
+    const info = {productId: 'CCC', XCloudTitleId: 'MARVELRIVALS'};
+    expect(mergeXcloudLookup(catalog, {CCC: info}).get('CCC')).toBe(info);
+  });
+
+  it('leaves out ids without an xCloud title id, and keeps catalog ids', () => {
+    const merged = mergeXcloudLookup(catalog, {
+      DDD: {productId: 'DDD'},
+      AAA: {productId: 'AAA', XCloudTitleId: 'OTHER'},
+    });
+    expect(merged.has('DDD')).toBe(false);
+    expect(merged.get('AAA')).toBe(catalogItem);
   });
 });
