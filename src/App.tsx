@@ -193,7 +193,6 @@ function MainTabs() {
 
 function App() {
   const {t} = useTranslation();
-  const settings = getSettings();
   // Xbox authentication object + launch-time silent token refresh -- see
   // features/xbox-auth. Runs for the whole app; no screen gates on it.
   useXboxAuthBootstrap();
@@ -362,7 +361,7 @@ function App() {
   }, [openTitleShortcut]);
 
   React.useEffect(() => {
-    if (!settings.check_update || updateCheckedRef.current) {
+    if (updateCheckedRef.current) {
       return;
     }
 
@@ -441,7 +440,7 @@ function App() {
         );
       }
     });
-  }, [settings.check_update, t]);
+  }, [t]);
 
   const paperDarkTheme = {
     ...MD3DarkTheme,

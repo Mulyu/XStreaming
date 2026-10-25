@@ -3601,7 +3601,7 @@ export function NativeStreamScreenBase({
         showMouseOption={route.params?.streamType === 'gfn'}
         showEditGamepadLayout={inputMode === 'gamepad'}
         onEditGamepadLayout={handleRailEditGamepad}
-        showMicrophone={!!settings.enable_microphone}
+        showMicrophone={route.params?.streamType !== 'gfn'}
         microphoneOpen={openMicro}
         onToggleMicrophone={handleToggleMic}
         volume={audioGain}

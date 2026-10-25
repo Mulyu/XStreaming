@@ -111,6 +111,18 @@ export default {
     GfnSettings: 'GeForce NOW',
     CommonSettings: 'Common',
     SectionAccount: 'Account',
+    AccountSignedIn: 'Signed in',
+    AccountSignedOut: 'Not signed in',
+    AccountPlan: 'YOUR PLAN',
+    AccountChangePlan: 'View / change plan',
+    AccountSignIn: 'Sign in',
+    AccountSignOut: 'Sign out',
+    XboxGamePassActive: 'Game Pass: active',
+    XboxPlanUnknownDesc:
+      'The plan type (Ultimate, etc.) and renewal date are not available in the app. Check them on the Microsoft page.',
+    PsPlanUnknownDesc:
+      'The plan type and renewal date are not available in the app. Check them on the PlayStation page.',
+    GfnPlanRenews: 'Renews on {{date}}',
     SectionVideo: 'Video',
     SectionRegionSignaling: 'Region & Signaling',
     SectionSignInLanguage: 'Sign-in & Language',

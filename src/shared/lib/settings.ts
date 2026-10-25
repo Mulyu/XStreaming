@@ -40,11 +40,9 @@ export type Settings = {
   right_trigger_effects: [];
   fsr_display_options: DisplayOptions;
   ipv6: boolean;
-  check_update: boolean;
   fsr: boolean;
   coop: boolean;
   use_msal_login: boolean;
-  enable_microphone: boolean;
   /** In-app game volume (0.0-1.0 in 0.1 steps, 1 = full), applied
    * independently of the Android system volume via the remote audio track's
    * gain. */
@@ -109,7 +107,6 @@ const defaultSettings: Settings = {
   right_trigger_type: 0,
   right_trigger_effects: [],
   ipv6: false,
-  check_update: true,
   fsr_display_options: {
     sharpness: 2,
     saturation: 5,
@@ -119,7 +116,6 @@ const defaultSettings: Settings = {
   fsr: false,
   coop: false,
   use_msal_login: false,
-  enable_microphone: false,
   audio_gain: 1,
   background_mute: true,
   gfn_resolution: '1920x1080',
