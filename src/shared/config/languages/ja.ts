@@ -108,6 +108,18 @@ export default {
     GfnSettings: 'GeForce NOW',
     CommonSettings: '共通',
     SectionAccount: 'アカウント',
+    AccountSignedIn: 'サインイン中',
+    AccountSignedOut: 'サインインしていません',
+    AccountPlan: 'ご契約のプラン',
+    AccountChangePlan: 'プランを確認・変更',
+    AccountSignIn: 'サインイン',
+    AccountSignOut: 'サインアウト',
+    XboxGamePassActive: 'Game Pass　加入中',
+    XboxPlanUnknownDesc:
+      'プランの種類（Ultimate など）と更新日は、アプリでは取得できません。Microsoft のページで確認できます。',
+    PsPlanUnknownDesc:
+      'プランの種類と更新日は、アプリでは取得できません。PlayStation のページで確認できます。',
+    GfnPlanRenews: '次回の更新日　{{date}}',
     SectionVideo: '映像',
     SectionRegionSignaling: 'リージョン・シグナリング',
     SectionSignInLanguage: 'サインイン・言語',

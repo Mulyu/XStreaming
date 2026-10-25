@@ -33,6 +33,9 @@ export {
   isStreamTokenValid,
 } from './model/streamTokenStore';
 
+export {fetchXboxProfile, parseXboxProfile} from './api/profile';
+export type {XboxProfile} from './api/profile';
+
 export {default as Xal} from './api/xal';
 export {default as Msal} from './api/msal';
 

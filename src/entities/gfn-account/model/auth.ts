@@ -472,6 +472,42 @@ const jwtSub = (token?: string): string | null => {
   }
 };
 
+// The name to show for the signed-in account, read from the id/access token's
+// own claims (no network): `preferred_username`, else the part of `email`
+// before the @. Null when the token carries neither.
+export const nameFromJwt = (token?: string): string | null => {
+  if (!token) {
+    return null;
+  }
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const claims = JSON.parse(base64UrlDecode(parts[1]));
+    if (
+      typeof claims.preferred_username === 'string' &&
+      claims.preferred_username
+    ) {
+      return claims.preferred_username;
+    }
+    if (typeof claims.email === 'string' && claims.email.includes('@')) {
+      return claims.email.split('@')[0] || null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+export const getGfnDisplayName = (): string | null => {
+  const tokens = getStoredTokens();
+  if (!tokens) {
+    return null;
+  }
+  return nameFromJwt(tokens.idToken) ?? nameFromJwt(tokens.accessToken);
+};
+
 // Multiple call sites (the library screen's owned-games load, a stream launch,
 // ...) can call getValidTokens() within milliseconds of each other. If both
 // see the same near-expiry token and independently call refreshAuthTokens(),

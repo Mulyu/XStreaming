@@ -1,6 +1,6 @@
 import React from 'react';
-import {StyleSheet, ScrollView, View, Pressable, Platform} from 'react-native';
-import {Text, SegmentedButtons, Portal, Modal, Card} from 'react-native-paper';
+import {StyleSheet, ScrollView, View, Pressable} from 'react-native';
+import {Text, Portal, Modal, Card} from 'react-native-paper';
 import Spinner from '../../../shared/ui/Spinner';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
 import SettingItem from '../../../shared/ui/SettingItem';
@@ -9,27 +9,29 @@ import {
   SegmentedRow,
   DropdownRow,
   SliderRow,
-  InfoRow,
 } from '../../../shared/ui/InlineSettingRows';
+import AccountCard from './AccountCard';
 import {GfnSignInModal} from '../../../entities/gfn-account';
 import {MsalAuth} from '../../../entities/xbox-token';
 import {M} from '../model/useSettingsScreen';
 import type {Lane, SettingsScreenViewModel} from '../model/useSettingsScreen';
 
-import pkg from '../../../../package.json';
 import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = SettingsScreenViewModel;
 
-// TV only: react-native-paper's SegmentedButtons segments take no D-pad focus
-// (they never show a focus state), so the lane switch is a row of ordinary
-// buttons there instead.
+// The provider switch: the same rounded pills as the Store's provider tabs,
+// filled in the provider's own colour when selected.
 function LaneButton({
   label,
+  color,
+  flex,
   active,
   onPress,
 }: {
   label: string;
+  color: string;
+  flex: number;
   active: boolean;
   onPress: () => void;
 }) {
@@ -38,7 +40,8 @@ function LaneButton({
     <Pressable
       style={[
         styles.laneButton,
-        active && styles.laneButtonActive,
+        {flex},
+        active && {backgroundColor: color, borderColor: color},
         focus.focused && tvFocusRing,
       ]}
       onPress={onPress}
@@ -46,7 +49,9 @@ function LaneButton({
       onBlur={focus.onBlur}
       accessibilityRole="button"
       accessibilityState={{selected: active}}>
-      <Text style={[styles.laneButtonText, active && styles.laneButtonTextOn]}>
+      <Text
+        style={[styles.laneButtonText, active && styles.laneButtonTextOn]}
+        numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -74,14 +79,13 @@ const SettingsView: React.FC<Props> = ({
   retryGfnLogin,
   cancelGfnLogin,
   isAuthed,
-  user,
   signalingCloudOptions,
   signalingCloudValue,
-  gfnNoOpFlag,
   gfnRegionOptions,
-  xcloudCatalogDescription,
-  gfnCatalogDescription,
-  gfnPlaytimeDescription,
+  xboxAccount,
+  gfnAccount,
+  psAccount,
+  onOpenPlan,
   onChangeLane,
   updateSetting,
   onLocaleChange,
@@ -97,19 +101,50 @@ const SettingsView: React.FC<Props> = ({
   onCopyAppDebugInfo,
   onPsPlusAccountPress,
   onXcloudAccountPress,
-  onXcloudCatalogReload,
-  onGfnCatalogReload,
   onNavigateVirtualGamepadSettings,
   onNavigateHistory,
   onNavigateDs5Left,
   onNavigateDs5Right,
 }) => {
-  const laneButtons: {value: Lane; label: string}[] = [
-    {value: 'common', label: t('CommonSettings')},
-    {value: 'xbox', label: t('XcloudSettings')},
-    {value: 'gfn', label: t('GfnSettings')},
-    {value: 'psplus', label: t('PsPlusSettings')},
+  const laneButtons: {
+    value: Lane;
+    label: string;
+    color: string;
+    flex: number;
+  }[] = [
+    {
+      value: 'common',
+      label: t('CommonSettings'),
+      color: palette.accent,
+      flex: 0.8,
+    },
+    {
+      value: 'xbox',
+      label: t('XcloudSettings'),
+      color: palette.provider.xbox,
+      flex: 0.9,
+    },
+    {
+      value: 'gfn',
+      label: t('GfnSettings'),
+      color: palette.provider.gfn,
+      flex: 1.45,
+    },
+    {
+      value: 'psplus',
+      label: t('PsPlusSettings'),
+      color: palette.provider.ps,
+      flex: 1.25,
+    },
   ];
+  const accountLabels = {
+    signedIn: t('AccountSignedIn'),
+    signedOut: t('AccountSignedOut'),
+    plan: t('AccountPlan'),
+    changePlan: t('AccountChangePlan'),
+    signIn: t('AccountSignIn'),
+    signOut: t('AccountSignOut'),
+  };
   return (
     <View style={styles.container}>
       <Spinner
@@ -119,24 +154,18 @@ const SettingsView: React.FC<Props> = ({
 
       <View style={styles.header}>
         <Text style={styles.title}>{t('Settings')}</Text>
-        {Platform.isTV ? (
-          <View style={styles.laneRow}>
-            {laneButtons.map(button => (
-              <LaneButton
-                key={button.value}
-                label={button.label}
-                active={lane === button.value}
-                onPress={() => onChangeLane(button.value)}
-              />
-            ))}
-          </View>
-        ) : (
-          <SegmentedButtons
-            value={lane}
-            onValueChange={value => onChangeLane(value as Lane)}
-            buttons={laneButtons}
-          />
-        )}
+        <View style={styles.laneRow}>
+          {laneButtons.map(button => (
+            <LaneButton
+              key={button.value}
+              label={button.label}
+              color={button.color}
+              flex={button.flex}
+              active={lane === button.value}
+              onPress={() => onChangeLane(button.value)}
+            />
+          ))}
+        </View>
       </View>
 
       {lane === 'common' && (
@@ -188,15 +217,6 @@ const SettingsView: React.FC<Props> = ({
             onPress={onNavigateVirtualGamepadSettings}
           />
 
-          <SectionLabel title={t('AudioSettings')} />
-          <SwitchRow
-            title={M('enable_microphone').title}
-            desc={M('enable_microphone').description}
-            value={settings.enable_microphone}
-            onChange={v => updateSetting('enable_microphone', v)}
-            flag={gfnNoOpFlag}
-          />
-
           <SectionLabel title={t('Others')} />
           <SliderRow
             title={M('anti_idle_max_minutes').title}
@@ -207,12 +227,6 @@ const SettingsView: React.FC<Props> = ({
             value={settings.anti_idle_max_minutes}
             onChange={v => updateSetting('anti_idle_max_minutes', v)}
             formatValue={v => `${v}m`}
-          />
-          <SwitchRow
-            title={M('check_update').title}
-            desc={M('check_update').description}
-            value={settings.check_update}
-            onChange={v => updateSetting('check_update', v)}
           />
           <SettingItem
             title={t('HistoryTitle')}
@@ -226,36 +240,23 @@ const SettingsView: React.FC<Props> = ({
             description={t('AppCopyDebugInfoDesc')}
             onPress={onCopyAppDebugInfo}
           />
-
-          <View style={styles.version}>
-            <Text style={styles.versionText} variant="titleMedium">
-              {t('Version')}: v{pkg.version}
-            </Text>
-            <Text style={styles.versionText} variant="titleSmall">
-              © 2024-{new Date().getFullYear()} Geocld
-            </Text>
-          </View>
         </ScrollView>
       )}
 
       {lane === 'xbox' && (
         <ScrollView style={styles.settingsScroll}>
           <SectionLabel title={t('SectionAccount')} />
-          <SettingItem
-            title={t('XcloudAccountTitle')}
-            description={
-              isAuthed
-                ? user
-                  ? `${t('Current user')}: ${user}`
-                  : t('XcloudAccountSignedInDesc')
-                : t('XcloudAccountSignedOutDesc')
-            }
-            onPress={onXcloudAccountPress}
-          />
-          <SettingItem
-            title={t('CatalogCacheTitle')}
-            description={xcloudCatalogDescription}
-            onPress={onXcloudCatalogReload}
+          <AccountCard
+            color={palette.provider.xbox}
+            service="Xbox"
+            signedIn={isAuthed}
+            userName={xboxAccount.userName}
+            planTitle={xboxAccount.planTitle}
+            planLines={xboxAccount.planLines}
+            labels={accountLabels}
+            onSignIn={onXcloudAccountPress}
+            onSignOut={onXcloudAccountPress}
+            onChangePlan={() => onOpenPlan('xbox')}
           />
 
           <SectionLabel title={t('SectionVideo')} />
@@ -330,22 +331,17 @@ const SettingsView: React.FC<Props> = ({
       {lane === 'gfn' && (
         <ScrollView style={styles.settingsScroll}>
           <SectionLabel title={t('SectionAccount')} />
-          <SettingItem
-            title={t('GfnAccountTitle')}
-            description={
-              gfnSignedIn ? t('GfnSignedIn') : t('GfnAccountSignedOutDesc')
-            }
-            onPress={onGfnAccountPress}
-          />
-          <SettingItem
-            title={t('CatalogCacheTitle')}
-            description={gfnCatalogDescription}
-            onPress={onGfnCatalogReload}
-          />
-          <InfoRow
-            title={t('GfnPlaytimeTitle')}
-            value={gfnPlaytimeDescription}
-            accent={palette.provider.gfn}
+          <AccountCard
+            color={palette.provider.gfn}
+            service="GeForce NOW"
+            signedIn={gfnSignedIn}
+            userName={gfnAccount.userName}
+            planTitle={gfnAccount.planTitle}
+            planLines={gfnAccount.planLines}
+            labels={accountLabels}
+            onSignIn={onGfnAccountPress}
+            onSignOut={onGfnAccountPress}
+            onChangePlan={() => onOpenPlan('gfn')}
           />
 
           <SectionLabel title={t('SectionVideo')} />
@@ -411,14 +407,17 @@ const SettingsView: React.FC<Props> = ({
       {lane === 'psplus' && (
         <ScrollView style={styles.settingsScroll}>
           <SectionLabel title={t('SectionAccount')} />
-          <SettingItem
-            title={t('PsPlusAccountTitle')}
-            description={
-              psPlusSignedIn
-                ? t('PsPlusSignedIn')
-                : t('PsPlusAccountSignedOutDesc')
-            }
-            onPress={onPsPlusAccountPress}
+          <AccountCard
+            color={palette.provider.ps}
+            service="PlayStation"
+            signedIn={psPlusSignedIn}
+            userName={psAccount.userName}
+            planTitle={psAccount.planTitle}
+            planLines={psAccount.planLines}
+            labels={accountLabels}
+            onSignIn={onPsPlusAccountPress}
+            onSignOut={onPsPlusAccountPress}
+            onChangePlan={() => onOpenPlan('psplus')}
           />
 
           <SectionLabel title={t('SectionVideo')} />
@@ -503,21 +502,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6, gap: 10},
-  laneRow: {flexDirection: 'row', gap: 10, flexWrap: 'wrap'},
-  // Constant 2px transparent border so gaining the focus ring never resizes
-  // the button.
+  laneRow: {flexDirection: 'row', gap: 8},
+  // Same pill as the Store's provider tabs. A constant 1px border (the focus
+  // ring swaps its colour) so gaining focus never resizes the button.
   laneButton: {
-    minHeight: 48,
-    paddingHorizontal: 22,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: alpha(palette.white, 0.07),
+    height: 36,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: alpha(palette.text, 0.3),
+    backgroundColor: alpha(palette.text, 0.14),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  laneButtonActive: {backgroundColor: palette.accent},
-  laneButtonText: {fontSize: 15, fontWeight: '700', color: palette.textSoft},
+  laneButtonText: {fontSize: 12.5, fontWeight: '700', color: palette.textSoft},
   laneButtonTextOn: {color: palette.onAccent},
   title: {fontSize: 18, fontWeight: '800'},
   sectionLabel: {
@@ -529,15 +527,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 2,
     marginHorizontal: 16,
-  },
-  version: {
-    paddingTop: 20,
-    paddingBottom: 50,
-    textAlign: 'center',
-  },
-  versionText: {
-    textAlign: 'center',
-    paddingTop: 10,
   },
 });
 
