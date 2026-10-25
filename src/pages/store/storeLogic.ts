@@ -273,3 +273,42 @@ export const rowWishlistExtra = (
   refs: refsForRow(provider, row.id),
   snapshot: rowSnapshot(row),
 });
+
+// The Xbox browse endpoint lists a title under its Store product id, but the
+// account's xCloud catalog can hold the same title under another id (a
+// different edition or SKU) -- the catalog keeps one entry per title name.
+// `cloudInfo` is what Microsoft's catalog says about the browse ids the
+// account's catalog lacks (see XcloudCatalogApi.getCatalogGames); an id with an
+// xCloud title id there is streamable. It resolves to the account's own
+// catalog entry for that title when there is one (it carries the entitlement),
+// and to the catalog's own item otherwise.
+export const mergeXcloudLookup = (
+  catalogByProductId: Map<string, any>,
+  cloudInfo: Record<string, any>,
+): Map<string, any> => {
+  const ids = Object.keys(cloudInfo);
+  if (ids.length === 0) {
+    return catalogByProductId;
+  }
+  const byCloudTitleId = new Map<string, any>();
+  catalogByProductId.forEach(item => {
+    const cloudId = item?.XCloudTitleId;
+    if (cloudId && !byCloudTitleId.has(String(cloudId).toUpperCase())) {
+      byCloudTitleId.set(String(cloudId).toUpperCase(), item);
+    }
+  });
+  const merged = new Map(catalogByProductId);
+  ids.forEach(id => {
+    const key = id.toUpperCase();
+    if (merged.has(key)) {
+      return;
+    }
+    const info = cloudInfo[id];
+    const cloudId = info?.XCloudTitleId || info?.titleId;
+    if (!cloudId) {
+      return;
+    }
+    merged.set(key, byCloudTitleId.get(String(cloudId).toUpperCase()) ?? info);
+  });
+  return merged;
+};

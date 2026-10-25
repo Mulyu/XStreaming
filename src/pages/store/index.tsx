@@ -37,6 +37,7 @@ import {
   buildUnifiedCatalog,
   mergeOwnedGames,
   getFreshOwnedGames,
+  XcloudCatalogApi,
   isCatalogTitleOwned,
   getFavoriteKeys,
   isCatalogTitleFavorite,
@@ -79,6 +80,7 @@ import {
   StoreRow,
   resolveRowTitle,
   rowWishlistExtra,
+  mergeXcloudLookup,
 } from './storeLogic';
 import {alpha, palette} from '../../shared/config/palette';
 
@@ -351,6 +353,56 @@ function StoreScreen() {
     return map;
   }, [xcloudTitles]);
 
+  // Browse ids the account's catalog doesn't hold under that id, asked of
+  // Microsoft's catalog: ones with an xCloud title id are streamable too (see
+  // mergeXcloudLookup). The ref mirrors the state so the paging loop can see
+  // an answer the moment it arrives.
+  const [xboxCloudInfo, setXboxCloudInfo] = React.useState<Record<string, any>>(
+    {},
+  );
+  const xboxCloudInfoRef = React.useRef<Record<string, any>>({});
+  const xboxCloudRequestedRef = React.useRef<Set<string>>(new Set());
+  const ensureCloudInfo = React.useCallback(
+    async (ids: string[]) => {
+      const wanted = ids.filter(id => {
+        const key = id.toUpperCase();
+        return (
+          !xcloudByProductId.has(key) && !xboxCloudRequestedRef.current.has(key)
+        );
+      });
+      if (wanted.length === 0) {
+        return;
+      }
+      wanted.forEach(id => xboxCloudRequestedRef.current.add(id.toUpperCase()));
+      const api = new XcloudCatalogApi('', '');
+      const found: Record<string, any> = {};
+      for (let i = 0; i < wanted.length; i += 100) {
+        const items: any[] = await api.getCatalogGames(
+          wanted.slice(i, i + 100),
+        );
+        items.forEach(item => {
+          if (item?.productId) {
+            found[String(item.productId).toUpperCase()] = item;
+          }
+        });
+      }
+      if (Object.keys(found).length > 0) {
+        xboxCloudInfoRef.current = {...xboxCloudInfoRef.current, ...found};
+        setXboxCloudInfo(xboxCloudInfoRef.current);
+      }
+    },
+    [xcloudByProductId],
+  );
+  React.useEffect(() => {
+    if (provider === 'xcloud') {
+      ensureCloudInfo(xboxProductIds);
+    }
+  }, [provider, xboxProductIds, ensureCloudInfo]);
+  const xcloudLookup = React.useMemo(
+    () => mergeXcloudLookup(xcloudByProductId, xboxCloudInfo),
+    [xcloudByProductId, xboxCloudInfo],
+  );
+
   // Store prices aren't in the Game Pass catalog response (or the browse
   // endpoint, which returns bare ids) -- fetched in bulk for the whole
   // entitled catalog up front, same as Library.tsx does, so a price is
@@ -396,9 +448,7 @@ function StoreScreen() {
     }
     const wanted = xboxProductIds.filter(id => {
       const key = id.toUpperCase();
-      return (
-        !xcloudByProductId.has(key) && !xboxBasicsRequestedRef.current.has(key)
-      );
+      return !xcloudLookup.has(key) && !xboxBasicsRequestedRef.current.has(key);
     });
     if (wanted.length === 0) {
       return;
@@ -416,7 +466,7 @@ function StoreScreen() {
     provider,
     xboxAvailableOnly,
     xboxProductIds,
-    xcloudByProductId,
+    xcloudLookup,
     market,
     language,
   ]);
@@ -682,7 +732,10 @@ function StoreScreen() {
       const sort: XboxBrowseSort =
         chartKind === 'best' ? 'MostPopular desc' : 'ReleaseDate desc';
       const isVisibleMatch = (id: string): boolean => {
-        const item = xcloudByProductId.get(id.toUpperCase());
+        const item = mergeXcloudLookup(
+          xcloudByProductId,
+          xboxCloudInfoRef.current,
+        ).get(id.toUpperCase());
         if (!item) {
           // Not in the account's catalog: a row only if the filter is off
           // (its price is not known yet, so the sale filter can't exclude it
@@ -727,6 +780,12 @@ function StoreScreen() {
             id => !seenIds.has(id.toUpperCase()),
           );
           newIds.forEach(id => seenIds.add(id.toUpperCase()));
+          // Ask Microsoft's catalog about the page's unknown ids first, so a
+          // streamable title the account's catalog lacks counts as a row.
+          await ensureCloudInfo(newIds).catch(() => {});
+          if (stale()) {
+            return;
+          }
           foundVisibleRow = newIds.some(isVisibleMatch);
           if (newIds.length > 0) {
             setXboxProductIds(prev => [...prev, ...newIds]);
@@ -866,6 +925,7 @@ function StoreScreen() {
     xboxNextCT,
     xboxHasMore,
     xcloudByProductId,
+    ensureCloudInfo,
     xboxPriceMap,
     saleOnly,
     gfnAvailableOnly,
@@ -904,7 +964,7 @@ function StoreScreen() {
       provider === 'xcloud'
         ? buildXboxStoreRows(
             xboxProductIds,
-            xcloudByProductId,
+            xcloudLookup,
             xboxPriceMap,
             xboxBasics,
             xboxAvailableOnly,
@@ -915,7 +975,7 @@ function StoreScreen() {
     [
       provider,
       xboxProductIds,
-      xcloudByProductId,
+      xcloudLookup,
       xboxPriceMap,
       xboxBasics,
       xboxAvailableOnly,
