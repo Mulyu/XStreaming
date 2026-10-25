@@ -25,7 +25,7 @@ import {
   tvFocusRing,
   TV_FOCUS_COLOR,
 } from '../../../shared/ui/tvFocus';
-import {RailButton} from '../../../shared/ui/RailControls';
+import {RailButton, RailSegment} from '../../../shared/ui/RailControls';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
 import {alpha, palette} from '../../../shared/config/palette';
 
@@ -706,57 +706,110 @@ const LibraryView: React.FC<Props> = ({
         ) : null}
         <View style={styles.filterRow}>
           <View style={styles.chipsRow}>
-            <RailButton
-              iconOnly
-              compact={!Platform.isTV}
-              letter="X"
-              label={t('LibraryFilterXcloud')}
-              active={filterXcloud}
-              accent={palette.accent}
-              fill
-              onPress={() => setFilterXcloud(v => !v)}
-            />
-            <RailButton
-              iconOnly
-              compact={!Platform.isTV}
-              letter="N"
-              label={t('LibraryFilterGfn')}
-              active={filterGfn}
-              accent={palette.accent}
-              fill
-              onPress={() => setFilterGfn(v => !v)}
-            />
-            <RailButton
-              iconOnly
-              compact={!Platform.isTV}
-              letter="PS"
-              label={t('LibraryFilterPsPlus')}
-              active={filterPsPlus}
-              accent={palette.accent}
-              fill
-              onPress={() => setFilterPsPlus(v => !v)}
-            />
-            <RailButton
-              iconOnly
-              compact={!Platform.isTV}
-              icon="heart-outline"
-              label={t('LibraryFilterFavorite')}
-              active={filterFavorite}
-              accent={palette.accent}
-              fill
-              onPress={() => setFilterFavorite(v => !v)}
-            />
-            <RailButton
-              iconOnly
-              compact={!Platform.isTV}
-              icon={filterWishlist ? 'bookmark' : 'bookmark-outline'}
-              label={t('LibraryFilterWishlist')}
-              active={filterWishlist}
-              accent={palette.accent}
-              badge={wishlistSaleCount}
-              fill
-              onPress={toggleFilterWishlist}
-            />
+            {Platform.isTV ? (
+              <>
+                <RailButton
+                  iconOnly
+                  compact={!Platform.isTV}
+                  letter="X"
+                  label={t('LibraryFilterXcloud')}
+                  active={filterXcloud}
+                  accent={palette.accent}
+                  fill
+                  onPress={() => setFilterXcloud(v => !v)}
+                />
+                <RailButton
+                  iconOnly
+                  compact={!Platform.isTV}
+                  letter="N"
+                  label={t('LibraryFilterGfn')}
+                  active={filterGfn}
+                  accent={palette.accent}
+                  fill
+                  onPress={() => setFilterGfn(v => !v)}
+                />
+                <RailButton
+                  iconOnly
+                  compact={!Platform.isTV}
+                  letter="PS"
+                  label={t('LibraryFilterPsPlus')}
+                  active={filterPsPlus}
+                  accent={palette.accent}
+                  fill
+                  onPress={() => setFilterPsPlus(v => !v)}
+                />
+                <RailButton
+                  iconOnly
+                  compact={!Platform.isTV}
+                  icon="heart-outline"
+                  label={t('LibraryFilterFavorite')}
+                  active={filterFavorite}
+                  accent={palette.accent}
+                  fill
+                  onPress={() => setFilterFavorite(v => !v)}
+                />
+                <RailButton
+                  iconOnly
+                  compact={!Platform.isTV}
+                  icon={filterWishlist ? 'bookmark' : 'bookmark-outline'}
+                  label={t('LibraryFilterWishlist')}
+                  active={filterWishlist}
+                  accent={palette.accent}
+                  badge={wishlistSaleCount}
+                  fill
+                  onPress={toggleFilterWishlist}
+                />
+              </>
+            ) : (
+              <>
+                <RailSegment
+                  accent={palette.accent}
+                  options={[
+                    {
+                      key: 'xcloud',
+                      letter: 'X',
+                      label: t('LibraryFilterXcloud'),
+                      active: filterXcloud,
+                      onPress: () => setFilterXcloud(v => !v),
+                    },
+                    {
+                      key: 'gfn',
+                      letter: 'N',
+                      label: t('LibraryFilterGfn'),
+                      active: filterGfn,
+                      onPress: () => setFilterGfn(v => !v),
+                    },
+                    {
+                      key: 'psplus',
+                      letter: 'PS',
+                      label: t('LibraryFilterPsPlus'),
+                      active: filterPsPlus,
+                      onPress: () => setFilterPsPlus(v => !v),
+                    },
+                  ]}
+                />
+                <RailSegment
+                  accent={palette.accent}
+                  options={[
+                    {
+                      key: 'favorite',
+                      icon: filterFavorite ? 'heart' : 'heart-outline',
+                      label: t('LibraryFilterFavorite'),
+                      active: filterFavorite,
+                      onPress: () => setFilterFavorite(v => !v),
+                    },
+                    {
+                      key: 'wishlist',
+                      icon: filterWishlist ? 'bookmark' : 'bookmark-outline',
+                      label: t('LibraryFilterWishlist'),
+                      active: filterWishlist,
+                      badge: wishlistSaleCount,
+                      onPress: toggleFilterWishlist,
+                    },
+                  ]}
+                />
+              </>
+            )}
             <RailButton
               iconOnly
               compact={!Platform.isTV}
