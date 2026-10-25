@@ -316,8 +316,17 @@ export class GfnWebRtcClient {
   stopMic(): void {
     const stream = this.micStream;
     this.micStream = null;
-    this.micTransceiver?.sender?.replaceTrack(null).catch(() => {});
-    stream?.getTracks().forEach(t => t.stop());
+    // Detach from the sender first, then release the native capture track:
+    // track.stop() alone only disables it in JS and leaves the Android
+    // microphone open.
+    const detach =
+      this.micTransceiver?.sender?.replaceTrack(null) ?? Promise.resolve();
+    detach
+      .catch(() => {})
+      .then(() => {
+        stream?.getTracks().forEach(t => t.stop());
+        (stream as any)?.release?.();
+      });
   }
 
   // One-off check a few seconds after the mic starts: bytesSent on the audio
