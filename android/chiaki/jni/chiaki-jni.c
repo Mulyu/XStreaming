@@ -1582,6 +1582,21 @@ JNIEXPORT jbyteArray JNICALL JNI_FCN(cloudCatalogFetchUnified)(JNIEnv *env, jobj
 	return result;
 }
 
+// The PSN online ID for an npsso (blocking -- background thread). Online IDs are ASCII, so
+// NewStringUTF is safe. Returns NULL on failure.
+JNIEXPORT jstring JNICALL JNI_FCN(cloudCatalogFetchOnlineId)(JNIEnv *env, jobject obj, jstring npsso_str)
+{
+	const char *npsso = npsso_str ? E->GetStringUTFChars(env, npsso_str, NULL) : NULL;
+	if(!npsso)
+		return NULL;
+	char online_id[64];
+	ChiakiErrorCode err = chiaki_cloudcatalog_fetch_online_id(npsso, online_id, sizeof(online_id), &global_log);
+	E->ReleaseStringUTFChars(env, npsso_str, npsso);
+	if(err != CHIAKI_ERR_SUCCESS)
+		return NULL;
+	return E->NewStringUTF(env, online_id);
+}
+
 JNIEXPORT void JNICALL JNI_FCN(cloudCatalogInvalidateCache)(JNIEnv *env, jobject obj, jstring cache_dir_str)
 {
 	const char *cache_dir = cache_dir_str ? E->GetStringUTFChars(env, cache_dir_str, NULL) : NULL;

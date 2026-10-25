@@ -163,6 +163,13 @@ class PsPlusChiakiClient {
     return PsPlusChiakiNative.fetchCatalog(npsso, locale, forceRefresh);
   }
 
+  // The PSN online ID behind an npsso, or null when it can't be read.
+  fetchOnlineId(npsso: string | undefined): Promise<string | null> {
+    return PsPlusChiakiNative?.fetchOnlineId
+      ? PsPlusChiakiNative.fetchOnlineId(npsso)
+      : Promise.resolve(null);
+  }
+
   invalidateCatalogCache(): void {
     PsPlusChiakiNative?.invalidateCatalogCache?.();
   }

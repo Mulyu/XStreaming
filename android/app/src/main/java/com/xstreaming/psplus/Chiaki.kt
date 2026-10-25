@@ -192,6 +192,7 @@ private class ChiakiNative
 		// errorOut[0] receives the lib's failure detail when the result is null.
 		@JvmStatic external fun cloudCatalogFetchUnified(npsso: String?, locale: String?, cacheDir: String, forceRefresh: Boolean, errorOut: Array<String?>): ByteArray?
 		@JvmStatic external fun cloudCatalogInvalidateCache(cacheDir: String)
+		@JvmStatic external fun cloudCatalogFetchOnlineId(npsso: String?): String?
 		@JvmStatic external fun cloudGaikaiLanguage(locale: String?): String
 		@JvmStatic external fun cloudSupportedLanguages(): Array<String>
 
@@ -391,6 +392,9 @@ fun cloudCatalogFetchUnified(npsso: String?, locale: String?, cacheDir: String, 
 	val bytes = ChiakiNative.cloudCatalogFetchUnified(npsso, locale, cacheDir, forceRefresh, errorOut)
 	return CloudCatalogFetch(bytes?.let { String(it, Charsets.UTF_8) }, errorOut[0])
 }
+
+/** The PSN online ID behind [npsso], or null when it can't be read. Blocking -- background thread. */
+fun cloudCatalogFetchOnlineId(npsso: String?): String? = ChiakiNative.cloudCatalogFetchOnlineId(npsso)
 
 /** Delete every lib-owned cache file under [cacheDir] (e.g. on locale change). */
 fun cloudCatalogInvalidateCache(cacheDir: String) = ChiakiNative.cloudCatalogInvalidateCache(cacheDir)

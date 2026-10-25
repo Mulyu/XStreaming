@@ -190,6 +190,18 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 		}
 	}
 
+	/** Resolves the PSN online ID for [npsso], or null when it can't be read. */
+	@ReactMethod
+	fun fetchOnlineId(npsso: String?, promise: Promise) {
+		thread(name = "PsPlusOnlineId") {
+			try {
+				promise.resolve(cloudCatalogFetchOnlineId(npsso))
+			} catch (e: Exception) {
+				promise.resolve(null)
+			}
+		}
+	}
+
 	@ReactMethod
 	fun invalidateCatalogCache() {
 		val cacheDir = File(reactApplicationContext.cacheDir, "psplus-catalog")
