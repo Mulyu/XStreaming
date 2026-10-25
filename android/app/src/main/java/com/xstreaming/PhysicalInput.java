@@ -51,6 +51,9 @@ final class PhysicalInput {
     private static View captureView;
 
     private static boolean enabled = false;
+    // Key-capture mode (see setKeyCapture): independent of `enabled` and of
+    // which screen is current.
+    private static volatile boolean keyCapture = false;
     // Ctrl+Alt+Shift+Z toggles this: the player gets the OS cursor back
     // (e.g. to click the control rail) until it is toggled again.
     private static boolean userReleased = false;
@@ -91,6 +94,15 @@ final class PhysicalInput {
             }
             update();
         });
+    }
+
+    /**
+     * While on, physical keyboard presses are emitted as onPhysicalKey and
+     * swallowed on any screen, so the input-mapping editor can learn which
+     * key the user pressed. Called from the JS module, any thread.
+     */
+    static void setKeyCapture(boolean value) {
+        keyCapture = value;
     }
 
     /** Called when the current screen changes (stream <-> not), any thread. */
@@ -252,6 +264,13 @@ final class PhysicalInput {
 
     /** MainActivity.dispatchKeyEvent. Returns true if the event was consumed. */
     static boolean handleKeyEvent(KeyEvent event) {
+        if (keyCapture && isPhysicalKeyboard(event) && !event.isSystem()) {
+            int captureAction = event.getAction();
+            if (captureAction == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                emitKey(event.getKeyCode(), event.getScanCode(), true, event.getMetaState());
+            }
+            return true;
+        }
         // Keys keep flowing through a brief flag flip so a key released
         // during it isn't left stuck down.
         if (!isLive()) {

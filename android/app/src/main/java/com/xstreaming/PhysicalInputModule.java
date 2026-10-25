@@ -21,6 +21,14 @@ public class PhysicalInputModule extends ReactContextBaseJavaModule {
         PhysicalInput.setEnabled(enabled);
     }
 
+    // While on, physical keyboard key presses are reported to JS and swallowed
+    // on any screen (the input-mapping editor uses it to learn which key the
+    // user pressed).
+    @ReactMethod
+    public void setKeyCapture(boolean enabled) {
+        PhysicalInput.setKeyCapture(enabled);
+    }
+
     // Required by NativeEventEmitter-style listeners; the events themselves
     // go out through DeviceEventManagerModule.
     @ReactMethod

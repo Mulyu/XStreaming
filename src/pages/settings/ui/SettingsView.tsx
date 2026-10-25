@@ -94,14 +94,13 @@ const SettingsView: React.FC<Props> = ({
   onPreferredLanguageChange,
   onLowLatencyDecoderChange,
   onSignalingCloudChange,
-  onItemPress,
   onGfnAccountPress,
   onCopyGfnDebugInfo,
   onCopyPsPlusDebugInfo,
   onCopyAppDebugInfo,
   onPsPlusAccountPress,
   onXcloudAccountPress,
-  onNavigateVirtualGamepadSettings,
+  onNavigateInputMapping,
   onNavigateHistory,
   onNavigateDs5Left,
   onNavigateDs5Right,
@@ -188,9 +187,9 @@ const SettingsView: React.FC<Props> = ({
 
           <SectionLabel title={t('GamepadSettings')} />
           <SettingItem
-            title={t('Key mapping')}
-            description={t('Mapping key of gamepad')}
-            onPress={() => onItemPress('maping')}
+            title={t('InputMapping')}
+            description={t('InputMappingDesc')}
+            onPress={onNavigateInputMapping}
           />
           <DropdownRow
             title={M('polling_rate').title}
@@ -208,13 +207,6 @@ const SettingsView: React.FC<Props> = ({
             value={settings.dead_zone}
             onChange={v => updateSetting('dead_zone', v)}
             formatValue={v => v.toFixed(2)}
-          />
-
-          <SectionLabel title={t('vGamepadSettings')} />
-          <SettingItem
-            title={t('Customize virtual buttons')}
-            description={t('CustomizeButtonsWithMacroHint')}
-            onPress={onNavigateVirtualGamepadSettings}
           />
 
           <SectionLabel title={t('Others')} />

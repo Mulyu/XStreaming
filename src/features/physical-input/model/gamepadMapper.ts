@@ -4,82 +4,16 @@
 // through the exact same path (turbo, hold-toggle, swipe-aim gating) as the
 // on-screen gamepad.
 
-// Android KeyEvent.KEYCODE_* values.
-const KEY = {
-  A: 29,
-  C: 31,
-  D: 32,
-  E: 33,
-  G: 35,
-  Q: 45,
-  R: 46,
-  S: 47,
-  V: 50,
-  W: 51,
-  Tab: 61,
-  Space: 62,
-  Enter: 66,
-  Escape: 111,
-  ShiftLeft: 59,
-  ShiftRight: 60,
-  CtrlLeft: 113,
-  CtrlRight: 114,
-  ArrowUp: 19,
-  ArrowDown: 20,
-  ArrowLeft: 21,
-  ArrowRight: 22,
-  F1: 131,
-} as const;
+import {
+  BindingTarget,
+  DEFAULT_BINDINGS,
+  GamepadButtonName,
+  InputBindings,
+  StickDirection,
+  isStickDirection,
+} from './bindings';
 
-export type GamepadButtonName =
-  | 'A'
-  | 'B'
-  | 'X'
-  | 'Y'
-  | 'LeftShoulder'
-  | 'RightShoulder'
-  | 'LeftTrigger'
-  | 'RightTrigger'
-  | 'LeftThumb'
-  | 'RightThumb'
-  | 'View'
-  | 'Menu'
-  | 'Nexus'
-  | 'DPadUp'
-  | 'DPadDown'
-  | 'DPadLeft'
-  | 'DPadRight';
-
-// Standard FPS-style layout. WASD is the left stick (handled separately).
-const KEY_BUTTONS: Record<number, GamepadButtonName> = {
-  [KEY.Space]: 'A',
-  [KEY.C]: 'B',
-  [KEY.CtrlLeft]: 'B',
-  [KEY.E]: 'X',
-  [KEY.R]: 'X',
-  [KEY.Q]: 'Y',
-  [KEY.ShiftLeft]: 'LeftThumb',
-  [KEY.ShiftRight]: 'LeftThumb',
-  [KEY.V]: 'RightThumb',
-  [KEY.G]: 'LeftShoulder',
-  [KEY.Tab]: 'View',
-  [KEY.Escape]: 'Menu',
-  [KEY.Enter]: 'Menu',
-  [KEY.F1]: 'Nexus',
-  [KEY.ArrowUp]: 'DPadUp',
-  [KEY.ArrowDown]: 'DPadDown',
-  [KEY.ArrowLeft]: 'DPadLeft',
-  [KEY.ArrowRight]: 'DPadRight',
-};
-
-// DOM button numbering (see PhysicalMouseButton).
-const MOUSE_BUTTONS: Record<number, GamepadButtonName> = {
-  0: 'RightTrigger',
-  1: 'RightThumb',
-  2: 'LeftTrigger',
-  3: 'LeftShoulder',
-  4: 'RightShoulder',
-};
+export type {GamepadButtonName} from './bindings';
 
 // Wheel notches fire a short tap on a shoulder button (weapon switch).
 const WHEEL_TAP_MS = 60;
@@ -98,13 +32,17 @@ export type GamepadMapper = {
   releaseAll: () => void;
 };
 
-export const createGamepadMapper = (sink: GamepadMapperSink): GamepadMapper => {
+export const createGamepadMapper = (
+  sink: GamepadMapperSink,
+  bindings: InputBindings = DEFAULT_BINDINGS,
+): GamepadMapper => {
   // Count per button so two inputs mapped to one button (e.g. C and Ctrl ->
   // B) don't release it while the other is still held.
   const held = new Map<GamepadButtonName, number>();
   const keyHeld = new Map<number, GamepadButtonName>();
   const mouseHeld = new Map<number, GamepadButtonName>();
-  const moveKeys = new Set<number>();
+  // Held keys bound to a stick direction, by key code.
+  const stickKeys = new Map<number, StickDirection>();
   const wheelTimers = new Set<ReturnType<typeof setTimeout>>();
 
   const acquire = (name: GamepadButtonName) => {
@@ -129,21 +67,22 @@ export const createGamepadMapper = (sink: GamepadMapperSink): GamepadMapper => {
   let stickX = 0;
   let stickY = 0;
   const updateStick = () => {
+    const dirs = new Set(stickKeys.values());
     let x = 0;
     let y = 0;
-    if (moveKeys.has(KEY.D)) {
+    if (dirs.has('StickRight')) {
       x += 1;
     }
-    if (moveKeys.has(KEY.A)) {
+    if (dirs.has('StickLeft')) {
       x -= 1;
     }
     // gpState's left stick Y is screen-down positive (what the on-screen
     // stick reports; xCloud/GFN negate it on the wire, PS Plus sends it as
     // is), so forward (W) is negative.
-    if (moveKeys.has(KEY.W)) {
+    if (dirs.has('StickUp')) {
       y -= 1;
     }
-    if (moveKeys.has(KEY.S)) {
+    if (dirs.has('StickDown')) {
       y += 1;
     }
     // Diagonals are normalized so they don't outrun straight movement.
@@ -158,27 +97,22 @@ export const createGamepadMapper = (sink: GamepadMapperSink): GamepadMapper => {
     }
   };
 
-  const isMoveKey = (keyCode: number) =>
-    keyCode === KEY.W ||
-    keyCode === KEY.A ||
-    keyCode === KEY.S ||
-    keyCode === KEY.D;
-
   return {
     key: (keyCode, down) => {
-      if (isMoveKey(keyCode)) {
+      const target: BindingTarget | undefined = bindings.keys[keyCode];
+      if (!target) {
+        return;
+      }
+      if (isStickDirection(target)) {
         if (down) {
-          moveKeys.add(keyCode);
+          stickKeys.set(keyCode, target);
         } else {
-          moveKeys.delete(keyCode);
+          stickKeys.delete(keyCode);
         }
         updateStick();
         return;
       }
-      const name = KEY_BUTTONS[keyCode];
-      if (!name) {
-        return;
-      }
+      const name = target;
       if (down) {
         if (!keyHeld.has(keyCode)) {
           keyHeld.set(keyCode, name);
@@ -190,7 +124,7 @@ export const createGamepadMapper = (sink: GamepadMapperSink): GamepadMapper => {
       }
     },
     mouseButton: (button, down) => {
-      const name = MOUSE_BUTTONS[button];
+      const name = bindings.mouse[button];
       if (!name) {
         return;
       }
@@ -224,7 +158,7 @@ export const createGamepadMapper = (sink: GamepadMapperSink): GamepadMapper => {
       wheelTimers.clear();
       keyHeld.clear();
       mouseHeld.clear();
-      moveKeys.clear();
+      stickKeys.clear();
       held.forEach((_count, name) => sink.release(name));
       held.clear();
       updateStick();

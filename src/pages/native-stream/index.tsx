@@ -64,6 +64,7 @@ import {
 } from '../../entities/gfn-input';
 import {
   createGamepadMapper,
+  getInputBindings,
   usePhysicalInput,
 } from '../../features/physical-input';
 import type {PhysicalKeyEvent} from '../../features/physical-input';
@@ -3431,11 +3432,14 @@ export function NativeStreamScreenBase({
   };
   const gamepadMapper = React.useMemo(
     () =>
-      createGamepadMapper({
-        press: name => gamepadSinkRef.current.press(name),
-        release: name => gamepadSinkRef.current.release(name),
-        moveLeftStick: (x, y) => gamepadSinkRef.current.stick('left', {x, y}),
-      }),
+      createGamepadMapper(
+        {
+          press: name => gamepadSinkRef.current.press(name),
+          release: name => gamepadSinkRef.current.release(name),
+          moveLeftStick: (x, y) => gamepadSinkRef.current.stick('left', {x, y}),
+        },
+        getInputBindings(),
+      ),
     [],
   );
   const handleMouseAimMove = (dx: number, dy: number) => {
