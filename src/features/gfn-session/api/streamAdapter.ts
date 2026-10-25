@@ -466,12 +466,22 @@ export class GfnStreamAdapter {
       };
     }
     if (name === 'chat') {
-      // GFN mic is not wired up; report "not paused" so the mic toggle takes
-      // the stop path (no "failed to open microphone" alert).
+      // The mic rides the peer connection (see GfnWebRtcClient.startMic).
+      // `isPaused` stays true until the mic is actually sending so the toggle
+      // takes the start path; without a mic line it reports failure.
+      let sending = false;
       return {
-        isPaused: false,
-        startMic: () => Promise.resolve(false),
-        stopMic: () => {},
+        get isPaused() {
+          return !sending;
+        },
+        startMic: async () => {
+          sending = (await this.gfnClient?.startMic()) ?? false;
+          return sending;
+        },
+        stopMic: () => {
+          sending = false;
+          this.gfnClient?.stopMic();
+        },
         send: () => {},
       };
     }
@@ -481,6 +491,12 @@ export class GfnStreamAdapter {
       flushGamepadInput: () => {},
       send: () => {},
     };
+  }
+
+  // True once the server's offer carried a microphone line (the in-game menu
+  // shows the mic button only then).
+  get micAvailable(): boolean {
+    return this.gfnClient?.micAvailable ?? false;
   }
 
   // ---- handler setters NativeStream calls ----

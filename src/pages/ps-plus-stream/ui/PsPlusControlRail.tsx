@@ -12,9 +12,9 @@ import {alpha, palette} from '../../../shared/config/palette';
 // scoped to only what actually applies to a PS5 cloud session: no input-
 // mode switch (PS Plus is gamepad-only -- no mouse/touch modes exist
 // server-side), no mouse sensitivity/keyboard (mouse-mode-only on GFN), no
-// microphone (no 2-way voice chat channel here), no FSR (a WebRTC-renderer-
-// only upscaling pipeline, unrelated to this decoder), no Press Nexus (no
-// PS5-equivalent chord button to synthesize).
+// FSR (a WebRTC-renderer-only upscaling pipeline, unrelated to this
+// decoder), no Press Nexus (no PS5-equivalent chord button to synthesize).
+// The microphone is sent natively (AudioRecord -> Opus -> takion).
 type Props = Pick<
   PsPlusStreamViewModel,
   | 't'
@@ -30,6 +30,8 @@ type Props = Pick<
   | 'videoFormat'
   | 'onCycleVideoFormat'
   | 'audioGain'
+  | 'micOpen'
+  | 'onToggleMic'
   | 'onAudioGainChange'
   | 'onEditGamepadLayout'
   | 'showVirtualGamepad'
@@ -63,6 +65,8 @@ const PsPlusControlRail: React.FC<Props> = ({
   videoFormat,
   onCycleVideoFormat,
   audioGain,
+  micOpen,
+  onToggleMic,
   onAudioGainChange,
   onEditGamepadLayout,
   showVirtualGamepad,
@@ -164,6 +168,13 @@ const PsPlusControlRail: React.FC<Props> = ({
 
       <View style={styles.group}>
         <Text style={styles.groupLabel}>{t('Audio')}</Text>
+        <RailButton
+          accent={palette.provider.ps}
+          icon={micOpen ? 'microphone' : 'microphone-off'}
+          label={t('Microphone')}
+          active={micOpen}
+          onPress={onToggleMic}
+        />
         <View style={styles.sliderRow}>
           <View style={styles.sliderHead}>
             <Text style={styles.sliderHeadLabel}>{t('Volume')}</Text>

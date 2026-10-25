@@ -388,6 +388,10 @@ export class PsPlusSession {
     psPlusChiaki.setAudioGain(gain);
   }
 
+  setMicEnabled(enabled: boolean): Promise<boolean> {
+    return psPlusChiaki.setMicEnabled(enabled);
+  }
+
   getMetrics() {
     return psPlusChiaki.getMetrics();
   }

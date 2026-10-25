@@ -779,6 +779,40 @@ export function usePsPlusStream(navigation: any, route: any) {
     audioGainRef.current = audioGain;
   }, [audioGain]);
 
+  // Microphone: off at every connect; the first unmute asks for the record
+  // permission. The native side stops capture with the session.
+  const [micOpen, setMicOpen] = React.useState(false);
+  const onToggleMic = React.useCallback(async () => {
+    const session = sessionRef.current;
+    if (!session) {
+      return;
+    }
+    if (micOpen) {
+      await session.setMicEnabled(false);
+      setMicOpen(false);
+      return;
+    }
+    let granted = true;
+    if (Platform.OS === 'android') {
+      try {
+        granted =
+          (await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          )) === PermissionsAndroid.RESULTS.GRANTED;
+      } catch {
+        granted = false;
+      }
+    }
+    const started = granted && (await session.setMicEnabled(true));
+    setMicOpen(Boolean(started));
+    if (!started) {
+      Alert.alert(
+        t('Warning'),
+        'Failed to open microphone. Please check microphone permission.',
+      );
+    }
+  }, [micOpen, t]);
+
   React.useEffect(() => {
     const npsso = getNpsso();
     if (!npsso) {
@@ -1619,6 +1653,8 @@ export function usePsPlusStream(navigation: any, route: any) {
     onCycleVideoFormat,
     audioGain,
     onAudioGainChange,
+    micOpen,
+    onToggleMic,
     onEditGamepadLayout,
     showGamepadEditor,
     editorProfile,

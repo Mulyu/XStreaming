@@ -15,6 +15,7 @@
 #include <chiaki/cloudcatalog.h>
 #include <chiaki/cloudsession.h>
 #include <chiaki/orientation.h>
+#include <chiaki/opusencoder.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -288,6 +289,9 @@ typedef struct android_chiaki_session_t
 	AndroidChiakiAudioDecoder audio_decoder;
 	AndroidChiakiOpusDecoder opus_decoder;
 	bool use_opus_decoder; // true for PSCloud, false for PSNow/Remote Play
+	ChiakiOpusEncoder mic_encoder; // microphone -> Opus -> takion (PSCloud only)
+	bool mic_encoder_inited;
+	bool mic_ready; // mic_encoder has an opus encoder and an audio sender
 	void *audio_output;
 	uint8_t last_haptic_amp; // last haptic-audio-derived rumble amplitude emitted (throttle)
 	uint16_t haptic_same_amp_frames; // consecutive frames suppressed by the throttle
@@ -691,6 +695,9 @@ JNIEXPORT void JNICALL JNI_FCN(sessionCreate)(JNIEnv *env, jobject obj, jobject 
 		android_chiaki_audio_decoder_set_cb(&session->audio_decoder, android_chiaki_audio_output_settings, android_chiaki_audio_output_frame, session->audio_output);
 	}
 
+	session->mic_encoder_inited = false;
+	session->mic_ready = false;
+
 	err = chiaki_session_init(&session->session, &connect_info, log);
 	if(err != CHIAKI_ERR_SUCCESS)
 	{
@@ -704,6 +711,22 @@ JNIEXPORT void JNICALL JNI_FCN(sessionCreate)(JNIEnv *env, jobject obj, jobject 
 		free(session);
 		session = NULL;
 		goto beach;
+	}
+
+	// Microphone encoder: 48 kHz stereo, 480-sample (10 ms) frames, the same
+	// parameters stream_connection_enable_microphone advertises to the console.
+	// The audio sender keeps a pointer to the session's takion, so it can be
+	// created before the connection exists. Frames are only sent once Kotlin
+	// starts capturing (after the stream is connected).
+	if(session->use_opus_decoder)
+	{
+		chiaki_opus_encoder_init(&session->mic_encoder, log);
+		session->mic_encoder_inited = true;
+		ChiakiAudioHeader mic_header;
+		chiaki_audio_header_set(&mic_header, 2, 16, 48000, 480);
+		chiaki_opus_encoder_header(&mic_header, &session->mic_encoder, &session->session);
+		session->mic_ready = session->mic_encoder.opus_encoder && session->mic_encoder.audio_sender;
+		CHIAKI_LOGI(log, "JNI microphone encoder %s", session->mic_ready ? "ready" : "unavailable");
 	}
 
 	session->java_session = E->NewGlobalRef(env, java_session);
@@ -796,7 +819,10 @@ JNIEXPORT void JNICALL JNI_FCN(sessionFree)(JNIEnv *env, jobject obj, jlong ptr)
 	if(!session)
 		return;
 	CHIAKI_LOGI(session->log, "Shutting down JNI Session");
+	session->mic_ready = false;
 	chiaki_session_fini(&session->session);
+	if(session->mic_encoder_inited)
+		chiaki_opus_encoder_fini(&session->mic_encoder);
 	android_chiaki_video_decoder_fini(&session->video_decoder);
 	if(session->use_opus_decoder)
 		android_chiaki_opus_decoder_fini(&session->opus_decoder);
@@ -860,6 +886,29 @@ JNIEXPORT void JNICALL JNI_FCN(sessionSetAudioGain)(JNIEnv *env, jobject obj, jl
 	if(!session)
 		return;
 	android_chiaki_audio_output_set_gain(gain, session->audio_output);
+}
+
+// One 10 ms microphone frame: 960 shorts = 480 stereo sample pairs at 48 kHz.
+// Called from the Kotlin capture thread; Kotlin joins that thread before
+// sessionFree. Returns false when the frame was not encoded (no mic encoder,
+// or a wrong-sized buffer).
+JNIEXPORT jboolean JNICALL JNI_FCN(sessionSendMicFrame)(JNIEnv *env, jobject obj, jlong ptr, jshortArray pcm)
+{
+	AndroidChiakiSession *session = (AndroidChiakiSession *)ptr;
+	if(!session || !session->mic_ready || !pcm)
+		return JNI_FALSE;
+	if(E->GetArrayLength(env, pcm) != 960)
+		return JNI_FALSE;
+	int16_t buf[960];
+	E->GetShortArrayRegion(env, pcm, 0, 960, buf);
+	chiaki_opus_encoder_frame(buf, &session->mic_encoder);
+	return JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL JNI_FCN(sessionMicReady)(JNIEnv *env, jobject obj, jlong ptr)
+{
+	AndroidChiakiSession *session = (AndroidChiakiSession *)ptr;
+	return (session && session->mic_ready) ? JNI_TRUE : JNI_FALSE;
 }
 
 // Live stream metrics for the optional on-screen stats overlay. All values are
