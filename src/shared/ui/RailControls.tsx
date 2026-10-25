@@ -127,6 +127,70 @@ export const RailButton: React.FC<{
   );
 };
 
+export type RailSegmentOption = {
+  key: string;
+  // Exactly one of letter/icon.
+  letter?: string;
+  icon?: string;
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  // Count balloon on the option's corner (hidden at 0 or unset).
+  badge?: number;
+};
+
+// A phone-toolbar group of related toggles drawn as one rounded pill (the
+// provider letters, the favorite/wishlist pair) instead of one chip each, so
+// the whole filter row fits on one line. Each option is still its own
+// button: it toggles on and off independently, same as the chips it replaces.
+export const RailSegment: React.FC<{
+  options: RailSegmentOption[];
+  accent: string;
+}> = ({options, accent}) => (
+  <View style={styles.segment}>
+    {options.map(option => (
+      <RailSegmentItem key={option.key} option={option} accent={accent} />
+    ))}
+  </View>
+);
+
+const RailSegmentItem: React.FC<{
+  option: RailSegmentOption;
+  accent: string;
+}> = ({option, accent}) => {
+  const [focused, setFocused] = React.useState(false);
+  const color = option.active ? palette.onAccent : palette.textSoft;
+  return (
+    <Pressable
+      style={[
+        styles.segmentItem,
+        option.active && {backgroundColor: accent},
+        focused && styles.segmentItemFocused,
+      ]}
+      accessibilityLabel={option.label}
+      accessibilityState={{selected: option.active}}
+      onPress={option.onPress}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      android_ripple={{color: alpha(palette.white, 0.15)}}>
+      {option.letter ? (
+        <Text style={[styles.railBtnLetterCompact, {color}]}>
+          {option.letter}
+        </Text>
+      ) : option.icon ? (
+        <Icon source={option.icon} size={20} color={color} />
+      ) : null}
+      {!!option.badge && option.badge > 0 && (
+        <View style={styles.railBadge} pointerEvents="none">
+          <Text style={styles.railBadgeText}>
+            {option.badge > 99 ? '99+' : option.badge}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+};
+
 export const SegOption: React.FC<{
   icon: string;
   label: string;
@@ -195,6 +259,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: alpha(palette.text, 0.24),
     backgroundColor: alpha(palette.text, 0.14),
+  },
+  segment: {
+    flexDirection: 'row',
+    height: 34,
+    padding: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: alpha(palette.text, 0.24),
+    backgroundColor: alpha(palette.text, 0.14),
+  },
+  segmentItem: {
+    minWidth: 27,
+    paddingHorizontal: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  segmentItemFocused: {
+    borderColor: TV_FOCUS_COLOR,
   },
   railBadge: {
     position: 'absolute',
