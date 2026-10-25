@@ -32,13 +32,22 @@ export default class ChatChannel extends BaseChannel {
     return senders.find(sender => sender?.track?.kind === 'audio') || null;
   }
 
-  private stopLocalMicStream() {
-    if (!this.micStream) {
+  // Takes the current mic stream; a restart can create a new one while a
+  // stop is still detaching the old one.
+  private takeMicStream() {
+    const stream = this.micStream;
+    this.micStream = null;
+    return stream;
+  }
+
+  private static releaseStream(stream: any) {
+    if (!stream) {
       return;
     }
-
-    this.micStream.getTracks().forEach(track => track.stop?.());
-    this.micStream = null;
+    // track.stop() only disables the track in JS; release() frees the native
+    // capture so Android's microphone indicator goes off.
+    stream.getTracks().forEach(track => track.stop?.());
+    stream.release?.();
   }
 
   onOpen(event: any) {
@@ -76,14 +85,15 @@ export default class ChatChannel extends BaseChannel {
       return true;
     }
 
+    let stream: any = null;
     try {
       console.log('Start chat...');
-      const stream = await this.getMicStream();
+      stream = await this.getMicStream();
       const audioTracks = stream.getAudioTracks();
 
       if (audioTracks.length === 0) {
         console.log('Channel/Chat.ts - No Audio device:', audioTracks);
-        stream.getTracks().forEach(track => track.stop?.());
+        ChatChannel.releaseStream(stream);
         this.micStream = null;
         this.isCapturing = false;
         this.isPaused = true;
@@ -113,7 +123,7 @@ export default class ChatChannel extends BaseChannel {
     } catch (err) {
       console.log(err);
       console.log('Channel/Chat.ts - getUserMedia error:' + err);
-      this.stopLocalMicStream();
+      ChatChannel.releaseStream(stream);
       this.isCapturing = false;
       this.isPaused = true;
       return false;
@@ -123,14 +133,19 @@ export default class ChatChannel extends BaseChannel {
   stopMic() {
     console.log('Channel/Chat.ts - Disabling Microphone');
 
+    const stream = this.takeMicStream();
     const sender = this.getAudioSender();
     if (sender) {
-      sender.replaceTrack(null).catch(error => {
-        console.log('Channel/Chat.ts - replaceTrack(null) error:', error);
-      });
+      // Detach before releasing the native track.
+      sender
+        .replaceTrack(null)
+        .catch(error => {
+          console.log('Channel/Chat.ts - replaceTrack(null) error:', error);
+        })
+        .then(() => ChatChannel.releaseStream(stream));
+    } else {
+      ChatChannel.releaseStream(stream);
     }
-
-    this.stopLocalMicStream();
 
     this.isCapturing = false;
     this.isPaused = true;
