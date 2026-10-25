@@ -4,6 +4,7 @@
 // input into it, and tearing it down). Consumers import from here, not from
 // api/ directly.
 export {getNpsso, setNpsso, clearNpsso, isPsPlusSignedIn} from './api/auth';
+export {loadPsPlusOnlineId} from './api/onlineId';
 export {fetchUnifiedCatalog, CloudCategory} from './api/catalog';
 export type {CloudGame, UnifiedCatalogResult} from './api/catalog';
 export {

@@ -175,7 +175,8 @@ static CCNativeResult psnow_oauth(ChiakiLog *log, const char *npsso, const char 
 static CCNativeResult psnow_session(ChiakiLog *log, const char *code, const char *duid,
                                     char *out_jsession, size_t js_sz,
                                     char *out_country, size_t cc_sz,
-                                    char *out_language, size_t lang_sz)
+                                    char *out_language, size_t lang_sz,
+                                    char *out_online_id, size_t oid_sz)
 {
 	char body[1024];
 	snprintf(body, sizeof(body), "code=%s&client_id=" PSNOW_CLIENT_ID "&duid=%s", code, duid);
@@ -216,6 +217,9 @@ static CCNativeResult psnow_session(ChiakiLog *log, const char *code, const char
 					snprintf(out_country, cc_sz, "%s", cc_json_str(data, "country"));
 				if(out_language && lang_sz)
 					snprintf(out_language, lang_sz, "%s", cc_json_str(data, "language"));
+				// The account's PSN online ID (shown in the app's account card).
+				if(out_online_id && oid_sz)
+					snprintf(out_online_id, oid_sz, "%s", cc_json_str(data, "onlineId"));
 			}
 			if(extract_jsessionid(resp.headers, out_jsession, js_sz))
 				result = CC_NATIVE_OK;
@@ -458,7 +462,7 @@ CCNativeResult cc_fetch_psnow_native(ChiakiLog *log, const char *npsso, struct j
 	CHIAKI_LOGI(log, "[PSNOW] OAuth code obtained, creating session");
 
 	char jsession[512];
-	r = psnow_session(log, code, duid, jsession, sizeof(jsession), out_country, cc_sz, out_language, lang_sz);
+	r = psnow_session(log, code, duid, jsession, sizeof(jsession), out_country, cc_sz, out_language, lang_sz, NULL, 0);
 	if(r != CC_NATIVE_OK)
 		return r;
 	CHIAKI_LOGI(log, "[PSNOW] Session created, fetching stores");
@@ -1041,4 +1045,31 @@ CCOwnedResult cc_fetch_owned(ChiakiLog *log, const char *npsso,
 	CHIAKI_LOGI(log, "[OWNED] %d entitlements -> %d games",
 		(int)an, (int)json_object_array_length(*out_games));
 	return CC_OWNED_OK;
+}
+
+// The PSN online ID of the account behind an npsso: the same OAuth + Kamaji
+// session exchange the catalog fetch starts with, keeping only data.onlineId.
+CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_online_id(
+	const char *npsso, char *out, size_t out_size, ChiakiLog *log)
+{
+	if(!out || out_size == 0)
+		return CHIAKI_ERR_INVALID_DATA;
+	out[0] = 0;
+	if(!npsso || !*npsso)
+		return CHIAKI_ERR_INVALID_DATA;
+
+	size_t duid_size = CHIAKI_DUID_STR_SIZE;
+	char duid[CHIAKI_DUID_STR_SIZE];
+	if(chiaki_holepunch_generate_client_device_uid(duid, &duid_size) != CHIAKI_ERR_SUCCESS)
+		return CHIAKI_ERR_UNKNOWN;
+
+	char code[1024];
+	if(psnow_oauth(log, npsso, duid, code, sizeof(code)) != CC_NATIVE_OK)
+		return CHIAKI_ERR_UNKNOWN;
+
+	char jsession[512];
+	// The session itself may still be refused (region), but the response body
+	// carries the online ID either way, so only an empty ID counts as failure.
+	psnow_session(log, code, duid, jsession, sizeof(jsession), NULL, 0, NULL, 0, out, out_size);
+	return out[0] ? CHIAKI_ERR_SUCCESS : CHIAKI_ERR_UNKNOWN;
 }

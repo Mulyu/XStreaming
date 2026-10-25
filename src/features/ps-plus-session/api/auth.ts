@@ -18,6 +18,29 @@ export const setNpsso = (npsso: string): void => {
 
 export const clearNpsso = (): void => {
   storage.delete(NPSSO_KEY);
+  storage.delete(ONLINE_ID_KEY);
+};
+
+// The account's PSN online ID, remembered with the npsso it was read for so a
+// different account's name is never shown after a re-sign-in.
+const ONLINE_ID_KEY = 'psplus.onlineId';
+
+export const getCachedOnlineId = (npsso: string | undefined): string | null => {
+  if (!npsso) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(storage.getString(ONLINE_ID_KEY) || 'null');
+    return parsed && parsed.npsso === npsso && parsed.onlineId
+      ? parsed.onlineId
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setCachedOnlineId = (npsso: string, onlineId: string): void => {
+  storage.set(ONLINE_ID_KEY, JSON.stringify({npsso, onlineId}));
 };
 
 export const isPsPlusSignedIn = (): boolean => !!getNpsso();

@@ -22,6 +22,7 @@ import {
   clearNpsso,
   clearCatalogGames,
   psPlusChiaki,
+  loadPsPlusOnlineId,
 } from '../../../features/ps-plus-session';
 import {
   getGfnDisplayName,
@@ -92,6 +93,23 @@ export function useSettingsScreen(navigation: any, route: any) {
     });
     return unsubscribe;
   }, [navigation]);
+  // The PSN online ID for the account card; read once per sign-in.
+  const [psOnlineId, setPsOnlineId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!psPlusSignedIn) {
+      setPsOnlineId(null);
+      return undefined;
+    }
+    let cancelled = false;
+    loadPsPlusOnlineId().then(id => {
+      if (!cancelled) {
+        setPsOnlineId(id);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [psPlusSignedIn]);
   const [settings, setSettings] = React.useState(() => getSettings());
 
   const {
@@ -506,7 +524,7 @@ export function useSettingsScreen(navigation: any, route: any) {
   };
 
   const psAccount = {
-    userName: undefined as string | undefined,
+    userName: psOnlineId ?? undefined,
     planTitle: undefined as string | undefined,
     planLines: psPlusSignedIn ? [t('PsPlanUnknownDesc')] : [],
   };

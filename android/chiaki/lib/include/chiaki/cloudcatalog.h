@@ -113,6 +113,14 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_unified(
 /** Release a result populated by chiaki_cloudcatalog_fetch_unified(). */
 CHIAKI_EXPORT void chiaki_cloudcatalog_result_fini(ChiakiCloudCatalogResult *out);
 
+/**
+ * The PSN online ID of the account behind @p npsso, written NUL-terminated to
+ * @p out. Blocking (two HTTPS requests). Returns CHIAKI_ERR_SUCCESS only when a
+ * non-empty ID was read.
+ */
+CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_online_id(
+	const char *npsso, char *out, size_t out_size, ChiakiLog *log);
+
 /** Delete all lib-owned cache files under @p cache_dir (e.g. on locale change). */
 CHIAKI_EXPORT void chiaki_cloudcatalog_invalidate_cache(const char *cache_dir);
 
