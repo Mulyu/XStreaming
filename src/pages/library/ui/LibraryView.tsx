@@ -496,6 +496,12 @@ const LibraryView: React.FC<Props> = ({
     [],
   );
 
+  // Next order after the current one, wrapping around (TV sort button).
+  const cycleSort = React.useCallback(() => {
+    const at = sortOptions.findIndex(o => o.value === sortMode);
+    setSortMode(sortOptions[(at + 1) % sortOptions.length].value);
+  }, [sortOptions, sortMode, setSortMode]);
+
   const toggleFavoriteRef = React.useRef(toggleFavorite);
   toggleFavoriteRef.current = toggleFavorite;
   const toggleWishlistRef = React.useRef(toggleWishlist);
@@ -877,21 +883,34 @@ const LibraryView: React.FC<Props> = ({
               </>
             )}
             <View style={styles.sortChipTv}>
-              <RailButton
-                iconOnly
-                compact={!Platform.isTV}
-                icon="sort"
-                trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
-                label={`${t('Sort')}: ${activeSortLabel}`}
-                active={sortMode !== 'recent'}
-                accent={palette.accent}
-                fill
-                onPress={() => setSortMenuOpen(v => !v)}
-              />
+              {Platform.isTV ? (
+                // TV: the current order is written out, and each press moves
+                // to the next one (no dropdown to pick from with a remote).
+                <RailButton
+                  icon="sort"
+                  label={activeSortLabel}
+                  active={sortMode !== 'recent'}
+                  accent={palette.accent}
+                  fill
+                  onPress={cycleSort}
+                />
+              ) : (
+                <RailButton
+                  iconOnly
+                  compact
+                  icon="sort"
+                  trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
+                  label={`${t('Sort')}: ${activeSortLabel}`}
+                  active={sortMode !== 'recent'}
+                  accent={palette.accent}
+                  fill
+                  onPress={() => setSortMenuOpen(v => !v)}
+                />
+              )}
             </View>
           </View>
 
-          {sortMenuOpen && (
+          {!Platform.isTV && sortMenuOpen && (
             <View style={styles.sortMenu}>
               {sortOptions.map(option => (
                 <Pressable
