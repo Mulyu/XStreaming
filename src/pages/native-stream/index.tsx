@@ -66,6 +66,7 @@ import {
   createGamepadMapper,
   getInputBindings,
   usePhysicalInput,
+  PhysicalInputDebug,
 } from '../../features/physical-input';
 import type {PhysicalKeyEvent} from '../../features/physical-input';
 import CustomKeyButtons from './ui/CustomKeyButtons';
@@ -3854,6 +3855,7 @@ export function NativeStreamScreenBase({
       />
 
       {renderControlRail()}
+      <PhysicalInputDebug />
     </View>
   );
 }
