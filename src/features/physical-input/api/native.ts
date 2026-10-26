@@ -15,3 +15,9 @@ export const setPhysicalInputEnabled = (enabled: boolean): void => {
 export const setKeyCaptureEnabled = (enabled: boolean): void => {
   PhysicalInputNative?.setKeyCapture?.(enabled);
 };
+
+// TV diagnostics: while on, the native side sends a text snapshot of the
+// capture state (onPhysicalDebug) every half second.
+export const setPhysicalDebugEnabled = (enabled: boolean): void => {
+  PhysicalInputNative?.setDebugOverlay?.(enabled);
+};

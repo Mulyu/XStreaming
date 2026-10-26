@@ -8,6 +8,7 @@ import {VirtualGamepadEditor} from '../../../widgets/virtual-gamepad-editor';
 import PsPlusControlRail from './PsPlusControlRail';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
 import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {PhysicalInputDebug} from '../../../features/physical-input';
 import StreamHandshakeOverlay from '../../../shared/ui/StreamHandshakeOverlay';
 import TouchpadZone from '../../../shared/ui/TouchpadZone';
 import {alpha, palette} from '../../../shared/config/palette';
@@ -262,6 +263,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
           </Button>
         </View>
       )}
+      <PhysicalInputDebug />
     </View>
   );
 };

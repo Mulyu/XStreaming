@@ -551,8 +551,18 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     // evaluates the deadzone.
   }
 
+  // Mouse clicks that are not captured arrive here as touches (hover and
+  // scroll come through onGenericMotionEvent below); counted for the TV
+  // diagnostics only.
+  @Override
+  public boolean dispatchTouchEvent(MotionEvent event) {
+    PhysicalInput.noteUncapturedMouse(event);
+    return super.dispatchTouchEvent(event);
+  }
+
   @Override
   public boolean onGenericMotionEvent(MotionEvent event) {
+    PhysicalInput.noteUncapturedMouse(event);
     InputDevice inputDevice = event.getDevice();
 
     String currentScreen = GamepadManager.getCurrentScreen();

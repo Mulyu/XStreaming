@@ -70,6 +70,30 @@ final class PhysicalInput {
     // diagnosing capture that drops.
     private static int deviceEvents = 0;
 
+    // On-screen diagnostics (TV): JS asks for them, and a text snapshot of the
+    // capture state goes out every DEBUG_INTERVAL_MS while on.
+    private static final long DEBUG_INTERVAL_MS = 500;
+    private static boolean debugOverlay = false;
+    private static int requestCount = 0;
+    private static int releaseCount = 0;
+    private static String lastRelease = "-";
+    private static int capturedEvents = 0;
+    private static int movesEmitted = 0;
+    private static int buttonsEmitted = 0;
+    private static int wheelsEmitted = 0;
+    // Mouse events that reached the activity while NOT captured (hover,
+    // clicks as touches): tells "mouse not detected" from "capture dropped".
+    private static int uncapturedMouseEvents = 0;
+    private static long lastCapturedAt = 0;
+    private static long lastUncapturedAt = 0;
+    private static final Runnable DEBUG_TICK = () -> {
+        if (!debugOverlay) {
+            return;
+        }
+        emitDebug();
+        mainHandler.postDelayed(PhysicalInput.DEBUG_TICK, DEBUG_INTERVAL_MS);
+    };
+
     private static final Runnable FLUSH = () -> {
         flushScheduled = false;
         flushMove();
@@ -103,6 +127,26 @@ final class PhysicalInput {
      */
     static void setKeyCapture(boolean value) {
         keyCapture = value;
+    }
+
+    /** Turns the on-screen diagnostics on or off. Called from the JS module, any thread. */
+    static void setDebugOverlay(boolean value) {
+        mainHandler.post(() -> {
+            mainHandler.removeCallbacks(DEBUG_TICK);
+            debugOverlay = value;
+            if (value) {
+                DEBUG_TICK.run();
+            }
+        });
+    }
+
+    /** MainActivity: a mouse event that reached the activity (not the capture view). */
+    static void noteUncapturedMouse(MotionEvent event) {
+        if (event.isFromSource(InputDevice.SOURCE_MOUSE)
+                && !event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)) {
+            uncapturedMouseEvents++;
+            lastUncapturedAt = SystemClock.uptimeMillis();
+        }
     }
 
     /** Called when the current screen changes (stream <-> not), any thread. */
@@ -172,19 +216,107 @@ final class PhysicalInput {
         return isActive() || inactiveSince != 0;
     }
 
+    /**
+     * A mouse (USB, Bluetooth, DeX), as opposed to a gamepad whose touchpad
+     * also advertises a mouse source. The source constants share class bits
+     * (SOURCE_KEYBOARD and SOURCE_DPAD carry SOURCE_CLASS_BUTTON, like
+     * SOURCE_GAMEPAD), so a plain "& mask != 0" would also throw out any mouse
+     * that doubles as a keyboard or D-pad (media keys, air-mouse remotes):
+     * each source has to match in full.
+     */
+    private static boolean isMouseDevice(InputDevice device) {
+        if (device == null || !device.supportsSource(InputDevice.SOURCE_MOUSE)) {
+            return false;
+        }
+        int sources = device.getSources();
+        boolean gamepadLike = (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+        return !gamepadLike;
+    }
+
     private static boolean hasMouse() {
         for (int id : InputDevice.getDeviceIds()) {
-            InputDevice device = InputDevice.getDevice(id);
-            if (device == null || !device.supportsSource(InputDevice.SOURCE_MOUSE)) {
-                continue;
-            }
-            // Gamepads with a touchpad also advertise a mouse source.
-            int sources = device.getSources();
-            if ((sources & (InputDevice.SOURCE_GAMEPAD | InputDevice.SOURCE_JOYSTICK)) == 0) {
+            if (isMouseDevice(InputDevice.getDevice(id))) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** Compact multi-line state for the TV overlay. */
+    private static String debugText() {
+        MainActivity activity = activity();
+        long now = SystemClock.uptimeMillis();
+        boolean captured = captureView != null && captureView.hasPointerCapture();
+        StringBuilder sb = new StringBuilder();
+        sb.append("PhysicalInput ").append(isActive() ? "ACTIVE" : "inactive")
+                .append(" enabled=").append(enabled)
+                .append(" screen=").append(GamepadManager.getCurrentScreen())
+                .append('\n');
+        sb.append("captured=").append(captured)
+                .append(" viewFocus=").append(captureView != null && captureView.isFocused())
+                .append(" winFocus=").append(activity != null && activity.hasWindowFocus())
+                .append(" released=").append(userReleased)
+                .append(" hasMouse=").append(hasMouse())
+                .append('\n');
+        sb.append("req=").append(requestCount)
+                .append(" rel=").append(releaseCount)
+                .append(" last=").append(lastRelease)
+                .append(" devEvents=").append(deviceEvents)
+                .append('\n');
+        sb.append("captured evts=").append(capturedEvents)
+                .append(" (").append(ageText(now, lastCapturedAt)).append(')')
+                .append(" move=").append(movesEmitted)
+                .append(" btn=").append(buttonsEmitted)
+                .append(" wheel=").append(wheelsEmitted)
+                .append('\n');
+        sb.append("uncaptured mouse evts=").append(uncapturedMouseEvents)
+                .append(" (").append(ageText(now, lastUncapturedAt)).append(")\n");
+        int shown = 0;
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice device = InputDevice.getDevice(id);
+            if (device == null || device.isVirtual()) {
+                continue;
+            }
+            int sources = device.getSources();
+            boolean mouse = isMouseDevice(device);
+            // The remote and hidden system devices are noise; keep anything
+            // that can point, type or play.
+            boolean interesting = mouse
+                    || (sources & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD
+                    || (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                    || (sources & InputDevice.SOURCE_TOUCHPAD) == InputDevice.SOURCE_TOUCHPAD;
+            if (!interesting) {
+                continue;
+            }
+            if (++shown > 6) {
+                sb.append("...\n");
+                break;
+            }
+            String name = device.getName();
+            if (name != null && name.length() > 24) {
+                name = name.substring(0, 24);
+            }
+            sb.append(mouse ? "[M] " : "    ").append(name)
+                    .append(" #").append(id)
+                    .append(" 0x").append(Integer.toHexString(sources))
+                    .append('\n');
+        }
+        return sb.toString();
+    }
+
+    private static String ageText(long now, long at) {
+        if (at == 0) {
+            return "never";
+        }
+        long ms = now - at;
+        return ms < 1000 ? ms + "ms" : (ms / 1000) + "s";
+    }
+
+    private static void emitDebug() {
+        WritableMap map = Arguments.createMap();
+        map.putString("text", debugText());
+        emit("onPhysicalDebug", map);
     }
 
     private static View ensureCaptureView(MainActivity activity) {
@@ -219,6 +351,7 @@ final class PhysicalInput {
             mainHandler.removeCallbacks(RECHECK);
             View view = ensureCaptureView(activity);
             if (!view.hasPointerCapture()) {
+                requestCount++;
                 log("request " + stateSummary(activity));
                 view.requestFocus();
                 view.requestPointerCapture();
@@ -231,6 +364,9 @@ final class PhysicalInput {
         }
         inactiveSince = 0;
         if (captured) {
+            releaseCount++;
+            lastRelease = (!active ? "screen" : userReleased ? "user"
+                    : !activity.hasWindowFocus() ? "winFocus" : "noMouse");
             log("release " + stateSummary(activity) + " hasMouse=" + hasMouse());
             captureView.releasePointerCapture();
         }
@@ -327,6 +463,8 @@ final class PhysicalInput {
     }
 
     private static boolean handleCapturedPointer(MotionEvent event) {
+        capturedEvents++;
+        lastCapturedAt = SystemClock.uptimeMillis();
         if (!isLive()) {
             return false;
         }
@@ -341,6 +479,7 @@ final class PhysicalInput {
             WritableMap map = Arguments.createMap();
             map.putDouble("x", event.getAxisValue(MotionEvent.AXIS_HSCROLL));
             map.putDouble("y", event.getAxisValue(MotionEvent.AXIS_VSCROLL));
+            wheelsEmitted++;
             emit("onPhysicalMouseWheel", map);
             return true;
         }
@@ -402,6 +541,7 @@ final class PhysicalInput {
         WritableMap map = Arguments.createMap();
         map.putInt("dx", ix);
         map.putInt("dy", iy);
+        movesEmitted++;
         emit("onPhysicalMouseMove", map);
     }
 
@@ -434,6 +574,7 @@ final class PhysicalInput {
         WritableMap map = Arguments.createMap();
         map.putInt("button", button);
         map.putBoolean("down", down);
+        buttonsEmitted++;
         emit("onPhysicalMouseButton", map);
     }
 
