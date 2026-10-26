@@ -467,21 +467,16 @@ export class GfnStreamAdapter {
     }
     if (name === 'chat') {
       // The mic rides the peer connection (see GfnWebRtcClient.startMic).
-      // `isPaused` stays true until the mic is actually sending so the toggle
-      // takes the start path; without a mic line it reports failure.
-      let sending = false;
+      // This object is rebuilt on every call, so whether the mic is sending
+      // lives on the client, not in a closure: `isPaused` must still read
+      // false on the next toggle, or the mic could never be turned off.
+      const client = this.gfnClient;
       return {
         get isPaused() {
-          return !sending;
+          return !client?.micSending;
         },
-        startMic: async () => {
-          sending = (await this.gfnClient?.startMic()) ?? false;
-          return sending;
-        },
-        stopMic: () => {
-          sending = false;
-          this.gfnClient?.stopMic();
-        },
+        startMic: () => client?.startMic() ?? Promise.resolve(false),
+        stopMic: () => client?.stopMic(),
         send: () => {},
       };
     }
