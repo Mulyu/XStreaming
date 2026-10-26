@@ -2,7 +2,7 @@ import React from 'react';
 import {StyleSheet, ScrollView, View, Pressable} from 'react-native';
 import {Text, Portal, Modal, Card} from 'react-native-paper';
 import Spinner from '../../../shared/ui/Spinner';
-import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {useTVFocus, tvFocusBold} from '../../../shared/ui/tvFocus';
 import SettingItem from '../../../shared/ui/SettingItem';
 import {
   SwitchRow,
@@ -42,7 +42,7 @@ function LaneButton({
         styles.laneButton,
         {flex},
         active && {backgroundColor: color, borderColor: color},
-        focus.focused && tvFocusRing,
+        focus.focused && tvFocusBold,
       ]}
       onPress={onPress}
       onFocus={focus.onFocus}

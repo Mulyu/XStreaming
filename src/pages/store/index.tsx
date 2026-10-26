@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import {Text, Icon} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
-import {useTVFocus, tvFocusRing} from '../../shared/ui/tvFocus';
+import {useTVFocus, tvFocusBold, tvFocusRow} from '../../shared/ui/tvFocus';
+import {RailButton} from '../../shared/ui/RailControls';
 import {InlineSpinner} from '../../shared/ui/Spinner';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
@@ -1161,7 +1162,7 @@ function StoreScreen() {
     const actionOnColor = owned ? palette.sale : palette.accent;
     return (
       <Pressable
-        style={[styles.row, isFocused && tvFocusRing]}
+        style={[styles.row, isFocused && tvFocusRow]}
         onPress={() => openRow(item)}
         onFocus={() => setFocusedRowId(item.id)}
         onBlur={() => setFocusedRowId(prev => (prev === item.id ? null : prev))}
@@ -1201,7 +1202,7 @@ function StoreScreen() {
           )}
         </View>
         <Pressable
-          style={[styles.rowAction, focusedActionId === item.id && tvFocusRing]}
+          style={[styles.rowAction, focusedActionId === item.id && tvFocusBold]}
           hitSlop={4}
           onPress={() => toggleRowSaved(item)}
           onFocus={() => setFocusedActionId(item.id)}
@@ -1243,148 +1244,219 @@ function StoreScreen() {
     <View style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('Store')}</Text>
-        <View style={styles.tabRow}>
-          <Pressable
-            style={[
-              styles.tab,
-              provider === 'xcloud' && {
-                backgroundColor: palette.provider.xbox,
-                borderColor: palette.provider.xbox,
-              },
-              xcloudTabFocus.focused && tvFocusRing,
-            ]}
-            onPress={() => setProvider('xcloud')}
-            onFocus={xcloudTabFocus.onFocus}
-            onBlur={xcloudTabFocus.onBlur}>
-            <Text
-              style={[
-                styles.tabText,
-                provider === 'xcloud' && styles.tabTextOn,
-              ]}>
-              {t('StoreTabXbox')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.tab,
-              provider === 'gfn' && {
-                backgroundColor: palette.provider.gfn,
-                borderColor: palette.provider.gfn,
-              },
-              gfnTabFocus.focused && tvFocusRing,
-            ]}
-            onPress={() => setProvider('gfn')}
-            onFocus={gfnTabFocus.onFocus}
-            onBlur={gfnTabFocus.onBlur}>
-            <Text
-              style={[styles.tabText, provider === 'gfn' && styles.tabTextOn]}>
-              {t('StoreTabSteam')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.tab,
-              provider === 'psstore' && {
-                backgroundColor: palette.provider.ps,
-                borderColor: palette.provider.ps,
-              },
-              psstoreTabFocus.focused && tvFocusRing,
-            ]}
-            onPress={() => setProvider('psstore')}
-            onFocus={psstoreTabFocus.onFocus}
-            onBlur={psstoreTabFocus.onBlur}>
-            <Text
-              style={[
-                styles.tabText,
-                provider === 'psstore' && styles.tabTextOn,
-              ]}>
-              {t('StoreTabPlayStation')}
-            </Text>
-          </Pressable>
-        </View>
-        <View style={styles.kindRow}>
-          <Pressable
-            style={[
-              styles.kindChip,
-              chartKind === 'best' && styles.kindOn,
-              bestKindFocus.focused && tvFocusRing,
-            ]}
-            onPress={() => setChartKind('best')}
-            onFocus={bestKindFocus.onFocus}
-            onBlur={bestKindFocus.onBlur}>
-            <Text
-              style={[
-                styles.kindText,
-                chartKind === 'best' && styles.kindTextOn,
-              ]}>
-              {t('StoreBestSellers')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.kindChip,
-              chartKind === 'new' && styles.kindOn,
-              newKindFocus.focused && tvFocusRing,
-            ]}
-            onPress={() => setChartKind('new')}
-            onFocus={newKindFocus.onFocus}
-            onBlur={newKindFocus.onBlur}>
-            <Text
-              style={[
-                styles.kindText,
-                chartKind === 'new' && styles.kindTextOn,
-              ]}>
-              {t('StoreNewReleases')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.kindChip,
-              saleOnly && styles.kindOnSale,
-              saleKindFocus.focused && tvFocusRing,
-            ]}
-            onPress={() => setSaleOnly(prev => !prev)}
-            onFocus={saleKindFocus.onFocus}
-            onBlur={saleKindFocus.onBlur}>
-            <Text style={[styles.kindText, saleOnly && styles.kindTextOnSale]}>
-              {t('LibraryFilterOnSale')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.kindChip,
-              availableOnly && styles.kindOnAvailable,
-              availableFocus.focused && tvFocusRing,
-            ]}
-            onPress={toggleAvailableOnly}
-            onFocus={availableFocus.onFocus}
-            onBlur={availableFocus.onBlur}>
-            <Text
-              style={[
-                styles.kindText,
-                availableOnly && styles.kindTextOnAvailable,
-              ]}>
-              {t('StoreFilterAvailableOnly')}
-            </Text>
-          </Pressable>
-          {Platform.isTV && (
-            // TV has no pull-to-refresh gesture: a focusable button does it.
-            <Pressable
-              style={[
-                styles.kindChip,
-                styles.reloadChip,
-                reloadFocus.focused && tvFocusRing,
-              ]}
+        {Platform.isTV ? (
+          // TV: the Library's toolbar buttons, so the focused one reads the
+          // same way here as there.
+          <View style={styles.tvControls}>
+            <RailButton
+              fill
+              label={t('StoreTabXbox')}
+              accent={palette.provider.xbox}
+              active={provider === 'xcloud'}
+              onPress={() => setProvider('xcloud')}
+            />
+            <RailButton
+              fill
+              label={t('StoreTabSteam')}
+              accent={palette.provider.gfn}
+              active={provider === 'gfn'}
+              onPress={() => setProvider('gfn')}
+            />
+            <RailButton
+              fill
+              label={t('StoreTabPlayStation')}
+              accent={palette.provider.ps}
+              active={provider === 'psstore'}
+              onPress={() => setProvider('psstore')}
+            />
+            <View style={styles.tvControlsGap} />
+            <RailButton
+              fill
+              label={t('StoreBestSellers')}
+              accent={palette.accent}
+              active={chartKind === 'best'}
+              onPress={() => setChartKind('best')}
+            />
+            <RailButton
+              fill
+              label={t('StoreNewReleases')}
+              accent={palette.accent}
+              active={chartKind === 'new'}
+              onPress={() => setChartKind('new')}
+            />
+            <RailButton
+              fill
+              label={t('LibraryFilterOnSale')}
+              accent={palette.sale}
+              active={saleOnly}
+              onPress={() => setSaleOnly(prev => !prev)}
+            />
+            <RailButton
+              fill
+              label={t('StoreFilterAvailableOnly')}
+              accent={palette.success}
+              active={availableOnly}
+              onPress={toggleAvailableOnly}
+            />
+            {/* TV has no pull-to-refresh gesture: a focusable button does it. */}
+            <RailButton
+              iconOnly
+              icon="refresh"
+              label={t('Refresh')}
+              accent={palette.accent}
               onPress={onRefresh}
-              onFocus={reloadFocus.onFocus}
-              onBlur={reloadFocus.onBlur}
-              accessibilityRole="button"
-              accessibilityLabel={t('Refresh')}>
-              <Icon source="refresh" size={14} color={palette.textSoft} />
-              <Text style={styles.kindText}>{t('Refresh')}</Text>
-            </Pressable>
-          )}
-        </View>
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.tabRow}>
+              <Pressable
+                style={[
+                  styles.tab,
+                  provider === 'xcloud' && {
+                    backgroundColor: palette.provider.xbox,
+                    borderColor: palette.provider.xbox,
+                  },
+                  xcloudTabFocus.focused && tvFocusBold,
+                ]}
+                onPress={() => setProvider('xcloud')}
+                onFocus={xcloudTabFocus.onFocus}
+                onBlur={xcloudTabFocus.onBlur}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    provider === 'xcloud' && styles.tabTextOn,
+                  ]}>
+                  {t('StoreTabXbox')}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.tab,
+                  provider === 'gfn' && {
+                    backgroundColor: palette.provider.gfn,
+                    borderColor: palette.provider.gfn,
+                  },
+                  gfnTabFocus.focused && tvFocusBold,
+                ]}
+                onPress={() => setProvider('gfn')}
+                onFocus={gfnTabFocus.onFocus}
+                onBlur={gfnTabFocus.onBlur}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    provider === 'gfn' && styles.tabTextOn,
+                  ]}>
+                  {t('StoreTabSteam')}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.tab,
+                  provider === 'psstore' && {
+                    backgroundColor: palette.provider.ps,
+                    borderColor: palette.provider.ps,
+                  },
+                  psstoreTabFocus.focused && tvFocusBold,
+                ]}
+                onPress={() => setProvider('psstore')}
+                onFocus={psstoreTabFocus.onFocus}
+                onBlur={psstoreTabFocus.onBlur}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    provider === 'psstore' && styles.tabTextOn,
+                  ]}>
+                  {t('StoreTabPlayStation')}
+                </Text>
+              </Pressable>
+            </View>
+            <View style={styles.kindRow}>
+              <Pressable
+                style={[
+                  styles.kindChip,
+                  chartKind === 'best' && styles.kindOn,
+                  bestKindFocus.focused && tvFocusBold,
+                ]}
+                onPress={() => setChartKind('best')}
+                onFocus={bestKindFocus.onFocus}
+                onBlur={bestKindFocus.onBlur}>
+                <Text
+                  style={[
+                    styles.kindText,
+                    chartKind === 'best' && styles.kindTextOn,
+                  ]}>
+                  {t('StoreBestSellers')}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.kindChip,
+                  chartKind === 'new' && styles.kindOn,
+                  newKindFocus.focused && tvFocusBold,
+                ]}
+                onPress={() => setChartKind('new')}
+                onFocus={newKindFocus.onFocus}
+                onBlur={newKindFocus.onBlur}>
+                <Text
+                  style={[
+                    styles.kindText,
+                    chartKind === 'new' && styles.kindTextOn,
+                  ]}>
+                  {t('StoreNewReleases')}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.kindChip,
+                  saleOnly && styles.kindOnSale,
+                  saleKindFocus.focused && tvFocusBold,
+                ]}
+                onPress={() => setSaleOnly(prev => !prev)}
+                onFocus={saleKindFocus.onFocus}
+                onBlur={saleKindFocus.onBlur}>
+                <Text
+                  style={[styles.kindText, saleOnly && styles.kindTextOnSale]}>
+                  {t('LibraryFilterOnSale')}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.kindChip,
+                  availableOnly && styles.kindOnAvailable,
+                  availableFocus.focused && tvFocusBold,
+                ]}
+                onPress={toggleAvailableOnly}
+                onFocus={availableFocus.onFocus}
+                onBlur={availableFocus.onBlur}>
+                <Text
+                  style={[
+                    styles.kindText,
+                    availableOnly && styles.kindTextOnAvailable,
+                  ]}>
+                  {t('StoreFilterAvailableOnly')}
+                </Text>
+              </Pressable>
+              {Platform.isTV && (
+                // TV has no pull-to-refresh gesture: a focusable button does it.
+                <Pressable
+                  style={[
+                    styles.kindChip,
+                    styles.reloadChip,
+                    reloadFocus.focused && tvFocusBold,
+                  ]}
+                  onPress={onRefresh}
+                  onFocus={reloadFocus.onFocus}
+                  onBlur={reloadFocus.onBlur}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Refresh')}>
+                  <Icon source="refresh" size={14} color={palette.textSoft} />
+                  <Text style={styles.kindText}>{t('Refresh')}</Text>
+                </Pressable>
+              )}
+            </View>
+          </>
+        )}
         {availableOnly && (
           <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
         )}
@@ -1422,6 +1494,14 @@ const styles = StyleSheet.create({
   root: {flex: 1},
   header: {paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10, gap: 10},
   title: {fontSize: 18, fontWeight: '800'},
+  // TV: provider tabs, chart/filter buttons and refresh on one wrapping row.
+  tvControls: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tvControlsGap: {width: 12},
   tabRow: {flexDirection: 'row', gap: 8},
   tab: {
     flex: 1,

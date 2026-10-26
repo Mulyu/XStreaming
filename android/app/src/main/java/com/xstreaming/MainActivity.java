@@ -203,13 +203,21 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
   private Runnable dpadCenterLongPressRunnable;
   private boolean dpadCenterLongPressFired = false;
 
+  private void fireDpadCenterLongPress() {
+    disarmDpadCenterLongPress();
+    if (dpadCenterLongPressFired) {
+      return;
+    }
+    dpadCenterLongPressFired = true;
+    sendEvent("onDpadCenterLongPress", null);
+  }
+
   private void armDpadCenterLongPress() {
     disarmDpadCenterLongPress();
     dpadCenterLongPressFired = false;
     dpadCenterLongPressRunnable = () -> {
       dpadCenterLongPressRunnable = null;
-      dpadCenterLongPressFired = true;
-      sendEvent("onDpadCenterLongPress", null);
+      fireDpadCenterLongPress();
     };
     dpadCenterLongPressHandler.postDelayed(
             dpadCenterLongPressRunnable, ViewConfiguration.getLongPressTimeout());
@@ -893,15 +901,24 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
     if (PhysicalInput.handleKeyEvent(event)) {
       return true;
     }
-    if (GamepadManager.isCenterLongPressEnabled()
-        && !GamepadManager.getCurrentScreen().equals("stream")
-        && isCenterKey(event.getKeyCode())) {
+    if (isCenterKey(event.getKeyCode())
+        && !GamepadManager.getCurrentScreen().equals("stream")) {
+      boolean enabled = GamepadManager.isCenterLongPressEnabled();
       if (event.getAction() == KeyEvent.ACTION_DOWN) {
-        if (event.getRepeatCount() == 0) {
-          armDpadCenterLongPress();
+        if (enabled) {
+          if (event.getRepeatCount() == 0) {
+            armDpadCenterLongPress();
+          } else if (event.isLongPress()) {
+            // The system's own long-press mark on the first auto-repeat: covers
+            // a remote whose initial key-down this activity did not see armed.
+            fireDpadCenterLongPress();
+          }
         }
       } else if (event.getAction() == KeyEvent.ACTION_UP) {
         disarmDpadCenterLongPress();
+        // Checked even if the screen has since turned the feature off: the
+        // long press usually navigates away, and its release must still be
+        // swallowed instead of clicking whatever is focused next.
         if (dpadCenterLongPressFired) {
           dpadCenterLongPressFired = false;
           // The long press already did its job: deliver the release as a

@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleSheet, View, Pressable} from 'react-native';
 import {Text, Icon} from 'react-native-paper';
-import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {useTVFocus, tvFocusBold} from '../../../shared/ui/tvFocus';
 import {alpha, palette} from '../../../shared/config/palette';
 
 type Props = {
@@ -92,7 +92,7 @@ const AccountCard: React.FC<Props> = ({
               style={[
                 styles.primary,
                 {backgroundColor: color},
-                primaryFocus.focused && tvFocusRing,
+                primaryFocus.focused && tvFocusBold,
               ]}
               onPress={onChangePlan}
               onFocus={primaryFocus.onFocus}
@@ -102,7 +102,7 @@ const AccountCard: React.FC<Props> = ({
               <Icon source="open-in-new" size={15} color={palette.onAccent} />
             </Pressable>
             <Pressable
-              style={[styles.secondary, secondaryFocus.focused && tvFocusRing]}
+              style={[styles.secondary, secondaryFocus.focused && tvFocusBold]}
               onPress={onSignOut}
               onFocus={secondaryFocus.onFocus}
               onBlur={secondaryFocus.onBlur}
@@ -115,7 +115,7 @@ const AccountCard: React.FC<Props> = ({
             style={[
               styles.primary,
               {backgroundColor: color},
-              primaryFocus.focused && tvFocusRing,
+              primaryFocus.focused && tvFocusBold,
             ]}
             onPress={onSignIn}
             onFocus={primaryFocus.onFocus}

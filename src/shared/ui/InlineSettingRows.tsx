@@ -2,7 +2,7 @@ import React from 'react';
 import {View, StyleSheet, Pressable, ScrollView, TextInput} from 'react-native';
 import {Text, Switch, Menu, Divider} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
-import {useTVFocus, tvFocusRing} from './tvFocus';
+import {useTVFocus, tvFocusBold} from './tvFocus';
 import {alpha, palette} from '../config/palette';
 
 // Xbox/GeForce NOW accent colors, matching Library.tsx's own tone -- reused
@@ -75,7 +75,7 @@ const FocusableChip: React.FC<{
       style={[
         styles.chip,
         active && {backgroundColor: accent, borderColor: accent},
-        focused && tvFocusRing,
+        focused && tvFocusBold,
       ]}>
       <Text style={[styles.chipText, active && styles.chipTextOn]}>
         {label}
@@ -101,7 +101,7 @@ const SwatchOption: React.FC<{
         styles.swatchOpt,
         {backgroundColor: color},
         active && styles.swatchOptActive,
-        focused && tvFocusRing,
+        focused && tvFocusBold,
       ]}
     />
   );
@@ -220,7 +220,7 @@ export const DropdownRow: React.FC<{
               onPress={() => setOpen(true)}
               onFocus={onFocus}
               onBlur={onBlur}
-              style={[styles.dropdownPill, focused && tvFocusRing]}>
+              style={[styles.dropdownPill, focused && tvFocusBold]}>
               <Text style={styles.dropdownPillText} numberOfLines={1}>
                 {currentLabel}
               </Text>
