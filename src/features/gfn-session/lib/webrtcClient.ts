@@ -272,6 +272,11 @@ export class GfnWebRtcClient {
     return this.micTransceiver != null;
   }
 
+  // True while a microphone track is attached and sending.
+  get micSending(): boolean {
+    return this.micStream != null;
+  }
+
   // Start sending the microphone. Resolves false (never throws) when the
   // server offered no mic line, permission is denied or capture fails.
   async startMic(): Promise<boolean> {
