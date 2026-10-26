@@ -1,5 +1,6 @@
 import React from 'react';
-import {palette} from '../config/palette';
+import type {ViewStyle} from 'react-native';
+import {alpha, palette} from '../config/palette';
 
 // Android TV / Google TV D-pad navigation has no visible "hover" the way a
 // mouse cursor does, and nothing in this app draws one for free: Pressable's
@@ -25,6 +26,25 @@ export const tvFocusRing = {
   borderWidth: 2,
   borderColor: TV_FOCUS_COLOR,
 } as const;
+
+// Stronger variants for the screens where the plain ring was hard to spot
+// from the couch (Store, title detail, Settings). Buttons and chips grow a
+// little on top of the ring, like the Library tiles do; wide rows would run
+// off the screen edge if they scaled, so they get a tinted fill instead. The
+// zIndex keeps a grown/tinted element above its neighbours.
+export const tvFocusBold: ViewStyle = {
+  borderWidth: 2,
+  borderColor: TV_FOCUS_COLOR,
+  transform: [{scale: 1.06}],
+  zIndex: 10,
+};
+
+export const tvFocusRow: ViewStyle = {
+  borderWidth: 2,
+  borderColor: TV_FOCUS_COLOR,
+  backgroundColor: alpha(palette.focusRing, 0.16),
+  zIndex: 10,
+};
 
 export type TVFocusState = {
   focused: boolean;

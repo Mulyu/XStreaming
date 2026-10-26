@@ -26,7 +26,7 @@ import {
   renderStars,
 } from '../../../entities/title-capabilities';
 import {getTitleProductId} from '../../../features/launch-title';
-import {useTVFocus, tvFocusRing} from '../../../shared/ui/tvFocus';
+import {useTVFocus, tvFocusBold, tvFocusRow} from '../../../shared/ui/tvFocus';
 import type {LibraryTitleDetailViewModel} from '../model/useLibraryTitleDetail';
 import {alpha, palette} from '../../../shared/config/palette';
 
@@ -198,7 +198,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
 
   const favoriteBtn = (
     <Pressable
-      style={[styles.favoriteBtn, favoriteFocus.focused && tvFocusRing]}
+      style={[styles.favoriteBtn, favoriteFocus.focused && tvFocusBold]}
       onPress={onSave}
       onFocus={favoriteFocus.onFocus}
       onBlur={favoriteFocus.onBlur}
@@ -332,7 +332,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               key={row.key}
               style={[
                 styles.providerRow,
-                focusedStoreRow === row.key && tvFocusRing,
+                focusedStoreRow === row.key && tvFocusRow,
               ]}
               disabled={!row.url}
               onPress={() => row.url && openStore(row.url)}
@@ -380,7 +380,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             style={[
               styles.providerRow,
               !xcloudEntitled && styles.dimRow,
-              xcloudRowFocus.focused && tvFocusRing,
+              xcloudRowFocus.focused && tvFocusRow,
             ]}
             onPress={playXcloud}
             onFocus={xcloudRowFocus.onFocus}
@@ -449,7 +449,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               <Pressable
                 style={[
                   styles.storeLinkBtn,
-                  xcloudStoreLinkFocus.focused && tvFocusRing,
+                  xcloudStoreLinkFocus.focused && tvFocusBold,
                 ]}
                 hitSlop={8}
                 onPress={() => openStore(getStoreUrl(xcloudProductId))}
@@ -462,7 +462,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               <Pressable
                 style={[
                   styles.storeLinkBtn,
-                  xcloudShortcutFocus.focused && tvFocusRing,
+                  xcloudShortcutFocus.focused && tvFocusBold,
                 ]}
                 hitSlop={8}
                 accessibilityLabel={t('Add to desktop')}
@@ -494,7 +494,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             style={[
               styles.providerRow,
               !gfnAnyOwned && styles.dimRow,
-              gfnRowFocus.focused && tvFocusRing,
+              gfnRowFocus.focused && tvFocusRow,
             ]}
             onPress={() =>
               gfnVariants.length > 1
@@ -557,7 +557,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               <Pressable
                 style={[
                   styles.storeLinkBtn,
-                  gfnStoreLinkFocus.focused && tvFocusRing,
+                  gfnStoreLinkFocus.focused && tvFocusBold,
                 ]}
                 hitSlop={8}
                 onPress={() =>
@@ -574,7 +574,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
               <Pressable
                 style={[
                   styles.storeLinkBtn,
-                  gfnShortcutFocus.focused && tvFocusRing,
+                  gfnShortcutFocus.focused && tvFocusBold,
                 ]}
                 hitSlop={8}
                 accessibilityLabel={t('Add to desktop')}
@@ -619,7 +619,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     style={[
                       styles.storeRow,
                       !variant.owned && styles.dimRow,
-                      focusedVariantKey === rowKey && tvFocusRing,
+                      focusedVariantKey === rowKey && tvFocusRow,
                     ]}
                     onPress={() => playGfnVariant(variant)}
                     onFocus={() => setFocusedVariantKey(rowKey)}
@@ -666,7 +666,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                         <Pressable
                           style={[
                             styles.storeLinkBtn,
-                            focusedVariantKey === storeLinkKey && tvFocusRing,
+                            focusedVariantKey === storeLinkKey && tvFocusBold,
                           ]}
                           hitSlop={8}
                           onPress={() =>
@@ -691,7 +691,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                         <Pressable
                           style={[
                             styles.storeLinkBtn,
-                            focusedVariantKey === shortcutKey && tvFocusRing,
+                            focusedVariantKey === shortcutKey && tvFocusBold,
                           ]}
                           hitSlop={8}
                           accessibilityLabel={t('Add to desktop')}
@@ -808,7 +808,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                 style={[
                   styles.providerRow,
                   !psplusAvailable && styles.dimRow,
-                  psplusRowFocus.focused && tvFocusRing,
+                  psplusRowFocus.focused && tvFocusRow,
                 ]}
                 onPress={playPsPlus}
                 onFocus={psplusRowFocus.onFocus}
@@ -841,7 +841,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                   <Pressable
                     style={[
                       styles.storeLinkBtn,
-                      psplusStoreLinkFocus.focused && tvFocusRing,
+                      psplusStoreLinkFocus.focused && tvFocusBold,
                     ]}
                     hitSlop={8}
                     onPress={() => openStore(psStoreUrl)}
@@ -858,7 +858,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                   <Pressable
                     style={[
                       styles.storeLinkBtn,
-                      psplusShortcutFocus.focused && tvFocusRing,
+                      psplusShortcutFocus.focused && tvFocusBold,
                     ]}
                     hitSlop={8}
                     accessibilityLabel={t('Add to desktop')}
@@ -884,7 +884,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     <Pressable
                       style={[
                         styles.tvInfoButton,
-                        psPriceFocus.focused && tvFocusRing,
+                        psPriceFocus.focused && tvFocusBold,
                       ]}
                       onPress={() => openStore(psStoreUrl)}
                       onFocus={psPriceFocus.onFocus}
@@ -943,7 +943,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
         style={[
           styles.mediaShotWrap,
           styles.mediaShotButton,
-          mediaFocusedKey === key && tvFocusRing,
+          mediaFocusedKey === key && tvFocusBold,
         ]}
         onPress={onPress}
         onFocus={() => setMediaFocusedKey(key)}
@@ -1017,7 +1017,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
         <Pressable
           style={[
             styles.descriptionButton,
-            descriptionFocus.focused && tvFocusRing,
+            descriptionFocus.focused && tvFocusBold,
           ]}
           onPress={() => setDescriptionExpanded(v => !v)}
           onFocus={descriptionFocus.onFocus}
@@ -1083,7 +1083,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             <Pressable
               style={[
                 styles.tvFavoriteBtn,
-                favoriteFocus.focused && tvFocusRing,
+                favoriteFocus.focused && tvFocusBold,
               ]}
               onPress={onSave}
               onFocus={favoriteFocus.onFocus}
@@ -1121,7 +1121,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           animationType="fade"
           onRequestClose={() => setViewerUri(null)}>
           <Pressable
-            style={[styles.viewerRoot, viewerFocus.focused && tvFocusRing]}
+            style={[styles.viewerRoot, viewerFocus.focused && tvFocusBold]}
             onPress={() => setViewerUri(null)}
             onFocus={viewerFocus.onFocus}
             onBlur={viewerFocus.onBlur}

@@ -1,7 +1,7 @@
 import React from 'react';
 import {List, Divider} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {useTVFocus, tvFocusRing} from './tvFocus';
+import {useTVFocus, tvFocusRow} from './tvFocus';
 import {palette} from '../config/palette';
 
 type Props = {
@@ -32,7 +32,7 @@ const SettingItem: React.FC<Props> = ({title, description, onPress}) => {
         onPress={handlePress}
         onFocus={onFocus}
         onBlur={onBlur}
-        style={focused && tvFocusRing}
+        style={focused && tvFocusRow}
       />
       <Divider />
     </>

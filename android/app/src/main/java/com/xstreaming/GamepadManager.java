@@ -50,7 +50,7 @@ public class GamepadManager extends ReactContextBaseJavaModule {
     // Set by a screen that wants a held remote OK button to mean "open the
     // details" (the Library): MainActivity then reports a long press of
     // OK/Enter as onDpadCenterLongPress and cancels the click it would end in.
-    private static boolean centerLongPressEnabled = false;
+    private static volatile boolean centerLongPressEnabled = false;
 
     private final ReactApplicationContext reactContext;
     public GamepadManager(ReactApplicationContext reactContext) {
