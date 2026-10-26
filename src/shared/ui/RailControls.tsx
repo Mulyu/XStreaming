@@ -42,6 +42,9 @@ export const RailButton: React.FC<{
   // Library's wishlist chip uses it for "this many wishlisted titles are on
   // sale".
   badge?: number;
+  // TV: take the D-pad focus as soon as the button appears (a screen whose
+  // only action this is, e.g. the stream start-up screen's Cancel).
+  preferFocus?: boolean;
   // Layout overrides from the parent (e.g. flexGrow for a wide search button).
   style?: StyleProp<ViewStyle>;
 }> = ({
@@ -57,6 +60,7 @@ export const RailButton: React.FC<{
   iconOnly,
   compact,
   badge,
+  preferFocus,
   style,
 }) => {
   const [focused, setFocused] = React.useState(false);
@@ -91,6 +95,7 @@ export const RailButton: React.FC<{
       onPress={onPress}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
+      hasTVPreferredFocus={preferFocus}
       android_ripple={{color: alpha(palette.white, 0.15)}}>
       {letter ? (
         <Text

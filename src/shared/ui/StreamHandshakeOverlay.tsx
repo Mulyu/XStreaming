@@ -3,6 +3,7 @@ import {
   Animated,
   Easing,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import {
 import {useTranslation} from 'react-i18next';
 import type {LoadingPhase} from '../lib/loadingPhase';
 import {useTVFocus, tvFocusRing} from './tvFocus';
+import {RailButton} from './RailControls';
 import {alpha, palette} from '../config/palette';
 
 // Per-provider chip look. streamType values come from NativeStream's own
@@ -245,14 +247,27 @@ const StreamHandshakeOverlay: React.FC<StreamHandshakeOverlayProps> = ({
           </View>
           <Text style={styles.chipLabel}>{providerLabel}</Text>
         </View>
-        <Pressable
-          style={[styles.cancelBtn, cancelFocus.focused && tvFocusRing]}
-          onPress={onCancel}
-          onFocus={cancelFocus.onFocus}
-          onBlur={cancelFocus.onBlur}
-          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <Text style={styles.cancelText}>{`✕ ${t('Cancel')}`}</Text>
-        </Pressable>
+        {Platform.isTV ? (
+          // TV: the same button as the rest of the TV UI, big enough to read
+          // from the couch and already focused, so OK cancels the launch.
+          <RailButton
+            preferFocus
+            icon="close"
+            label={t('Cancel')}
+            accent={palette.accent}
+            style={styles.cancelBtnTv}
+            onPress={onCancel}
+          />
+        ) : (
+          <Pressable
+            style={[styles.cancelBtn, cancelFocus.focused && tvFocusRing]}
+            onPress={onCancel}
+            onFocus={cancelFocus.onFocus}
+            onBlur={cancelFocus.onBlur}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <Text style={styles.cancelText}>{`✕ ${t('Cancel')}`}</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.hud} pointerEvents="none">
@@ -361,6 +376,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: alpha(palette.text, 0.14),
   },
+  cancelBtnTv: {backgroundColor: alpha(palette.scrim, 0.6)},
   cancelText: {fontSize: 11, fontWeight: '600', color: palette.textSoft},
   hud: {
     position: 'absolute',
