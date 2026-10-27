@@ -552,8 +552,8 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
   }
 
   // Mouse clicks that are not captured arrive here as touches (hover and
-  // scroll come through onGenericMotionEvent below); counted for the TV
-  // diagnostics only.
+  // scroll come through onGenericMotionEvent below); PhysicalInput uses them
+  // to notice a mouse and start the capture.
   @Override
   public boolean dispatchTouchEvent(MotionEvent event) {
     PhysicalInput.noteUncapturedMouse(event);

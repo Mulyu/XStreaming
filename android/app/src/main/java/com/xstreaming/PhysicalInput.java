@@ -70,38 +70,12 @@ final class PhysicalInput {
     // diagnosing capture that drops.
     private static int deviceEvents = 0;
 
-    // On-screen diagnostics (TV): JS asks for them, and a text snapshot of the
-    // capture state goes out every DEBUG_INTERVAL_MS while on.
-    private static final long DEBUG_INTERVAL_MS = 500;
-    private static boolean debugOverlay = false;
-    private static int requestCount = 0;
-    private static int releaseCount = 0;
-    private static String lastRelease = "-";
-    private static int capturedEvents = 0;
-    private static int movesEmitted = 0;
-    private static int buttonsEmitted = 0;
-    private static int wheelsEmitted = 0;
-    // Mouse events that reached the activity while NOT captured (hover,
-    // clicks as touches): tells "mouse not detected" from "capture dropped".
-    private static int uncapturedMouseEvents = 0;
-    private static long lastCapturedAt = 0;
-    private static long lastUncapturedAt = 0;
-    // What the last uncaptured mouse event said about its device, for the
-    // overlay: the device list alone can disagree with the events (on some
-    // TVs a working mouse never counts as one there).
-    private static String lastMouseEventInfo = "-";
     // A mouse event arrived while the stream was active: proof enough that a
-    // mouse is present, whatever the device list says. Cleared when the
-    // stream stops being active.
+    // mouse is present, whatever the device list says (on some TVs a working
+    // mouse never passes the list check). Cleared when the stream stops being
+    // active.
     private static boolean mouseSeenViaEvent = false;
     private static long lastEventDrivenUpdateAt = 0;
-    private static final Runnable DEBUG_TICK = () -> {
-        if (!debugOverlay) {
-            return;
-        }
-        emitDebug();
-        mainHandler.postDelayed(PhysicalInput.DEBUG_TICK, DEBUG_INTERVAL_MS);
-    };
 
     private static final Runnable FLUSH = () -> {
         flushScheduled = false;
@@ -138,48 +112,28 @@ final class PhysicalInput {
         keyCapture = value;
     }
 
-    /** Turns the on-screen diagnostics on or off. Called from the JS module, any thread. */
-    static void setDebugOverlay(boolean value) {
-        mainHandler.post(() -> {
-            mainHandler.removeCallbacks(DEBUG_TICK);
-            debugOverlay = value;
-            if (value) {
-                DEBUG_TICK.run();
-            }
-        });
-    }
-
-    /** MainActivity: a mouse event that reached the activity (not the capture view). */
+    /**
+     * MainActivity: a mouse event that reached the activity (not the capture
+     * view) -- hover and scroll through onGenericMotionEvent, clicks as touches
+     * through dispatchTouchEvent. Starts the capture even when the device list
+     * does not recognise the mouse, and retries it (calmly) while the mouse
+     * keeps moving without being captured.
+     */
     static void noteUncapturedMouse(MotionEvent event) {
         if (!event.isFromSource(InputDevice.SOURCE_MOUSE)
-                || event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)) {
+                || event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)
+                || !isActive()) {
             return;
         }
         long now = SystemClock.uptimeMillis();
-        uncapturedMouseEvents++;
-        lastUncapturedAt = now;
-        InputDevice device = event.getDevice();
-        lastMouseEventInfo = (device != null ? shortName(device.getName()) + " #" + device.getId()
-                + " dev=0x" + Integer.toHexString(device.getSources()) : "no device")
-                + " evt=0x" + Integer.toHexString(event.getSource())
-                + " tool=" + event.getToolType(0);
-        if (isActive() && !mouseSeenViaEvent) {
+        if (!mouseSeenViaEvent) {
             mouseSeenViaEvent = true;
             update();
-        } else if (isActive() && captureView != null && !captureView.hasPointerCapture()
+        } else if (captureView != null && !captureView.hasPointerCapture()
                 && now - lastEventDrivenUpdateAt > 500) {
-            // Capture was refused or dropped while the mouse keeps moving:
-            // try again, at a calm rate.
             lastEventDrivenUpdateAt = now;
             update();
         }
-    }
-
-    private static String shortName(String name) {
-        if (name == null) {
-            return "?";
-        }
-        return name.length() > 20 ? name.substring(0, 20) : name;
     }
 
     /** Called when the current screen changes (stream <-> not), any thread. */
@@ -276,71 +230,6 @@ final class PhysicalInput {
         return false;
     }
 
-    /** Compact multi-line state for the TV overlay. */
-    private static String debugText() {
-        MainActivity activity = activity();
-        long now = SystemClock.uptimeMillis();
-        boolean captured = captureView != null && captureView.hasPointerCapture();
-        StringBuilder sb = new StringBuilder();
-        sb.append("PhysicalInput ").append(isActive() ? "ACTIVE" : "inactive")
-                .append(" screen=").append(GamepadManager.getCurrentScreen())
-                .append('\n');
-        sb.append("captured=").append(captured)
-                .append(" viewFocus=").append(captureView != null && captureView.isFocused())
-                .append(" winFocus=").append(activity != null && activity.hasWindowFocus())
-                .append('\n');
-        sb.append("released=").append(userReleased)
-                .append(" hasMouse=").append(hasMouse())
-                .append(" seenByEvent=").append(mouseSeenViaEvent)
-                .append('\n');
-        sb.append("req=").append(requestCount)
-                .append(" rel=").append(releaseCount)
-                .append(" last=").append(lastRelease)
-                .append(" devEvents=").append(deviceEvents)
-                .append('\n');
-        sb.append("captured evts=").append(capturedEvents)
-                .append(" (").append(ageText(now, lastCapturedAt)).append(')')
-                .append(" move=").append(movesEmitted)
-                .append(" btn=").append(buttonsEmitted)
-                .append(" wheel=").append(wheelsEmitted)
-                .append('\n');
-        sb.append("uncaptured mouse evts=").append(uncapturedMouseEvents)
-                .append(" (").append(ageText(now, lastUncapturedAt)).append(")\n");
-        sb.append("mouse evt from: ").append(lastMouseEventInfo).append('\n');
-        int shown = 0;
-        for (int id : InputDevice.getDeviceIds()) {
-            InputDevice device = InputDevice.getDevice(id);
-            if (device == null) {
-                continue;
-            }
-            if (++shown > 12) {
-                sb.append("...\n");
-                break;
-            }
-            sb.append(isMouseDevice(device) ? "[M] " : "    ")
-                    .append(device.isVirtual() ? "v " : "")
-                    .append(shortName(device.getName()))
-                    .append(" #").append(id)
-                    .append(" 0x").append(Integer.toHexString(device.getSources()))
-                    .append('\n');
-        }
-        return sb.toString();
-    }
-
-    private static String ageText(long now, long at) {
-        if (at == 0) {
-            return "never";
-        }
-        long ms = now - at;
-        return ms < 1000 ? ms + "ms" : (ms / 1000) + "s";
-    }
-
-    private static void emitDebug() {
-        WritableMap map = Arguments.createMap();
-        map.putString("text", debugText());
-        emit("onPhysicalDebug", map);
-    }
-
     private static View ensureCaptureView(MainActivity activity) {
         if (captureView == null || captureView.getContext() != activity) {
             View view = new CaptureView(activity);
@@ -373,7 +262,6 @@ final class PhysicalInput {
             mainHandler.removeCallbacks(RECHECK);
             View view = ensureCaptureView(activity);
             if (!view.hasPointerCapture()) {
-                requestCount++;
                 log("request " + stateSummary(activity));
                 view.requestFocus();
                 view.requestPointerCapture();
@@ -386,9 +274,6 @@ final class PhysicalInput {
         }
         inactiveSince = 0;
         if (captured) {
-            releaseCount++;
-            lastRelease = (!active ? "screen" : userReleased ? "user"
-                    : !activity.hasWindowFocus() ? "winFocus" : "noMouse");
             log("release " + stateSummary(activity) + " hasMouse=" + hasMouse());
             captureView.releasePointerCapture();
         }
@@ -486,8 +371,6 @@ final class PhysicalInput {
     }
 
     private static boolean handleCapturedPointer(MotionEvent event) {
-        capturedEvents++;
-        lastCapturedAt = SystemClock.uptimeMillis();
         if (!isLive()) {
             return false;
         }
@@ -502,7 +385,6 @@ final class PhysicalInput {
             WritableMap map = Arguments.createMap();
             map.putDouble("x", event.getAxisValue(MotionEvent.AXIS_HSCROLL));
             map.putDouble("y", event.getAxisValue(MotionEvent.AXIS_VSCROLL));
-            wheelsEmitted++;
             emit("onPhysicalMouseWheel", map);
             return true;
         }
@@ -564,7 +446,6 @@ final class PhysicalInput {
         WritableMap map = Arguments.createMap();
         map.putInt("dx", ix);
         map.putInt("dy", iy);
-        movesEmitted++;
         emit("onPhysicalMouseMove", map);
     }
 
@@ -597,7 +478,6 @@ final class PhysicalInput {
         WritableMap map = Arguments.createMap();
         map.putInt("button", button);
         map.putBoolean("down", down);
-        buttonsEmitted++;
         emit("onPhysicalMouseButton", map);
     }
 

@@ -65,8 +65,8 @@ import {
 import {
   createGamepadMapper,
   getInputBindings,
+  getMouseLookReverseY,
   usePhysicalInput,
-  PhysicalInputDebug,
 } from '../../features/physical-input';
 import type {PhysicalKeyEvent} from '../../features/physical-input';
 import CustomKeyButtons from './ui/CustomKeyButtons';
@@ -3443,7 +3443,13 @@ export function NativeStreamScreenBase({
       ),
     [],
   );
-  const handleMouseAimMove = (dx: number, dy: number) => {
+  // Read once per stream: the switch lives on the input-mapping screen.
+  const mouseLookReverseY = React.useMemo(
+    () => getMouseLookReverseY('xbox'),
+    [],
+  );
+  const handleMouseAimMove = (dx: number, rawDy: number) => {
+    const dy = mouseLookReverseY ? -rawDy : rawDy;
     const sensitivity =
       (Number(activeSwipe.sensitivity) || PHYSICAL_MOUSE_SENSITIVITY) * 0.0025;
     const acceleration = (Number(activeSwipe.acceleration) || 0) * 0.0003;
@@ -3855,7 +3861,6 @@ export function NativeStreamScreenBase({
       />
 
       {renderControlRail()}
-      <PhysicalInputDebug />
     </View>
   );
 }

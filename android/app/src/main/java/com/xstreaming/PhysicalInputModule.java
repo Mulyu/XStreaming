@@ -29,13 +29,6 @@ public class PhysicalInputModule extends ReactContextBaseJavaModule {
         PhysicalInput.setKeyCapture(enabled);
     }
 
-    // TV diagnostics: while on, a text snapshot of the capture state is sent
-    // to JS as onPhysicalDebug every half second.
-    @ReactMethod
-    public void setDebugOverlay(boolean enabled) {
-        PhysicalInput.setDebugOverlay(enabled);
-    }
-
     // Required by NativeEventEmitter-style listeners; the events themselves
     // go out through DeviceEventManagerModule.
     @ReactMethod

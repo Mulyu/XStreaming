@@ -95,6 +95,8 @@ const InputMappingView: React.FC<Props> = ({
   onCancelCapture,
   onRemoveKey,
   onToggleMouse,
+  lookUp,
+  onToggleReverseY,
   onReset,
   onOpenGamepadMap,
   onOpenVirtualGamepad,
@@ -183,6 +185,23 @@ const InputMappingView: React.FC<Props> = ({
             ))}
           </ScrollView>
           <View style={styles.footer}>
+            <Text style={styles.footerLabel}>{t('InputMappingMouseLook')}</Text>
+            <ActionButton
+              label={t(
+                lookUp.xbox
+                  ? 'InputMappingMouseLookXboxUp'
+                  : 'InputMappingMouseLookXboxDown',
+              )}
+              onPress={() => onToggleReverseY('xbox')}
+            />
+            <ActionButton
+              label={t(
+                lookUp.ps
+                  ? 'InputMappingMouseLookPsUp'
+                  : 'InputMappingMouseLookPsDown',
+              )}
+              onPress={() => onToggleReverseY('ps')}
+            />
             <ActionButton label={t('InputMappingReset')} onPress={onReset} />
           </View>
         </>
@@ -337,8 +356,10 @@ const styles = StyleSheet.create({
   },
   keycapRemovable: {height: 32, paddingHorizontal: 9},
   keycapText: {fontSize: 12, fontWeight: '800', color: palette.text},
+  footerLabel: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
   footer: {
     padding: 16,
+    gap: 8,
     borderTopWidth: 1,
     borderTopColor: alpha(palette.text, 0.14),
   },

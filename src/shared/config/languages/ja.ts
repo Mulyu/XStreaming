@@ -122,6 +122,11 @@ export default {
     InputMappingKbmNote:
       'キーボードとマウスをつないだときの、Xbox と PlayStation でのコントローラーへの変換です。GeForce NOW はそのままゲームへ送るので対象外です。行をタップして変更します。',
     InputMappingUnbound: '未割り当て',
+    InputMappingMouseLook: 'マウスの視点（マウスを上に動かしたとき）',
+    InputMappingMouseLookXboxUp: 'Xbox：上を向く',
+    InputMappingMouseLookXboxDown: 'Xbox：下を向く',
+    InputMappingMouseLookPsUp: 'PlayStation：上を向く',
+    InputMappingMouseLookPsDown: 'PlayStation：下を向く',
     InputMappingReset: '初期値に戻す',
     InputMappingResetConfirm:
       'キーボードとマウスの割り当てをすべて初期値に戻しますか？',
