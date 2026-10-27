@@ -263,6 +263,8 @@ final class PhysicalInput {
             View view = ensureCaptureView(activity);
             if (!view.hasPointerCapture()) {
                 log("request " + stateSummary(activity));
+                view.setFocusable(true);
+                view.setFocusableInTouchMode(true);
                 view.requestFocus();
                 view.requestPointerCapture();
             }
@@ -276,6 +278,14 @@ final class PhysicalInput {
         if (captured) {
             log("release " + stateSummary(activity) + " hasMouse=" + hasMouse());
             captureView.releasePointerCapture();
+        }
+        // The capture view took the focus to hold the capture. Left focusable
+        // it keeps that focus after the stream (D-pad / keyboard navigation in
+        // the app then starts from an invisible 1px view), so give it back.
+        if (captureView != null && captureView.isFocusable()) {
+            captureView.clearFocus();
+            captureView.setFocusable(false);
+            captureView.setFocusableInTouchMode(false);
         }
         if (!active) {
             mouseSeenViaEvent = false;

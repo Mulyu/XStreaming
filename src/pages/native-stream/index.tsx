@@ -348,6 +348,7 @@ export function NativeStreamScreenBase({
   const isRumbling = React.useRef(false);
   const systemKeyboardTransactionRef = React.useRef<any>(null);
   const handleExitRef = React.useRef<() => void | Promise<void>>(() => {});
+  const requestExitRef = React.useRef<() => void>(() => {});
 
   // webrtc
   const [webrtcClient, setWebrtcClient] = React.useState<any>(undefined);
@@ -1432,6 +1433,11 @@ export function NativeStreamScreenBase({
       // button inside is the actual way to leave.
       if (e.data.action.type !== 'GO_BACK') {
         navigation.dispatch(e.data.action);
+      } else if (!isConnected.current) {
+        // Still starting up (or the stream never came up): back leaves right
+        // away instead of opening a rail that has nothing to control yet.
+        e.preventDefault();
+        requestExitRef.current();
       } else {
         e.preventDefault();
         setShowControlRail(true);
@@ -2908,6 +2914,7 @@ export function NativeStreamScreenBase({
     GamepadSensorModule.stopSensor();
     handleExit();
   }, [clearAllMacroTimers, handleExit, webrtcClient]);
+  requestExitRef.current = requestExit;
 
   const handleToggleMic = React.useCallback(async () => {
     if (!webrtcClient) {
@@ -3813,10 +3820,7 @@ export function NativeStreamScreenBase({
           phase={loadingPhase}
           queuePosition={loadingQueuePosition}
           detailText={loadingText}
-          onCancel={() => {
-            setLoading(false);
-            setShowControlRail(true);
-          }}
+          onCancel={requestExit}
         />
       )}
 
