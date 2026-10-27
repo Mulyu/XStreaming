@@ -1,9 +1,23 @@
 import React from 'react';
-import {View, StyleSheet, Pressable, ScrollView, TextInput} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  TextInput,
+  Platform,
+} from 'react-native';
 import {Text, Switch, Menu, Divider} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import {useTVFocus, tvFocusBold} from './tvFocus';
 import {alpha, palette} from '../config/palette';
+import {
+  TvSwitchRow,
+  TvChoiceRow,
+  TvTextRow,
+  TvStepperRow,
+  TvSwatchRow,
+} from './TvSettingRows';
 
 // Xbox/GeForce NOW accent colors, matching Library.tsx's own tone -- reused
 // here so the "on" state of a switch/segmented/dropdown reads as the same
@@ -118,7 +132,7 @@ export const InfoRow: React.FC<{
   />
 );
 
-export const SwitchRow: React.FC<{
+const PhoneSwitchRow: React.FC<{
   title: string;
   desc?: string;
   value: boolean;
@@ -143,7 +157,7 @@ export const SwitchRow: React.FC<{
   />
 );
 
-export const SegmentedRow: React.FC<{
+const PhoneSegmentedRow: React.FC<{
   title: string;
   desc?: string;
   options: SettingOption[];
@@ -183,7 +197,7 @@ export const SegmentedRow: React.FC<{
   />
 );
 
-export const DropdownRow: React.FC<{
+const PhoneDropdownRow: React.FC<{
   title: string;
   desc?: string;
   options: SettingOption[];
@@ -256,7 +270,7 @@ export const DropdownRow: React.FC<{
 // `suggestions` are tap-to-fill chips -- unlike SegmentedRow's, none of them
 // need to already be `value` to render; tapping one both fills the field and
 // commits immediately, same as picking a DropdownRow option.
-export const TextInputRow: React.FC<{
+const PhoneTextInputRow: React.FC<{
   title: string;
   desc?: string;
   value: string;
@@ -316,7 +330,7 @@ export const TextInputRow: React.FC<{
   );
 };
 
-export const SliderRow: React.FC<{
+const PhoneSliderRow: React.FC<{
   title: string;
   desc?: string;
   min: number;
@@ -367,7 +381,7 @@ export const SliderRow: React.FC<{
   );
 };
 
-export const SwatchRow: React.FC<{
+const PhoneSwatchRow: React.FC<{
   title: string;
   desc?: string;
   colors: string[];
@@ -403,6 +417,112 @@ export const SwatchRow: React.FC<{
     </RowShell>
   );
 };
+
+// On TV every value row is a single line that opens a dialog (see
+// TvSettingRows); the rows above are the phone layout.
+export const SwitchRow: React.FC<
+  React.ComponentProps<typeof PhoneSwitchRow>
+> = props =>
+  Platform.isTV ? (
+    <TvSwitchRow
+      title={props.title}
+      desc={props.desc}
+      flag={props.flag}
+      value={props.value}
+      onChange={props.onChange}
+      accent={props.accent ?? palette.accent}
+    />
+  ) : (
+    <PhoneSwitchRow {...props} />
+  );
+
+export const SegmentedRow: React.FC<
+  React.ComponentProps<typeof PhoneSegmentedRow>
+> = props =>
+  Platform.isTV ? (
+    <TvChoiceRow
+      title={props.title}
+      desc={props.desc}
+      flag={props.flag}
+      options={props.options}
+      value={props.value}
+      onChange={props.onChange}
+      accent={props.accent ?? palette.accent}
+    />
+  ) : (
+    <PhoneSegmentedRow {...props} />
+  );
+
+export const DropdownRow: React.FC<
+  React.ComponentProps<typeof PhoneDropdownRow>
+> = props =>
+  Platform.isTV ? (
+    <TvChoiceRow
+      title={props.title}
+      desc={props.desc}
+      flag={props.flag}
+      options={props.options}
+      value={props.value}
+      onChange={props.onChange}
+      accent={props.accent ?? palette.accent}
+      emptyLabel={props.emptyLabel}
+    />
+  ) : (
+    <PhoneDropdownRow {...props} />
+  );
+
+export const TextInputRow: React.FC<
+  React.ComponentProps<typeof PhoneTextInputRow>
+> = props =>
+  Platform.isTV ? (
+    <TvTextRow
+      title={props.title}
+      desc={props.desc}
+      flag={props.flag}
+      value={props.value}
+      placeholder={props.placeholder}
+      onChange={props.onChange}
+      suggestions={props.suggestions}
+      accent={props.accent ?? palette.accent}
+    />
+  ) : (
+    <PhoneTextInputRow {...props} />
+  );
+
+export const SliderRow: React.FC<
+  React.ComponentProps<typeof PhoneSliderRow>
+> = props =>
+  Platform.isTV ? (
+    <TvStepperRow
+      title={props.title}
+      desc={props.desc}
+      flag={props.flag}
+      min={props.min}
+      max={props.max}
+      step={props.step}
+      value={props.value}
+      onChange={props.onChange}
+      formatValue={props.formatValue}
+      accent={props.accent ?? palette.accent}
+    />
+  ) : (
+    <PhoneSliderRow {...props} />
+  );
+
+export const SwatchRow: React.FC<
+  React.ComponentProps<typeof PhoneSwatchRow>
+> = props =>
+  Platform.isTV ? (
+    <TvSwatchRow
+      title={props.title}
+      desc={props.desc}
+      colors={props.colors}
+      value={props.value}
+      onChange={props.onChange}
+    />
+  ) : (
+    <PhoneSwatchRow {...props} />
+  );
 
 const styles = StyleSheet.create({
   row: {
