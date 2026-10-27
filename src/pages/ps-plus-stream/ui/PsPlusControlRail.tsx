@@ -1,5 +1,12 @@
 import React from 'react';
-import {View, StyleSheet, Pressable, Animated, Easing} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Animated,
+  Easing,
+  ScrollView,
+} from 'react-native';
 import {Text, Icon} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
@@ -133,145 +140,154 @@ const PsPlusControlRail: React.FC<Props> = ({
         <Icon source="close" size={16} color={palette.textSoft} />
       </Pressable>
 
-      <View style={styles.group}>
-        <Text style={styles.groupLabel}>{t('Input')}</Text>
-        <RailButton
-          accent={palette.provider.ps}
-          icon={
-            showVirtualGamepad ? 'gamepad-variant' : 'gamepad-variant-outline'
-          }
-          label={t('Virtual gamepad')}
-          active={showVirtualGamepad}
-          onPress={onToggleVirtualGamepad}
-        />
-        <RailButton
-          accent={palette.provider.ps}
-          icon="gesture-swipe"
-          label={t('Touchpad')}
-          active={touchpadVisible}
-          onPress={onToggleTouchpad}
-        />
-        <RailButton
-          accent={palette.provider.ps}
-          icon="pencil-outline"
-          label={t('Edit Virtual Gamepad')}
-          onPress={onEditGamepadLayout}
-        />
-        <RailButton
-          accent={palette.provider.ps}
-          icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
-          label={t('Vibration')}
-          active={vibrationEnabled}
-          onPress={onToggleVibration}
-        />
-      </View>
-
-      <View style={styles.group}>
-        <Text style={styles.groupLabel}>{t('Audio')}</Text>
-        <RailButton
-          accent={palette.provider.ps}
-          icon={micOpen ? 'microphone' : 'microphone-off'}
-          label={t('Microphone')}
-          active={micOpen}
-          onPress={onToggleMic}
-        />
-        <View style={styles.sliderRow}>
-          <View style={styles.sliderHead}>
-            <Text style={styles.sliderHeadLabel}>{t('Volume')}</Text>
-            <Text style={styles.sliderHeadValue}>{liveVolume.toFixed(1)}x</Text>
-          </View>
-          <RNSlider
-            style={styles.sliderTrack}
-            minimumValue={0}
-            maximumValue={1}
-            step={0.1}
-            value={audioGain}
-            onValueChange={setLiveVolume}
-            onSlidingComplete={onAudioGainChange}
-            minimumTrackTintColor={palette.provider.ps}
-            maximumTrackTintColor={alpha(palette.white, 0.14)}
-            thumbTintColor={palette.provider.ps}
-          />
-        </View>
-      </View>
-
-      <View style={styles.group}>
-        <Text style={styles.groupLabel}>{t('Display')}</Text>
-        <RailButton
-          accent={palette.provider.ps}
-          icon="chart-line"
-          label={t('Perf stats')}
-          active={performanceVisible}
-          onPress={onTogglePerformance}
-        />
-        {performanceVisible && metrics && (
-          <View style={styles.metrics}>
-            <Text style={styles.metricLine}>
-              {metrics.width}x{metrics.height} @ {Math.round(metrics.fps)}fps
-            </Text>
-            <Text style={styles.metricLine}>
-              {metrics.bitrateMbps.toFixed(1)} Mbps · {metrics.rttMs}ms
-            </Text>
-            <Text style={styles.metricLine}>
-              {(metrics.packetLoss * 100).toFixed(1)}% loss ·{' '}
-              {metrics.droppedFrames} dropped
-            </Text>
-          </View>
-        )}
-        {coverAvailable && (
+      {/* The contents scroll: on a short screen (a TV) the groups no longer
+          fit, and a fixed-height rail would squeeze them together. */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.group}>
+          <Text style={styles.groupLabel}>{t('Input')}</Text>
           <RailButton
             accent={palette.provider.ps}
-            icon="image-outline"
-            label={t('Cover controls')}
-            active={coverPresented}
-            onPress={onToggleCoverControls}
+            icon={
+              showVirtualGamepad ? 'gamepad-variant' : 'gamepad-variant-outline'
+            }
+            label={t('Virtual gamepad')}
+            active={showVirtualGamepad}
+            onPress={onToggleVirtualGamepad}
           />
-        )}
-      </View>
-
-      <View style={styles.group}>
-        <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
-        <View style={styles.segRow}>
-          <SegOption
+          <RailButton
             accent={palette.provider.ps}
-            icon="align-vertical-top"
-            label={t('Top')}
-            active={screenPosition === 'top'}
-            onPress={() => onSetScreenPosition('top')}
+            icon="gesture-swipe"
+            label={t('Touchpad')}
+            active={touchpadVisible}
+            onPress={onToggleTouchpad}
           />
-          <SegOption
+          <RailButton
             accent={palette.provider.ps}
-            icon="align-vertical-center"
-            label={t('Center')}
-            active={screenPosition === 'center'}
-            onPress={() => onSetScreenPosition('center')}
+            icon="pencil-outline"
+            label={t('Edit Virtual Gamepad')}
+            onPress={onEditGamepadLayout}
           />
-          <SegOption
+          <RailButton
             accent={palette.provider.ps}
-            icon="align-vertical-bottom"
-            label={t('Bottom')}
-            active={screenPosition === 'bottom'}
-            onPress={() => onSetScreenPosition('bottom')}
+            icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
+            label={t('Vibration')}
+            active={vibrationEnabled}
+            onPress={onToggleVibration}
           />
         </View>
-        <RailButton
-          accent={palette.provider.ps}
-          icon="aspect-ratio"
-          label={videoFormatLabel}
-          onPress={onCycleVideoFormat}
-        />
-      </View>
 
-      <View style={[styles.group, styles.sessionGroup]}>
-        <Text style={styles.groupLabel}>{t('Session')}</Text>
-        <RailButton
-          accent={palette.provider.ps}
-          icon="power"
-          label={t('Disconnect')}
-          danger
-          onPress={onRailDisconnect}
-        />
-      </View>
+        <View style={styles.group}>
+          <Text style={styles.groupLabel}>{t('Audio')}</Text>
+          <RailButton
+            accent={palette.provider.ps}
+            icon={micOpen ? 'microphone' : 'microphone-off'}
+            label={t('Microphone')}
+            active={micOpen}
+            onPress={onToggleMic}
+          />
+          <View style={styles.sliderRow}>
+            <View style={styles.sliderHead}>
+              <Text style={styles.sliderHeadLabel}>{t('Volume')}</Text>
+              <Text style={styles.sliderHeadValue}>
+                {liveVolume.toFixed(1)}x
+              </Text>
+            </View>
+            <RNSlider
+              style={styles.sliderTrack}
+              minimumValue={0}
+              maximumValue={1}
+              step={0.1}
+              value={audioGain}
+              onValueChange={setLiveVolume}
+              onSlidingComplete={onAudioGainChange}
+              minimumTrackTintColor={palette.provider.ps}
+              maximumTrackTintColor={alpha(palette.white, 0.14)}
+              thumbTintColor={palette.provider.ps}
+            />
+          </View>
+        </View>
+
+        <View style={styles.group}>
+          <Text style={styles.groupLabel}>{t('Display')}</Text>
+          <RailButton
+            accent={palette.provider.ps}
+            icon="chart-line"
+            label={t('Perf stats')}
+            active={performanceVisible}
+            onPress={onTogglePerformance}
+          />
+          {performanceVisible && metrics && (
+            <View style={styles.metrics}>
+              <Text style={styles.metricLine}>
+                {metrics.width}x{metrics.height} @ {Math.round(metrics.fps)}fps
+              </Text>
+              <Text style={styles.metricLine}>
+                {metrics.bitrateMbps.toFixed(1)} Mbps · {metrics.rttMs}ms
+              </Text>
+              <Text style={styles.metricLine}>
+                {(metrics.packetLoss * 100).toFixed(1)}% loss ·{' '}
+                {metrics.droppedFrames} dropped
+              </Text>
+            </View>
+          )}
+          {coverAvailable && (
+            <RailButton
+              accent={palette.provider.ps}
+              icon="image-outline"
+              label={t('Cover controls')}
+              active={coverPresented}
+              onPress={onToggleCoverControls}
+            />
+          )}
+        </View>
+
+        <View style={styles.group}>
+          <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
+          <View style={styles.segRow}>
+            <SegOption
+              accent={palette.provider.ps}
+              icon="align-vertical-top"
+              label={t('Top')}
+              active={screenPosition === 'top'}
+              onPress={() => onSetScreenPosition('top')}
+            />
+            <SegOption
+              accent={palette.provider.ps}
+              icon="align-vertical-center"
+              label={t('Center')}
+              active={screenPosition === 'center'}
+              onPress={() => onSetScreenPosition('center')}
+            />
+            <SegOption
+              accent={palette.provider.ps}
+              icon="align-vertical-bottom"
+              label={t('Bottom')}
+              active={screenPosition === 'bottom'}
+              onPress={() => onSetScreenPosition('bottom')}
+            />
+          </View>
+          <RailButton
+            accent={palette.provider.ps}
+            icon="aspect-ratio"
+            label={videoFormatLabel}
+            onPress={onCycleVideoFormat}
+          />
+        </View>
+
+        <View style={[styles.group, styles.sessionGroup]}>
+          <Text style={styles.groupLabel}>{t('Session')}</Text>
+          <RailButton
+            accent={palette.provider.ps}
+            icon="power"
+            label={t('Disconnect')}
+            danger
+            onPress={onRailDisconnect}
+          />
+        </View>
+      </ScrollView>
     </Animated.View>
   );
 };
@@ -290,6 +306,8 @@ const styles = StyleSheet.create({
     gap: 14,
     zIndex: 100,
   },
+  scroll: {flex: 1},
+  scrollContent: {gap: 14, flexGrow: 1},
   closeBtn: {
     alignSelf: 'flex-end',
     width: 26,
