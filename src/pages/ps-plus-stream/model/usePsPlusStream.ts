@@ -53,6 +53,7 @@ import {
 import {
   createGamepadMapper,
   getInputBindings,
+  getMouseLookReverseY,
   usePhysicalInput,
 } from '../../../features/physical-input';
 import {debugFactory} from '../../../shared/lib/debug';
@@ -1129,8 +1130,11 @@ export function usePsPlusStream(navigation: any, route: any) {
     }
     return () => physicalMapper.releaseAll();
   }, [physicalEnabled, physicalMapper]);
+  // Read once per stream: the switch lives on the input-mapping screen.
+  const mouseLookReverseY = React.useMemo(() => getMouseLookReverseY('ps'), []);
   const handlePhysicalMouseMove = React.useCallback(
-    (dx: number, dy: number) => {
+    (dx: number, rawDy: number) => {
+      const dy = mouseLookReverseY ? -rawDy : rawDy;
       const sensitivity =
         (Number(activeSwipe.sensitivity) || PHYSICAL_MOUSE_SENSITIVITY) *
         SWIPE_AIM_SENSITIVITY_SCALE;
@@ -1140,7 +1144,12 @@ export function usePsPlusStream(navigation: any, route: any) {
         acceleration > 0 ? 1 + acceleration * Math.hypot(dx, dy) : 1;
       applyAim(dx * sensitivity * boost, dy * sensitivity * boost);
     },
-    [activeSwipe.sensitivity, activeSwipe.acceleration, applyAim],
+    [
+      activeSwipe.sensitivity,
+      activeSwipe.acceleration,
+      applyAim,
+      mouseLookReverseY,
+    ],
   );
   usePhysicalInput(physicalEnabled, {
     onKey: e => physicalMapper.key(e.keyCode, e.down),

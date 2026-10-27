@@ -125,6 +125,11 @@ export default {
     InputMappingKbmNote:
       'How a connected keyboard and mouse act as a controller on Xbox and PlayStation. GeForce NOW receives them as they are, so this does not apply there. Tap a row to change it.',
     InputMappingUnbound: 'Not assigned',
+    InputMappingMouseLook: 'Mouse look (push the mouse up)',
+    InputMappingMouseLookXboxUp: 'Xbox: looks up',
+    InputMappingMouseLookXboxDown: 'Xbox: looks down',
+    InputMappingMouseLookPsUp: 'PlayStation: looks up',
+    InputMappingMouseLookPsDown: 'PlayStation: looks down',
     InputMappingReset: 'Reset to defaults',
     InputMappingResetConfirm:
       'Reset every keyboard and mouse assignment to the defaults?',

@@ -7,6 +7,9 @@ import {
   assignKey,
   assignMouse,
   getInputBindings,
+  getMouseLookReverseY,
+  saveMouseLookReverseY,
+  resetMouseLook,
   inputsForTarget,
   isStickDirection,
   keyLabel,
@@ -16,6 +19,7 @@ import {
   unbindMouse,
   useKeyCapture,
   InputBindings,
+  MouseLookProvider,
 } from '../../../features/physical-input';
 
 export type MappingTab = 'gamepad' | 'kbm' | 'virtual';
@@ -34,6 +38,15 @@ export function useInputMappingScreen(navigation: any) {
   const [bindings, setBindings] = React.useState<InputBindings>(() =>
     getInputBindings(),
   );
+  const [reverseY, setReverseY] = React.useState({
+    xbox: getMouseLookReverseY('xbox'),
+    ps: getMouseLookReverseY('ps'),
+  });
+  const toggleReverseY = (provider: MouseLookProvider) => {
+    const next = !reverseY[provider];
+    saveMouseLookReverseY(provider, next);
+    setReverseY(prev => ({...prev, [provider]: next}));
+  };
   // The target being edited in the dialog, and whether the next key press is
   // being waited for.
   const [editing, setEditing] = React.useState<BindingTarget | null>(null);
@@ -93,7 +106,14 @@ export function useInputMappingScreen(navigation: any) {
       {
         text: t('Confirm'),
         style: 'destructive',
-        onPress: () => setBindings(resetInputBindings()),
+        onPress: () => {
+          setBindings(resetInputBindings());
+          resetMouseLook();
+          setReverseY({
+            xbox: getMouseLookReverseY('xbox'),
+            ps: getMouseLookReverseY('ps'),
+          });
+        },
       },
     ]);
   };
@@ -146,6 +166,10 @@ export function useInputMappingScreen(navigation: any) {
           : assignMouse(bindings, button, editing),
       );
     },
+    // What the switches mean for the player: the Xbox path looked down before
+    // the switch existed (so "flipped" = up), the PS Plus path looked up.
+    lookUp: {xbox: reverseY.xbox, ps: !reverseY.ps},
+    onToggleReverseY: toggleReverseY,
     onReset: handleReset,
     onOpenGamepadMap: () => navigation.navigate('NativeGameMap'),
     onOpenVirtualGamepad: () => navigation.navigate('VirtualGamepadSettings'),

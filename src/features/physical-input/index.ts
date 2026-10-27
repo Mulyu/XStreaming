@@ -34,4 +34,9 @@ export {
 } from './model/bindingsStore';
 export {keyLabel} from './model/keyNames';
 export {useKeyCapture} from './model/useKeyCapture';
-export {PhysicalInputDebug} from './ui/PhysicalInputDebug';
+export {
+  getMouseLookReverseY,
+  saveMouseLookReverseY,
+  resetMouseLook,
+} from './model/mouseLook';
+export type {MouseLookProvider} from './model/mouseLook';
