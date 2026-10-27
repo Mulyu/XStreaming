@@ -86,6 +86,15 @@ final class PhysicalInput {
     private static int uncapturedMouseEvents = 0;
     private static long lastCapturedAt = 0;
     private static long lastUncapturedAt = 0;
+    // What the last uncaptured mouse event said about its device, for the
+    // overlay: the device list alone can disagree with the events (on some
+    // TVs a working mouse never counts as one there).
+    private static String lastMouseEventInfo = "-";
+    // A mouse event arrived while the stream was active: proof enough that a
+    // mouse is present, whatever the device list says. Cleared when the
+    // stream stops being active.
+    private static boolean mouseSeenViaEvent = false;
+    private static long lastEventDrivenUpdateAt = 0;
     private static final Runnable DEBUG_TICK = () -> {
         if (!debugOverlay) {
             return;
@@ -142,11 +151,35 @@ final class PhysicalInput {
 
     /** MainActivity: a mouse event that reached the activity (not the capture view). */
     static void noteUncapturedMouse(MotionEvent event) {
-        if (event.isFromSource(InputDevice.SOURCE_MOUSE)
-                && !event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)) {
-            uncapturedMouseEvents++;
-            lastUncapturedAt = SystemClock.uptimeMillis();
+        if (!event.isFromSource(InputDevice.SOURCE_MOUSE)
+                || event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)) {
+            return;
         }
+        long now = SystemClock.uptimeMillis();
+        uncapturedMouseEvents++;
+        lastUncapturedAt = now;
+        InputDevice device = event.getDevice();
+        lastMouseEventInfo = (device != null ? shortName(device.getName()) + " #" + device.getId()
+                + " dev=0x" + Integer.toHexString(device.getSources()) : "no device")
+                + " evt=0x" + Integer.toHexString(event.getSource())
+                + " tool=" + event.getToolType(0);
+        if (isActive() && !mouseSeenViaEvent) {
+            mouseSeenViaEvent = true;
+            update();
+        } else if (isActive() && captureView != null && !captureView.hasPointerCapture()
+                && now - lastEventDrivenUpdateAt > 500) {
+            // Capture was refused or dropped while the mouse keeps moving:
+            // try again, at a calm rate.
+            lastEventDrivenUpdateAt = now;
+            update();
+        }
+    }
+
+    private static String shortName(String name) {
+        if (name == null) {
+            return "?";
+        }
+        return name.length() > 20 ? name.substring(0, 20) : name;
     }
 
     /** Called when the current screen changes (stream <-> not), any thread. */
@@ -250,14 +283,15 @@ final class PhysicalInput {
         boolean captured = captureView != null && captureView.hasPointerCapture();
         StringBuilder sb = new StringBuilder();
         sb.append("PhysicalInput ").append(isActive() ? "ACTIVE" : "inactive")
-                .append(" enabled=").append(enabled)
                 .append(" screen=").append(GamepadManager.getCurrentScreen())
                 .append('\n');
         sb.append("captured=").append(captured)
                 .append(" viewFocus=").append(captureView != null && captureView.isFocused())
                 .append(" winFocus=").append(activity != null && activity.hasWindowFocus())
-                .append(" released=").append(userReleased)
+                .append('\n');
+        sb.append("released=").append(userReleased)
                 .append(" hasMouse=").append(hasMouse())
+                .append(" seenByEvent=").append(mouseSeenViaEvent)
                 .append('\n');
         sb.append("req=").append(requestCount)
                 .append(" rel=").append(releaseCount)
@@ -272,34 +306,22 @@ final class PhysicalInput {
                 .append('\n');
         sb.append("uncaptured mouse evts=").append(uncapturedMouseEvents)
                 .append(" (").append(ageText(now, lastUncapturedAt)).append(")\n");
+        sb.append("mouse evt from: ").append(lastMouseEventInfo).append('\n');
         int shown = 0;
         for (int id : InputDevice.getDeviceIds()) {
             InputDevice device = InputDevice.getDevice(id);
-            if (device == null || device.isVirtual()) {
+            if (device == null) {
                 continue;
             }
-            int sources = device.getSources();
-            boolean mouse = isMouseDevice(device);
-            // The remote and hidden system devices are noise; keep anything
-            // that can point, type or play.
-            boolean interesting = mouse
-                    || (sources & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD
-                    || (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
-                    || (sources & InputDevice.SOURCE_TOUCHPAD) == InputDevice.SOURCE_TOUCHPAD;
-            if (!interesting) {
-                continue;
-            }
-            if (++shown > 6) {
+            if (++shown > 12) {
                 sb.append("...\n");
                 break;
             }
-            String name = device.getName();
-            if (name != null && name.length() > 24) {
-                name = name.substring(0, 24);
-            }
-            sb.append(mouse ? "[M] " : "    ").append(name)
+            sb.append(isMouseDevice(device) ? "[M] " : "    ")
+                    .append(device.isVirtual() ? "v " : "")
+                    .append(shortName(device.getName()))
                     .append(" #").append(id)
-                    .append(" 0x").append(Integer.toHexString(sources))
+                    .append(" 0x").append(Integer.toHexString(device.getSources()))
                     .append('\n');
         }
         return sb.toString();
@@ -345,7 +367,7 @@ final class PhysicalInput {
         // A mouse is only needed to *start* capturing. Once captured, a device
         // list that momentarily lacks one (devices being re-enumerated, which
         // DeX does) must not drop the capture.
-        boolean wantCapture = canKeep && (captured || hasMouse());
+        boolean wantCapture = canKeep && (captured || hasMouse() || mouseSeenViaEvent);
         if (wantCapture) {
             inactiveSince = 0;
             mainHandler.removeCallbacks(RECHECK);
@@ -371,6 +393,7 @@ final class PhysicalInput {
             captureView.releasePointerCapture();
         }
         if (!active) {
+            mouseSeenViaEvent = false;
             releaseAll();
         }
     }
