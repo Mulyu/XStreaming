@@ -316,6 +316,15 @@ final class PhysicalInput {
                 && device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC;
     }
 
+    private static boolean isMouseSideButtonKey(KeyEvent event) {
+        int keyCode = event.getKeyCode();
+        // While the pointer is captured the mouse reports as SOURCE_MOUSE_RELATIVE,
+        // which does not contain SOURCE_MOUSE, so both are checked.
+        return (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_FORWARD)
+                && (event.isFromSource(InputDevice.SOURCE_MOUSE)
+                || event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE));
+    }
+
     /** MainActivity.dispatchKeyEvent. Returns true if the event was consumed. */
     static boolean handleKeyEvent(KeyEvent event) {
         if (keyCapture && isPhysicalKeyboard(event) && !event.isSystem()) {
@@ -329,6 +338,14 @@ final class PhysicalInput {
         // during it isn't left stuck down.
         if (!isLive()) {
             return false;
+        }
+        // A mouse's side buttons also arrive as KEYCODE_BACK / KEYCODE_FORWARD
+        // key events (the input system synthesizes them next to the button
+        // MotionEvent, which is what the game gets). Left alone, Back would
+        // run the activity's back handling and open the control rail in the
+        // middle of play.
+        if (isMouseSideButtonKey(event)) {
+            return true;
         }
         int action = event.getAction();
         if (action != KeyEvent.ACTION_DOWN && action != KeyEvent.ACTION_UP) {
