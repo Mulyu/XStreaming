@@ -381,6 +381,10 @@ export default {
     PsPlusBitrateTitle: 'ビットレート',
     PsPlusBitrateDesc:
       'PS Plusクラウドストリーミングのビットレートを設定します(注:回線が弱い場合、ビットレートを下げると改善することがあります)。',
+    PsPlusAccountInfoTitle: 'PS Plusのアカウント情報を確認',
+    PsPlusAccountInfoDesc:
+      'Sonyのセッション応答に含まれるアカウント情報を表示（とコピー）します。PS Plusの契約が切れたときに何が返るかを調べるための診断です。秘密の値は伏せます。',
+    PsPlusAccountInfoFailed: 'アカウント情報を取得できませんでした。',
     PsPlusCopyDebugInfoTitle: 'PS Plusのログをコピー',
     PsPlusCopyDebugInfoDesc:
       '直前のPS Plusセッションのログをクリップボードにコピーします。不具合報告の際にお使いください。',

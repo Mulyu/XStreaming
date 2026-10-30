@@ -202,6 +202,18 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 		}
 	}
 
+	/** Diagnostics: what Sony says about the account behind [npsso] (secrets hidden), or null. */
+	@ReactMethod
+	fun fetchAccountDiag(npsso: String?, promise: Promise) {
+		thread(name = "PsPlusAccountDiag") {
+			try {
+				promise.resolve(cloudCatalogFetchAccountDiag(npsso))
+			} catch (e: Exception) {
+				promise.resolve(null)
+			}
+		}
+	}
+
 	@ReactMethod
 	fun invalidateCatalogCache() {
 		val cacheDir = File(reactApplicationContext.cacheDir, "psplus-catalog")

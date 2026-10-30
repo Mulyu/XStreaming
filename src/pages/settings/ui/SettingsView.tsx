@@ -97,6 +97,7 @@ const SettingsView: React.FC<Props> = ({
   onGfnAccountPress,
   onCopyGfnDebugInfo,
   onCopyPsPlusDebugInfo,
+  onShowPsPlusAccountInfo,
   onCopyAppDebugInfo,
   onPsPlusAccountPress,
   onXcloudAccountPress,
@@ -455,6 +456,11 @@ const SettingsView: React.FC<Props> = ({
             title={t('PsPlusCopyDebugInfoTitle')}
             description={t('PsPlusCopyDebugInfoDesc')}
             onPress={onCopyPsPlusDebugInfo}
+          />
+          <SettingItem
+            title={t('PsPlusAccountInfoTitle')}
+            description={t('PsPlusAccountInfoDesc')}
+            onPress={onShowPsPlusAccountInfo}
           />
         </ScrollView>
       )}

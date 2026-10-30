@@ -19,6 +19,7 @@ import {useGfnSignIn} from '../../../features/gfn-auth';
 import {useXcloudLogin} from '../../../features/xbox-auth';
 import {
   isPsPlusSignedIn,
+  getNpsso,
   clearNpsso,
   clearCatalogGames,
   psPlusChiaki,
@@ -380,6 +381,25 @@ export function useSettingsScreen(navigation: any, route: any) {
       });
   };
 
+  // Diagnostic for a lapsed PS Plus subscription: what Sony's session reply says
+  // about the account. Shown in a dialog and copied, so it can be read off the
+  // screen (TV) or pasted into a report.
+  const handleShowPsPlusAccountInfo = () => {
+    psPlusChiaki
+      .fetchAccountDiag(getNpsso())
+      .then(info => {
+        if (!info) {
+          ToastAndroid.show(t('PsPlusAccountInfoFailed'), ToastAndroid.SHORT);
+          return;
+        }
+        Clipboard.setString(info);
+        Alert.alert(t('PsPlusAccountInfoTitle'), info);
+      })
+      .catch(() => {
+        ToastAndroid.show(t('PsPlusAccountInfoFailed'), ToastAndroid.SHORT);
+      });
+  };
+
   // Debug aid for reports that aren't specific to any one streaming provider,
   // e.g. the Home/Library screen occasionally coming back black after the app
   // is backgrounded and resumed -- see shared/lib/appDebugLog.ts for what this
@@ -571,6 +591,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     onGfnAccountPress: handleGfnAccountPress,
     onCopyGfnDebugInfo: handleCopyGfnDebugInfo,
     onCopyPsPlusDebugInfo: handleCopyPsPlusDebugInfo,
+    onShowPsPlusAccountInfo: handleShowPsPlusAccountInfo,
     onCopyAppDebugInfo: handleCopyAppDebugInfo,
     onPsPlusAccountPress: handlePsPlusAccountPress,
     onXcloudAccountPress: handleXcloudAccountPress,

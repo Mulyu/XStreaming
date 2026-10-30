@@ -121,6 +121,13 @@ CHIAKI_EXPORT void chiaki_cloudcatalog_result_fini(ChiakiCloudCatalogResult *out
 CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_online_id(
 	const char *npsso, char *out, size_t out_size, ChiakiLog *log);
 
+/**
+ * Diagnostics: the account block of the Kamaji session for @p npsso as pretty JSON, with
+ * secret-looking values hidden. @p out_json is malloc'd on success; free() it.
+ */
+CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_account_diag(
+	const char *npsso, char **out_json, ChiakiLog *log);
+
 /** Delete all lib-owned cache files under @p cache_dir (e.g. on locale change). */
 CHIAKI_EXPORT void chiaki_cloudcatalog_invalidate_cache(const char *cache_dir);
 
