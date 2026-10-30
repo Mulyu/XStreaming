@@ -83,7 +83,9 @@ export class GfnWebRtcClient {
   }
 
   connect(): void {
-    console.log(`GFN signaling: ${this.session.signalingUrl}`);
+    console.log(
+      `GFN signaling: ${this.session.signalingUrl} [${this.session.transportSummary}]`,
+    );
     console.log(`GFN signaling: connectionInfo\n${this.session.signalingDiag}`);
     this.setState('signaling');
     this.signaling.onEvent(event => this.handleSignalingEvent(event));
@@ -128,12 +130,13 @@ export class GfnWebRtcClient {
       const host = this.session.signalingUrl
         .replace(/^wss?:\/\//, '')
         .split('/')[0];
+      const waited = `${OFFER_WAIT_MS / 1000}s`;
       console.log(
-        `GFN signaling: no offer after ${OFFER_WAIT_MS / 1000}s from ${host}`,
+        `GFN signaling: no offer after ${waited} from ${host} [${this.session.transportSummary}]`,
       );
       this.setState(
         'signaling',
-        `no offer from ${host} after ${OFFER_WAIT_MS / 1000}s`,
+        `no offer from ${host} after ${waited} [${this.session.transportSummary}]`,
       );
     }, OFFER_WAIT_MS);
   }

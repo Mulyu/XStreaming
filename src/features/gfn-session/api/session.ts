@@ -61,6 +61,8 @@ export type GfnSession = {
   signalingUrl: string;
   /** connectionInfo[] summary + the entry chosen for signaling (diagnostics). */
   signalingDiag: string;
+  /** One-line summary of how the server understood the request (diagnostics). */
+  transportSummary: string;
   iceServers: GfnIceServer[];
   streamingBaseUrl: string;
   clientId: string;
@@ -247,6 +249,11 @@ type RawCloudMatchResponse = {
     gpuType?: string;
     seatSetupInfo?: {seatSetupStep?: number; queuePosition?: number};
     connectionInfo?: RawConnection[];
+    sessionRequestData?: {
+      secureRTSPSupported?: boolean;
+      streamerVersion?: number | string;
+      metaData?: Array<{key?: string; value?: string}>;
+    };
     sessionControlInfo?: {ip?: string | string[]};
     iceServerConfiguration?: {
       iceServers?: Array<{
@@ -347,6 +354,31 @@ const normalizeIceServers = (
   ];
 };
 
+// How the server echoed our request back: a WebRTC session is one that kept
+// secureRTSPSupported=false and GSStreamerType=WebRTC. Anything else means it
+// set up a native stream, which never sends a WebRTC offer.
+const describeTransport = (
+  session: NonNullable<RawCloudMatchResponse['session']>,
+): string => {
+  const request = session.sessionRequestData;
+  const type =
+    request?.metaData?.find(entry => entry.key === 'GSStreamerType')?.value ??
+    '-';
+  const usages = (session.connectionInfo ?? [])
+    .map(
+      c =>
+        `${c.usage ?? '?'}${
+          c.appLevelProtocol ? `/p${c.appLevelProtocol}` : ''
+        }`,
+    )
+    .join(',');
+  return (
+    `type=${type} rtsps=${request?.secureRTSPSupported ?? '-'} ` +
+    `sv=${request?.streamerVersion ?? '-'} status=${session.status ?? '-'} ` +
+    `conns=${usages || '-'}`
+  );
+};
+
 const toGfnSession = (
   payload: RawCloudMatchResponse,
   ctx: {
@@ -385,6 +417,7 @@ const toGfnSession = (
       endpoint?.url ??
       (serverIp ? buildSignalingUrl(serverIp, sigConn?.resourcePath) : ''),
     signalingDiag,
+    transportSummary: describeTransport(session),
     iceServers: normalizeIceServers(session),
     streamingBaseUrl: ctx.streamingBaseUrl,
     clientId: ctx.clientId,
