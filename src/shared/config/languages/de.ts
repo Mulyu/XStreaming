@@ -68,6 +68,8 @@ export default {
     'Customize buttons of virtual gamepad':
       'Customize your virtual gamepad layout. You can edit multiple layouts and use them as needed.',
     'Edit Virtual Gamepad': 'Virtuelles Gamepad bearbeiten',
+    Mute: 'Stummschalten',
+    'Edit layout': 'Layout bearbeiten',
     'Click on an element to set its size and display':
       'Tap an element to set its size and visibility',
     'Drag elements to adjust their position':

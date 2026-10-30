@@ -164,6 +164,11 @@ export const getSettings = (): Settings => {
       'locale_follow_system',
     );
     const merged = Object.assign({}, defaultSettings, _settings);
+    // The in-stream rail's FSR and aspect-ratio buttons were removed, so a
+    // value saved while they existed has nothing left to change it: always
+    // off / automatic.
+    merged.fsr = false;
+    merged.video_format = '';
     merged.locale_follow_system = hasLocaleFollowSystem
       ? !!_settings.locale_follow_system
       : false;
