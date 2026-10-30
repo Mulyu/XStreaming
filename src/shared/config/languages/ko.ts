@@ -65,6 +65,8 @@ export default {
     'Customize virtual buttons': '가상 버튼 사용자 지정',
     'Customize buttons of virtual gamepad': '가상 패드 레이아웃 편집',
     'Edit Virtual Gamepad': '가상 패드 편집',
+    Mute: '음소거',
+    'Edit layout': '배치 편집',
     'Click on an element to set its size and display':
       '크기 및 표시 설정을 위해 클릭하세요.',
     'Drag elements to adjust their position': '드래그하여 위치 조정',
