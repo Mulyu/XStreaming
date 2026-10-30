@@ -67,6 +67,7 @@ export class GfnWebRtcClient {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private stream: MediaStream | null = null;
   private offerWatchdog: ReturnType<typeof setTimeout> | null = null;
+  private offerWatchdogDetail: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly session: GfnSession,
@@ -119,32 +120,45 @@ export class GfnWebRtcClient {
     }
   }
 
-  // The server sends the offer right after sign-in. If nothing arrives, the
-  // socket is almost certainly on the wrong endpoint — say which one.
+  // The server sends the offer right after sign-in. If nothing arrives, say
+  // where we are connected and what the server has sent; a bit later, list the
+  // session's connections so a wrong entry shows up in a screenshot.
   private armOfferWatchdog(): void {
     this.clearOfferWatchdog();
+    const host = this.session.signalingUrl
+      .replace(/^wss?:\/\//, '')
+      .split('/')[0];
+    const waited = `${OFFER_WAIT_MS / 1000}s`;
     this.offerWatchdog = setTimeout(() => {
       if (this.disposed || this.pc) {
         return;
       }
-      const host = this.session.signalingUrl
-        .replace(/^wss?:\/\//, '')
-        .split('/')[0];
-      const waited = `${OFFER_WAIT_MS / 1000}s`;
-      console.log(
-        `GFN signaling: no offer after ${waited} from ${host} [${this.session.transportSummary}]`,
-      );
-      this.setState(
-        'signaling',
-        `no offer from ${host} after ${waited} [${this.session.transportSummary}]`,
-      );
+      const text = `no offer from ${host} after ${waited} [${
+        this.session.transportSummary
+      }] ${this.signaling.describeReceived()}`;
+      console.log(`GFN signaling: ${text}`);
+      this.setState('signaling', text);
     }, OFFER_WAIT_MS);
+    this.offerWatchdogDetail = setTimeout(() => {
+      if (this.disposed || this.pc) {
+        return;
+      }
+      const text = `connections: ${this.session.signalingDiag
+        .split('\n')
+        .join(' | ')} ${this.signaling.describeReceived()}`;
+      console.log(`GFN signaling: ${text}`);
+      this.setState('signaling', text);
+    }, OFFER_WAIT_MS * 2);
   }
 
   private clearOfferWatchdog(): void {
     if (this.offerWatchdog) {
       clearTimeout(this.offerWatchdog);
       this.offerWatchdog = null;
+    }
+    if (this.offerWatchdogDetail) {
+      clearTimeout(this.offerWatchdogDetail);
+      this.offerWatchdogDetail = null;
     }
   }
 

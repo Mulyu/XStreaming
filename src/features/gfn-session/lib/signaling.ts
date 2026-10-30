@@ -34,6 +34,8 @@ export class GfnSignalingClient {
   private ackCounter = 0;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private listener: (event: GfnSignalingEvent) => void = () => {};
+  private rxCount = 0;
+  private rxRecent: string[] = [];
 
   constructor(
     private readonly signalingUrl: string,
@@ -46,6 +48,32 @@ export class GfnSignalingClient {
 
   private emit(event: GfnSignalingEvent): void {
     this.listener(event);
+  }
+
+  // What the server has sent so far, for the stall screen: how many frames and
+  // the shape of the latest few (keys, or the error text).
+  describeReceived(): string {
+    return `rx=${this.rxCount}${
+      this.rxRecent.length > 0 ? ` [${this.rxRecent.join(', ')}]` : ''
+    }`;
+  }
+
+  private noteReceived(parsed: any): void {
+    this.rxCount += 1;
+    let shape: string;
+    if (parsed && typeof parsed === 'object') {
+      shape =
+        parsed.error !== undefined && parsed.error !== null
+          ? `error=${String(parsed.error)}`
+          : Object.keys(parsed).join('+');
+      const msg = parsed.peer_msg?.msg;
+      if (typeof msg === 'string') {
+        shape += `:${msg.trim().slice(0, 12)}`;
+      }
+    } else {
+      shape = typeof parsed;
+    }
+    this.rxRecent = [...this.rxRecent, shape].slice(-4);
   }
 
   private buildSignInUrl(): string {
@@ -145,6 +173,7 @@ export class GfnSignalingClient {
     } catch {
       return;
     }
+    this.noteReceived(parsed);
 
     if (parsed.peer_info) {
       if (
@@ -169,6 +198,16 @@ export class GfnSignalingClient {
 
     if (parsed.error === 'peerRemoved') {
       this.emit({type: 'disconnected', reason: 'peerRemoved'});
+      return;
+    }
+
+    // Any other error is the server refusing the sign-in (as OpenNOW treats
+    // it); silently ignoring it left the stream waiting for an offer forever.
+    if (parsed.error !== undefined && parsed.error !== null) {
+      this.emit({
+        type: 'error',
+        message: `Signaling rejected: ${String(parsed.error)}`,
+      });
       return;
     }
 
