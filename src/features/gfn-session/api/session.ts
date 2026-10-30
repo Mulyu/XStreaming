@@ -44,6 +44,13 @@ export type GfnStreamSettings = {
   maxBitrateMbps: number;
   /** Wire codec: only H264 is safe to assume works everywhere on RN today. */
   codec: 'H264' | 'H265' | 'AV1';
+  /**
+   * 'compat': the WebRTC request OpenNOW's compatibility mode sends (sdk 1.0,
+   * streamer 1). 'official': the request the last Electron OpenNOW sent for
+   * WebRTC (sdk 2.0, streamer 14), in case the server only starts a WebRTC
+   * streamer for that one.
+   */
+  requestProfile: 'compat' | 'official';
 };
 
 export const DEFAULT_GFN_SETTINGS: GfnStreamSettings = {
@@ -51,6 +58,7 @@ export const DEFAULT_GFN_SETTINGS: GfnStreamSettings = {
   fps: 60,
   maxBitrateMbps: 30,
   codec: 'H264',
+  requestProfile: 'compat',
 };
 
 // The resolved session, ready for the signaling/WebRTC stage.
@@ -162,7 +170,7 @@ const buildSessionRequestBody = (
   deviceHashId: string,
 ): unknown => {
   const {width, height} = parseResolution(settings.resolution);
-  return {
+  const body: any = {
     sessionRequestData: {
       appId,
       internalTitle: null,
@@ -241,6 +249,23 @@ const buildSessionRequestBody = (
       },
     },
   };
+  if (settings.requestProfile === 'official') {
+    // What the last Electron OpenNOW sent for its WebRTC mode.
+    const request = body.sessionRequestData;
+    request.appId = parseInt(appId, 10);
+    request.externalAppId = null;
+    request.sdkVersion = '2.0';
+    request.streamerVersion = '14';
+    request.enhancedStreamMode = 0;
+    request.requestedAudioFormat = 0;
+    request.transport = null;
+    request.partnerCustomData = null;
+    request.accountLinked = false;
+    request.userAge = 25;
+    request.remoteControllersBitmap = 0;
+    request.clientRequestMonitorSettings[0].dpi = 96;
+  }
+  return body;
 };
 
 // ---- response parsing (WebRTC signaling path only) ----
