@@ -369,11 +369,6 @@ export default {
     GfnBitrateTitle: 'ビットレート',
     GfnBitrateDesc:
       'GeForce NOW の最大ストリーミングビットレートを設定します（注：回線や端末の性能が低い場合、ビットレートを下げると改善することがあります）。',
-    GfnSessionProfileTitle: 'セッション要求方式（診断用）',
-    GfnSessionProfileDesc:
-      'GeForce NOW のセッションの要求方法です。「signaling connected」のまま進まない場合のみ、もう一方を試してください。',
-    GfnSessionProfileCompat: '互換',
-    GfnSessionProfileOfficial: '公式',
     GfnRegionTitle: 'サーバーリージョン',
     GfnRegionDesc:
       'CloudMatch による自動選択の代わりに、特定のGeForce NOWリージョンを固定します。起動に失敗する場合は自動に戻してみてください。',

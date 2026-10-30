@@ -35,16 +35,6 @@ const gfn = [
     ],
   },
   {
-    name: 'gfn_session_profile',
-    type: 'radio',
-    title: t('GfnSessionProfileTitle'),
-    description: t('GfnSessionProfileDesc'),
-    data: [
-      {value: 'compat', text: t('GfnSessionProfileCompat')},
-      {value: 'official', text: t('GfnSessionProfileOfficial')},
-    ],
-  },
-  {
     name: 'gfn_region',
     type: 'radio',
     title: t('GfnRegionTitle'),

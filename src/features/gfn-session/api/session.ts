@@ -44,13 +44,6 @@ export type GfnStreamSettings = {
   maxBitrateMbps: number;
   /** Wire codec: only H264 is safe to assume works everywhere on RN today. */
   codec: 'H264' | 'H265' | 'AV1';
-  /**
-   * 'compat': the WebRTC request OpenNOW's compatibility mode sends (sdk 1.0,
-   * streamer 1). 'official': the request the last Electron OpenNOW sent for
-   * WebRTC (sdk 2.0, streamer 14), in case the server only starts a WebRTC
-   * streamer for that one.
-   */
-  requestProfile: 'compat' | 'official';
 };
 
 export const DEFAULT_GFN_SETTINGS: GfnStreamSettings = {
@@ -58,7 +51,6 @@ export const DEFAULT_GFN_SETTINGS: GfnStreamSettings = {
   fps: 60,
   maxBitrateMbps: 30,
   codec: 'H264',
-  requestProfile: 'compat',
 };
 
 // The resolved session, ready for the signaling/WebRTC stage.
@@ -125,8 +117,11 @@ const buildCloudMatchHeaders = (opts: {
     Authorization: `GFNJWT ${opts.token}`,
     'Content-Type': 'text/plain',
     'nv-client-id': opts.clientId,
-    'nv-client-streamer': 'NVIDIA-CLASSIC',
-    'nv-client-type': 'NATIVE',
+    // The server only starts a WebRTC streamer (and offers it on the /nvst/
+    // signaling socket) for a browser identity; NATIVE / NVIDIA-CLASSIC gets a
+    // native RTSPS seat that never sends an offer.
+    'nv-client-streamer': 'WEBRTC',
+    'nv-client-type': 'BROWSER',
     'nv-client-version': GFN_CLIENT_VERSION,
     'x-device-id': opts.deviceId,
     'nv-device-os': 'WINDOWS',
@@ -170,7 +165,7 @@ const buildSessionRequestBody = (
   deviceHashId: string,
 ): unknown => {
   const {width, height} = parseResolution(settings.resolution);
-  const body: any = {
+  return {
     sessionRequestData: {
       appId,
       internalTitle: null,
@@ -249,23 +244,6 @@ const buildSessionRequestBody = (
       },
     },
   };
-  if (settings.requestProfile === 'official') {
-    // What the last Electron OpenNOW sent for its WebRTC mode.
-    const request = body.sessionRequestData;
-    request.appId = parseInt(appId, 10);
-    request.externalAppId = null;
-    request.sdkVersion = '2.0';
-    request.streamerVersion = '14';
-    request.enhancedStreamMode = 0;
-    request.requestedAudioFormat = 0;
-    request.transport = null;
-    request.partnerCustomData = null;
-    request.accountLinked = false;
-    request.userAge = 25;
-    request.remoteControllersBitmap = 0;
-    request.clientRequestMonitorSettings[0].dpi = 96;
-  }
-  return body;
 };
 
 // ---- response parsing (WebRTC signaling path only) ----
