@@ -19,9 +19,12 @@ import {
 
 // Default streaming service; CloudMatch redirects us to the nearest region.
 const DEFAULT_BASE_URL = 'https://prod.cloudmatchbeta.nvidiagrid.net';
+// Client identity as OpenNOW's current CloudMatch requests send it (its
+// native client and WebRTC compatibility path share it).
 const GFN_USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 NVIDIACEFClient/HEAD/debb5919f6 GFN-PC/2.0.80.173';
-const GFN_CLIENT_VERSION = '2.0.80.173';
+  'GFN-PC/30.0 (Windows NT 10.0) BifrostClientSDK/4.9 (38495286)';
+const GFN_CLIENT_VERSION = '2.0.87.131';
+const GFN_CLIENT_ID = 'ec7e38d4-03af-4b58-b131-cfb0495903ab';
 const GFN_PLAY_ORIGIN = 'https://play.geforcenow.com';
 const GFN_PLAY_REFERER = 'https://play.geforcenow.com/';
 
@@ -109,8 +112,7 @@ const buildCloudMatchHeaders = (opts: {
   const headers: Record<string, string> = {
     'User-Agent': GFN_USER_AGENT,
     Authorization: `GFNJWT ${opts.token}`,
-    'Content-Type': 'application/json',
-    'nv-browser-type': 'CHROME',
+    'Content-Type': 'text/plain',
     'nv-client-id': opts.clientId,
     'nv-client-streamer': 'NVIDIA-CLASSIC',
     'nv-client-type': 'NATIVE',
@@ -120,6 +122,7 @@ const buildCloudMatchHeaders = (opts: {
     'nv-device-type': 'DESKTOP',
     'nv-device-make': 'UNKNOWN',
     'nv-device-model': 'UNKNOWN',
+    'x-nv-client-identity': GFN_USER_AGENT,
   };
   if (opts.includeOrigin) {
     headers.Origin = GFN_PLAY_ORIGIN;
@@ -160,7 +163,8 @@ const buildSessionRequestBody = (
     sessionRequestData: {
       appId,
       internalTitle: null,
-      availableSupportedControllers: [],
+      availableSupportedControllers: [2],
+      preferredController: 2,
       networkTestSessionId: null,
       parentSessionId: null,
       clientIdentification: 'GFN-PC',
@@ -203,7 +207,7 @@ const buildSessionRequestBody = (
       sdrHdrMode: 0,
       clientDisplayHdrCapabilities: null,
       surroundAudioInfo: 0,
-      remoteControllersBitmap: 0,
+      remoteControllersBitmap: 1,
       clientTimezoneOffset: -new Date().getTimezoneOffset() * 60 * 1000,
       enhancedStreamMode: 1,
       // gamepadFriendly (2): ask NVIDIA to launch big-picture/console style.
@@ -524,7 +528,7 @@ export type GfnRegionOption = {name: string; url: string};
 export const fetchGfnRegions = async (
   token: string,
 ): Promise<GfnRegionOption[]> => {
-  const clientId = uuid();
+  const clientId = GFN_CLIENT_ID;
   const deviceId = getStableDeviceId();
   const headers = buildCloudMatchHeaders({
     token,
@@ -557,7 +561,7 @@ export const fetchGfnRegions = async (
 // know which datacenter's plan to report against. Ported from OpenNOW's
 // fetchDynamicRegions(), which reads it off the identical endpoint.
 export const fetchGfnVpcId = async (token: string): Promise<string | null> => {
-  const clientId = uuid();
+  const clientId = GFN_CLIENT_ID;
   const deviceId = getStableDeviceId();
   const headers = buildCloudMatchHeaders({
     token,
@@ -611,7 +615,7 @@ export const fetchGfnSubscription = async (
   url.searchParams.set('vpcId', vpcId);
   url.searchParams.set('userId', userId);
 
-  const clientId = uuid();
+  const clientId = GFN_CLIENT_ID;
   const deviceId = getStableDeviceId();
   const headers = buildCloudMatchHeaders({
     token,
@@ -717,7 +721,7 @@ export const createGfnSession = async (
   if (!/^\d+$/.test(appId)) {
     throw new Error(`Invalid GFN appId '${appId}' (must be numeric)`);
   }
-  const clientId = uuid();
+  const clientId = GFN_CLIENT_ID;
   const deviceId = getStableDeviceId();
   const originHeaders = buildCloudMatchHeaders({
     token,
