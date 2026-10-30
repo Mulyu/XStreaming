@@ -292,7 +292,7 @@ const StreamHandshakeOverlay: React.FC<StreamHandshakeOverlayProps> = ({
           <View
             style={[styles.telemetryDot, isLive && {backgroundColor: accent}]}
           />
-          <Text style={styles.telemetryText} numberOfLines={1}>
+          <Text style={styles.telemetryText} numberOfLines={5}>
             {detailText}
           </Text>
         </View>
