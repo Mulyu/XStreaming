@@ -906,6 +906,16 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
   // Physical keyboard events are claimed here, ahead of the view hierarchy,
   // while a stream is active -- otherwise a focused React Native view (or the
   // system) would handle keys like Space/Enter/arrows itself.
+  // The mouse's Back button must not open the control rail mid-stream (see
+  // PhysicalInput.shouldSwallowBack).
+  @Override
+  public void onBackPressed() {
+    if (PhysicalInput.shouldSwallowBack()) {
+      return;
+    }
+    super.onBackPressed();
+  }
+
   @Override
   public boolean dispatchKeyEvent(KeyEvent event) {
     if (PhysicalInput.handleKeyEvent(event)) {

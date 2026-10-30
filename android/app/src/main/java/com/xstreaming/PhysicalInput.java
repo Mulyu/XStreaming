@@ -76,6 +76,11 @@ final class PhysicalInput {
     // active.
     private static boolean mouseSeenViaEvent = false;
     private static long lastEventDrivenUpdateAt = 0;
+    // When the mouse's Back (side) button last moved, from its button events.
+    // Some systems deliver the matching "back" through paths that carry no
+    // mouse source (see shouldSwallowBack), so the button itself is the proof.
+    private static long lastMouseBackAt = 0;
+    private static final long MOUSE_BACK_WINDOW_MS = 600;
 
     private static final Runnable FLUSH = () -> {
         flushScheduled = false;
@@ -121,8 +126,11 @@ final class PhysicalInput {
      */
     static void noteUncapturedMouse(MotionEvent event) {
         if (!event.isFromSource(InputDevice.SOURCE_MOUSE)
-                || event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)
-                || !isActive()) {
+                || event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)) {
+            return;
+        }
+        noteMouseBack(event);
+        if (!isActive()) {
             return;
         }
         long now = SystemClock.uptimeMillis();
@@ -134,6 +142,31 @@ final class PhysicalInput {
             lastEventDrivenUpdateAt = now;
             update();
         }
+    }
+
+    /** Remembers when the mouse's Back button was pressed or released. */
+    private static void noteMouseBack(MotionEvent event) {
+        boolean down = (event.getButtonState() & MotionEvent.BUTTON_BACK) != 0;
+        int action = event.getActionMasked();
+        boolean edge = (action == MotionEvent.ACTION_BUTTON_PRESS
+                || action == MotionEvent.ACTION_BUTTON_RELEASE)
+                && event.getActionButton() == MotionEvent.BUTTON_BACK;
+        if (down || edge) {
+            lastMouseBackAt = SystemClock.uptimeMillis();
+        }
+    }
+
+    /**
+     * MainActivity.onBackPressed: true when this "back" is the mouse's Back
+     * button during a stream, so it must not reach the app's back handling
+     * (which opens the control rail). Covers a back that arrives without the
+     * key event handleKeyEvent already consumes.
+     */
+    static boolean shouldSwallowBack() {
+        if (!isLive()) {
+            return false;
+        }
+        return SystemClock.uptimeMillis() - lastMouseBackAt < MOUSE_BACK_WINDOW_MS;
     }
 
     /** Called when the current screen changes (stream <-> not), any thread. */
@@ -318,11 +351,18 @@ final class PhysicalInput {
 
     private static boolean isMouseSideButtonKey(KeyEvent event) {
         int keyCode = event.getKeyCode();
+        if (keyCode != KeyEvent.KEYCODE_BACK && keyCode != KeyEvent.KEYCODE_FORWARD) {
+            return false;
+        }
         // While the pointer is captured the mouse reports as SOURCE_MOUSE_RELATIVE,
         // which does not contain SOURCE_MOUSE, so both are checked.
-        return (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_FORWARD)
-                && (event.isFromSource(InputDevice.SOURCE_MOUSE)
-                || event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE));
+        if (event.isFromSource(InputDevice.SOURCE_MOUSE)
+                || event.isFromSource(InputDevice.SOURCE_MOUSE_RELATIVE)) {
+            return true;
+        }
+        // A TV's input stack may tag the synthesized key with another source;
+        // it still comes from the mouse's own device.
+        return isMouseDevice(event.getDevice());
     }
 
     /** MainActivity.dispatchKeyEvent. Returns true if the event was consumed. */
@@ -433,6 +473,7 @@ final class PhysicalInput {
             }
         }
 
+        noteMouseBack(event);
         int buttonState = event.getButtonState();
         int changed = buttonState ^ lastButtonState;
         if (changed != 0) {
