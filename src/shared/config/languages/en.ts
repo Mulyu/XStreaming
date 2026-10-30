@@ -371,6 +371,11 @@ export default {
     GfnBitrateTitle: 'Bitrate',
     GfnBitrateDesc:
       'Set the maximum streaming bitrate for GeForce NOW (Note: a lower bitrate can help on weaker networks or devices).',
+    GfnSessionProfileTitle: 'Session request (diagnostic)',
+    GfnSessionProfileDesc:
+      'How the GeForce NOW session is requested. Try the other one only if the stream stalls after "signaling connected".',
+    GfnSessionProfileCompat: 'Compatible',
+    GfnSessionProfileOfficial: 'Official',
     GfnRegionTitle: 'Server region',
     GfnRegionDesc:
       'Pin a specific GeForce NOW region instead of letting CloudMatch pick the nearest one automatically. If a title fails to start, try switching back to Auto.',
