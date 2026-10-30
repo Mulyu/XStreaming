@@ -130,8 +130,6 @@ const readGfnStreamSettings = (): GfnStreamSettings => {
     fps,
     maxBitrateMbps,
     codec: DEFAULT_GFN_SETTINGS.codec,
-    requestProfile:
-      s.gfn_session_profile === 'official' ? 'official' : 'compat',
   };
 };
 

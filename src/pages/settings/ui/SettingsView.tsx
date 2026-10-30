@@ -374,14 +374,6 @@ const SettingsView: React.FC<Props> = ({
               accent={palette.provider.gfn}
             />
           )}
-          <SegmentedRow
-            title={M('gfn_session_profile').title}
-            desc={M('gfn_session_profile').description}
-            options={M('gfn_session_profile').data}
-            value={settings.gfn_session_profile}
-            onChange={v => updateSetting('gfn_session_profile', v)}
-            accent={palette.provider.gfn}
-          />
           <DropdownRow
             title={M('gfn_region').title}
             desc={M('gfn_region').description}

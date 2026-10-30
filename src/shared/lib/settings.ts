@@ -61,8 +61,6 @@ export type Settings = {
    * empty = auto (nearest region, CloudMatch's own default).
    */
   gfn_region: string;
-  /** How the GeForce NOW session is requested: 'compat' (WebRTC 1.0) or 'official' (2.0 / streamer 14). */
-  gfn_session_profile: string;
   /** Multiplier applied to MouseTrackpadZone's per-move finger delta before
    * it's sent -- see entities/gfn-input's MouseTrackpadZone.tsx. */
   gfn_mouse_trackpad_sensitivity: number;
@@ -125,7 +123,6 @@ const defaultSettings: Settings = {
   gfn_bitrate_mode: 'auto',
   gfn_bitrate: 20,
   gfn_region: '',
-  gfn_session_profile: 'compat',
   gfn_mouse_trackpad_sensitivity: 1.4,
   psplus_resolution: 4,
   psplus_fps: 60,
