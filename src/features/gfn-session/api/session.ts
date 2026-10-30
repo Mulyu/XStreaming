@@ -117,8 +117,11 @@ const buildCloudMatchHeaders = (opts: {
     Authorization: `GFNJWT ${opts.token}`,
     'Content-Type': 'text/plain',
     'nv-client-id': opts.clientId,
-    'nv-client-streamer': 'NVIDIA-CLASSIC',
-    'nv-client-type': 'NATIVE',
+    // The server only starts a WebRTC streamer (and offers it on the /nvst/
+    // signaling socket) for a browser identity; NATIVE / NVIDIA-CLASSIC gets a
+    // native RTSPS seat that never sends an offer.
+    'nv-client-streamer': 'WEBRTC',
+    'nv-client-type': 'BROWSER',
     'nv-client-version': GFN_CLIENT_VERSION,
     'x-device-id': opts.deviceId,
     'nv-device-os': 'WINDOWS',
