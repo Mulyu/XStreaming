@@ -35,7 +35,8 @@ export class GfnSignalingClient {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private listener: (event: GfnSignalingEvent) => void = () => {};
   private rxCount = 0;
-  private rxRecent: string[] = [];
+  private rxHeartbeats = 0;
+  private rxOther: string[] = [];
 
   constructor(
     private readonly signalingUrl: string,
@@ -50,30 +51,22 @@ export class GfnSignalingClient {
     this.listener(event);
   }
 
-  // What the server has sent so far, for the stall screen: how many frames and
-  // the shape of the latest few (keys, or the error text).
+  // What the server has sent so far, for the stall screen: heartbeat count
+  // and the first few other frames (shape, then the start of the raw text).
   describeReceived(): string {
-    return `rx=${this.rxCount}${
-      this.rxRecent.length > 0 ? ` [${this.rxRecent.join(', ')}]` : ''
+    return `rx: hb=${this.rxHeartbeats} other=${this.rxOther.length}${
+      this.rxOther.length > 0 ? ` ${this.rxOther.join(' ; ')}` : ''
     }`;
   }
 
-  private noteReceived(parsed: any): void {
-    this.rxCount += 1;
-    let shape: string;
-    if (parsed && typeof parsed === 'object') {
-      shape =
-        parsed.error !== undefined && parsed.error !== null
-          ? `error=${String(parsed.error)}`
-          : Object.keys(parsed).join('+');
-      const msg = parsed.peer_msg?.msg;
-      if (typeof msg === 'string') {
-        shape += `:${msg.trim().slice(0, 12)}`;
-      }
-    } else {
-      shape = typeof parsed;
+  private noteReceived(parsed: any, text: string): void {
+    if (parsed && typeof parsed === 'object' && parsed.hb) {
+      this.rxHeartbeats += 1;
+      return;
     }
-    this.rxRecent = [...this.rxRecent, shape].slice(-4);
+    if (this.rxOther.length < 3) {
+      this.rxOther.push(text.slice(0, 90));
+    }
   }
 
   private buildSignInUrl(): string {
@@ -173,7 +166,7 @@ export class GfnSignalingClient {
     } catch {
       return;
     }
-    this.noteReceived(parsed);
+    this.noteReceived(parsed, text);
 
     if (parsed.peer_info) {
       if (

@@ -68,6 +68,7 @@ export class GfnWebRtcClient {
   private stream: MediaStream | null = null;
   private offerWatchdog: ReturnType<typeof setTimeout> | null = null;
   private offerWatchdogDetail: ReturnType<typeof setTimeout> | null = null;
+  private offerWatchdogSession: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly session: GfnSession,
@@ -149,6 +150,14 @@ export class GfnWebRtcClient {
       console.log(`GFN signaling: ${text}`);
       this.setState('signaling', text);
     }, OFFER_WAIT_MS * 2);
+    this.offerWatchdogSession = setTimeout(() => {
+      if (this.disposed || this.pc) {
+        return;
+      }
+      const text = `session: ${this.session.sessionDiag}`;
+      console.log(`GFN signaling: ${text}`);
+      this.setState('signaling', text);
+    }, OFFER_WAIT_MS * 3);
   }
 
   private clearOfferWatchdog(): void {
@@ -159,6 +168,10 @@ export class GfnWebRtcClient {
     if (this.offerWatchdogDetail) {
       clearTimeout(this.offerWatchdogDetail);
       this.offerWatchdogDetail = null;
+    }
+    if (this.offerWatchdogSession) {
+      clearTimeout(this.offerWatchdogSession);
+      this.offerWatchdogSession = null;
     }
   }
 

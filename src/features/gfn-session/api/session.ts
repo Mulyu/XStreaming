@@ -3,6 +3,7 @@ import {
   getGfnLocaleSlug,
   getGfnGraphqlLocale,
 } from '../../../entities/catalog-title';
+import {describeSessionObject} from '../lib/sessionDiag';
 import {
   describeConnections,
   selectSignalingEndpoint,
@@ -66,6 +67,8 @@ export type GfnSession = {
   signalingDiag: string;
   /** One-line summary of how the server understood the request (diagnostics). */
   transportSummary: string;
+  /** What else the server's session object says (diagnostics). */
+  sessionDiag: string;
   iceServers: GfnIceServer[];
   streamingBaseUrl: string;
   clientId: string;
@@ -422,6 +425,7 @@ const toGfnSession = (
       (serverIp ? buildSignalingUrl(serverIp, sigConn?.resourcePath) : ''),
     signalingDiag,
     transportSummary: describeTransport(session),
+    sessionDiag: describeSessionObject(session),
     iceServers: normalizeIceServers(session),
     streamingBaseUrl: ctx.streamingBaseUrl,
     clientId: ctx.clientId,
