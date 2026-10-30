@@ -41,6 +41,8 @@ const baseProps = (): StreamControlRailProps => ({
   onToggleCoverControls: jest.fn(),
   screenPosition: 'center',
   onSetScreenPosition: jest.fn(),
+  fsrEnabled: false,
+  onToggleFsr: jest.fn(),
   onPressNexus: jest.fn(),
   onDisconnect: jest.fn(),
 });
@@ -103,10 +105,16 @@ describe('StreamControlRail', () => {
     expect(props.onToggleMute).toHaveBeenCalledTimes(1);
   });
 
-  it('no longer offers FSR or the aspect-ratio button', () => {
-    const tree = render(baseProps());
-    expect(pressable(tree, 'FSR')).toBeUndefined();
+  it('has FSR as an icon tile next to perf stats, and no aspect-ratio button', () => {
+    const props = baseProps();
+    const tree = render(props);
     expect(texts(tree)).not.toContain('FSR');
+    act(() => pressable(tree, 'FSR')?.props.onPress());
+    expect(props.onToggleFsr).toHaveBeenCalledTimes(1);
+    const labels = tree.root
+      .findAllByType(Pressable)
+      .map(p => p.props.accessibilityLabel);
+    expect(labels.indexOf('FSR')).toBe(labels.indexOf('Perf stats') + 1);
     expect(texts(tree)).not.toContain('Aspect ratio');
   });
 
