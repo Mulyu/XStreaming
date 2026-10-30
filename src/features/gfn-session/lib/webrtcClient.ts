@@ -45,6 +45,7 @@ type Options = {
 };
 
 const DEFAULT_PARTIAL_RELIABLE_MS = 30;
+const OFFER_WAIT_MS = 15_000;
 // Connected + XInput-style bitmap for controller 0 (bit 0 | bit 8).
 const CONTROLLER0_BITMAP = 0x0101;
 
@@ -65,6 +66,7 @@ export class GfnWebRtcClient {
   private micStream: MediaStream | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private stream: MediaStream | null = null;
+  private offerWatchdog: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly session: GfnSession,
@@ -81,6 +83,8 @@ export class GfnWebRtcClient {
   }
 
   connect(): void {
+    console.log(`GFN signaling: ${this.session.signalingUrl}`);
+    console.log(`GFN signaling: connectionInfo\n${this.session.signalingDiag}`);
     this.setState('signaling');
     this.signaling.onEvent(event => this.handleSignalingEvent(event));
     this.signaling.connect();
@@ -93,8 +97,10 @@ export class GfnWebRtcClient {
     switch (event.type) {
       case 'connected':
         this.setState('signaling', 'signaling connected');
+        this.armOfferWatchdog();
         break;
       case 'offer':
+        this.clearOfferWatchdog();
         this.handleOffer(event.sdp).catch(err =>
           this.setState('failed', `offer handling failed: ${String(err)}`),
         );
@@ -108,6 +114,34 @@ export class GfnWebRtcClient {
       case 'error':
         this.setState('failed', event.message);
         break;
+    }
+  }
+
+  // The server sends the offer right after sign-in. If nothing arrives, the
+  // socket is almost certainly on the wrong endpoint — say which one.
+  private armOfferWatchdog(): void {
+    this.clearOfferWatchdog();
+    this.offerWatchdog = setTimeout(() => {
+      if (this.disposed || this.pc) {
+        return;
+      }
+      const host = this.session.signalingUrl
+        .replace(/^wss?:\/\//, '')
+        .split('/')[0];
+      console.log(
+        `GFN signaling: no offer after ${OFFER_WAIT_MS / 1000}s from ${host}`,
+      );
+      this.setState(
+        'signaling',
+        `no offer from ${host} after ${OFFER_WAIT_MS / 1000}s`,
+      );
+    }, OFFER_WAIT_MS);
+  }
+
+  private clearOfferWatchdog(): void {
+    if (this.offerWatchdog) {
+      clearTimeout(this.offerWatchdog);
+      this.offerWatchdog = null;
     }
   }
 
@@ -567,6 +601,7 @@ export class GfnWebRtcClient {
 
   dispose(): void {
     this.disposed = true;
+    this.clearOfferWatchdog();
     this.stopMic();
     this.micTransceiver = null;
     this.stopInputHeartbeat();

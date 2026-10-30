@@ -3,6 +3,11 @@ import {
   getGfnLocaleSlug,
   getGfnGraphqlLocale,
 } from '../../../entities/catalog-title';
+import {
+  describeConnections,
+  selectSignalingEndpoint,
+  type SignalingConnection,
+} from '../lib/signalingEndpoint';
 
 // GeForce NOW CloudMatch session layer. This requests a game session from
 // NVIDIA's CloudMatch service, polls it until a GPU seat is ready, and resolves
@@ -54,6 +59,8 @@ export type GfnSession = {
   serverIp: string;
   /** wss://host:443/nvst/ */
   signalingUrl: string;
+  /** connectionInfo[] summary + the entry chosen for signaling (diagnostics). */
+  signalingDiag: string;
   iceServers: GfnIceServer[];
   streamingBaseUrl: string;
   clientId: string;
@@ -229,12 +236,7 @@ const buildSessionRequestBody = (
 
 // ---- response parsing (WebRTC signaling path only) ----
 
-type RawConnection = {
-  ip?: string | string[];
-  port?: number;
-  usage?: number;
-  resourcePath?: string;
-};
+type RawConnection = SignalingConnection;
 
 type RawCloudMatchResponse = {
   requestStatus?: {statusCode?: number; statusDescription?: string};
@@ -363,10 +365,15 @@ const toGfnSession = (
       } (code ${payload.requestStatus?.statusCode})`,
     );
   }
-  const serverIp = streamingServerIp(session) ?? '';
+  const connections = session.connectionInfo ?? [];
+  // Several usage=14 entries can be listed (WebRTC and native); picking the
+  // wrong one connects fine but never delivers an offer.
+  const endpoint = selectSignalingEndpoint(connections);
+  const signalingDiag = describeConnections(connections, endpoint);
   // The signaling connection's resourcePath (usage=14) — carried even when the
   // connection has no `ip` field, so do not require one.
-  const sigConn = (session.connectionInfo ?? []).find(c => c.usage === 14);
+  const sigConn = connections.find(c => c.usage === 14);
+  const serverIp = endpoint?.serverIp ?? streamingServerIp(session) ?? '';
   return {
     sessionId,
     status: session.status ?? 1,
@@ -374,9 +381,10 @@ const toGfnSession = (
       session.queuePosition ?? session.seatSetupInfo?.queuePosition,
     seatSetupStep: session.seatSetupInfo?.seatSetupStep,
     serverIp,
-    signalingUrl: serverIp
-      ? buildSignalingUrl(serverIp, sigConn?.resourcePath)
-      : '',
+    signalingUrl:
+      endpoint?.url ??
+      (serverIp ? buildSignalingUrl(serverIp, sigConn?.resourcePath) : ''),
+    signalingDiag,
     iceServers: normalizeIceServers(session),
     streamingBaseUrl: ctx.streamingBaseUrl,
     clientId: ctx.clientId,
