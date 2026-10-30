@@ -170,6 +170,14 @@ class PsPlusChiakiClient {
       : Promise.resolve(null);
   }
 
+  // Diagnostics: the account block of Sony's session reply (secrets hidden), or
+  // null when it can't be read.
+  fetchAccountDiag(npsso: string | undefined): Promise<string | null> {
+    return PsPlusChiakiNative?.fetchAccountDiag
+      ? PsPlusChiakiNative.fetchAccountDiag(npsso)
+      : Promise.resolve(null);
+  }
+
   invalidateCatalogCache(): void {
     PsPlusChiakiNative?.invalidateCatalogCache?.();
   }

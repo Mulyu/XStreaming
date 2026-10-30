@@ -1646,6 +1646,29 @@ JNIEXPORT jstring JNICALL JNI_FCN(cloudCatalogFetchOnlineId)(JNIEnv *env, jobjec
 	return E->NewStringUTF(env, online_id);
 }
 
+// Diagnostics: the account block of the Kamaji session as UTF-8 JSON bytes (blocking --
+// background thread). Bytes rather than NewStringUTF because the values may be non-ASCII.
+JNIEXPORT jbyteArray JNICALL JNI_FCN(cloudCatalogFetchAccountDiag)(JNIEnv *env, jobject obj, jstring npsso_str)
+{
+	const char *npsso = npsso_str ? E->GetStringUTFChars(env, npsso_str, NULL) : NULL;
+	if(!npsso)
+		return NULL;
+	char *json = NULL;
+	ChiakiErrorCode err = chiaki_cloudcatalog_fetch_account_diag(npsso, &json, &global_log);
+	E->ReleaseStringUTFChars(env, npsso_str, npsso);
+	if(err != CHIAKI_ERR_SUCCESS || !json)
+	{
+		free(json);
+		return NULL;
+	}
+	size_t len = strlen(json);
+	jbyteArray result = E->NewByteArray(env, (jsize)len);
+	if(result)
+		E->SetByteArrayRegion(env, result, 0, (jsize)len, (const jbyte *)json);
+	free(json);
+	return result;
+}
+
 JNIEXPORT void JNICALL JNI_FCN(cloudCatalogInvalidateCache)(JNIEnv *env, jobject obj, jstring cache_dir_str)
 {
 	const char *cache_dir = cache_dir_str ? E->GetStringUTFChars(env, cache_dir_str, NULL) : NULL;

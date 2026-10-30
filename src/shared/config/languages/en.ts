@@ -383,6 +383,10 @@ export default {
     PsPlusBitrateTitle: 'Bitrate',
     PsPlusBitrateDesc:
       'Set the streaming bitrate for PS Plus cloud streaming (Note: a lower bitrate can help on weaker networks).',
+    PsPlusAccountInfoTitle: 'Check PS Plus account info',
+    PsPlusAccountInfoDesc:
+      "Shows (and copies) what Sony's session reply says about your account, to see what a lapsed PS Plus subscription looks like. Secret values are hidden.",
+    PsPlusAccountInfoFailed: 'Could not read the account info.',
     PsPlusCopyDebugInfoTitle: 'Copy PS Plus logs',
     PsPlusCopyDebugInfoDesc:
       'Copies the native streaming log from your most recent PS Plus session to the clipboard, for reporting a bug.',

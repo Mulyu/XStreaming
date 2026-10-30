@@ -169,6 +169,54 @@ static CCNativeResult psnow_oauth(ChiakiLog *log, const char *npsso, const char 
 	return result;
 }
 
+// A key whose value must not leave the device in a diagnostic dump.
+static bool cc_key_is_secret(const char *key)
+{
+	static const char *const bad[] = {
+		"token", "ticket", "session", "cookie", "secret", "password", "sso", "jwt", "auth",
+	};
+	char lower[96];
+	size_t n = 0;
+	for(; key[n] && n + 1 < sizeof(lower); n++)
+		lower[n] = (char)tolower((unsigned char)key[n]);
+	lower[n] = 0;
+	for(size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
+		if(strstr(lower, bad[i]))
+			return true;
+	return false;
+}
+
+// Deep copy of @p o with the values of secret-looking keys replaced by "<hidden>".
+// Scalars are shared by refcount, so free the copy with json_object_put as usual.
+static struct json_object *cc_sanitize_json(struct json_object *o)
+{
+	switch(json_object_get_type(o))
+	{
+		case json_type_object:
+		{
+			struct json_object *copy = json_object_new_object();
+			json_object_object_foreach(o, key, val)
+			{
+				if(cc_key_is_secret(key))
+					json_object_object_add(copy, key, json_object_new_string("<hidden>"));
+				else
+					json_object_object_add(copy, key, cc_sanitize_json(val));
+			}
+			return copy;
+		}
+		case json_type_array:
+		{
+			struct json_object *copy = json_object_new_array();
+			size_t n = json_object_array_length(o);
+			for(size_t i = 0; i < n; i++)
+				json_object_array_add(copy, cc_sanitize_json(json_object_array_get_idx(o, i)));
+			return copy;
+		}
+		default:
+			return json_object_get(o);
+	}
+}
+
 // POST /user/session -> JSESSIONID. Returns CC_NATIVE_OK/AUTH_ERROR.
 // Also captures the account region signal from the response body (data.country /
 // data.language) into out_country/out_language when present (may be left empty).
@@ -176,7 +224,8 @@ static CCNativeResult psnow_session(ChiakiLog *log, const char *code, const char
                                     char *out_jsession, size_t js_sz,
                                     char *out_country, size_t cc_sz,
                                     char *out_language, size_t lang_sz,
-                                    char *out_online_id, size_t oid_sz)
+                                    char *out_online_id, size_t oid_sz,
+                                    char **out_data_json)
 {
 	char body[1024];
 	snprintf(body, sizeof(body), "code=%s&client_id=" PSNOW_CLIENT_ID "&duid=%s", code, duid);
@@ -220,6 +269,14 @@ static CCNativeResult psnow_session(ChiakiLog *log, const char *code, const char
 				// The account's PSN online ID (shown in the app's account card).
 				if(out_online_id && oid_sz)
 					snprintf(out_online_id, oid_sz, "%s", cc_json_str(data, "onlineId"));
+				// Diagnostics: the whole account block, minus anything secret-looking.
+				if(out_data_json)
+				{
+					struct json_object *clean = cc_sanitize_json(data);
+					const char *text = json_object_to_json_string_ext(clean, JSON_C_TO_STRING_PRETTY);
+					*out_data_json = text ? strdup(text) : NULL;
+					json_object_put(clean);
+				}
 			}
 			if(extract_jsessionid(resp.headers, out_jsession, js_sz))
 				result = CC_NATIVE_OK;
@@ -462,7 +519,7 @@ CCNativeResult cc_fetch_psnow_native(ChiakiLog *log, const char *npsso, struct j
 	CHIAKI_LOGI(log, "[PSNOW] OAuth code obtained, creating session");
 
 	char jsession[512];
-	r = psnow_session(log, code, duid, jsession, sizeof(jsession), out_country, cc_sz, out_language, lang_sz, NULL, 0);
+	r = psnow_session(log, code, duid, jsession, sizeof(jsession), out_country, cc_sz, out_language, lang_sz, NULL, 0, NULL);
 	if(r != CC_NATIVE_OK)
 		return r;
 	CHIAKI_LOGI(log, "[PSNOW] Session created, fetching stores");
@@ -1070,6 +1127,32 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_online_id(
 	char jsession[512];
 	// The session itself may still be refused (region), but the response body
 	// carries the online ID either way, so only an empty ID counts as failure.
-	psnow_session(log, code, duid, jsession, sizeof(jsession), NULL, 0, NULL, 0, out, out_size);
+	psnow_session(log, code, duid, jsession, sizeof(jsession), NULL, 0, NULL, 0, out, out_size, NULL);
 	return out[0] ? CHIAKI_ERR_SUCCESS : CHIAKI_ERR_UNKNOWN;
+}
+
+// Diagnostics for "what does Sony say about this account": the Kamaji session's
+// account block (data.*) as pretty JSON with secret-looking values hidden. Used to find
+// out what a lapsed PS Plus subscription looks like. *out_json is malloc'd (free it).
+CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_account_diag(
+	const char *npsso, char **out_json, ChiakiLog *log)
+{
+	if(!out_json)
+		return CHIAKI_ERR_INVALID_DATA;
+	*out_json = NULL;
+	if(!npsso || !*npsso)
+		return CHIAKI_ERR_INVALID_DATA;
+
+	size_t duid_size = CHIAKI_DUID_STR_SIZE;
+	char duid[CHIAKI_DUID_STR_SIZE];
+	if(chiaki_holepunch_generate_client_device_uid(duid, &duid_size) != CHIAKI_ERR_SUCCESS)
+		return CHIAKI_ERR_UNKNOWN;
+
+	char code[1024];
+	if(psnow_oauth(log, npsso, duid, code, sizeof(code)) != CC_NATIVE_OK)
+		return CHIAKI_ERR_UNKNOWN;
+
+	char jsession[512];
+	psnow_session(log, code, duid, jsession, sizeof(jsession), NULL, 0, NULL, 0, NULL, 0, out_json);
+	return *out_json ? CHIAKI_ERR_SUCCESS : CHIAKI_ERR_UNKNOWN;
 }
