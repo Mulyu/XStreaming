@@ -58,8 +58,6 @@ export interface StreamControlRailProps {
   onToggleCoverControls: () => void;
   screenPosition: 'top' | 'center' | 'bottom';
   onSetScreenPosition: (position: 'top' | 'center' | 'bottom') => void;
-  fsrEnabled: boolean;
-  onToggleFsr: () => void;
   onPressNexus: () => void;
   onDisconnect: () => void;
 }
@@ -97,8 +95,6 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   onToggleCoverControls,
   screenPosition,
   onSetScreenPosition,
-  fsrEnabled,
-  onToggleFsr,
   onPressNexus,
   onDisconnect,
 }) => {
@@ -331,14 +327,6 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   active={performanceVisible}
                   accent={accent}
                   onPress={onTogglePerformance}
-                  {...tileCaption('display')}
-                />
-                <RailTile
-                  icon="auto-fix"
-                  label={t('FSR')}
-                  active={fsrEnabled}
-                  accent={accent}
-                  onPress={onToggleFsr}
                   {...tileCaption('display')}
                 />
                 {showCoverControls && (

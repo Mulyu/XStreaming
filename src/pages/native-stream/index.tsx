@@ -3182,12 +3182,6 @@ export function NativeStreamScreenBase({
     [],
   );
 
-  const handleToggleFsr = React.useCallback(() => {
-    const nextSettings = {...getSettings(), fsr: !settings.fsr};
-    saveSettings(nextSettings);
-    setSettings(nextSettings);
-  }, [settings.fsr]);
-
   const handleToggleVibration = React.useCallback(() => {
     const nextSettings = {...getSettings(), vibration: !settings.vibration};
     saveSettings(nextSettings);
@@ -3644,8 +3638,6 @@ export function NativeStreamScreenBase({
         onToggleCoverControls={handleToggleCoverControls}
         screenPosition={settings.screen_position || 'center'}
         onSetScreenPosition={handleSetScreenPosition}
-        fsrEnabled={!!settings.fsr}
-        onToggleFsr={handleToggleFsr}
         onPressNexus={handleRailPressNexus}
         onDisconnect={handleRailDisconnect}
       />
