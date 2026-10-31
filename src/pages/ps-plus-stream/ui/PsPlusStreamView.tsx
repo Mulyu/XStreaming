@@ -45,11 +45,10 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   videoFormat,
   audioGain,
   onAudioGainChange,
-  audioMuted,
-  onToggleMute,
   micOpen,
   onToggleMic,
   onSetScreenPosition,
+  onCycleVideoFormat,
   onEditGamepadLayout,
   showGamepadEditor,
   editorProfile,
@@ -204,10 +203,10 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         metrics={metrics}
         screenPosition={screenPosition}
         onSetScreenPosition={onSetScreenPosition}
+        videoFormat={videoFormat}
+        onCycleVideoFormat={onCycleVideoFormat}
         audioGain={audioGain}
         onAudioGainChange={onAudioGainChange}
-        audioMuted={audioMuted}
-        onToggleMute={onToggleMute}
         micOpen={micOpen}
         onToggleMic={onToggleMic}
         onEditGamepadLayout={onEditGamepadLayout}

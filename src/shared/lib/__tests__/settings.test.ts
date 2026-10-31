@@ -28,18 +28,3 @@ describe('getSettingsCached', () => {
     expect(second.dead_zone).toBe(0.4);
   });
 });
-
-describe('removed rail control', () => {
-  beforeEach(() => mockStore.clear());
-
-  it('ignores a saved aspect-ratio value but keeps FSR', () => {
-    mockStore.set(
-      'user.settings',
-      JSON.stringify({fsr: true, video_format: 'Zoom', dead_zone: 0.3}),
-    );
-    const settings = getSettings();
-    expect(settings.fsr).toBe(true);
-    expect(settings.video_format).toBe('');
-    expect(settings.dead_zone).toBe(0.3);
-  });
-});

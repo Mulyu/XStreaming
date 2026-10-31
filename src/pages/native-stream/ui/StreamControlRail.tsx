@@ -1,16 +1,17 @@
 import React from 'react';
-import {View, StyleSheet, Animated, Easing, ScrollView} from 'react-native';
-import {Text} from 'react-native-paper';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Animated,
+  Easing,
+  ScrollView,
+} from 'react-native';
+import {Text, Icon} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import {useTranslation} from 'react-i18next';
-import {
-  RailButton,
-  RailIconButton,
-  RailSectionLabel,
-  RailTile,
-  RailTileRow,
-  SegOption,
-} from '../../../shared/ui/RailControls';
+import {RailButton, SegOption} from '../../../shared/ui/RailControls';
+import {TV_FOCUS_COLOR as FOCUS_COLOR} from '../../../shared/ui/tvFocus';
 import {alpha, palette} from '../../../shared/config/palette';
 
 export type StreamInputMode = 'off' | 'gamepad' | 'mouse' | 'touch';
@@ -48,9 +49,6 @@ export interface StreamControlRailProps {
   onToggleMicrophone: () => void;
   volume: number;
   onVolumeChange: (value: number) => void;
-  // Silences the game without moving the volume slider.
-  muted: boolean;
-  onToggleMute: () => void;
   performanceVisible: boolean;
   onTogglePerformance: () => void;
   showCoverControls: boolean;
@@ -58,6 +56,8 @@ export interface StreamControlRailProps {
   onToggleCoverControls: () => void;
   screenPosition: 'top' | 'center' | 'bottom';
   onSetScreenPosition: (position: 'top' | 'center' | 'bottom') => void;
+  videoFormat: string;
+  onCycleVideoFormat: () => void;
   fsrEnabled: boolean;
   onToggleFsr: () => void;
   onPressNexus: () => void;
@@ -88,8 +88,6 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   onToggleMicrophone,
   volume,
   onVolumeChange,
-  muted,
-  onToggleMute,
   performanceVisible,
   onTogglePerformance,
   showCoverControls,
@@ -97,6 +95,8 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   onToggleCoverControls,
   screenPosition,
   onSetScreenPosition,
+  videoFormat,
+  onCycleVideoFormat,
   fsrEnabled,
   onToggleFsr,
   onPressNexus,
@@ -105,25 +105,23 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
   const {t} = useTranslation();
   const accent =
     streamType === 'gfn' ? palette.provider.gfn : palette.provider.xbox;
+  const videoFormatLabel =
+    videoFormat === ''
+      ? t('Aspect ratio')
+      : videoFormat === 'Stretch'
+      ? t('Stretch')
+      : videoFormat === 'Zoom'
+      ? t('Zoom')
+      : videoFormat;
   const [liveVolume, setLiveVolume] = React.useState(volume);
   React.useEffect(() => setLiveVolume(volume), [volume]);
+  const [closeFocused, setCloseFocused] = React.useState(false);
   const [liveMouseSensitivity, setLiveMouseSensitivity] =
     React.useState(mouseSensitivity);
   React.useEffect(
     () => setLiveMouseSensitivity(mouseSensitivity),
     [mouseSensitivity],
   );
-  // The focused tile's name, shown beside its section's heading so the tile
-  // rows need no text of their own.
-  const [caption, setCaption] = React.useState<{
-    section: 'input' | 'display';
-    text: string;
-  } | null>(null);
-  const tileCaption = (section: 'input' | 'display') => ({
-    onFocusLabel: (text: string) => setCaption({section, text}),
-    onBlurLabel: () =>
-      setCaption(current => (current?.section === section ? null : current)),
-  });
   const slideIn = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -156,30 +154,14 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
           ],
         },
       ]}>
-      <View style={styles.topRow}>
-        {connected && (
-          <RailIconButton
-            icon="microsoft-xbox"
-            label={t('Press Nexus')}
-            accent={accent}
-            onPress={onPressNexus}
-          />
-        )}
-        <RailIconButton
-          icon="power"
-          label={t('Disconnect')}
-          accent={accent}
-          danger
-          onPress={onDisconnect}
-        />
-        <View style={styles.topSpacer} />
-        <RailIconButton
-          icon="close"
-          label={t('Close')}
-          accent={accent}
-          onPress={onClose}
-        />
-      </View>
+      <Pressable
+        style={[styles.closeBtn, closeFocused && styles.closeBtnFocused]}
+        onPress={onClose}
+        onFocus={() => setCloseFocused(true)}
+        onBlur={() => setCloseFocused(false)}
+        android_ripple={{color: alpha(palette.white, 0.15)}}>
+        <Icon source="close" size={16} color={palette.textSoft} />
+      </Pressable>
 
       {/* The contents scroll: on a short screen (a TV) the groups no longer
           fit, and a fixed-height rail would squeeze them together. */}
@@ -190,12 +172,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
         {connected && (
           <>
             <View style={styles.group}>
-              <RailSectionLabel
-                title={t('Input')}
-                caption={
-                  caption?.section === 'input' ? caption.text : undefined
-                }
-              />
+              <Text style={styles.groupLabel}>{t('Input')}</Text>
               <View style={styles.segRow}>
                 <SegOption
                   icon="close-circle-outline"
@@ -231,7 +208,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
               {showEditGamepadLayout && (
                 <RailButton
                   icon="pencil-outline"
-                  label={t('Edit layout')}
+                  label={t('Edit Virtual Gamepad')}
                   accent={accent}
                   onPress={onEditGamepadLayout}
                 />
@@ -260,30 +237,26 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   />
                 </View>
               )}
-              <RailTileRow>
-                <RailTile
-                  icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
-                  label={t('Vibration')}
-                  active={vibrationEnabled}
+              <RailButton
+                icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
+                label={t('Vibration')}
+                active={vibrationEnabled}
+                accent={accent}
+                onPress={onToggleVibration}
+              />
+              {showKeyboardOption && (
+                <RailButton
+                  icon="keyboard-outline"
+                  label={t('Keyboard')}
+                  active={keyboardVisible}
                   accent={accent}
-                  onPress={onToggleVibration}
-                  {...tileCaption('input')}
+                  onPress={onToggleKeyboard}
                 />
-                {showKeyboardOption && (
-                  <RailTile
-                    icon="keyboard-outline"
-                    label={t('Keyboard')}
-                    active={keyboardVisible}
-                    accent={accent}
-                    onPress={onToggleKeyboard}
-                    {...tileCaption('input')}
-                  />
-                )}
-              </RailTileRow>
+              )}
             </View>
 
             <View style={styles.group}>
-              <RailSectionLabel title={t('Audio')} />
+              <Text style={styles.groupLabel}>{t('Audio')}</Text>
               {showMicrophone && (
                 <RailButton
                   icon={microphoneOpen ? 'microphone' : 'microphone-off'}
@@ -293,65 +266,50 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   onPress={onToggleMicrophone}
                 />
               )}
-              <View style={styles.volumeRow}>
-                <RailIconButton
-                  icon={muted ? 'volume-off' : 'volume-high'}
-                  label={t('Mute')}
-                  accent={accent}
-                  active={muted}
-                  onPress={onToggleMute}
-                />
+              <View style={styles.sliderRow}>
+                <View style={styles.sliderHead}>
+                  <Text style={styles.sliderHeadLabel}>{t('Volume')}</Text>
+                  <Text style={styles.sliderHeadValue}>
+                    {liveVolume.toFixed(1)}x
+                  </Text>
+                </View>
                 <RNSlider
-                  style={styles.volumeTrack}
+                  style={styles.sliderTrack}
                   minimumValue={0}
                   maximumValue={1}
                   step={0.1}
                   value={volume}
                   onValueChange={setLiveVolume}
                   onSlidingComplete={onVolumeChange}
-                  minimumTrackTintColor={muted ? palette.textDim : accent}
+                  minimumTrackTintColor={accent}
                   maximumTrackTintColor={alpha(palette.white, 0.14)}
-                  thumbTintColor={muted ? palette.textDim : accent}
+                  thumbTintColor={accent}
                 />
-                <Text style={styles.volumeValue}>{liveVolume.toFixed(1)}x</Text>
               </View>
             </View>
 
             <View style={styles.group}>
-              <RailSectionLabel
-                title={t('Display')}
-                caption={
-                  caption?.section === 'display' ? caption.text : undefined
-                }
+              <Text style={styles.groupLabel}>{t('Display')}</Text>
+              <RailButton
+                icon="chart-line"
+                label={t('Perf stats')}
+                active={performanceVisible}
+                accent={accent}
+                onPress={onTogglePerformance}
               />
-              <RailTileRow>
-                <RailTile
-                  icon="chart-line"
-                  label={t('Perf stats')}
-                  active={performanceVisible}
+              {showCoverControls && (
+                <RailButton
+                  icon="image-outline"
+                  label={t('Cover controls')}
+                  active={coverPresented}
                   accent={accent}
-                  onPress={onTogglePerformance}
-                  {...tileCaption('display')}
+                  onPress={onToggleCoverControls}
                 />
-                <RailTile
-                  icon="auto-fix"
-                  label={t('FSR')}
-                  active={fsrEnabled}
-                  accent={accent}
-                  onPress={onToggleFsr}
-                  {...tileCaption('display')}
-                />
-                {showCoverControls && (
-                  <RailTile
-                    icon="image-outline"
-                    label={t('Cover controls')}
-                    active={coverPresented}
-                    accent={accent}
-                    onPress={onToggleCoverControls}
-                    {...tileCaption('display')}
-                  />
-                )}
-              </RailTileRow>
+              )}
+            </View>
+
+            <View style={styles.group}>
+              <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
               <View style={styles.segRow}>
                 <SegOption
                   icon="align-vertical-top"
@@ -375,8 +333,50 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   onPress={() => onSetScreenPosition('bottom')}
                 />
               </View>
+              <RailButton
+                icon="aspect-ratio"
+                label={videoFormatLabel}
+                accent={accent}
+                onPress={onCycleVideoFormat}
+              />
+              <RailButton
+                icon="auto-fix"
+                label={t('FSR')}
+                active={fsrEnabled}
+                accent={accent}
+                onPress={onToggleFsr}
+              />
+            </View>
+
+            <View style={[styles.group, styles.sessionGroup]}>
+              <Text style={styles.groupLabel}>{t('Session')}</Text>
+              <RailButton
+                icon="microsoft-xbox"
+                label={t('Press Nexus')}
+                accent={accent}
+                onPress={onPressNexus}
+              />
+              <RailButton
+                icon="power"
+                label={t('Disconnect')}
+                accent={accent}
+                danger
+                onPress={onDisconnect}
+              />
             </View>
           </>
+        )}
+
+        {!connected && (
+          <View style={[styles.group, styles.sessionGroup]}>
+            <RailButton
+              icon="power"
+              label={t('Disconnect')}
+              accent={accent}
+              danger
+              onPress={onDisconnect}
+            />
+          </View>
         )}
       </ScrollView>
     </Animated.View>
@@ -399,14 +399,31 @@ const styles = StyleSheet.create({
   },
   scroll: {flex: 1},
   scrollContent: {gap: 14, flexGrow: 1},
-  topRow: {
-    flexDirection: 'row',
+  closeBtn: {
+    alignSelf: 'flex-end',
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    backgroundColor: alpha(palette.white, 0.06),
   },
-  topSpacer: {flex: 1},
+  closeBtnFocused: {
+    borderWidth: 2,
+    borderColor: FOCUS_COLOR,
+  },
   group: {
     gap: 6,
+  },
+  sessionGroup: {
+    marginTop: 'auto',
+  },
+  groupLabel: {
+    fontSize: 9,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: palette.textDim,
+    paddingHorizontal: 4,
   },
   segRow: {
     flexDirection: 'row',
@@ -434,21 +451,6 @@ const styles = StyleSheet.create({
   sliderTrack: {
     height: 28,
     width: '100%',
-  },
-  volumeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  volumeTrack: {
-    flex: 1,
-    height: 28,
-  },
-  volumeValue: {
-    width: 26,
-    fontSize: 9.5,
-    color: palette.textSoft,
-    textAlign: 'right',
   },
 });
 

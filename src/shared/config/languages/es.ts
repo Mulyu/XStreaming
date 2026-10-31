@@ -67,8 +67,6 @@ export default {
     'Customize virtual buttons': 'Personalizar botones virtuales',
     'Customize buttons of virtual gamepad': 'Editar diseño del mando virtual.',
     'Edit Virtual Gamepad': 'Editar mando virtual',
-    Mute: 'Silenciar',
-    'Edit layout': 'Editar diseño',
     'Click on an element to set its size and display':
       'Pulsa un elemento para ajustar tamaño y visibilidad.',
     'Drag elements to adjust their position':

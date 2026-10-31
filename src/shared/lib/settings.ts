@@ -164,9 +164,6 @@ export const getSettings = (): Settings => {
       'locale_follow_system',
     );
     const merged = Object.assign({}, defaultSettings, _settings);
-    // The in-stream rail's aspect-ratio button was removed, so a value saved
-    // while it existed has nothing left to change it: always automatic.
-    merged.video_format = '';
     merged.locale_follow_system = hasLocaleFollowSystem
       ? !!_settings.locale_follow_system
       : false;

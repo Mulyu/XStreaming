@@ -1,25 +1,27 @@
 import React from 'react';
-import {View, StyleSheet, Animated, Easing, ScrollView} from 'react-native';
-import {Text} from 'react-native-paper';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Animated,
+  Easing,
+  ScrollView,
+} from 'react-native';
+import {Text, Icon} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
-import {
-  RailButton,
-  RailIconButton,
-  RailSectionLabel,
-  RailTile,
-  RailTileRow,
-  SegOption,
-} from '../../../shared/ui/RailControls';
+import {RailButton, SegOption} from '../../../shared/ui/RailControls';
+import {TV_FOCUS_COLOR as FOCUS_COLOR} from '../../../shared/ui/tvFocus';
 import {alpha, palette} from '../../../shared/config/palette';
 
-// Same layout as native-stream's own StreamControlRail (icon buttons on top,
-// Input / Audio / Display sections, icon tiles for the on/off switches),
-// scoped to only what applies to a PS5 cloud session: no input-mode switch
-// (the virtual gamepad and touchpad are independent toggles), no mouse
-// sensitivity/keyboard (mouse-mode-only on GFN), no Press Nexus (no PS5
-// equivalent chord button to synthesize). The microphone is sent natively
-// (AudioRecord -> Opus -> takion).
+// Grouped-section layout ported from native-stream's own StreamControlRail
+// (same group labels, segmented control, slider, and focus-ring styling),
+// scoped to only what actually applies to a PS5 cloud session: no input-
+// mode switch (PS Plus is gamepad-only -- no mouse/touch modes exist
+// server-side), no mouse sensitivity/keyboard (mouse-mode-only on GFN), no
+// FSR (a WebRTC-renderer-only upscaling pipeline, unrelated to this
+// decoder), no Press Nexus (no PS5-equivalent chord button to synthesize).
+// The microphone is sent natively (AudioRecord -> Opus -> takion).
 type Props = Pick<
   PsPlusStreamViewModel,
   | 't'
@@ -32,9 +34,9 @@ type Props = Pick<
   | 'metrics'
   | 'screenPosition'
   | 'onSetScreenPosition'
+  | 'videoFormat'
+  | 'onCycleVideoFormat'
   | 'audioGain'
-  | 'audioMuted'
-  | 'onToggleMute'
   | 'micOpen'
   | 'onToggleMic'
   | 'onAudioGainChange'
@@ -67,9 +69,9 @@ const PsPlusControlRail: React.FC<Props> = ({
   metrics,
   screenPosition,
   onSetScreenPosition,
+  videoFormat,
+  onCycleVideoFormat,
   audioGain,
-  audioMuted,
-  onToggleMute,
   micOpen,
   onToggleMic,
   onAudioGainChange,
@@ -83,18 +85,17 @@ const PsPlusControlRail: React.FC<Props> = ({
   onToggleCoverControls,
   onRailDisconnect,
 }) => {
+  const videoFormatLabel =
+    videoFormat === ''
+      ? t('Aspect ratio')
+      : videoFormat === 'Stretch'
+      ? t('Stretch')
+      : videoFormat === 'Zoom'
+      ? t('Zoom')
+      : videoFormat;
   const [liveVolume, setLiveVolume] = React.useState(audioGain);
   React.useEffect(() => setLiveVolume(audioGain), [audioGain]);
-  // The focused tile's name, shown beside its section's heading.
-  const [caption, setCaption] = React.useState<{
-    section: 'input' | 'display';
-    text: string;
-  } | null>(null);
-  const tileCaption = (section: 'input' | 'display') => ({
-    onFocusLabel: (text: string) => setCaption({section, text}),
-    onBlurLabel: () =>
-      setCaption(current => (current?.section === section ? null : current)),
-  });
+  const [closeFocused, setCloseFocused] = React.useState(false);
   const slideIn = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -130,22 +131,14 @@ const PsPlusControlRail: React.FC<Props> = ({
           ],
         },
       ]}>
-      <View style={styles.topRow}>
-        <RailIconButton
-          icon="power"
-          label={t('Disconnect')}
-          accent={palette.provider.ps}
-          danger
-          onPress={onRailDisconnect}
-        />
-        <View style={styles.topSpacer} />
-        <RailIconButton
-          icon="close"
-          label={t('Close')}
-          accent={palette.provider.ps}
-          onPress={onCloseControlRail}
-        />
-      </View>
+      <Pressable
+        style={[styles.closeBtn, closeFocused && styles.closeBtnFocused]}
+        onPress={onCloseControlRail}
+        onFocus={() => setCloseFocused(true)}
+        onBlur={() => setCloseFocused(false)}
+        android_ripple={{color: alpha(palette.white, 0.15)}}>
+        <Icon source="close" size={16} color={palette.textSoft} />
+      </Pressable>
 
       {/* The contents scroll: on a short screen (a TV) the groups no longer
           fit, and a fixed-height rail would squeeze them together. */}
@@ -154,50 +147,40 @@ const PsPlusControlRail: React.FC<Props> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         <View style={styles.group}>
-          <RailSectionLabel
-            title={t('Input')}
-            caption={caption?.section === 'input' ? caption.text : undefined}
+          <Text style={styles.groupLabel}>{t('Input')}</Text>
+          <RailButton
+            accent={palette.provider.ps}
+            icon={
+              showVirtualGamepad ? 'gamepad-variant' : 'gamepad-variant-outline'
+            }
+            label={t('Virtual gamepad')}
+            active={showVirtualGamepad}
+            onPress={onToggleVirtualGamepad}
           />
-          <RailTileRow>
-            <RailTile
-              accent={palette.provider.ps}
-              icon={
-                showVirtualGamepad
-                  ? 'gamepad-variant'
-                  : 'gamepad-variant-outline'
-              }
-              label={t('Virtual gamepad')}
-              active={showVirtualGamepad}
-              onPress={onToggleVirtualGamepad}
-              {...tileCaption('input')}
-            />
-            <RailTile
-              accent={palette.provider.ps}
-              icon="gesture-swipe"
-              label={t('Touchpad')}
-              active={touchpadVisible}
-              onPress={onToggleTouchpad}
-              {...tileCaption('input')}
-            />
-            <RailTile
-              accent={palette.provider.ps}
-              icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
-              label={t('Vibration')}
-              active={vibrationEnabled}
-              onPress={onToggleVibration}
-              {...tileCaption('input')}
-            />
-          </RailTileRow>
+          <RailButton
+            accent={palette.provider.ps}
+            icon="gesture-swipe"
+            label={t('Touchpad')}
+            active={touchpadVisible}
+            onPress={onToggleTouchpad}
+          />
           <RailButton
             accent={palette.provider.ps}
             icon="pencil-outline"
-            label={t('Edit layout')}
+            label={t('Edit Virtual Gamepad')}
             onPress={onEditGamepadLayout}
+          />
+          <RailButton
+            accent={palette.provider.ps}
+            icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
+            label={t('Vibration')}
+            active={vibrationEnabled}
+            onPress={onToggleVibration}
           />
         </View>
 
         <View style={styles.group}>
-          <RailSectionLabel title={t('Audio')} />
+          <Text style={styles.groupLabel}>{t('Audio')}</Text>
           <RailButton
             accent={palette.provider.ps}
             icon={micOpen ? 'microphone' : 'microphone-off'}
@@ -205,59 +188,37 @@ const PsPlusControlRail: React.FC<Props> = ({
             active={micOpen}
             onPress={onToggleMic}
           />
-          <View style={styles.volumeRow}>
-            <RailIconButton
-              icon={audioMuted ? 'volume-off' : 'volume-high'}
-              label={t('Mute')}
-              accent={palette.provider.ps}
-              active={audioMuted}
-              onPress={onToggleMute}
-            />
+          <View style={styles.sliderRow}>
+            <View style={styles.sliderHead}>
+              <Text style={styles.sliderHeadLabel}>{t('Volume')}</Text>
+              <Text style={styles.sliderHeadValue}>
+                {liveVolume.toFixed(1)}x
+              </Text>
+            </View>
             <RNSlider
-              style={styles.volumeTrack}
+              style={styles.sliderTrack}
               minimumValue={0}
               maximumValue={1}
               step={0.1}
               value={audioGain}
               onValueChange={setLiveVolume}
               onSlidingComplete={onAudioGainChange}
-              minimumTrackTintColor={
-                audioMuted ? palette.textDim : palette.provider.ps
-              }
+              minimumTrackTintColor={palette.provider.ps}
               maximumTrackTintColor={alpha(palette.white, 0.14)}
-              thumbTintColor={
-                audioMuted ? palette.textDim : palette.provider.ps
-              }
+              thumbTintColor={palette.provider.ps}
             />
-            <Text style={styles.volumeValue}>{liveVolume.toFixed(1)}x</Text>
           </View>
         </View>
 
         <View style={styles.group}>
-          <RailSectionLabel
-            title={t('Display')}
-            caption={caption?.section === 'display' ? caption.text : undefined}
+          <Text style={styles.groupLabel}>{t('Display')}</Text>
+          <RailButton
+            accent={palette.provider.ps}
+            icon="chart-line"
+            label={t('Perf stats')}
+            active={performanceVisible}
+            onPress={onTogglePerformance}
           />
-          <RailTileRow>
-            <RailTile
-              accent={palette.provider.ps}
-              icon="chart-line"
-              label={t('Perf stats')}
-              active={performanceVisible}
-              onPress={onTogglePerformance}
-              {...tileCaption('display')}
-            />
-            {coverAvailable && (
-              <RailTile
-                accent={palette.provider.ps}
-                icon="image-outline"
-                label={t('Cover controls')}
-                active={coverPresented}
-                onPress={onToggleCoverControls}
-                {...tileCaption('display')}
-              />
-            )}
-          </RailTileRow>
           {performanceVisible && metrics && (
             <View style={styles.metrics}>
               <Text style={styles.metricLine}>
@@ -272,6 +233,19 @@ const PsPlusControlRail: React.FC<Props> = ({
               </Text>
             </View>
           )}
+          {coverAvailable && (
+            <RailButton
+              accent={palette.provider.ps}
+              icon="image-outline"
+              label={t('Cover controls')}
+              active={coverPresented}
+              onPress={onToggleCoverControls}
+            />
+          )}
+        </View>
+
+        <View style={styles.group}>
+          <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
           <View style={styles.segRow}>
             <SegOption
               accent={palette.provider.ps}
@@ -295,6 +269,23 @@ const PsPlusControlRail: React.FC<Props> = ({
               onPress={() => onSetScreenPosition('bottom')}
             />
           </View>
+          <RailButton
+            accent={palette.provider.ps}
+            icon="aspect-ratio"
+            label={videoFormatLabel}
+            onPress={onCycleVideoFormat}
+          />
+        </View>
+
+        <View style={[styles.group, styles.sessionGroup]}>
+          <Text style={styles.groupLabel}>{t('Session')}</Text>
+          <RailButton
+            accent={palette.provider.ps}
+            icon="power"
+            label={t('Disconnect')}
+            danger
+            onPress={onRailDisconnect}
+          />
         </View>
       </ScrollView>
     </Animated.View>
@@ -317,14 +308,31 @@ const styles = StyleSheet.create({
   },
   scroll: {flex: 1},
   scrollContent: {gap: 14, flexGrow: 1},
-  topRow: {
-    flexDirection: 'row',
+  closeBtn: {
+    alignSelf: 'flex-end',
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    backgroundColor: alpha(palette.white, 0.06),
   },
-  topSpacer: {flex: 1},
+  closeBtnFocused: {
+    borderWidth: 2,
+    borderColor: FOCUS_COLOR,
+  },
   group: {
     gap: 6,
+  },
+  sessionGroup: {
+    marginTop: 'auto',
+  },
+  groupLabel: {
+    fontSize: 9,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: palette.textDim,
+    paddingHorizontal: 4,
   },
   segRow: {
     flexDirection: 'row',
@@ -338,20 +346,25 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   metricLine: {fontSize: 11, color: palette.textSoft},
-  volumeRow: {
+  sliderRow: {
+    gap: 4,
+    paddingHorizontal: 4,
+  },
+  sliderHead: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
   },
-  volumeTrack: {
-    flex: 1,
-    height: 28,
-  },
-  volumeValue: {
-    width: 26,
+  sliderHeadLabel: {
     fontSize: 9.5,
     color: palette.textSoft,
-    textAlign: 'right',
+  },
+  sliderHeadValue: {
+    fontSize: 9.5,
+    color: palette.textSoft,
+  },
+  sliderTrack: {
+    height: 28,
+    width: '100%',
   },
 });
 

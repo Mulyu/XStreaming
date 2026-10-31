@@ -68,8 +68,6 @@ export default {
     'Customize virtual buttons': 'वर्चुअल बटन कस्टमाइज़ करें',
     'Customize buttons of virtual gamepad': 'वर्चुअल पैड के लेआउट को बदलें।',
     'Edit Virtual Gamepad': 'वर्चुअल पैड संपादित करें',
-    Mute: 'म्यूट',
-    'Edit layout': 'लेआउट संपादित करें',
     'Click on an element to set its size and display':
       'आकार और दिखावट सेट करने के लिए क्लिक करें।',
     'Drag elements to adjust their position': 'स्थिति बदलने के लिए खींचें।',
