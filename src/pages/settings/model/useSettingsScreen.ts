@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Linking, ToastAndroid} from 'react-native';
+import {Alert, ToastAndroid} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
@@ -47,7 +47,6 @@ import {
   gfnSettings as gfn,
   psPlusSettings as psplus,
 } from '../../../features/app-settings';
-import {planUrl, PlanProvider} from './planLinks';
 
 const log = debugFactory('SettingsScreen');
 
@@ -511,48 +510,25 @@ export function useSettingsScreen(navigation: any, route: any) {
     ...gfnRegions.map(r => ({value: r.url, text: r.name})),
   ];
 
-  // What each provider's account card shows. Only what the provider lets us
-  // read: GeForce NOW gives the full plan; Xbox only whether a membership is
-  // active; PlayStation nothing beyond being signed in.
+  // What each provider's account row shows. Only what the provider lets us
+  // read: GeForce NOW gives the plan tier; Xbox only whether a membership is
+  // active; PlayStation nothing beyond the signed-in name.
   const xboxAccount = {
     userName: xboxProfile?.gamertag || user,
     planTitle:
       xboxProfile?.accountTier === 'Gold' ? t('XboxGamePassActive') : undefined,
-    planLines: isAuthed ? [t('XboxPlanUnknownDesc')] : [],
   };
 
-  const gfnRenewal = (): string[] => {
-    const end = gfnSubscription?.currentSpanEndDateTime;
-    const date = end ? new Date(end) : null;
-    return date && !Number.isNaN(date.getTime())
-      ? [
-          t('GfnPlanRenews', {
-            date: date.toLocaleDateString(settings.locale || undefined),
-          }),
-        ]
-      : [];
-  };
   const gfnAccount = {
     userName: getGfnDisplayName() ?? undefined,
     planTitle: gfnSubscription
       ? gfnSubscription.membershipTier.charAt(0).toUpperCase() +
         gfnSubscription.membershipTier.slice(1).toLowerCase()
       : undefined,
-    planLines: gfnSubscription
-      ? [gfnPlaytimeDescription(), ...gfnRenewal()]
-      : [],
   };
 
   const psAccount = {
     userName: psOnlineId ?? undefined,
-    planTitle: undefined as string | undefined,
-    planLines: psPlusSignedIn ? [t('PsPlanUnknownDesc')] : [],
-  };
-
-  const handleOpenPlan = (provider: PlanProvider) => {
-    Linking.openURL(planUrl(provider, settings.locale)).catch(() => {
-      Alert.alert(t('Warning'), t('StoreLinkOpenFailed'));
-    });
   };
 
   return {
@@ -579,7 +555,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     xboxAccount,
     gfnAccount,
     psAccount,
-    onOpenPlan: handleOpenPlan,
+    gfnPlaytimeDescription: gfnPlaytimeDescription(),
     onChangeLane: setLane,
     updateSetting,
     onLocaleChange: handleLocaleChange,

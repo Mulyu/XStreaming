@@ -9,8 +9,8 @@ import {
   SegmentedRow,
   DropdownRow,
   SliderRow,
+  InfoRow,
 } from '../../../shared/ui/InlineSettingRows';
-import AccountCard from './AccountCard';
 import {GfnSignInModal} from '../../../entities/gfn-account';
 import {MsalAuth} from '../../../entities/xbox-token';
 import {M} from '../model/useSettingsScreen';
@@ -85,7 +85,7 @@ const SettingsView: React.FC<Props> = ({
   xboxAccount,
   gfnAccount,
   psAccount,
-  onOpenPlan,
+  gfnPlaytimeDescription,
   onChangeLane,
   updateSetting,
   onLocaleChange,
@@ -137,14 +137,12 @@ const SettingsView: React.FC<Props> = ({
       flex: 1.25,
     },
   ];
-  const accountLabels = {
-    signedIn: t('AccountSignedIn'),
-    signedOut: t('AccountSignedOut'),
-    plan: t('AccountPlan'),
-    changePlan: t('AccountChangePlan'),
-    signIn: t('AccountSignIn'),
-    signOut: t('AccountSignOut'),
-  };
+  // One line per provider: who is signed in (and the plan where the provider
+  // lets the app read it), or how to sign in. Tapping signs in or out.
+  const signedInText = (userName: string | undefined, plan?: string) =>
+    userName
+      ? `${t('Current user')}: ${userName}${plan ? ` · ${plan}` : ''}`
+      : undefined;
   return (
     <View style={styles.container}>
       <Spinner
@@ -239,17 +237,15 @@ const SettingsView: React.FC<Props> = ({
       {lane === 'xbox' && (
         <ScrollView style={styles.settingsScroll}>
           <SectionLabel title={t('SectionAccount')} />
-          <AccountCard
-            color={palette.provider.xbox}
-            service="Xbox"
-            signedIn={isAuthed}
-            userName={xboxAccount.userName}
-            planTitle={xboxAccount.planTitle}
-            planLines={xboxAccount.planLines}
-            labels={accountLabels}
-            onSignIn={onXcloudAccountPress}
-            onSignOut={onXcloudAccountPress}
-            onChangePlan={() => onOpenPlan('xbox')}
+          <SettingItem
+            title={t('XcloudAccountTitle')}
+            description={
+              isAuthed
+                ? signedInText(xboxAccount.userName, xboxAccount.planTitle) ??
+                  t('XcloudAccountSignedInDesc')
+                : t('XcloudAccountSignedOutDesc')
+            }
+            onPress={onXcloudAccountPress}
           />
 
           <SectionLabel title={t('SectionVideo')} />
@@ -324,17 +320,20 @@ const SettingsView: React.FC<Props> = ({
       {lane === 'gfn' && (
         <ScrollView style={styles.settingsScroll}>
           <SectionLabel title={t('SectionAccount')} />
-          <AccountCard
-            color={palette.provider.gfn}
-            service="GeForce NOW"
-            signedIn={gfnSignedIn}
-            userName={gfnAccount.userName}
-            planTitle={gfnAccount.planTitle}
-            planLines={gfnAccount.planLines}
-            labels={accountLabels}
-            onSignIn={onGfnAccountPress}
-            onSignOut={onGfnAccountPress}
-            onChangePlan={() => onOpenPlan('gfn')}
+          <SettingItem
+            title={t('GfnAccountTitle')}
+            description={
+              gfnSignedIn
+                ? signedInText(gfnAccount.userName, gfnAccount.planTitle) ??
+                  t('GfnSignedIn')
+                : t('GfnAccountSignedOutDesc')
+            }
+            onPress={onGfnAccountPress}
+          />
+          <InfoRow
+            title={t('GfnPlaytimeTitle')}
+            value={gfnPlaytimeDescription}
+            accent={palette.provider.gfn}
           />
 
           <SectionLabel title={t('SectionVideo')} />
@@ -400,17 +399,14 @@ const SettingsView: React.FC<Props> = ({
       {lane === 'psplus' && (
         <ScrollView style={styles.settingsScroll}>
           <SectionLabel title={t('SectionAccount')} />
-          <AccountCard
-            color={palette.provider.ps}
-            service="PlayStation"
-            signedIn={psPlusSignedIn}
-            userName={psAccount.userName}
-            planTitle={psAccount.planTitle}
-            planLines={psAccount.planLines}
-            labels={accountLabels}
-            onSignIn={onPsPlusAccountPress}
-            onSignOut={onPsPlusAccountPress}
-            onChangePlan={() => onOpenPlan('psplus')}
+          <SettingItem
+            title={t('PsPlusAccountTitle')}
+            description={
+              psPlusSignedIn
+                ? signedInText(psAccount.userName) ?? t('PsPlusSignedIn')
+                : t('PsPlusAccountSignedOutDesc')
+            }
+            onPress={onPsPlusAccountPress}
           />
 
           <SectionLabel title={t('SectionVideo')} />
