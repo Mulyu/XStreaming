@@ -78,8 +78,6 @@ export default {
     CustomizeButtonsWithMacroHint:
       '仮想パッドのレイアウトを編集(マクロボタン3個を含む)。編集画面でマクロボタンをタップすると、そのボタン専用のアクション列を設定できます。',
     'Edit Virtual Gamepad': '仮想パッドを編集',
-    Mute: 'ミュート',
-    'Edit layout': '配置を編集',
     'Click on an element to set its size and display':
       'クリックしてサイズと表示を設定।',
     'Drag elements to adjust their position': 'ドラッグして位置調整।',

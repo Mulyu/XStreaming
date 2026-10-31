@@ -104,6 +104,18 @@ const LIVE_GAMEPAD_PROFILE = 'LiveLayout';
 // Mouse aim when the profile has no swipe-aim sensitivity (0 = off for the
 // touch trackpad, but a mouse still needs to aim).
 const PHYSICAL_MOUSE_SENSITIVITY = 20;
+// Cycled in order by the control rail's Video format button -- was the
+// DropdownRow option list on the old Settings screen entry.
+const VIDEO_FORMAT_OPTIONS = [
+  '',
+  'Stretch',
+  'Zoom',
+  '16:10',
+  '18:9',
+  '20:9',
+  '21:9',
+  '4:3',
+];
 const {
   FullScreenManager,
   GamepadManager,
@@ -321,9 +333,6 @@ export function NativeStreamScreenBase({
     const g = Number(getSettings().audio_gain);
     return Number.isFinite(g) ? Math.max(0, Math.min(1, g)) : 1;
   });
-  // The rail's mute button: silences the game without touching audioGain, so
-  // the slider keeps its place. Per session, not saved.
-  const [audioMuted, setAudioMuted] = React.useState(false);
   const [mouseSensitivity, setMouseSensitivity] = React.useState(() => {
     const s = Number(getSettings().gfn_mouse_trackpad_sensitivity);
     return Number.isFinite(s) && s > 0 ? Math.max(0.5, Math.min(3, s)) : 1.4;
@@ -351,7 +360,6 @@ export function NativeStreamScreenBase({
       return Number.isFinite(g) ? Math.max(0, Math.min(1, g)) : 1;
     })(),
   );
-  const audioMutedRef = React.useRef(false);
   // True while the app is backgrounded and audio is muted, so foreground
   // restore knows to re-apply the user's gain.
   const backgroundMutedRef = React.useRef(false);
@@ -704,11 +712,10 @@ export function NativeStreamScreenBase({
   }, []);
 
   const applyRemoteAudioGain = React.useCallback((gain?: number) => {
-    const requestedGain =
+    const nextGain =
       typeof gain === 'number' && Number.isFinite(gain)
         ? Math.max(0, Math.min(1, gain))
         : audioGainRef.current;
-    const nextGain = audioMutedRef.current ? 0 : requestedGain;
     const audioTracks = remoteStream.current?.getAudioTracks?.() ?? [];
     audioTracks.forEach((track: any) => {
       track?._setVolume?.(nextGain);
@@ -722,9 +729,6 @@ export function NativeStreamScreenBase({
       const nextGain = Math.max(0, Math.min(1, Math.round(value * 10) / 10));
       audioGainRef.current = nextGain;
       setAudioGain(nextGain);
-      // Moving the slider while muted brings the sound back.
-      audioMutedRef.current = false;
-      setAudioMuted(false);
       // Persist so the chosen game volume is remembered across sessions.
       try {
         saveSettings({...getSettings(), audio_gain: nextGain});
@@ -737,17 +741,6 @@ export function NativeStreamScreenBase({
     },
     [applyRemoteAudioGain],
   );
-
-  const handleToggleMute = React.useCallback(() => {
-    const nextMuted = !audioMutedRef.current;
-    audioMutedRef.current = nextMuted;
-    setAudioMuted(nextMuted);
-    // While backgrounded the audio is already off; the foreground restore
-    // applies the mute state then.
-    if (!backgroundMutedRef.current) {
-      applyRemoteAudioGain();
-    }
-  }, [applyRemoteAudioGain]);
 
   const handleMouseSensitivityChange = React.useCallback((value: number) => {
     const nextSensitivity = Math.max(
@@ -1544,9 +1537,7 @@ export function NativeStreamScreenBase({
         if (track?.kind === 'audio') {
           // Stay muted if a track arrives while backgrounded.
           track?._setVolume?.(
-            backgroundMutedRef.current || audioMutedRef.current
-              ? 0
-              : audioGainRef.current,
+            backgroundMutedRef.current ? 0 : audioGainRef.current,
           );
         }
       });
@@ -3182,6 +3173,25 @@ export function NativeStreamScreenBase({
     [],
   );
 
+  const handleCycleVideoFormat = React.useCallback(() => {
+    const currentIndex = VIDEO_FORMAT_OPTIONS.indexOf(settings.video_format);
+    const nextIndex =
+      (currentIndex + 1 + VIDEO_FORMAT_OPTIONS.length) %
+      VIDEO_FORMAT_OPTIONS.length;
+    const nextSettings = {
+      ...getSettings(),
+      video_format: VIDEO_FORMAT_OPTIONS[nextIndex],
+    };
+    saveSettings(nextSettings);
+    setSettings(nextSettings);
+  }, [settings.video_format]);
+
+  const handleToggleFsr = React.useCallback(() => {
+    const nextSettings = {...getSettings(), fsr: !settings.fsr};
+    saveSettings(nextSettings);
+    setSettings(nextSettings);
+  }, [settings.fsr]);
+
   const handleToggleVibration = React.useCallback(() => {
     const nextSettings = {...getSettings(), vibration: !settings.vibration};
     saveSettings(nextSettings);
@@ -3617,8 +3627,6 @@ export function NativeStreamScreenBase({
         onToggleMicrophone={handleToggleMic}
         volume={audioGain}
         onVolumeChange={handleAudioGainChange}
-        muted={audioMuted}
-        onToggleMute={handleToggleMute}
         showMouseSensitivity={
           route.params?.streamType === 'gfn' && inputMode === 'mouse'
         }
@@ -3638,6 +3646,10 @@ export function NativeStreamScreenBase({
         onToggleCoverControls={handleToggleCoverControls}
         screenPosition={settings.screen_position || 'center'}
         onSetScreenPosition={handleSetScreenPosition}
+        videoFormat={settings.video_format || ''}
+        onCycleVideoFormat={handleCycleVideoFormat}
+        fsrEnabled={!!settings.fsr}
+        onToggleFsr={handleToggleFsr}
         onPressNexus={handleRailPressNexus}
         onDisconnect={handleRailDisconnect}
       />

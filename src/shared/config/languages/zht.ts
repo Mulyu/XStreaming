@@ -67,8 +67,6 @@ export default {
     'Customize buttons of virtual gamepad':
       '自訂属于自己的虚拟按键布局，可以编辑多套按键布局并按需使用',
     'Edit Virtual Gamepad': '編輯虛擬手柄',
-    Mute: '靜音',
-    'Edit layout': '編輯配置',
     'Click on an element to set its size and display':
       '👆点击元素設定元素大小及顯示',
     'Drag elements to adjust their position': '✋拖动元素调整位置',

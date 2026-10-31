@@ -66,6 +66,22 @@ const {
   StreamKeepAliveManager,
 } = NativeModules;
 
+// Exactly native-stream's own VIDEO_FORMAT_OPTIONS -- '' is "Auto" (native
+// aspect, 16:9 for every PS Plus resolution preset), then a fill-exact
+// stretch, a fill-and-crop zoom, then fixed target aspect ratios (each
+// letterboxed/pillarboxed, never cropped). See PsPlusStreamView.kt's
+// onLayout() for how each of these is actually applied.
+const VIDEO_FORMAT_OPTIONS = [
+  '',
+  'Stretch',
+  'Zoom',
+  '16:10',
+  '18:9',
+  '20:9',
+  '21:9',
+  '4:3',
+];
+
 // button name -> keyCode: the user's saved custom mapping (shared across
 // every streaming provider, including this one) if they set one, else the
 // stock Android gamepad key-code mapping.
@@ -732,9 +748,21 @@ export function usePsPlusStream(navigation: any, route: any) {
     setScreenPositionState(position);
   }, []);
 
-  // The aspect-ratio button was removed; the picture always keeps its
-  // native aspect (settings.ts forces any saved value back to '').
-  const videoFormat = '';
+  const [videoFormat, setVideoFormatState] = React.useState(
+    () => getSettings().video_format || '',
+  );
+  const onCycleVideoFormat = React.useCallback(() => {
+    const currentIndex = VIDEO_FORMAT_OPTIONS.indexOf(
+      getSettings().video_format,
+    );
+    const nextFormat =
+      VIDEO_FORMAT_OPTIONS[
+        (currentIndex + 1 + VIDEO_FORMAT_OPTIONS.length) %
+          VIDEO_FORMAT_OPTIONS.length
+      ];
+    saveSettings({...getSettings(), video_format: nextFormat});
+    setVideoFormatState(nextFormat);
+  }, []);
 
   // Real per-session gain applied natively (see audio-output.h's own
   // comment) -- unlike screen position/video format this also needs a live
@@ -742,28 +770,11 @@ export function usePsPlusStream(navigation: any, route: any) {
   const [audioGain, setAudioGainState] = React.useState(
     () => getSettings().audio_gain ?? 1,
   );
-  // The rail's mute button: silences the game without moving the slider.
-  // Per session, not saved.
-  const [audioMuted, setAudioMuted] = React.useState(false);
-  const audioMutedRef = React.useRef(false);
   const onAudioGainChange = React.useCallback((value: number) => {
     const nextGain = Math.max(0, Math.min(1, Math.round(value * 10) / 10));
     saveSettings({...getSettings(), audio_gain: nextGain});
     setAudioGainState(nextGain);
-    // Moving the slider while muted brings the sound back.
-    audioMutedRef.current = false;
-    setAudioMuted(false);
     sessionRef.current?.setAudioGain(nextGain);
-  }, []);
-  const onToggleMute = React.useCallback(() => {
-    const nextMuted = !audioMutedRef.current;
-    audioMutedRef.current = nextMuted;
-    setAudioMuted(nextMuted);
-    // While backgrounded the audio is already off; the foreground restore
-    // applies the mute state then.
-    if (!backgroundMutedRef.current) {
-      sessionRef.current?.setAudioGain(nextMuted ? 0 : audioGainRef.current);
-    }
   }, []);
   React.useEffect(() => {
     audioGainRef.current = audioGain;
@@ -1508,9 +1519,7 @@ export function usePsPlusStream(navigation: any, route: any) {
         clearAntiIdleTimer();
         if (backgroundMutedRef.current) {
           backgroundMutedRef.current = false;
-          sessionRef.current?.setAudioGain(
-            audioMutedRef.current ? 0 : audioGainRef.current,
-          );
+          sessionRef.current?.setAudioGain(audioGainRef.current);
         }
         return;
       }
@@ -1650,10 +1659,9 @@ export function usePsPlusStream(navigation: any, route: any) {
     screenPosition,
     onSetScreenPosition,
     videoFormat,
+    onCycleVideoFormat,
     audioGain,
     onAudioGainChange,
-    audioMuted,
-    onToggleMute,
     micOpen,
     onToggleMic,
     onEditGamepadLayout,
