@@ -34,6 +34,10 @@ export default {
     LibraryFilterShowResults: 'Show results',
     LibraryTabAll: 'All',
     LibraryTabHome: 'Home',
+    LibraryShelfRecent: 'Recently played',
+    LibraryShelfWishSale: 'Wishlist on sale',
+    LibraryHomeEmpty:
+      'Play something, or heart a title, and it will show up here.',
     Disconnect: 'Disconnect',
     Input: 'Input',
     Audio: 'Audio',
