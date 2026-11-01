@@ -312,37 +312,3 @@ export const mergeXcloudLookup = (
   });
   return merged;
 };
-
-// Case-insensitive title search over the rows loaded so far. The Store's
-// existing "fewer than MIN_VISIBLE_ROWS visible -> load more pages" effect then
-// keeps fetching while a search still has few matches.
-export const filterRowsByKeyword = (
-  rows: StoreRow[],
-  keyword: string,
-): StoreRow[] => {
-  const query = keyword.trim().toLowerCase();
-  return query
-    ? rows.filter(row => row.title.toLowerCase().includes(query))
-    : rows;
-};
-
-export const SHELF_SIZE = 10;
-
-// The two shelves above the full ranking: the first rows of the chart, and
-// the rows on sale. Neither is drawn while searching (the list itself is the
-// result), and the sale shelf is dropped when "on sale only" already narrows
-// the whole list.
-export const buildStoreShelves = (
-  rows: StoreRow[],
-  opts: {saleOnly: boolean; keyword: string},
-): {top: StoreRow[]; sale: StoreRow[]} => {
-  if (opts.keyword.trim()) {
-    return {top: [], sale: []};
-  }
-  return {
-    top: rows.slice(0, SHELF_SIZE),
-    sale: opts.saleOnly
-      ? []
-      : rows.filter(row => !!row.originalPrice).slice(0, SHELF_SIZE),
-  };
-};

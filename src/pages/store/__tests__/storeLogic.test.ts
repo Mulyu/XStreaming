@@ -2,9 +2,7 @@ import {
   buildGfnStoreRows,
   buildXboxStoreRows,
   buildPsStoreRows,
-  buildStoreShelves,
   dedupeByKey,
-  filterRowsByKeyword,
   hasMorePages,
   mergeXcloudLookup,
   resolveRowTitle,
@@ -386,62 +384,5 @@ describe('mergeXcloudLookup', () => {
     });
     expect(merged.has('DDD')).toBe(false);
     expect(merged.get('AAA')).toBe(catalogItem);
-  });
-});
-
-const row = (
-  id: string,
-  title: string,
-  over: Partial<StoreRow> = {},
-): StoreRow => ({id, rank: Number(id), title, catalogTitle: null, ...over});
-
-describe('filterRowsByKeyword', () => {
-  const rows = [
-    row('1', 'Alpha Quest'),
-    row('2', 'beta RACER'),
-    row('3', 'Gamma'),
-  ];
-
-  it('matches any part of the title, ignoring case', () => {
-    expect(filterRowsByKeyword(rows, 'racer').map(r => r.id)).toEqual(['2']);
-    expect(filterRowsByKeyword(rows, ' A').map(r => r.id)).toEqual([
-      '1',
-      '2',
-      '3',
-    ]);
-  });
-
-  it('returns everything for an empty keyword', () => {
-    expect(filterRowsByKeyword(rows, '  ')).toBe(rows);
-  });
-});
-
-describe('buildStoreShelves', () => {
-  const many = Array.from({length: 14}, (_, i) =>
-    row(
-      String(i + 1),
-      `Game ${i + 1}`,
-      i % 3 === 0 ? {originalPrice: '¥2,000'} : {},
-    ),
-  );
-
-  it('takes the first ten rows and the first ten on sale', () => {
-    const shelves = buildStoreShelves(many, {saleOnly: false, keyword: ''});
-    expect(shelves.top.map(r => r.id)).toEqual(
-      many.slice(0, 10).map(r => r.id),
-    );
-    expect(shelves.sale.map(r => r.id)).toEqual(['1', '4', '7', '10', '13']);
-  });
-
-  it('drops the sale shelf when on-sale-only already filters the list', () => {
-    expect(buildStoreShelves(many, {saleOnly: true, keyword: ''}).sale).toEqual(
-      [],
-    );
-  });
-
-  it('draws no shelves while searching', () => {
-    expect(buildStoreShelves(many, {saleOnly: false, keyword: 'game'})).toEqual(
-      {top: [], sale: []},
-    );
   });
 });
