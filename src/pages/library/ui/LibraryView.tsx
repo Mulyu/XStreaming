@@ -25,7 +25,7 @@ import {
   tvFocusRing,
   TV_FOCUS_COLOR,
 } from '../../../shared/ui/tvFocus';
-import {RailButton, RailSegment} from '../../../shared/ui/RailControls';
+import {AppButton, ToggleGroup} from '../../../shared/ui/Buttons';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
 import {appDebugLog} from '../../../shared/lib/appDebugLog';
 import {alpha, palette} from '../../../shared/config/palette';
@@ -572,7 +572,7 @@ const LibraryView: React.FC<Props> = ({
             {!Platform.isTV && (
               <>
                 <View style={styles.titleSpacer} />
-                <RailButton
+                <AppButton
                   compact
                   iconOnly
                   icon="magnify"
@@ -589,7 +589,7 @@ const LibraryView: React.FC<Props> = ({
         {Platform.isTV ? (
           <>
             <View style={styles.tvToolbarRow}>
-              <RailButton
+              <AppButton
                 icon="magnify"
                 label={t('Search')}
                 accent={palette.accent}
@@ -597,7 +597,7 @@ const LibraryView: React.FC<Props> = ({
                 onPress={() => setTvSearchOpen(true)}
               />
               {/* TV has no pull-to-refresh gesture: same refresh, as a button. */}
-              <RailButton
+              <AppButton
                 iconOnly
                 icon="refresh"
                 label={refreshing ? t('Loading...') : t('Refresh')}
@@ -721,7 +721,7 @@ const LibraryView: React.FC<Props> = ({
           <View style={styles.chipsRow}>
             {Platform.isTV ? (
               <>
-                <RailButton
+                <AppButton
                   iconOnly
                   compact={!Platform.isTV}
                   letter="X"
@@ -731,7 +731,7 @@ const LibraryView: React.FC<Props> = ({
                   fill
                   onPress={() => setFilterXcloud(v => !v)}
                 />
-                <RailButton
+                <AppButton
                   iconOnly
                   compact={!Platform.isTV}
                   letter="N"
@@ -741,7 +741,7 @@ const LibraryView: React.FC<Props> = ({
                   fill
                   onPress={() => setFilterGfn(v => !v)}
                 />
-                <RailButton
+                <AppButton
                   iconOnly
                   compact={!Platform.isTV}
                   letter="PS"
@@ -751,7 +751,7 @@ const LibraryView: React.FC<Props> = ({
                   fill
                   onPress={() => setFilterPsPlus(v => !v)}
                 />
-                <RailButton
+                <AppButton
                   iconOnly
                   compact={!Platform.isTV}
                   icon="heart-outline"
@@ -761,7 +761,7 @@ const LibraryView: React.FC<Props> = ({
                   fill
                   onPress={() => setFilterFavorite(v => !v)}
                 />
-                <RailButton
+                <AppButton
                   iconOnly
                   compact={!Platform.isTV}
                   icon={filterWishlist ? 'bookmark' : 'bookmark-outline'}
@@ -775,7 +775,7 @@ const LibraryView: React.FC<Props> = ({
               </>
             ) : (
               <>
-                <RailSegment
+                <ToggleGroup
                   accent={palette.accent}
                   options={[
                     {
@@ -801,7 +801,7 @@ const LibraryView: React.FC<Props> = ({
                     },
                   ]}
                 />
-                <RailSegment
+                <ToggleGroup
                   accent={palette.accent}
                   options={[
                     {
@@ -824,7 +824,7 @@ const LibraryView: React.FC<Props> = ({
               </>
             )}
             {!Platform.isTV && (
-              <RailSegment
+              <ToggleGroup
                 accent={palette.accent}
                 options={[
                   {
@@ -844,7 +844,7 @@ const LibraryView: React.FC<Props> = ({
                 ]}
               />
             )}
-            <RailButton
+            <AppButton
               iconOnly
               compact={!Platform.isTV}
               icon={
@@ -860,7 +860,7 @@ const LibraryView: React.FC<Props> = ({
             />
             {Platform.isTV && (
               <>
-                <RailButton
+                <AppButton
                   iconOnly
                   compact={!Platform.isTV}
                   icon="tag-outline"
@@ -870,7 +870,7 @@ const LibraryView: React.FC<Props> = ({
                   fill
                   onPress={() => setFilterOnSale(v => !v)}
                 />
-                <RailButton
+                <AppButton
                   iconOnly
                   compact={!Platform.isTV}
                   icon="gift-outline"
@@ -886,7 +886,7 @@ const LibraryView: React.FC<Props> = ({
               {Platform.isTV ? (
                 // TV: the current order is written out, and each press moves
                 // to the next one (no dropdown to pick from with a remote).
-                <RailButton
+                <AppButton
                   icon="sort"
                   label={activeSortLabel}
                   active={sortMode !== 'recent'}
@@ -895,7 +895,7 @@ const LibraryView: React.FC<Props> = ({
                   onPress={cycleSort}
                 />
               ) : (
-                <RailButton
+                <AppButton
                   iconOnly
                   compact
                   icon="sort"
@@ -1022,12 +1022,12 @@ const styles = StyleSheet.create({
     backgroundColor: alpha(palette.focusRing, 0.1),
   },
   searchInput: {flex: 1, padding: 0, fontSize: 14, color: palette.text},
-  // TV: the search box above collapses to this RailButton -- same shape as
+  // TV: the search box above collapses to this AppButton -- same shape as
   // the filter chips below it (icon + label, not an icon-only square) so
   // Android's own per-view focus highlight has the same exposed mat area to
   // land on, instead of the thin 2px-border-only cue a small icon button
   // gave it before. alignSelf keeps it content-sized -- `header`'s a column
-  // flex container, which would otherwise stretch a bare RailButton (no
+  // flex container, which would otherwise stretch a bare AppButton (no
   // explicit width of its own) to the header's full width.
   tvSearchOverlay: {
     flex: 1,
@@ -1071,7 +1071,7 @@ const styles = StyleSheet.create({
     gap: 6,
     alignItems: 'center',
   },
-  // TV only -- pushes the sort RailButton to the row's far end, same as
+  // TV only -- pushes the sort AppButton to the row's far end, same as
   // phone's sortChip's own marginLeft:'auto'.
   sortChipTv: {marginLeft: 'auto'},
   titleSpacer: {flex: 1},

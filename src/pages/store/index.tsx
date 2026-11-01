@@ -11,7 +11,7 @@ import {
 import {Text, Icon} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {useTVFocus, tvFocusBold, tvFocusRow} from '../../shared/ui/tvFocus';
-import {RailButton} from '../../shared/ui/RailControls';
+import {AppButton} from '../../shared/ui/Buttons';
 import {InlineSpinner} from '../../shared/ui/Spinner';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
@@ -1248,21 +1248,21 @@ function StoreScreen() {
           // TV: the Library's toolbar buttons, so the focused one reads the
           // same way here as there.
           <View style={styles.tvControls}>
-            <RailButton
+            <AppButton
               fill
               label={t('StoreTabXbox')}
               accent={palette.provider.xbox}
               active={provider === 'xcloud'}
               onPress={() => setProvider('xcloud')}
             />
-            <RailButton
+            <AppButton
               fill
               label={t('StoreTabSteam')}
               accent={palette.provider.gfn}
               active={provider === 'gfn'}
               onPress={() => setProvider('gfn')}
             />
-            <RailButton
+            <AppButton
               fill
               label={t('StoreTabPlayStation')}
               accent={palette.provider.ps}
@@ -1270,28 +1270,28 @@ function StoreScreen() {
               onPress={() => setProvider('psstore')}
             />
             <View style={styles.tvControlsGap} />
-            <RailButton
+            <AppButton
               fill
               label={t('StoreBestSellers')}
               accent={palette.accent}
               active={chartKind === 'best'}
               onPress={() => setChartKind('best')}
             />
-            <RailButton
+            <AppButton
               fill
               label={t('StoreNewReleases')}
               accent={palette.accent}
               active={chartKind === 'new'}
               onPress={() => setChartKind('new')}
             />
-            <RailButton
+            <AppButton
               fill
               label={t('LibraryFilterOnSale')}
               accent={palette.sale}
               active={saleOnly}
               onPress={() => setSaleOnly(prev => !prev)}
             />
-            <RailButton
+            <AppButton
               fill
               label={t('StoreFilterAvailableOnly')}
               accent={palette.success}
@@ -1299,7 +1299,7 @@ function StoreScreen() {
               onPress={toggleAvailableOnly}
             />
             {/* TV has no pull-to-refresh gesture: a focusable button does it. */}
-            <RailButton
+            <AppButton
               iconOnly
               icon="refresh"
               label={t('Refresh')}

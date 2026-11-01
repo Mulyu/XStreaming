@@ -55,7 +55,7 @@ export type TVFocusState = {
 // The one piece of state + two handlers every focusable element needs.
 // Deliberately not a wrapper component (so it drops into an existing
 // Pressable/Button/IconButton's own `style` array/prop without changing
-// that element's structure) -- see shared/ui/RailControls.tsx for the one
+// that element's structure) -- see shared/ui/Buttons.tsx for the one
 // place this app also factors out a couple of whole focusable components.
 export function useTVFocus(): TVFocusState {
   const [focused, setFocused] = React.useState(false);

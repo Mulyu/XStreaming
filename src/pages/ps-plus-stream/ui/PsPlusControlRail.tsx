@@ -10,7 +10,7 @@ import {
 import {Text, Icon} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import type {PsPlusStreamViewModel} from '../model/usePsPlusStream';
-import {RailButton, SegOption} from '../../../shared/ui/RailControls';
+import {AppButton, SegmentOption} from '../../../shared/ui/Buttons';
 import {TV_FOCUS_COLOR as FOCUS_COLOR} from '../../../shared/ui/tvFocus';
 import {alpha, palette} from '../../../shared/config/palette';
 
@@ -148,7 +148,7 @@ const PsPlusControlRail: React.FC<Props> = ({
         showsVerticalScrollIndicator={false}>
         <View style={styles.group}>
           <Text style={styles.groupLabel}>{t('Input')}</Text>
-          <RailButton
+          <AppButton
             accent={palette.provider.ps}
             icon={
               showVirtualGamepad ? 'gamepad-variant' : 'gamepad-variant-outline'
@@ -157,20 +157,20 @@ const PsPlusControlRail: React.FC<Props> = ({
             active={showVirtualGamepad}
             onPress={onToggleVirtualGamepad}
           />
-          <RailButton
+          <AppButton
             accent={palette.provider.ps}
             icon="gesture-swipe"
             label={t('Touchpad')}
             active={touchpadVisible}
             onPress={onToggleTouchpad}
           />
-          <RailButton
+          <AppButton
             accent={palette.provider.ps}
             icon="pencil-outline"
             label={t('Edit Virtual Gamepad')}
             onPress={onEditGamepadLayout}
           />
-          <RailButton
+          <AppButton
             accent={palette.provider.ps}
             icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
             label={t('Vibration')}
@@ -181,7 +181,7 @@ const PsPlusControlRail: React.FC<Props> = ({
 
         <View style={styles.group}>
           <Text style={styles.groupLabel}>{t('Audio')}</Text>
-          <RailButton
+          <AppButton
             accent={palette.provider.ps}
             icon={micOpen ? 'microphone' : 'microphone-off'}
             label={t('Microphone')}
@@ -212,7 +212,7 @@ const PsPlusControlRail: React.FC<Props> = ({
 
         <View style={styles.group}>
           <Text style={styles.groupLabel}>{t('Display')}</Text>
-          <RailButton
+          <AppButton
             accent={palette.provider.ps}
             icon="chart-line"
             label={t('Perf stats')}
@@ -234,7 +234,7 @@ const PsPlusControlRail: React.FC<Props> = ({
             </View>
           )}
           {coverAvailable && (
-            <RailButton
+            <AppButton
               accent={palette.provider.ps}
               icon="image-outline"
               label={t('Cover controls')}
@@ -247,21 +247,21 @@ const PsPlusControlRail: React.FC<Props> = ({
         <View style={styles.group}>
           <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
           <View style={styles.segRow}>
-            <SegOption
+            <SegmentOption
               accent={palette.provider.ps}
               icon="align-vertical-top"
               label={t('Top')}
               active={screenPosition === 'top'}
               onPress={() => onSetScreenPosition('top')}
             />
-            <SegOption
+            <SegmentOption
               accent={palette.provider.ps}
               icon="align-vertical-center"
               label={t('Center')}
               active={screenPosition === 'center'}
               onPress={() => onSetScreenPosition('center')}
             />
-            <SegOption
+            <SegmentOption
               accent={palette.provider.ps}
               icon="align-vertical-bottom"
               label={t('Bottom')}
@@ -269,7 +269,7 @@ const PsPlusControlRail: React.FC<Props> = ({
               onPress={() => onSetScreenPosition('bottom')}
             />
           </View>
-          <RailButton
+          <AppButton
             accent={palette.provider.ps}
             icon="aspect-ratio"
             label={videoFormatLabel}
@@ -279,7 +279,7 @@ const PsPlusControlRail: React.FC<Props> = ({
 
         <View style={[styles.group, styles.sessionGroup]}>
           <Text style={styles.groupLabel}>{t('Session')}</Text>
-          <RailButton
+          <AppButton
             accent={palette.provider.ps}
             icon="power"
             label={t('Disconnect')}

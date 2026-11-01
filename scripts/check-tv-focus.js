@@ -34,9 +34,9 @@ const EXEMPT_MARKER = 'tv-focus-exempt';
 
 // react-native + react-native-paper's own leaf interactive components --
 // deliberately NOT a list of this app's custom wrapper components (e.g.
-// SettingItem, RailButton): once those wrappers wire up onFocus once in
+// SettingItem, AppButton): once those wrappers wire up onFocus once in
 // their own definition (which this script's walk over SettingItem.tsx/
-// RailControls.tsx etc. already verifies, since the Pressable *inside* them
+// Buttons.tsx etc. already verifies, since the Pressable *inside* them
 // matches a tag below), every call site reusing them is covered for free
 // and shouldn't need to repeat onFocus itself.
 const INTERACTIVE_TAGS = new Set([
