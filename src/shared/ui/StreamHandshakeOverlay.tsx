@@ -12,7 +12,7 @@ import {
 import {useTranslation} from 'react-i18next';
 import type {LoadingPhase} from '../lib/loadingPhase';
 import {useTVFocus, tvFocusRing} from './tvFocus';
-import {RailButton} from './RailControls';
+import {AppButton} from './Buttons';
 import {alpha, palette} from '../config/palette';
 
 // Per-provider chip look. streamType values come from NativeStream's own
@@ -250,7 +250,7 @@ const StreamHandshakeOverlay: React.FC<StreamHandshakeOverlayProps> = ({
         {Platform.isTV ? (
           // TV: the same button as the rest of the TV UI, big enough to read
           // from the couch and already focused, so OK cancels the launch.
-          <RailButton
+          <AppButton
             preferFocus
             icon="close"
             label={t('Cancel')}

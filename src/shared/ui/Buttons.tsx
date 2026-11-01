@@ -4,16 +4,17 @@ import {Text, Icon} from 'react-native-paper';
 import {TV_FOCUS_COLOR} from './tvFocus';
 import {alpha, palette} from '../config/palette';
 
-// The in-stream control rails' (StreamControlRail/PsPlusControlRail) icon +
-// label button and segmented-control option, pulled out here after Library
-// needed a third near-identical copy for its own TV filter/sort row. Plain
-// onFocus/onBlur + local useState border ring -- confirmed to read clearly
-// on real Google TV hardware (see shared/ui/tvFocus.ts's own history), so
-// every screen that needs this look gets the same proven behavior instead
-// of its own re-implementation.
+// The app's shared buttons: AppButton (icon or letter + label), ToggleGroup (a
+// pill of independent toggles) and SegmentOption (one option of a segmented
+// control). Started as the in-stream control rails' buttons and now used by
+// Library, Store and the stream screens alike. Plain onFocus/onBlur + local
+// useState border ring -- confirmed to read clearly on real Google TV
+// hardware (see shared/ui/tvFocus.ts's own history), so every screen that
+// needs this look gets the same proven behavior instead of its own
+// re-implementation. Prefer these on TV over a one-off Pressable.
 
-export const RailButton: React.FC<{
-  // Exactly one of icon/letter is expected -- icon for the in-stream rails'
+export const AppButton: React.FC<{
+  // Exactly one of icon/letter is expected -- icon for the stream control rails'
   // MDI glyphs, letter for Library's X/N/PS provider badges (no MDI glyph
   // carries those services' identity the way this app's own letter-badge
   // convention already does everywhere else, e.g. the title grid's badges).
@@ -79,16 +80,16 @@ export const RailButton: React.FC<{
   return (
     <Pressable
       style={[
-        styles.railBtn,
-        focused && styles.railBtnFocused,
-        iconOnly && styles.railBtnIconOnly,
-        compact && styles.railBtnCompact,
+        styles.btn,
+        focused && styles.btnFocused,
+        iconOnly && styles.btnIconOnly,
+        compact && styles.btnCompact,
         active &&
           !danger &&
           (fill
             ? {backgroundColor: accent, borderColor: accent}
-            : styles.railBtnActive),
-        compact && focused && styles.railBtnFocused,
+            : styles.btnActive),
+        compact && focused && styles.btnFocused,
         style,
       ]}
       accessibilityLabel={label}
@@ -100,8 +101,8 @@ export const RailButton: React.FC<{
       {letter ? (
         <Text
           style={[
-            styles.railBtnLetter,
-            compact && styles.railBtnLetterCompact,
+            styles.btnLetter,
+            compact && styles.btnLetterCompact,
             {color: iconColor},
           ]}>
           {letter}
@@ -114,9 +115,7 @@ export const RailButton: React.FC<{
         />
       ) : null}
       {!iconOnly && (
-        <Text
-          style={[styles.railBtnLabel, {color: labelColor}]}
-          numberOfLines={1}>
+        <Text style={[styles.btnLabel, {color: labelColor}]} numberOfLines={1}>
           {label}
         </Text>
       )}
@@ -124,15 +123,15 @@ export const RailButton: React.FC<{
         <Icon source={trailingIcon} size={14} color={iconColor} />
       )}
       {!!badge && badge > 0 && (
-        <View style={styles.railBadge} pointerEvents="none">
-          <Text style={styles.railBadgeText}>{badge > 99 ? '99+' : badge}</Text>
+        <View style={styles.badge} pointerEvents="none">
+          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
         </View>
       )}
     </Pressable>
   );
 };
 
-export type RailSegmentOption = {
+export type ToggleGroupOption = {
   key: string;
   // Exactly one of letter/icon.
   letter?: string;
@@ -148,19 +147,19 @@ export type RailSegmentOption = {
 // provider letters, the favorite/wishlist pair) instead of one chip each, so
 // the whole filter row fits on one line. Each option is still its own
 // button: it toggles on and off independently, same as the chips it replaces.
-export const RailSegment: React.FC<{
-  options: RailSegmentOption[];
+export const ToggleGroup: React.FC<{
+  options: ToggleGroupOption[];
   accent: string;
 }> = ({options, accent}) => (
   <View style={styles.segment}>
     {options.map(option => (
-      <RailSegmentItem key={option.key} option={option} accent={accent} />
+      <ToggleGroupItem key={option.key} option={option} accent={accent} />
     ))}
   </View>
 );
 
-const RailSegmentItem: React.FC<{
-  option: RailSegmentOption;
+const ToggleGroupItem: React.FC<{
+  option: ToggleGroupOption;
   accent: string;
 }> = ({option, accent}) => {
   const [focused, setFocused] = React.useState(false);
@@ -179,15 +178,13 @@ const RailSegmentItem: React.FC<{
       onBlur={() => setFocused(false)}
       android_ripple={{color: alpha(palette.white, 0.15)}}>
       {option.letter ? (
-        <Text style={[styles.railBtnLetterCompact, {color}]}>
-          {option.letter}
-        </Text>
+        <Text style={[styles.btnLetterCompact, {color}]}>{option.letter}</Text>
       ) : option.icon ? (
         <Icon source={option.icon} size={20} color={color} />
       ) : null}
       {!!option.badge && option.badge > 0 && (
-        <View style={styles.railBadge} pointerEvents="none">
-          <Text style={styles.railBadgeText}>
+        <View style={styles.badge} pointerEvents="none">
+          <Text style={styles.badgeText}>
             {option.badge > 99 ? '99+' : option.badge}
           </Text>
         </View>
@@ -196,7 +193,7 @@ const RailSegmentItem: React.FC<{
   );
 };
 
-export const SegOption: React.FC<{
+export const SegmentOption: React.FC<{
   icon: string;
   label: string;
   active: boolean;
@@ -207,9 +204,9 @@ export const SegOption: React.FC<{
   return (
     <Pressable
       style={[
-        styles.segOpt,
+        styles.segmentOpt,
         active && {backgroundColor: accent},
-        focused && styles.segOptFocused,
+        focused && styles.segmentOptFocused,
       ]}
       accessibilityLabel={label}
       onPress={onPress}
@@ -226,18 +223,18 @@ export const SegOption: React.FC<{
 };
 
 const styles = StyleSheet.create({
-  segOpt: {
+  segmentOpt: {
     flex: 1,
     height: 34,
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segOptFocused: {
+  segmentOptFocused: {
     borderWidth: 2,
     borderColor: TV_FOCUS_COLOR,
   },
-  railBtn: {
+  btn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -248,14 +245,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  railBtnIconOnly: {
+  btnIconOnly: {
     minWidth: 46,
     height: 46,
     justifyContent: 'center',
     paddingVertical: 0,
     paddingHorizontal: 10,
   },
-  railBtnCompact: {
+  btnCompact: {
     minWidth: 34,
     height: 34,
     borderRadius: 12,
@@ -286,7 +283,7 @@ const styles = StyleSheet.create({
   segmentItemFocused: {
     borderColor: TV_FOCUS_COLOR,
   },
-  railBadge: {
+  badge: {
     position: 'absolute',
     top: -9,
     right: -9,
@@ -300,26 +297,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: palette.bg,
   },
-  railBadgeText: {
+  badgeText: {
     fontSize: 11,
     fontWeight: '800',
     color: palette.onAccent,
     lineHeight: 14,
   },
-  railBtnFocused: {
+  btnFocused: {
     borderColor: TV_FOCUS_COLOR,
   },
-  railBtnActive: {
+  btnActive: {
     backgroundColor: alpha(palette.white, 0.07),
   },
-  railBtnLetter: {
+  btnLetter: {
     fontSize: 13,
     fontWeight: '800',
   },
-  railBtnLetterCompact: {
+  btnLetterCompact: {
     fontSize: 12,
   },
-  railBtnLabel: {
+  btnLabel: {
     fontSize: 11.5,
     fontWeight: '500',
     flexShrink: 1,

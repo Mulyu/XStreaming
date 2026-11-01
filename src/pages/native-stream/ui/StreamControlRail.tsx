@@ -10,7 +10,7 @@ import {
 import {Text, Icon} from 'react-native-paper';
 import RNSlider from '@react-native-community/slider';
 import {useTranslation} from 'react-i18next';
-import {RailButton, SegOption} from '../../../shared/ui/RailControls';
+import {AppButton, SegmentOption} from '../../../shared/ui/Buttons';
 import {TV_FOCUS_COLOR as FOCUS_COLOR} from '../../../shared/ui/tvFocus';
 import {alpha, palette} from '../../../shared/config/palette';
 
@@ -174,14 +174,14 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
             <View style={styles.group}>
               <Text style={styles.groupLabel}>{t('Input')}</Text>
               <View style={styles.segRow}>
-                <SegOption
+                <SegmentOption
                   icon="close-circle-outline"
                   label={t('Off')}
                   active={inputMode === 'off'}
                   accent={accent}
                   onPress={() => onSetInputMode('off')}
                 />
-                <SegOption
+                <SegmentOption
                   icon="gamepad-variant"
                   label={t('Virtual gamepad')}
                   active={inputMode === 'gamepad'}
@@ -189,7 +189,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   onPress={() => onSetInputMode('gamepad')}
                 />
                 {showMouseOption && (
-                  <SegOption
+                  <SegmentOption
                     icon="mouse"
                     label={t('Mouse trackpad')}
                     active={inputMode === 'mouse'}
@@ -197,7 +197,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                     onPress={() => onSetInputMode('mouse')}
                   />
                 )}
-                <SegOption
+                <SegmentOption
                   icon="gesture-tap"
                   label={t('Native touch')}
                   active={inputMode === 'touch'}
@@ -206,7 +206,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                 />
               </View>
               {showEditGamepadLayout && (
-                <RailButton
+                <AppButton
                   icon="pencil-outline"
                   label={t('Edit Virtual Gamepad')}
                   accent={accent}
@@ -237,7 +237,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   />
                 </View>
               )}
-              <RailButton
+              <AppButton
                 icon={vibrationEnabled ? 'vibrate' : 'vibrate-off'}
                 label={t('Vibration')}
                 active={vibrationEnabled}
@@ -245,7 +245,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                 onPress={onToggleVibration}
               />
               {showKeyboardOption && (
-                <RailButton
+                <AppButton
                   icon="keyboard-outline"
                   label={t('Keyboard')}
                   active={keyboardVisible}
@@ -258,7 +258,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
             <View style={styles.group}>
               <Text style={styles.groupLabel}>{t('Audio')}</Text>
               {showMicrophone && (
-                <RailButton
+                <AppButton
                   icon={microphoneOpen ? 'microphone' : 'microphone-off'}
                   label={t('Microphone')}
                   active={microphoneOpen}
@@ -290,7 +290,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
 
             <View style={styles.group}>
               <Text style={styles.groupLabel}>{t('Display')}</Text>
-              <RailButton
+              <AppButton
                 icon="chart-line"
                 label={t('Perf stats')}
                 active={performanceVisible}
@@ -298,7 +298,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                 onPress={onTogglePerformance}
               />
               {showCoverControls && (
-                <RailButton
+                <AppButton
                   icon="image-outline"
                   label={t('Cover controls')}
                   active={coverPresented}
@@ -311,21 +311,21 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
             <View style={styles.group}>
               <Text style={styles.groupLabel}>{t('Game screen position')}</Text>
               <View style={styles.segRow}>
-                <SegOption
+                <SegmentOption
                   icon="align-vertical-top"
                   label={t('Top')}
                   active={screenPosition === 'top'}
                   accent={accent}
                   onPress={() => onSetScreenPosition('top')}
                 />
-                <SegOption
+                <SegmentOption
                   icon="align-vertical-center"
                   label={t('Center')}
                   active={screenPosition === 'center'}
                   accent={accent}
                   onPress={() => onSetScreenPosition('center')}
                 />
-                <SegOption
+                <SegmentOption
                   icon="align-vertical-bottom"
                   label={t('Bottom')}
                   active={screenPosition === 'bottom'}
@@ -333,13 +333,13 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
                   onPress={() => onSetScreenPosition('bottom')}
                 />
               </View>
-              <RailButton
+              <AppButton
                 icon="aspect-ratio"
                 label={videoFormatLabel}
                 accent={accent}
                 onPress={onCycleVideoFormat}
               />
-              <RailButton
+              <AppButton
                 icon="auto-fix"
                 label={t('FSR')}
                 active={fsrEnabled}
@@ -350,13 +350,13 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
 
             <View style={[styles.group, styles.sessionGroup]}>
               <Text style={styles.groupLabel}>{t('Session')}</Text>
-              <RailButton
+              <AppButton
                 icon="microsoft-xbox"
                 label={t('Press Nexus')}
                 accent={accent}
                 onPress={onPressNexus}
               />
-              <RailButton
+              <AppButton
                 icon="power"
                 label={t('Disconnect')}
                 accent={accent}
@@ -369,7 +369,7 @@ const StreamControlRail: React.FC<StreamControlRailProps> = ({
 
         {!connected && (
           <View style={[styles.group, styles.sessionGroup]}>
-            <RailButton
+            <AppButton
               icon="power"
               label={t('Disconnect')}
               accent={accent}
