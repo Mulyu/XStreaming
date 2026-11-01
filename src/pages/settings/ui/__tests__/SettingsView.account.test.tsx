@@ -87,7 +87,7 @@ describe('provider account rows', () => {
       onXcloudAccountPress,
     });
     expect(texts(tree)).toContain('Current user: player1 · XboxGamePassActive');
-    press(tree, 'XcloudAccountTitle');
+    press(tree, 'XboxAccountTitle');
     expect(onXcloudAccountPress).toHaveBeenCalledTimes(1);
     // The card's plan block and buttons are gone.
     expect(texts(tree)).not.toContain('AccountChangePlan');

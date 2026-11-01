@@ -120,7 +120,7 @@ const SettingsView: React.FC<Props> = ({
     },
     {
       value: 'xbox',
-      label: t('XcloudSettings'),
+      label: t('XboxSettings'),
       color: palette.provider.xbox,
       flex: 0.9,
     },
@@ -238,7 +238,7 @@ const SettingsView: React.FC<Props> = ({
         <ScrollView style={styles.settingsScroll}>
           <SectionLabel title={t('SectionAccount')} />
           <SettingItem
-            title={t('XcloudAccountTitle')}
+            title={t('XboxAccountTitle')}
             description={
               isAuthed
                 ? signedInText(xboxAccount.userName, xboxAccount.planTitle) ??
