@@ -5,10 +5,9 @@ import {
   FlatList,
   RefreshControl,
   Image,
-  TextInput,
   Platform,
   Pressable,
-  Modal,
+  ScrollView,
   DeviceEventEmitter,
   NativeModules,
 } from 'react-native';
@@ -25,7 +24,10 @@ import {
   tvFocusRing,
   TV_FOCUS_COLOR,
 } from '../../../shared/ui/tvFocus';
-import {AppButton, ToggleGroup} from '../../../shared/ui/Buttons';
+import {AppButton} from '../../../shared/ui/Buttons';
+import SearchField from '../../../shared/ui/SearchField';
+import TvSearchModal from '../../../shared/ui/TvSearchModal';
+import LibraryFilterSheet from './LibraryFilterSheet';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
 import {appDebugLog} from '../../../shared/lib/appDebugLog';
 import {alpha, palette} from '../../../shared/config/palette';
@@ -362,17 +364,17 @@ const LibraryView: React.FC<Props> = ({
   setFilterGfn,
   filterPsPlus,
   setFilterPsPlus,
-  filterFavorite,
-  setFilterFavorite,
-  filterWishlist,
-  toggleFilterWishlist,
+  libraryTab,
+  selectTab,
+  filterCount,
+  resetFilters,
   wishlistSaleCount,
   favoriteKeys,
   wishlistKeys,
   toggleFavorite,
   toggleWishlist,
   filterOwnership,
-  cycleOwnership,
+  setFilterOwnership,
   filterOnSale,
   setFilterOnSale,
   filterCatalog,
@@ -390,30 +392,14 @@ const LibraryView: React.FC<Props> = ({
   openTitleDetail,
   saleDiscount,
 }) => {
-  // One chip cycles owned -> not owned -> all; its label names the state.
-  const ownershipLabel = t(
-    filterOwnership === 'owned'
-      ? 'LibraryFilterOwned'
-      : filterOwnership === 'notOwned'
-      ? 'LibraryFilterNotOwned'
-      : 'LibraryFilterOwnershipAll',
-  );
-  const searchFocus = useTVFocus();
-  const tvSearchInputFocus = useTVFocus();
-  const tvSearchCloseFocus = useTVFocus();
-  const clearSearchFocus = useTVFocus();
-  const cancelSearchFocus = useTVFocus();
-  const [phoneSearchOpen, setPhoneSearchOpen] = React.useState(
-    keyword.length > 0,
-  );
   const [focusedSortOption, setFocusedSortOption] = React.useState<
     string | null
   >(null);
-  // TV only: the search box collapses to an icon button that opens this
-  // overlay -- typing with a remote's D-pad is slow, so the always-visible
-  // filter chips carry most of the narrowing on TV instead (see the TV
-  // navigation rail proposal this implements).
+  // TV only: search is a button that opens an overlay -- typing with a
+  // remote's D-pad is slow, so the tabs and the Filter sheet carry most of
+  // the narrowing on TV instead.
   const [tvSearchOpen, setTvSearchOpen] = React.useState(false);
+  const [filterOpen, setFilterOpen] = React.useState(false);
 
   // Google TV's remote mic/voice-search button (MainActivity.java's own
   // onKeyDown -- KEYCODE_SEARCH/VOICE_ASSIST/ASSIST, all three since remotes
@@ -555,47 +541,106 @@ const LibraryView: React.FC<Props> = ({
     ],
   );
 
+  // The view tabs (and, on the phone, the service chips): names written out.
+  // The wishlist tab carries the count of wishlisted titles on sale.
+  const renderTabs = (withServices: boolean) => (
+    <>
+      <AppButton
+        fill
+        label={t('LibraryTabAll')}
+        active={libraryTab === 'all'}
+        accent={palette.accent}
+        onPress={() => selectTab('all')}
+      />
+      <AppButton
+        fill
+        label={t('LibraryFilterFavorite')}
+        active={libraryTab === 'fav'}
+        accent={palette.accent}
+        onPress={() => selectTab('fav')}
+      />
+      <AppButton
+        fill
+        label={t('LibraryFilterWishlist')}
+        active={libraryTab === 'wish'}
+        badge={wishlistSaleCount}
+        accent={palette.accent}
+        onPress={() => selectTab('wish')}
+      />
+      {withServices && (
+        <>
+          <View style={styles.chipDivider} />
+          <AppButton
+            fill
+            label={t('LibraryFilterXcloud')}
+            active={filterXcloud}
+            accent={palette.provider.xbox}
+            onPress={() => setFilterXcloud(!filterXcloud)}
+          />
+          <AppButton
+            fill
+            label={t('LibraryFilterGfn')}
+            active={filterGfn}
+            accent={palette.provider.gfn}
+            onPress={() => setFilterGfn(!filterGfn)}
+          />
+          <AppButton
+            fill
+            label={t('LibraryFilterPsPlus')}
+            active={filterPsPlus}
+            accent={palette.provider.ps}
+            onPress={() => setFilterPsPlus(!filterPsPlus)}
+          />
+        </>
+      )}
+    </>
+  );
+
   return (
     <View style={[styles.root, {backgroundColor}]}>
       <View style={styles.header}>
-        {(Platform.isTV || !phoneSearchOpen) && (
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>{t('Library')}</Text>
-            {catalog.length > 0 && (
-              <Text style={styles.count}>
-                {filtered.length}/{catalog.length}
-              </Text>
-            )}
-            {gfnFullCatalogLoading && (
-              <InlineSpinner size={12} color={palette.textSoft} />
-            )}
-            {!Platform.isTV && (
-              <>
-                <View style={styles.titleSpacer} />
-                <AppButton
-                  compact
-                  iconOnly
-                  icon="magnify"
-                  label={t('Search')}
-                  active={keyword.length > 0}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setPhoneSearchOpen(true)}
-                />
-              </>
-            )}
-          </View>
-        )}
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{t('Library')}</Text>
+          {catalog.length > 0 && (
+            <Text style={styles.count}>
+              {filtered.length}/{catalog.length}
+            </Text>
+          )}
+          {gfnFullCatalogLoading && (
+            <InlineSpinner size={12} color={palette.textSoft} />
+          )}
+        </View>
         {Platform.isTV ? (
           <>
-            <View style={styles.tvToolbarRow}>
+            <View style={styles.toolbarRow}>
               <AppButton
                 icon="magnify"
-                label={t('Search')}
+                label={keyword ? `${t('Search')}: ${keyword}` : t('Search')}
+                active={keyword.length > 0}
                 accent={palette.accent}
-                style={styles.tvSearchGrow}
+                fill
                 onPress={() => setTvSearchOpen(true)}
               />
+              <AppButton
+                icon="tune"
+                label={t('LibraryFilterTitle')}
+                active={filterCount > 0}
+                badge={filterCount}
+                accent={palette.accent}
+                fill
+                onPress={() => setFilterOpen(true)}
+              />
+              {/* The current order is written out, and each press moves to
+                  the next one (no dropdown to pick from with a remote). */}
+              <AppButton
+                icon="sort"
+                label={`${t('Sort')}: ${activeSortLabel}`}
+                active={sortMode !== 'recent'}
+                accent={palette.accent}
+                fill
+                onPress={cycleSort}
+              />
+              <View style={styles.toolbarGap} />
               {/* TV has no pull-to-refresh gesture: same refresh, as a button. */}
               <AppButton
                 iconOnly
@@ -609,344 +654,123 @@ const LibraryView: React.FC<Props> = ({
                 }}
               />
             </View>
-            <Modal
+            <View style={styles.tabsRow}>{renderTabs(false)}</View>
+            <TvSearchModal
               visible={tvSearchOpen}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setTvSearchOpen(false)}>
-              <View style={styles.tvSearchOverlay}>
-                <View
-                  style={[
-                    styles.tvSearchBox,
-                    tvSearchInputFocus.focused && styles.tvSearchBoxFocused,
-                  ]}>
-                  <Icon
-                    source="magnify"
-                    size={20}
-                    color={
-                      tvSearchInputFocus.focused
-                        ? TV_FOCUS_COLOR
-                        : palette.textSoft
-                    }
-                  />
-                  <TextInput
-                    value={keyword}
-                    onChangeText={setKeyword}
-                    placeholder={t('Search')}
-                    placeholderTextColor={palette.textSoft}
-                    style={styles.tvSearchInput}
-                    onFocus={tvSearchInputFocus.onFocus}
-                    onBlur={tvSearchInputFocus.onBlur}
-                    autoFocus
-                  />
-                  <Pressable
-                    style={[
-                      styles.tvSearchCloseButton,
-                      tvSearchCloseFocus.focused && tvFocusRing,
-                    ]}
-                    onPress={() => setTvSearchOpen(false)}
-                    onFocus={tvSearchCloseFocus.onFocus}
-                    onBlur={tvSearchCloseFocus.onBlur}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Close')}>
-                    <Icon
-                      source="close"
-                      size={18}
-                      color={
-                        tvSearchCloseFocus.focused
-                          ? TV_FOCUS_COLOR
-                          : palette.text
-                      }
-                    />
-                  </Pressable>
-                </View>
-              </View>
-            </Modal>
-          </>
-        ) : phoneSearchOpen ? (
-          <View style={styles.phoneSearchRow}>
-            <View
-              style={[
-                styles.searchBox,
-                styles.phoneSearchBox,
-                searchFocus.focused && styles.searchBoxFocused,
-              ]}>
-              <Icon
-                source="magnify"
-                size={18}
-                color={searchFocus.focused ? TV_FOCUS_COLOR : palette.textSoft}
-              />
-              <TextInput
-                value={keyword}
-                onChangeText={setKeyword}
-                placeholder={t('Search')}
-                placeholderTextColor={palette.textSoft}
-                style={styles.searchInput}
-                onFocus={searchFocus.onFocus}
-                onBlur={searchFocus.onBlur}
-                autoFocus
-              />
-              {keyword.length > 0 && (
-                <Pressable
-                  style={[
-                    styles.searchClear,
-                    clearSearchFocus.focused && tvFocusRing,
-                  ]}
-                  onPress={() => setKeyword('')}
-                  onFocus={clearSearchFocus.onFocus}
-                  onBlur={clearSearchFocus.onBlur}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Close')}>
-                  <Icon source="close" size={18} color={palette.textSoft} />
-                </Pressable>
-              )}
-            </View>
-            <Pressable
-              style={[
-                styles.searchCancel,
-                cancelSearchFocus.focused && tvFocusRing,
-              ]}
-              onPress={() => {
-                setKeyword('');
-                setPhoneSearchOpen(false);
-              }}
-              onFocus={cancelSearchFocus.onFocus}
-              onBlur={cancelSearchFocus.onBlur}
-              accessibilityRole="button">
-              <Text style={styles.searchCancelText}>{t('Cancel')}</Text>
-            </Pressable>
-          </View>
-        ) : null}
-        <View style={styles.filterRow}>
-          <View style={styles.chipsRow}>
-            {Platform.isTV ? (
-              <>
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  letter="X"
-                  label={t('LibraryFilterXcloud')}
-                  active={filterXcloud}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterXcloud(v => !v)}
-                />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  letter="N"
-                  label={t('LibraryFilterGfn')}
-                  active={filterGfn}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterGfn(v => !v)}
-                />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  letter="PS"
-                  label={t('LibraryFilterPsPlus')}
-                  active={filterPsPlus}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterPsPlus(v => !v)}
-                />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  icon="heart-outline"
-                  label={t('LibraryFilterFavorite')}
-                  active={filterFavorite}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterFavorite(v => !v)}
-                />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  icon={filterWishlist ? 'bookmark' : 'bookmark-outline'}
-                  label={t('LibraryFilterWishlist')}
-                  active={filterWishlist}
-                  accent={palette.accent}
-                  badge={wishlistSaleCount}
-                  fill
-                  onPress={toggleFilterWishlist}
-                />
-              </>
-            ) : (
-              <>
-                <ToggleGroup
-                  accent={palette.accent}
-                  options={[
-                    {
-                      key: 'xcloud',
-                      letter: 'X',
-                      label: t('LibraryFilterXcloud'),
-                      active: filterXcloud,
-                      onPress: () => setFilterXcloud(v => !v),
-                    },
-                    {
-                      key: 'gfn',
-                      letter: 'N',
-                      label: t('LibraryFilterGfn'),
-                      active: filterGfn,
-                      onPress: () => setFilterGfn(v => !v),
-                    },
-                    {
-                      key: 'psplus',
-                      letter: 'PS',
-                      label: t('LibraryFilterPsPlus'),
-                      active: filterPsPlus,
-                      onPress: () => setFilterPsPlus(v => !v),
-                    },
-                  ]}
-                />
-                <ToggleGroup
-                  accent={palette.accent}
-                  options={[
-                    {
-                      key: 'favorite',
-                      icon: filterFavorite ? 'heart' : 'heart-outline',
-                      label: t('LibraryFilterFavorite'),
-                      active: filterFavorite,
-                      onPress: () => setFilterFavorite(v => !v),
-                    },
-                    {
-                      key: 'wishlist',
-                      icon: filterWishlist ? 'bookmark' : 'bookmark-outline',
-                      label: t('LibraryFilterWishlist'),
-                      active: filterWishlist,
-                      badge: wishlistSaleCount,
-                      onPress: toggleFilterWishlist,
-                    },
-                  ]}
-                />
-              </>
-            )}
-            {!Platform.isTV && (
-              <ToggleGroup
-                accent={palette.accent}
-                options={[
-                  {
-                    key: 'sale',
-                    icon: 'tag-outline',
-                    label: t('LibraryFilterOnSale'),
-                    active: filterOnSale,
-                    onPress: () => setFilterOnSale(v => !v),
-                  },
-                  {
-                    key: 'catalog',
-                    icon: 'gift-outline',
-                    label: t('LibraryFilterCatalog'),
-                    active: filterCatalog,
-                    onPress: toggleCatalog,
-                  },
-                ]}
-              />
-            )}
-            <AppButton
-              iconOnly
-              compact={!Platform.isTV}
-              icon={
-                filterOwnership === 'notOwned'
-                  ? 'close-circle-outline'
-                  : 'check-circle-outline'
-              }
-              label={ownershipLabel}
-              active={filterOwnership !== 'all'}
-              accent={palette.accent}
-              fill
-              onPress={cycleOwnership}
+              value={keyword}
+              onChangeText={setKeyword}
+              onClose={() => setTvSearchOpen(false)}
+              placeholder={t('Search')}
+              closeLabel={t('Close')}
             />
-            {Platform.isTV && (
-              <>
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  icon="tag-outline"
-                  label={t('LibraryFilterOnSale')}
-                  active={filterOnSale}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterOnSale(v => !v)}
+          </>
+        ) : (
+          <>
+            <View style={styles.phoneSearchRow}>
+              <View style={styles.phoneSearchBox}>
+                <SearchField
+                  value={keyword}
+                  onChangeText={setKeyword}
+                  placeholder={t('Search')}
+                  clearLabel={t('Close')}
                 />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  icon="gift-outline"
-                  label={t('LibraryFilterCatalog')}
-                  active={filterCatalog}
-                  accent={palette.accent}
-                  fill
-                  onPress={toggleCatalog}
-                />
-              </>
-            )}
-            <View style={styles.sortChipTv}>
-              {Platform.isTV ? (
-                // TV: the current order is written out, and each press moves
-                // to the next one (no dropdown to pick from with a remote).
-                <AppButton
-                  icon="sort"
-                  label={activeSortLabel}
-                  active={sortMode !== 'recent'}
-                  accent={palette.accent}
-                  fill
-                  onPress={cycleSort}
-                />
-              ) : (
-                <AppButton
-                  iconOnly
-                  compact
-                  icon="sort"
-                  trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
-                  label={`${t('Sort')}: ${activeSortLabel}`}
-                  active={sortMode !== 'recent'}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setSortMenuOpen(v => !v)}
-                />
-              )}
+              </View>
+              <AppButton
+                iconOnly
+                compact
+                icon="tune"
+                badge={filterCount}
+                label={t('LibraryFilterTitle')}
+                active={filterCount > 0}
+                accent={palette.accent}
+                fill
+                onPress={() => setFilterOpen(true)}
+              />
             </View>
-          </View>
-
-          {!Platform.isTV && sortMenuOpen && (
-            <View style={styles.sortMenu}>
-              {sortOptions.map(option => (
-                <Pressable
-                  key={option.value}
-                  style={[
-                    styles.sortItem,
-                    focusedSortOption === option.value && tvFocusRing,
-                  ]}
-                  onPress={() => {
-                    setSortMode(option.value);
-                    setSortMenuOpen(false);
-                  }}
-                  onFocus={() => setFocusedSortOption(option.value)}
-                  onBlur={() =>
-                    setFocusedSortOption(prev =>
-                      prev === option.value ? null : prev,
-                    )
-                  }>
-                  <View style={styles.sortItemLabelRow}>
-                    {sortMode === option.value && (
-                      <Icon
-                        source="check"
-                        size={13}
-                        color={palette.provider.gfn}
-                      />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsRow}>
+              {renderTabs(true)}
+            </ScrollView>
+          </>
+        )}
+        <LibraryFilterSheet
+          visible={filterOpen}
+          onClose={() => setFilterOpen(false)}
+          t={t}
+          isTV={Platform.isTV}
+          showServices={Platform.isTV}
+          filterXcloud={filterXcloud}
+          setFilterXcloud={setFilterXcloud}
+          filterGfn={filterGfn}
+          setFilterGfn={setFilterGfn}
+          filterPsPlus={filterPsPlus}
+          setFilterPsPlus={setFilterPsPlus}
+          showOwnership={libraryTab !== 'wish'}
+          ownership={filterOwnership}
+          setOwnership={setFilterOwnership}
+          filterOnSale={filterOnSale}
+          setFilterOnSale={setFilterOnSale}
+          filterCatalog={filterCatalog}
+          toggleCatalog={toggleCatalog}
+          onReset={resetFilters}
+        />
+        {!Platform.isTV && (
+          <View style={styles.filterRow}>
+            <View style={styles.sortRow}>
+              <Text style={styles.count}>{filtered.length}</Text>
+              <View style={styles.titleSpacer} />
+              <AppButton
+                iconOnly
+                compact
+                icon="sort"
+                trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
+                label={`${t('Sort')}: ${activeSortLabel}`}
+                active={sortMode !== 'recent'}
+                accent={palette.accent}
+                fill
+                onPress={() => setSortMenuOpen(v => !v)}
+              />
+            </View>
+            {sortMenuOpen && (
+              <View style={styles.sortMenu}>
+                {sortOptions.map(option => (
+                  <Pressable
+                    key={option.value}
+                    style={[
+                      styles.sortItem,
+                      focusedSortOption === option.value && tvFocusRing,
+                    ]}
+                    onPress={() => {
+                      setSortMode(option.value);
+                      setSortMenuOpen(false);
+                    }}
+                    onFocus={() => setFocusedSortOption(option.value)}
+                    onBlur={() =>
+                      setFocusedSortOption(prev =>
+                        prev === option.value ? null : prev,
+                      )
+                    }>
+                    <View style={styles.sortItemLabelRow}>
+                      {sortMode === option.value && (
+                        <Icon
+                          source="check"
+                          size={13}
+                          color={palette.provider.gfn}
+                        />
+                      )}
+                      <Text style={styles.sortItemLabel}>{option.label}</Text>
+                    </View>
+                    {!!option.scope && (
+                      <Text style={styles.sortItemScope}>{option.scope}</Text>
                     )}
-                    <Text style={styles.sortItemLabel}>{option.label}</Text>
-                  </View>
-                  {!!option.scope && (
-                    <Text style={styles.sortItemScope}>{option.scope}</Text>
-                  )}
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
       {catalog.length === 0 ? (
@@ -1065,6 +889,16 @@ const styles = StyleSheet.create({
     backgroundColor: alpha(palette.text, 0.18),
   },
   filterRow: {position: 'relative'},
+  toolbarRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  toolbarGap: {flex: 1},
+  tabsRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  sortRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  chipDivider: {
+    width: 1,
+    height: 24,
+    marginHorizontal: 2,
+    backgroundColor: alpha(palette.text, 0.24),
+  },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
