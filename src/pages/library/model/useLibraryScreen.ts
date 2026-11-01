@@ -103,16 +103,13 @@ import {
   popularityScore,
   RankTable,
 } from './rankSort';
-import {
-  activeFilterCount,
-  selectLibraryTab,
-  OwnershipFilter,
-  LibraryTab,
-} from './libraryFilters';
 
-import {buildLibraryShelves} from './libraryShelves';
-
-export type {OwnershipFilter, LibraryTab} from './libraryFilters';
+export type OwnershipFilter = 'owned' | 'notOwned' | 'all';
+const OWNERSHIP_NEXT: Record<OwnershipFilter, OwnershipFilter> = {
+  owned: 'notOwned',
+  notOwned: 'all',
+  all: 'owned',
+};
 
 export type SortMode = 'reco' | 'newest' | 'popular' | 'recent';
 
@@ -236,57 +233,28 @@ export function useLibraryScreen() {
   const [filterXcloud, setFilterXcloud] = React.useState(false);
   const [filterGfn, setFilterGfn] = React.useState(false);
   const [filterPsPlus, setFilterPsPlus] = React.useState(false);
-  // The view tabs (all / favorites / wishlist) replace the old favorite and
-  // wishlist chips: exactly one is active, and the two filters follow it.
-  const [libraryTab, setLibraryTab] = React.useState<LibraryTab>('home');
-  const filterFavorite = libraryTab === 'fav';
-  const filterWishlist = libraryTab === 'wish';
-  // Three states, picked in the Filter sheet: only titles playable now
-  // ('owned', the default), only the ones that aren't ('notOwned'), or
-  // everything.
+  const [filterFavorite, setFilterFavorite] = React.useState(false);
+  const [filterWishlist, setFilterWishlist] = React.useState(false);
+  // Three states, cycled by one chip: only titles playable now ('owned',
+  // the default), only the ones that aren't ('notOwned'), or everything.
   const [filterOwnership, setFilterOwnership] =
     React.useState<OwnershipFilter>('owned');
-  const savedOwnership = React.useRef<OwnershipFilter | null>(null);
-  const selectTab = React.useCallback(
-    (next: LibraryTab) => {
-      const result = selectLibraryTab(
-        {
-          tab: libraryTab,
-          ownership: filterOwnership,
-          savedOwnership: savedOwnership.current,
-        },
-        next,
-      );
-      savedOwnership.current = result.savedOwnership;
-      setLibraryTab(result.tab);
-      setFilterOwnership(result.ownership);
-    },
-    [libraryTab, filterOwnership],
+  const cycleOwnership = React.useCallback(
+    () => setFilterOwnership(v => OWNERSHIP_NEXT[v]),
+    [],
   );
+  // The wishlist is by definition titles that aren't owned, so turning it on
+  // widens the default "owned only" view to everything.
+  const toggleFilterWishlist = React.useCallback(() => {
+    if (!filterWishlist) {
+      setFilterOwnership('all');
+    }
+    setFilterWishlist(!filterWishlist);
+  }, [filterWishlist]);
   const [filterOnSale, setFilterOnSale] = React.useState(false);
   // On or off: only titles in Game Pass or the PS catalog.
   const [filterCatalog, setFilterCatalog] = React.useState(false);
   const toggleCatalog = React.useCallback(() => setFilterCatalog(v => !v), []);
-  const filterCount = activeFilterCount({
-    anyProvider: filterXcloud || filterGfn || filterPsPlus,
-    ownership: filterOwnership,
-    tab: libraryTab,
-    onSale: filterOnSale,
-    catalog: filterCatalog,
-  });
-  const resetFilters = React.useCallback(() => {
-    setFilterXcloud(false);
-    setFilterGfn(false);
-    setFilterPsPlus(false);
-    setFilterOnSale(false);
-    setFilterCatalog(false);
-    if (libraryTab === 'wish') {
-      // Ownership stays widened on the wishlist tab; it resets on leaving.
-      savedOwnership.current = 'owned';
-    } else {
-      setFilterOwnership('owned');
-    }
-  }, [libraryTab]);
 
   // Favorites live in their own catalog-key-based store (not tied to one
   // provider) so a GFN-only title can be favorited too -- reloaded on focus
@@ -990,28 +958,6 @@ export function useLibraryScreen() {
     [wishlist, catalogByKey, saleDiscount],
   );
 
-  // Home-tab shelves: recently played, favorites, wishlist titles on sale.
-  const homeShelves = React.useMemo(
-    () =>
-      buildLibraryShelves({
-        catalog,
-        wishlistItems: [...catalog, ...wishlistStubs].filter(item =>
-          wishlistKeys.has(item.key),
-        ),
-        playHistory,
-        favoriteKeys,
-        saleDiscount,
-      }),
-    [
-      catalog,
-      wishlistStubs,
-      wishlistKeys,
-      playHistory,
-      favoriteKeys,
-      saleDiscount,
-    ],
-  );
-
   const toggleFavorite = React.useCallback((item: CatalogTitle) => {
     if (!isCatalogTitleOwned(item)) {
       return;
@@ -1255,19 +1201,17 @@ export function useLibraryScreen() {
     setFilterGfn,
     filterPsPlus,
     setFilterPsPlus,
-    libraryTab,
-    selectTab,
-    homeShelves,
+    filterFavorite,
+    setFilterFavorite,
     filterWishlist,
-    filterCount,
-    resetFilters,
+    toggleFilterWishlist,
     wishlistSaleCount,
     favoriteKeys,
     wishlistKeys,
     toggleFavorite,
     toggleWishlist,
     filterOwnership,
-    setFilterOwnership,
+    cycleOwnership,
     filterOnSale,
     setFilterOnSale,
     filterCatalog,
