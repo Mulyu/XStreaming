@@ -110,6 +110,8 @@ import {
   LibraryTab,
 } from './libraryFilters';
 
+import {buildLibraryShelves} from './libraryShelves';
+
 export type {OwnershipFilter, LibraryTab} from './libraryFilters';
 
 export type SortMode = 'reco' | 'newest' | 'popular' | 'recent';
@@ -236,7 +238,7 @@ export function useLibraryScreen() {
   const [filterPsPlus, setFilterPsPlus] = React.useState(false);
   // The view tabs (all / favorites / wishlist) replace the old favorite and
   // wishlist chips: exactly one is active, and the two filters follow it.
-  const [libraryTab, setLibraryTab] = React.useState<LibraryTab>('all');
+  const [libraryTab, setLibraryTab] = React.useState<LibraryTab>('home');
   const filterFavorite = libraryTab === 'fav';
   const filterWishlist = libraryTab === 'wish';
   // Three states, picked in the Filter sheet: only titles playable now
@@ -988,6 +990,28 @@ export function useLibraryScreen() {
     [wishlist, catalogByKey, saleDiscount],
   );
 
+  // Home-tab shelves: recently played, favorites, wishlist titles on sale.
+  const homeShelves = React.useMemo(
+    () =>
+      buildLibraryShelves({
+        catalog,
+        wishlistItems: [...catalog, ...wishlistStubs].filter(item =>
+          wishlistKeys.has(item.key),
+        ),
+        playHistory,
+        favoriteKeys,
+        saleDiscount,
+      }),
+    [
+      catalog,
+      wishlistStubs,
+      wishlistKeys,
+      playHistory,
+      favoriteKeys,
+      saleDiscount,
+    ],
+  );
+
   const toggleFavorite = React.useCallback((item: CatalogTitle) => {
     if (!isCatalogTitleOwned(item)) {
       return;
@@ -1233,6 +1257,7 @@ export function useLibraryScreen() {
     setFilterPsPlus,
     libraryTab,
     selectTab,
+    homeShelves,
     filterWishlist,
     filterCount,
     resetFilters,

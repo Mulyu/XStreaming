@@ -40,6 +40,10 @@ export default {
     LibraryFilterShowResults: 'Ver resultados',
     LibraryTabAll: 'Todos',
     LibraryTabHome: 'Inicio',
+    LibraryShelfRecent: 'Jugados recientemente',
+    LibraryShelfWishSale: 'Lista de deseos en oferta',
+    LibraryHomeEmpty:
+      'Juega algo o marca un título con un corazón y aparecerá aquí.',
     Disconnect: 'Desconectar',
     Newest: 'Añadidos recientemente',
     Search: 'Buscar',

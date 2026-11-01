@@ -28,6 +28,7 @@ import {AppButton} from '../../../shared/ui/Buttons';
 import SearchField from '../../../shared/ui/SearchField';
 import TvSearchModal from '../../../shared/ui/TvSearchModal';
 import LibraryFilterSheet from './LibraryFilterSheet';
+import LibraryHome from './LibraryHome';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
 import {appDebugLog} from '../../../shared/lib/appDebugLog';
 import {alpha, palette} from '../../../shared/config/palette';
@@ -366,6 +367,7 @@ const LibraryView: React.FC<Props> = ({
   setFilterPsPlus,
   libraryTab,
   selectTab,
+  homeShelves,
   filterCount,
   resetFilters,
   wishlistSaleCount,
@@ -541,10 +543,22 @@ const LibraryView: React.FC<Props> = ({
     ],
   );
 
+  // The home tab shows shelves; searching or filtering switches to the grid
+  // (a Home tab with a search keyword or filter on is just the full list).
+  const showHome =
+    libraryTab === 'home' && keyword.trim().length === 0 && filterCount === 0;
+
   // The view tabs (and, on the phone, the service chips): names written out.
   // The wishlist tab carries the count of wishlisted titles on sale.
   const renderTabs = (withServices: boolean) => (
     <>
+      <AppButton
+        fill
+        label={t('LibraryTabHome')}
+        active={libraryTab === 'home'}
+        accent={palette.accent}
+        onPress={() => selectTab('home')}
+      />
       <AppButton
         fill
         label={t('LibraryTabAll')}
@@ -778,6 +792,17 @@ const LibraryView: React.FC<Props> = ({
           <InlineSpinner />
           <Text style={styles.centreText}>{t('Loading...')}</Text>
         </View>
+      ) : showHome ? (
+        <LibraryHome
+          t={t}
+          shelves={homeShelves}
+          gamePassMap={gamePassMap}
+          saleDiscount={saleDiscount}
+          openTitle={stableOpenTitle}
+          openTitleDetail={stableOpenTitleDetail}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
       ) : (
         <FlatList
           data={sorted}
