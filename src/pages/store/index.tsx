@@ -12,6 +12,12 @@ import {Text, Icon} from 'react-native-paper';
 import {useTranslation} from 'react-i18next';
 import {useTVFocus, tvFocusBold, tvFocusRow} from '../../shared/ui/tvFocus';
 import {AppButton} from '../../shared/ui/Buttons';
+import TitleCard from '../../shared/ui/TitleCard';
+import TitleShelf from '../../shared/ui/TitleShelf';
+import TitleSpotlight from '../../shared/ui/TitleSpotlight';
+import SearchField from '../../shared/ui/SearchField';
+import TvSearchModal from '../../shared/ui/TvSearchModal';
+import {SwitchRow} from '../../shared/ui/InlineSettingRows';
 import {InlineSpinner} from '../../shared/ui/Spinner';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
@@ -48,6 +54,10 @@ import {
   removeFromWishlist,
   isCatalogTitleWishlisted,
   buildWishlistEntry,
+  providerBadges,
+  providerStatuses,
+  PROVIDER_KEYS,
+  PROVIDER_NAMES,
 } from '../../entities/catalog-title';
 import {isSignedIn, getValidGfnJwt} from '../../entities/gfn-account';
 import {
@@ -76,7 +86,9 @@ import {
   buildGfnStoreRows,
   buildXboxStoreRows,
   buildPsStoreRows,
+  buildStoreShelves,
   dedupeByKey,
+  filterRowsByKeyword,
   hasMorePages,
   StoreRow,
   resolveRowTitle,
@@ -115,6 +127,85 @@ const STEAM_LANGUAGE: Record<string, string> = {
   hi: 'english',
 };
 
+// A chart row as a cover card (TV grid and every shelf). Memoised on stable
+// handlers so a focus move re-renders only the card that gained or lost it.
+const StoreCard = React.memo(function StoreCard({
+  row,
+  width,
+  ranked,
+  notStreamable,
+  onOpen,
+  onFocusRow,
+}: {
+  row: StoreRow;
+  width: number;
+  ranked: boolean;
+  notStreamable: string;
+  onOpen: (row: StoreRow) => void;
+  onFocusRow: (row: StoreRow) => void;
+}) {
+  return (
+    <TitleCard
+      width={width}
+      title={row.title}
+      imageUrl={row.imageUrl}
+      badges={row.catalogTitle ? providerBadges(row.catalogTitle) : undefined}
+      sale={row.discountPercent ? `-${row.discountPercent}%` : undefined}
+      price={row.price}
+      rank={ranked ? row.rank : undefined}
+      dim={!row.catalogTitle}
+      tag={row.catalogTitle ? undefined : notStreamable}
+      onPress={() => onOpen(row)}
+      onFocusItem={() => onFocusRow(row)}
+    />
+  );
+});
+
+// The TV's big "selected title" panel. Holds the selected row in its own
+// state and hands the setter to the screen, so moving focus across the cards
+// re-renders only this panel, not the whole Store screen.
+const StoreSpotlight = ({
+  initialRow,
+  register,
+  t,
+}: {
+  initialRow: StoreRow;
+  register: (set: (row: StoreRow) => void) => void;
+  t: (key: string) => string;
+}) => {
+  const [row, setRow] = React.useState(initialRow);
+  React.useEffect(() => {
+    register(setRow);
+  }, [register]);
+  const statusText: Record<string, string> = {
+    owned: t('SpotOwned'),
+    catalog: t('SpotIncluded'),
+    notOwned: t('SpotNotOwned'),
+    none: t('SpotNotAvailable'),
+  };
+  const statuses = row.catalogTitle ? providerStatuses(row.catalogTitle) : null;
+  return (
+    <TitleSpotlight
+      title={row.title}
+      imageUrl={row.imageUrl}
+      lines={
+        statuses
+          ? PROVIDER_KEYS.map(key => ({
+              color: palette.provider[key],
+              on: statuses[key] === 'owned' || statuses[key] === 'catalog',
+              text: `${PROVIDER_NAMES[key]} · ${statusText[statuses[key]]}`,
+            }))
+          : undefined
+      }
+      note={statuses ? undefined : t('StoreNotStreamable')}
+      price={row.price}
+      originalPrice={row.originalPrice}
+      sale={row.discountPercent ? `-${row.discountPercent}%` : undefined}
+      hint={`${t('LibraryTvHintOk')} ${t('LibraryTvHintDetail')}`}
+    />
+  );
+};
+
 function StoreScreen() {
   const {t} = useTranslation();
   const navigation = useNavigation<any>();
@@ -132,6 +223,10 @@ function StoreScreen() {
   // demand (xboxBasics below).
   const [xboxAvailableOnly, setXboxAvailableOnly] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [keyword, setKeyword] = React.useState('');
+  const [tvSearchOpen, setTvSearchOpen] = React.useState(false);
+  // Width of the screen's content box, for sizing the TV's cards.
+  const [contentWidth, setContentWidth] = React.useState(0);
 
   // Loading state is tracked per provider, not as one shared flag -- a
   // shared flag meant "is *a* chart loading", not "is the chart the screen
@@ -995,8 +1090,14 @@ function StoreScreen() {
     if (availableOnly) {
       list = list.filter(row => !!row.catalogTitle);
     }
-    return list;
-  }, [rows, saleOnly, availableOnly]);
+    return filterRowsByKeyword(list, keyword);
+  }, [rows, saleOnly, availableOnly, keyword]);
+
+  // TOP 10 and on-sale shelves above the full ranking.
+  const shelves = React.useMemo(
+    () => buildStoreShelves(visibleRows, {saleOnly, keyword}),
+    [visibleRows, saleOnly, keyword],
+  );
 
   // The initial page-0 fetch above only ever tries one page, and it's common
   // for that single page to match few or zero cloud-playable titles --
@@ -1182,6 +1283,34 @@ function StoreScreen() {
           <Text style={styles.rowTitle} numberOfLines={2}>
             {item.title}
           </Text>
+          <View style={styles.rowBadges}>
+            {item.catalogTitle ? (
+              providerBadges(item.catalogTitle).map(badge => (
+                <View
+                  key={badge.letter}
+                  style={[
+                    styles.miniBadge,
+                    {
+                      backgroundColor: badge.on
+                        ? badge.color
+                        : alpha(palette.text, 0.3),
+                    },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.miniBadgeText,
+                      !badge.on && {color: palette.textSoft},
+                    ]}>
+                    {badge.letter}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.notStreamable}>
+                {t('StoreNotStreamable')}
+              </Text>
+            )}
+          </View>
           {!!item.price && (
             <View style={styles.priceRow}>
               {!!item.discountPercent && (
@@ -1230,8 +1359,84 @@ function StoreScreen() {
   const bestKindFocus = useTVFocus();
   const newKindFocus = useTVFocus();
   const saleKindFocus = useTVFocus();
-  const availableFocus = useTVFocus();
-  const reloadFocus = useTVFocus();
+
+  const spotlightSetter = React.useRef<((row: StoreRow) => void) | null>(null);
+  const registerSpotlight = React.useCallback(
+    (set: (row: StoreRow) => void) => {
+      spotlightSetter.current = set;
+    },
+    [],
+  );
+  const onFocusRow = React.useCallback((row: StoreRow) => {
+    spotlightSetter.current?.(row);
+  }, []);
+  // TV: five cards across the grid, a little over six on a shelf so the next
+  // one peeks in. Phone shelves use a fixed width.
+  const tvInner = Math.max(0, contentWidth - 28);
+  const gridCardWidth = tvInner ? Math.floor(tvInner / 5) : 160;
+  const shelfCardWidth = Platform.isTV
+    ? tvInner
+      ? Math.floor(tvInner / 6.3)
+      : 140
+    : 132;
+  const notStreamable = t('StoreNotStreamable');
+
+  const renderShelfCard = (row: StoreRow, ranked: boolean) => (
+    <StoreCard
+      key={row.id}
+      row={row}
+      width={shelfCardWidth}
+      ranked={ranked}
+      notStreamable={notStreamable}
+      onOpen={openRow}
+      onFocusRow={onFocusRow}
+    />
+  );
+
+  // TV grid cell / phone list row.
+  const renderItem = ({item}: {item: StoreRow}) =>
+    Platform.isTV ? (
+      <StoreCard
+        row={item}
+        width={gridCardWidth}
+        ranked
+        notStreamable={notStreamable}
+        onOpen={openRow}
+        onFocusRow={onFocusRow}
+      />
+    ) : (
+      renderRow({item})
+    );
+
+  // Above the ranking: (TV) the selected-title panel, then the TOP 10 and
+  // on-sale shelves; none of it while searching.
+  const renderListHeader = () => (
+    <View style={styles.listHeader}>
+      {Platform.isTV && visibleRows.length > 0 && !keyword.trim() && (
+        <StoreSpotlight
+          key={`${provider}-${chartKind}`}
+          initialRow={visibleRows[0]}
+          register={registerSpotlight}
+          t={t}
+        />
+      )}
+      {shelves.top.length > 0 && (
+        <TitleShelf
+          title="TOP 10"
+          subtitle={
+            chartKind === 'best' ? t('StoreBestSellers') : t('StoreNewReleases')
+          }>
+          {shelves.top.map(row => renderShelfCard(row, true))}
+        </TitleShelf>
+      )}
+      {shelves.sale.length > 0 && (
+        <TitleShelf title={t('LibraryFilterOnSale')}>
+          {shelves.sale.map(row => renderShelfCard(row, false))}
+        </TitleShelf>
+      )}
+      <Text style={styles.sectionTitle}>{t('StoreRankingTitle')}</Text>
+    </View>
+  );
 
   const renderFooter = () =>
     loadingMore ? (
@@ -1241,13 +1446,32 @@ function StoreScreen() {
     ) : null;
 
   return (
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      onLayout={event => setContentWidth(event.nativeEvent.layout.width)}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('Store')}</Text>
+        {!Platform.isTV && (
+          <SearchField
+            value={keyword}
+            onChangeText={setKeyword}
+            placeholder={t('Search')}
+            clearLabel={t('Close')}
+          />
+        )}
         {Platform.isTV ? (
           // TV: the Library's toolbar buttons, so the focused one reads the
           // same way here as there.
           <View style={styles.tvControls}>
+            <AppButton
+              icon="magnify"
+              label={keyword ? `${t('Search')}: ${keyword}` : t('Search')}
+              accent={palette.accent}
+              active={keyword.length > 0}
+              fill
+              onPress={() => setTvSearchOpen(true)}
+            />
+            <View style={styles.tvControlsGap} />
             <AppButton
               fill
               label={t('StoreTabXbox')}
@@ -1420,44 +1644,17 @@ function StoreScreen() {
                   {t('LibraryFilterOnSale')}
                 </Text>
               </Pressable>
-              <Pressable
-                style={[
-                  styles.kindChip,
-                  availableOnly && styles.kindOnAvailable,
-                  availableFocus.focused && tvFocusBold,
-                ]}
-                onPress={toggleAvailableOnly}
-                onFocus={availableFocus.onFocus}
-                onBlur={availableFocus.onBlur}>
-                <Text
-                  style={[
-                    styles.kindText,
-                    availableOnly && styles.kindTextOnAvailable,
-                  ]}>
-                  {t('StoreFilterAvailableOnly')}
-                </Text>
-              </Pressable>
-              {Platform.isTV && (
-                // TV has no pull-to-refresh gesture: a focusable button does it.
-                <Pressable
-                  style={[
-                    styles.kindChip,
-                    styles.reloadChip,
-                    reloadFocus.focused && tvFocusBold,
-                  ]}
-                  onPress={onRefresh}
-                  onFocus={reloadFocus.onFocus}
-                  onBlur={reloadFocus.onBlur}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Refresh')}>
-                  <Icon source="refresh" size={14} color={palette.textSoft} />
-                  <Text style={styles.kindText}>{t('Refresh')}</Text>
-                </Pressable>
-              )}
             </View>
+            <SwitchRow
+              title={t('StoreFilterAvailableOnly')}
+              desc={availableOnly ? t('StoreFilteredNote') : undefined}
+              value={availableOnly}
+              onChange={toggleAvailableOnly}
+              accent={palette.success}
+            />
           </>
         )}
-        {availableOnly && (
+        {Platform.isTV && availableOnly && (
           <Text style={styles.subnote}>{t('StoreFilteredNote')}</Text>
         )}
       </View>
@@ -1476,7 +1673,13 @@ function StoreScreen() {
         <FlatList
           data={visibleRows}
           keyExtractor={item => item.id}
-          renderItem={renderRow}
+          renderItem={renderItem}
+          numColumns={Platform.isTV ? 5 : 1}
+          initialNumToRender={Platform.isTV ? 15 : 12}
+          windowSize={Platform.isTV ? 5 : 11}
+          // An element, not a component function: a new function each render would
+          // remount the header (and drop the TV focus) every time.
+          ListHeaderComponent={renderListHeader()}
           contentContainerStyle={styles.list}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
@@ -1484,6 +1687,16 @@ function StoreScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
+        />
+      )}
+      {Platform.isTV && (
+        <TvSearchModal
+          visible={tvSearchOpen}
+          value={keyword}
+          onChangeText={setKeyword}
+          onClose={() => setTvSearchOpen(false)}
+          placeholder={t('Search')}
+          closeLabel={t('Close')}
         />
       )}
     </View>
@@ -1524,15 +1737,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  reloadChip: {flexDirection: 'row', gap: 4},
   kindOn: {backgroundColor: alpha(palette.warning, 0.9)},
   kindOnSale: {backgroundColor: palette.sale},
-  kindOnAvailable: {backgroundColor: palette.accent},
   kindText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
   kindTextOn: {color: palette.onAccent},
   kindTextOnSale: {color: palette.onAccent},
-  kindTextOnAvailable: {color: palette.onAccent},
   subnote: {fontSize: 11, color: palette.textDim},
+  listHeader: {gap: 12, paddingBottom: 6},
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    paddingHorizontal: 4,
+    marginTop: 4,
+  },
+  rowBadges: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  miniBadge: {
+    height: 16,
+    paddingHorizontal: 5,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniBadgeText: {fontSize: 9.5, fontWeight: '800', color: palette.onAccent},
+  notStreamable: {fontSize: 11, color: palette.textDim},
   list: {paddingHorizontal: 14, paddingBottom: 24},
   row: {
     flexDirection: 'row',
@@ -1560,9 +1787,9 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   cover: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: 56,
+    height: 56,
+    borderRadius: 10,
     backgroundColor: palette.surfaceHigh,
   },
   coverPlaceholder: {backgroundColor: alpha(palette.text, 0.2)},

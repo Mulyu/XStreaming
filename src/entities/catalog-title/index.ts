@@ -14,6 +14,18 @@ export {
 
 export {isInGamePass, isInPsCatalog} from './model/gamePass';
 
+export type {
+  ProviderBadge,
+  ProviderKey,
+  ProviderStatus,
+} from './model/providerBadges';
+export {
+  PROVIDER_KEYS,
+  PROVIDER_NAMES,
+  providerBadges,
+  providerStatuses,
+} from './model/providerBadges';
+
 export {
   getFavoriteKeys,
   isCatalogTitleFavorite,
