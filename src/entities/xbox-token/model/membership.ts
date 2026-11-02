@@ -16,6 +16,13 @@ export const membershipFromTier = (tier?: string): boolean | null =>
 export const isXboxMembershipActive = (): boolean =>
   storage.getBoolean(KEY) !== false;
 
+// Forget it (sign-out): a different account starts as active again.
+export const clearXboxMembership = (): void => {
+  try {
+    storage.delete(KEY);
+  } catch {}
+};
+
 // Remember what a freshly fetched profile says; returns the state now in
 // effect.
 export const recordXboxMembership = (profile: XboxProfile | null): boolean => {

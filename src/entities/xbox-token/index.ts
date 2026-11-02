@@ -35,6 +35,11 @@ export {
 
 export {fetchXboxProfile, parseXboxProfile} from './api/profile';
 export {
+  getCachedXboxProfile,
+  loadXboxProfile,
+  clearXboxProfileCache,
+} from './model/profileCache';
+export {
   isXboxMembershipActive,
   membershipFromTier,
   recordXboxMembership,
