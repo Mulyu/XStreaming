@@ -34,6 +34,11 @@ export {
 } from './model/streamTokenStore';
 
 export {fetchXboxProfile, parseXboxProfile} from './api/profile';
+export {
+  isXboxMembershipActive,
+  membershipFromTier,
+  recordXboxMembership,
+} from './model/membership';
 export type {XboxProfile} from './api/profile';
 
 export {default as Xal} from './api/xal';

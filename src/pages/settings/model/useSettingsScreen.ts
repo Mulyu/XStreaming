@@ -10,6 +10,7 @@ import {
   clearStreamToken,
   clearWebToken,
   fetchXboxProfile,
+  recordXboxMembership,
   getWebToken,
   isWebTokenValid,
   XboxProfile,
@@ -169,6 +170,7 @@ export function useSettingsScreen(navigation: any, route: any) {
       fetchXboxProfile(webToken).then(profile => {
         if (!cancelled && profile) {
           setXboxProfile(profile);
+          recordXboxMembership(profile);
         }
       });
     };

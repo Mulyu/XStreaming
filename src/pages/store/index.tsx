@@ -50,6 +50,7 @@ import {
   buildWishlistEntry,
 } from '../../entities/catalog-title';
 import {isSignedIn, getValidGfnJwt} from '../../entities/gfn-account';
+import {isXboxMembershipActive} from '../../entities/xbox-token';
 import {
   isPsPlusSignedIn,
   getNpsso,
@@ -1058,18 +1059,20 @@ function StoreScreen() {
   // its own service) opens the same all-services detail the Library does. The
   // GFN side is merged with the owned list for the same ownership marks the
   // Library shows.
+  // The Library keeps this flag fresh; a lapsed Game Pass membership makes the
+  // Xbox side of a title read as not owned on its detail screen too.
+  const xboxActive = isXboxMembershipActive();
   const catalogIndex = React.useMemo(() => {
     const gfnGames = mergeOwnedGames(
       gfnFullCatalog,
       getFreshOwnedGames() || [],
     );
     return new Map(
-      buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames).map(item => [
-        item.key,
-        item,
-      ]),
+      buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames, {
+        xboxActive,
+      }).map(item => [item.key, item]),
     );
-  }, [xcloudTitles, gfnFullCatalog, psPlusGames]);
+  }, [xcloudTitles, gfnFullCatalog, psPlusGames, xboxActive]);
 
   // Favorites (owned titles) and the wishlist (the rest) shown on each row's
   // button; reloaded on focus since the detail screen toggles them too.
