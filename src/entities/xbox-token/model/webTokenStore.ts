@@ -1,5 +1,6 @@
 import {storage} from '../../../shared/lib/mmkv';
 import {debugFactory} from '../../../shared/lib/debug';
+import {clearXboxProfileCache} from './profileCache';
 const log = debugFactory('webTokenStore');
 
 const STORE_KEY = 'user.webToken';
@@ -24,6 +25,7 @@ export const getWebToken = (): any => {
 
 export const clearWebToken = () => {
   storage.set(STORE_KEY, JSON.stringify({}));
+  clearXboxProfileCache();
 };
 
 const calculateSecondsLeft = (date: any) => {

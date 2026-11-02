@@ -10,7 +10,7 @@ import {
 import {useSelector} from 'react-redux';
 import {isSignedIn, getValidGfnJwt} from '../../../entities/gfn-account';
 import {
-  fetchXboxProfile,
+  loadXboxProfile,
   getWebToken,
   isWebTokenValid,
   isXboxMembershipActive,
@@ -793,7 +793,7 @@ export function useLibraryScreen() {
         return undefined;
       }
       let cancelled = false;
-      fetchXboxProfile(webToken).then(profile => {
+      loadXboxProfile(webToken).then(profile => {
         if (!cancelled && profile) {
           setXboxActive(recordXboxMembership(profile));
         }

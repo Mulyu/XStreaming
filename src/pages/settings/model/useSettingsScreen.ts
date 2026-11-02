@@ -9,8 +9,8 @@ import {debugFactory} from '../../../shared/lib/debug';
 import {
   clearStreamToken,
   clearWebToken,
-  fetchXboxProfile,
-  recordXboxMembership,
+  getCachedXboxProfile,
+  loadXboxProfile,
   getWebToken,
   isWebTokenValid,
   XboxProfile,
@@ -153,8 +153,8 @@ export function useSettingsScreen(navigation: any, route: any) {
   // The signed-in account's profile (gamertag, membership tier), from the
   // web token the app already keeps. Best effort: nothing extra is shown when
   // the call fails. Re-run on focus so a fresh sign-in shows up.
-  const [xboxProfile, setXboxProfile] = React.useState<XboxProfile | null>(
-    null,
+  const [xboxProfile, setXboxProfile] = React.useState<XboxProfile | null>(() =>
+    getCachedXboxProfile(),
   );
   React.useEffect(() => {
     if (!isAuthed) {
@@ -167,10 +167,9 @@ export function useSettingsScreen(navigation: any, route: any) {
       if (!isWebTokenValid(webToken)) {
         return;
       }
-      fetchXboxProfile(webToken).then(profile => {
+      loadXboxProfile(webToken).then(profile => {
         if (!cancelled && profile) {
           setXboxProfile(profile);
-          recordXboxMembership(profile);
         }
       });
     };
