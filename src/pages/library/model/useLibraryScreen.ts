@@ -10,6 +10,13 @@ import {
 import {useSelector} from 'react-redux';
 import {isSignedIn, getValidGfnJwt} from '../../../entities/gfn-account';
 import {
+  fetchXboxProfile,
+  getWebToken,
+  isWebTokenValid,
+  isXboxMembershipActive,
+  recordXboxMembership,
+} from '../../../entities/xbox-token';
+import {
   GfnGame,
   fetchGfnOwnedGames,
   getFreshOwnedGames,
@@ -775,9 +782,32 @@ export function useLibraryScreen() {
     return rank;
   }, [xcloudTitles, releaseDates]);
 
+  // Whether the Xbox membership is active. A lapsed one makes the Xbox side of
+  // every title read as not owned (see CatalogOptions). Re-read from the
+  // profile on focus so a renewal or lapse shows up without restarting.
+  const [xboxActive, setXboxActive] = React.useState(isXboxMembershipActive);
+  useFocusEffect(
+    React.useCallback(() => {
+      const webToken = getWebToken();
+      if (!isWebTokenValid(webToken)) {
+        return undefined;
+      }
+      let cancelled = false;
+      fetchXboxProfile(webToken).then(profile => {
+        if (!cancelled && profile) {
+          setXboxActive(recordXboxMembership(profile));
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
   const catalog = React.useMemo(
-    () => buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames),
-    [xcloudTitles, gfnGames, psPlusGames],
+    () =>
+      buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames, {xboxActive}),
+    [xcloudTitles, gfnGames, psPlusGames, xboxActive],
   );
 
   // Discount percent for the sale badge/filter: the best of xCloud's own
