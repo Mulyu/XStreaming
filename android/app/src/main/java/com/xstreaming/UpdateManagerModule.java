@@ -10,12 +10,14 @@ import android.provider.Settings;
 import androidx.core.content.FileProvider;
 
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.UiThreadUtil;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.common.LifecycleState;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import java.io.File;
@@ -24,18 +26,60 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class UpdateManagerModule extends ReactContextBaseJavaModule {
+public class UpdateManagerModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
     private static final String MODULE_NAME = "UpdateManager";
     private static final String PROGRESS_EVENT_NAME = "UpdateManagerProgress";
     private static final String UPDATE_DIR_NAME = "updates";
     private static final long INSTALL_CLEANUP_DELAY_MS = 10 * 60 * 1000;
     private static final long UNKNOWN_TOTAL_EMIT_BYTES = 512 * 1024;
+    private static final String LOG_TAG = "UpdateManager";
 
     private final ReactApplicationContext reactContext;
+
+    // A downloaded APK whose installer could not be opened because the app was
+    // not in the foreground when the download finished (Android 10+ silently
+    // refuses an activity start from the background). It is opened again as
+    // soon as the app comes back, so the user does not have to download twice.
+    private volatile File pendingApk;
 
     public UpdateManagerModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.reactContext = reactContext;
+        reactContext.addLifecycleEventListener(this);
+    }
+
+    @Override
+    public void onHostResume() {
+        File apk = pendingApk;
+        pendingApk = null;
+        if (apk == null) {
+            return;
+        }
+        if (!apk.exists()) {
+            log("app is back, but the downloaded APK is gone");
+            return;
+        }
+        try {
+            log("app is back; opening the installer for the finished download");
+            installApk(apk);
+            scheduleDelete(apk);
+        } catch (Exception e) {
+            log("opening the installer on return failed: " + e);
+        }
+    }
+
+    @Override
+    public void onHostPause() {}
+
+    @Override
+    public void onHostDestroy() {}
+
+    private void log(String message) {
+        try {
+            AppDebugLog.log(reactContext, LOG_TAG, message);
+        } catch (Exception ignored) {
+            // diagnostics only
+        }
     }
 
     @Override
@@ -70,17 +114,31 @@ public class UpdateManagerModule extends ReactContextBaseJavaModule {
                     throw new IllegalStateException("Unable to create update cache directory");
                 }
 
+                pendingApk = null;
                 cleanupUpdateDir(updateDir);
 
                 String safeName = buildSafeApkName(apkName);
                 apkFile = new File(updateDir, safeName);
+                long startedAt = System.currentTimeMillis();
                 downloadFile(apkUrl, apkFile);
+                // The installer can only be opened while the app is in front;
+                // a slow download is exactly when the user has gone elsewhere.
+                boolean foreground = reactContext.getLifecycleState() == LifecycleState.RESUMED;
+                log("download finished: " + apkFile.length() + " bytes in "
+                        + (System.currentTimeMillis() - startedAt) / 1000 + " s, app in front: " + foreground);
                 sendProgress("installing", apkFile.length(), apkFile.length(), 1);
                 installApk(apkFile);
-                scheduleDelete(apkFile);
+                if (foreground) {
+                    scheduleDelete(apkFile);
+                } else {
+                    // Keep the file for the retry in onHostResume.
+                    pendingApk = apkFile;
+                    log("app was not in front; will open the installer when it returns");
+                }
                 sendProgress("completed", apkFile.length(), apkFile.length(), 1);
                 resolvePromise(promise);
             } catch (Exception e) {
+                log("auto update failed: " + e);
                 if (apkFile != null && apkFile.exists()) {
                     //noinspection ResultOfMethodCallIgnored
                     apkFile.delete();
