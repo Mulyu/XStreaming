@@ -120,8 +120,9 @@ static bool kamaji_ok(struct json_object *obj)
 // ===========================================================================
 
 // Returns OAuth `code` (CC_NATIVE_OK) or an error class. Writes code into out_code.
+// @p diag (optional, diagnostics only): receives the HTTP status and any OAuth error.
 static CCNativeResult psnow_oauth(ChiakiLog *log, const char *npsso, const char *duid,
-                                  char *out_code, size_t code_sz)
+                                  char *out_code, size_t code_sz, struct json_object *diag)
 {
 	char *enc_scope = url_encode(PS4_SCOPES);
 	char *enc_redirect = url_encode(KAMAJI_REDIRECT);
@@ -158,10 +159,21 @@ static CCNativeResult psnow_oauth(ChiakiLog *log, const char *npsso, const char 
 		return CC_NATIVE_FATAL;
 
 	CCNativeResult result = CC_NATIVE_AUTH_ERROR;
+	if(diag)
+		json_object_object_add(diag, "oauth_status", json_object_new_int((int)resp.status_code));
 	if(resp.status_code == 302 && resp.redirect_url)
 	{
 		if(extract_param(resp.redirect_url, "code", out_code, code_sz))
 			result = CC_NATIVE_OK;
+		else if(diag)
+		{
+			// No code: the redirect says why (e.g. login_required when the npsso is stale).
+			char why[256];
+			if(extract_param(resp.redirect_url, "error", why, sizeof(why)))
+				json_object_object_add(diag, "oauth_error", json_object_new_string(why));
+			if(extract_param(resp.redirect_url, "error_description", why, sizeof(why)))
+				json_object_object_add(diag, "oauth_error_description", json_object_new_string(why));
+		}
 	}
 	else if(resp.status_code >= 500)
 		result = CC_NATIVE_FATAL; // server blip says nothing about the token (parity with psnow_stores)
@@ -225,7 +237,7 @@ static CCNativeResult psnow_session(ChiakiLog *log, const char *code, const char
                                     char *out_country, size_t cc_sz,
                                     char *out_language, size_t lang_sz,
                                     char *out_online_id, size_t oid_sz,
-                                    char **out_data_json)
+                                    char **out_data_json, struct json_object *diag)
 {
 	char body[1024];
 	snprintf(body, sizeof(body), "code=%s&client_id=" PSNOW_CLIENT_ID "&duid=%s", code, duid);
@@ -251,9 +263,21 @@ static CCNativeResult psnow_session(ChiakiLog *log, const char *code, const char
 		return CC_NATIVE_FATAL;
 
 	CCNativeResult result = CC_NATIVE_AUTH_ERROR;
+	if(diag)
+		json_object_object_add(diag, "session_status", json_object_new_int((int)resp.status_code));
 	if(resp.status_code == 200)
 	{
 		struct json_object *obj = parse_body(&resp);
+		if(diag)
+		{
+			// Kamaji's own verdict on the session (an error envelope has no data block).
+			struct json_object *header = obj ? cc_json_obj(obj, "header") : NULL;
+			if(header)
+				json_object_object_add(diag, "session_header", cc_sanitize_json(header));
+			else if(resp.data && resp.size)
+				json_object_object_add(diag, "session_body", json_object_new_string_len(resp.data,
+					(int)(resp.size > 300 ? 300 : resp.size)));
+		}
 		if(obj && kamaji_ok(obj))
 		{
 			// Capture the account's region signal (country/language) regardless of
@@ -513,13 +537,13 @@ CCNativeResult cc_fetch_psnow_native(ChiakiLog *log, const char *npsso, struct j
 		return CC_NATIVE_FATAL;
 
 	char code[1024];
-	CCNativeResult r = psnow_oauth(log, npsso, duid, code, sizeof(code));
+	CCNativeResult r = psnow_oauth(log, npsso, duid, code, sizeof(code), NULL);
 	if(r != CC_NATIVE_OK)
 		return r;
 	CHIAKI_LOGI(log, "[PSNOW] OAuth code obtained, creating session");
 
 	char jsession[512];
-	r = psnow_session(log, code, duid, jsession, sizeof(jsession), out_country, cc_sz, out_language, lang_sz, NULL, 0, NULL);
+	r = psnow_session(log, code, duid, jsession, sizeof(jsession), out_country, cc_sz, out_language, lang_sz, NULL, 0, NULL, NULL);
 	if(r != CC_NATIVE_OK)
 		return r;
 	CHIAKI_LOGI(log, "[PSNOW] Session created, fetching stores");
@@ -1121,13 +1145,13 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_online_id(
 		return CHIAKI_ERR_UNKNOWN;
 
 	char code[1024];
-	if(psnow_oauth(log, npsso, duid, code, sizeof(code)) != CC_NATIVE_OK)
+	if(psnow_oauth(log, npsso, duid, code, sizeof(code), NULL) != CC_NATIVE_OK)
 		return CHIAKI_ERR_UNKNOWN;
 
 	char jsession[512];
 	// The session itself may still be refused (region), but the response body
 	// carries the online ID either way, so only an empty ID counts as failure.
-	psnow_session(log, code, duid, jsession, sizeof(jsession), NULL, 0, NULL, 0, out, out_size, NULL);
+	psnow_session(log, code, duid, jsession, sizeof(jsession), NULL, 0, NULL, 0, out, out_size, NULL, NULL);
 	return out[0] ? CHIAKI_ERR_SUCCESS : CHIAKI_ERR_UNKNOWN;
 }
 
@@ -1254,6 +1278,15 @@ static void diag_entitlements(ChiakiLog *log, struct json_object *probes, const 
 	json_object_array_add(probes, entry);
 }
 
+// Serialises the report (always succeeds with something to show) and frees it.
+static ChiakiErrorCode diag_finish(struct json_object *root, char **out_json)
+{
+	const char *text = json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY);
+	*out_json = text ? strdup(text) : NULL;
+	json_object_put(root);
+	return *out_json ? CHIAKI_ERR_SUCCESS : CHIAKI_ERR_UNKNOWN;
+}
+
 // Diagnostics: the Kamaji session's account block (data.*), then read-only probes of the
 // places a subscription state might live, as pretty JSON with secret-looking values
 // hidden: {"account": {...}, "probes": [...]}. *out_json is malloc'd (free it).
@@ -1266,25 +1299,38 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_account_diag(
 	if(!npsso || !*npsso)
 		return CHIAKI_ERR_INVALID_DATA;
 
+	struct json_object *root = json_object_new_object();
+	struct json_object *steps = json_object_new_object();
+	json_object_object_add(root, "steps", steps);
+
 	size_t duid_size = CHIAKI_DUID_STR_SIZE;
 	char duid[CHIAKI_DUID_STR_SIZE];
 	if(chiaki_holepunch_generate_client_device_uid(duid, &duid_size) != CHIAKI_ERR_SUCCESS)
-		return CHIAKI_ERR_UNKNOWN;
+	{
+		json_object_object_add(root, "failed_at", json_object_new_string("device id"));
+		return diag_finish(root, out_json);
+	}
 
+	// Each step records what Sony answered, so a failure says where it stopped.
 	char code[1024];
-	if(psnow_oauth(log, npsso, duid, code, sizeof(code)) != CC_NATIVE_OK)
-		return CHIAKI_ERR_UNKNOWN;
+	CCNativeResult oauth = psnow_oauth(log, npsso, duid, code, sizeof(code), steps);
+	json_object_object_add(steps, "oauth", json_object_new_string(oauth == CC_NATIVE_OK ? "ok" : "failed"));
 
 	char jsession[512] = "";
 	char *account_text = NULL;
-	CCNativeResult session = psnow_session(log, code, duid, jsession, sizeof(jsession), NULL, 0, NULL, 0, NULL, 0, &account_text);
-	if(!account_text)
-		return CHIAKI_ERR_UNKNOWN;
-
-	struct json_object *root = json_object_new_object();
-	struct json_object *account = json_tokener_parse(account_text);
+	CCNativeResult session = CC_NATIVE_AUTH_ERROR;
+	if(oauth == CC_NATIVE_OK)
+	{
+		session = psnow_session(log, code, duid, jsession, sizeof(jsession), NULL, 0, NULL, 0, NULL, 0, &account_text, steps);
+		json_object_object_add(steps, "session", json_object_new_string(session == CC_NATIVE_OK ? "ok" : "failed"));
+	}
+	else
+		json_object_object_add(root, "failed_at", json_object_new_string("oauth (npsso refused or expired?)"));
+	struct json_object *account = account_text ? json_tokener_parse(account_text) : NULL;
 	free(account_text);
 	json_object_object_add(root, "account", account ? account : json_object_new_object());
+	if(oauth == CC_NATIVE_OK && !account)
+		json_object_object_add(root, "failed_at", json_object_new_string("kamaji session (see steps)"));
 	struct json_object *probes = json_object_new_array();
 
 	// Kamaji: the places the PS Now client's own API might report a subscription.
@@ -1330,8 +1376,5 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_account_diag(
 		json_object_array_add(probes, json_object_new_string("commerce: no token"));
 
 	json_object_object_add(root, "probes", probes);
-	const char *text = json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY);
-	*out_json = text ? strdup(text) : NULL;
-	json_object_put(root);
-	return *out_json ? CHIAKI_ERR_SUCCESS : CHIAKI_ERR_UNKNOWN;
+	return diag_finish(root, out_json);
 }
