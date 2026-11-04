@@ -2025,6 +2025,10 @@ export function NativeStreamScreenBase({
           })
           .catch(e => {
             if (e !== '') {
+              // Close the session that failed to start. Left open, it can keep
+              // holding what the service attached to it (an ad experience, a
+              // slot) and make the next start of the same title fail too.
+              stopStreamWithTimeout(streamApi).catch(() => {});
               let msg = '';
               if (typeof e === 'string') {
                 if (e.includes('WaitingForServerToRegister')) {
@@ -2040,6 +2044,8 @@ export function NativeStreamScreenBase({
                 } else if (e.includes('xboxstreaminghelper.cpp')) {
                   msg =
                     '[StartSession] Fail:' + t('XboxstreaminghelperErr') + e;
+                } else if (e.includes('adexperiencetracker')) {
+                  msg = '[StartSession] Fail:' + t('AdExperienceErr') + e;
                 } else {
                   msg = '[StartSession] Fail:' + e;
                 }

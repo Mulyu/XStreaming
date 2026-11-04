@@ -21,6 +21,8 @@ export default {
       'コンソールが接続されていません。電源ボタンを10秒間長押ししてみてください।',
     XboxstreaminghelperErr:
       'ストリーミングサービスに問題があります。コンソールを再起動してください。エラー:',
+    AdExperienceErr:
+      'Microsoft側で広告の開始に失敗しました。時間をおいてもう一度試すか、広告なしで遊べるタイトルをお試しください。エラー:',
     DisabledStreamingErr:
       'ストリーミングが無効です।Xboxの設定を確認してください।',
     AuthFailDesc: '認証に失敗しました。エラー:',

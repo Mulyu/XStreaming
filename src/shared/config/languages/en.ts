@@ -21,6 +21,8 @@ export default {
       'Unable to establish streaming on the console because the console is not connected to Xbox servers. This is usually caused by an abnormal console state, a console update, or an account that is not signed in. Hold the power button or unplug power for at least 10 seconds to restart the console.',
     XboxstreaminghelperErr:
       'Console streaming is not working correctly. This is not an AnyStreaming error; the console streaming service has stopped working. Hold the power button or unplug power for at least 10 seconds to restart the console. Error: ',
+    AdExperienceErr:
+      'Xbox Cloud Gaming could not start the ad before play (a service-side error). Try again in a while, or try a title that plays without ads. Error:',
     DisabledStreamingErr:
       'Streaming is disabled on the console. Possible causes:\n1. Xbox console Settings - Devices & connections - Remote features is not enabled;\n2. You may be using a mainland China Xbox console, which does not support streaming.',
     AuthFailDesc: 'Authentication failed. Please log in again. Error:',
