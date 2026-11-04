@@ -273,6 +273,16 @@ export const extractRating = (product: any): RatingInfo | null => {
   return best;
 };
 
+// The store's genre for a product: one English token such as "Shooter" or
+// "Racing & flying" (not translated by the language parameter). Left out when
+// the product has none.
+export const extractCategory = (product: any): string | undefined => {
+  const category = product?.Properties?.Category;
+  return typeof category === 'string' && category.trim()
+    ? category.trim()
+    : undefined;
+};
+
 // Normalize a DisplayCatalog image/video Uri, which comes back protocol-
 // relative (leading "//"). Returns '' for anything unusable.
 const absUri = (uri: any): string => {
@@ -384,6 +394,8 @@ export type FetchPricesResult = {
   prices: Record<string, PriceInfo>;
   // Store ratings keyed by the same uppercase Store id.
   ratings: Record<string, RatingInfo>;
+  // The store's genre per product (see extractCategory), same keys.
+  genres: Record<string, string>;
   // Store ids (same uppercase keys) of the products included with a Game
   // Pass subscription in this market -- from the same DisplayCatalog response
   // as the prices, so it costs no extra request.
@@ -473,10 +485,11 @@ export const fetchPrices = async (
   const ids = uniqueIds(storeIds);
   const prices: Record<string, PriceInfo> = {};
   const ratings: Record<string, RatingInfo> = {};
+  const genres: Record<string, string> = {};
   const gamePass: Record<string, true> = {};
 
   if (ids.length === 0) {
-    return {prices, ratings, gamePass, ok: true};
+    return {prices, ratings, genres, gamePass, ok: true};
   }
 
   const ok = await fetchCatalogProducts(ids, market, language, product => {
@@ -490,12 +503,16 @@ export const fetchPrices = async (
     if (rating) {
       ratings[key] = rating;
     }
+    const genre = extractCategory(product);
+    if (genre) {
+      genres[key] = genre;
+    }
     if (extractInGamePass(product)) {
       gamePass[key] = true;
     }
   });
 
-  return {prices, ratings, gamePass, ok};
+  return {prices, ratings, genres, gamePass, ok};
 };
 
 // What a Store row needs to be drawn for a title that isn't in the signed-in
@@ -521,6 +538,8 @@ export const extractBasics = (product: any): ProductBasics | null => {
 export type FetchBasicsResult = {
   basics: Record<string, ProductBasics>;
   prices: Record<string, PriceInfo>;
+  ratings: Record<string, RatingInfo>;
+  genres: Record<string, string>;
   ok: boolean;
 };
 
@@ -532,8 +551,10 @@ export const fetchProductBasics = async (
   const ids = uniqueIds(storeIds);
   const basics: Record<string, ProductBasics> = {};
   const prices: Record<string, PriceInfo> = {};
+  const ratings: Record<string, RatingInfo> = {};
+  const genres: Record<string, string> = {};
   if (ids.length === 0) {
-    return {basics, prices, ok: true};
+    return {basics, prices, ratings, genres, ok: true};
   }
   const ok = await fetchCatalogProducts(ids, market, language, product => {
     const key = String(product.ProductId).toUpperCase();
@@ -545,8 +566,16 @@ export const fetchProductBasics = async (
     if (price) {
       prices[key] = price;
     }
+    const rating = extractRating(product);
+    if (rating) {
+      ratings[key] = rating;
+    }
+    const genre = extractCategory(product);
+    if (genre) {
+      genres[key] = genre;
+    }
   });
-  return {basics, prices, ok};
+  return {basics, prices, ratings, genres, ok};
 };
 
 export const delay = (ms: number): Promise<void> =>

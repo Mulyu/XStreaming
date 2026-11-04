@@ -70,6 +70,7 @@ import {
   fetchPricesWithRetry,
   isInGamePass,
   hasGamePassIds,
+  hasGenres,
   isInPsCatalog,
   fetchPsStoreSales,
   lookupPsSale,
@@ -363,13 +364,17 @@ export function useLibraryScreen() {
       }
       // Still fresh and fetched for this very title set: nothing to refetch.
       // (A cache written before Game Pass ids were stored has no map: refetch.)
-      if (cache.sig === sig && hasGamePassIds(cache.gamePassMap)) {
+      if (
+        cache.sig === sig &&
+        hasGamePassIds(cache.gamePassMap) &&
+        hasGenres(cache.genreMap)
+      ) {
         return;
       }
     }
 
     fetchPricesWithRetry(productIds, market, language).then(
-      ({prices, ratings, gamePass, ok}) => {
+      ({prices, ratings, genres, gamePass, ok}) => {
         if (Object.keys(prices).length > 0) {
           setPriceMap(prev => ({...prev, ...prices}));
         }
@@ -380,7 +385,7 @@ export function useLibraryScreen() {
           setGamePassMap(prev => ({...prev, ...gamePass}));
         }
         if (ok) {
-          savePriceCache(prices, ratings, market, sig, gamePass);
+          savePriceCache(prices, ratings, market, sig, gamePass, genres);
         } else {
           priceSigRef.current = '';
         }

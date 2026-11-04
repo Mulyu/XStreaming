@@ -9,6 +9,9 @@ const POPULAR_KEY = 'user.xcloud.popular';
 export type PriceCache = {
   priceMap: Record<string, PriceInfo>;
   ratingMap?: Record<string, RatingInfo>;
+  // The store's genre per product (absent in caches written before this
+  // existed, which is how callers know to refetch).
+  genreMap?: Record<string, string>;
   // Store ids included with Game Pass (absent in caches written before this
   // existed, which is how callers know to refetch).
   gamePassMap?: Record<string, true>;
@@ -61,16 +64,24 @@ export const hasGamePassIds = (
   map: Record<string, true> | undefined,
 ): map is Record<string, true> => !!map && Object.keys(map).length > 0;
 
+// Whether the cache already holds the genres. A cache from before they were
+// stored has none, so the prices are fetched once more to fill them in.
+export const hasGenres = (
+  map: Record<string, string> | undefined,
+): map is Record<string, string> => !!map && Object.keys(map).length > 0;
+
 export const savePriceCache = (
   priceMap: Record<string, PriceInfo>,
   ratingMap: Record<string, RatingInfo>,
   market: string,
   sig?: string,
   gamePassMap?: Record<string, true>,
+  genreMap?: Record<string, string>,
 ) => {
   const cache: PriceCache = {
     priceMap,
     ratingMap,
+    genreMap,
     gamePassMap,
     market,
     sig,

@@ -14,6 +14,15 @@ export {
 
 export {isInGamePass, isInPsCatalog} from './model/gamePass';
 
+export type {StoreRating} from './model/storeRating';
+export {xboxGenreLabel, formatPsContentRating} from './model/storeRating';
+export type {PsId, PsStoreBrief, PsStarRating} from './api/psStoreDetails';
+export {
+  fetchPsStoreBrief,
+  fetchPsStarRating,
+  fetchPsScreenshots,
+} from './api/psStoreDetails';
+
 export {
   getFavoriteKeys,
   isCatalogTitleFavorite,
@@ -65,6 +74,7 @@ export {
   getFreshPriceCache,
   savePriceCache,
   hasGamePassIds,
+  hasGenres,
   getFreshPopularOrder,
   savePopularOrder,
 } from './model/priceCache';

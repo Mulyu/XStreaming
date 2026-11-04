@@ -11,6 +11,7 @@
 import axios from 'axios';
 import {storage} from '../../../shared/lib/mmkv';
 import {debugFactory} from '../../../shared/lib/debug';
+import type {StoreRating} from '../../../entities/catalog-title';
 
 const log = debugFactory('steamCharts');
 
@@ -25,6 +26,9 @@ export type SteamChartEntry = {
   price?: string;
   originalPrice?: string;
   discountPercent?: number;
+  // The verdict on Steam's review summary ("Very Positive", ...), when the
+  // title has enough reviews for one.
+  rating?: StoreRating;
 };
 
 export type SteamChartPage = {
@@ -33,7 +37,7 @@ export type SteamChartPage = {
 };
 
 const cacheKey = (kind: SteamChartKind, cc: string): string =>
-  `store.steamChart.v2.${kind}.${cc}`;
+  `store.steamChart.v3.${kind}.${cc}`;
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12h, same as the Xbox chart cache
 
 // Only the first page is worth caching for an instant paint -- deeper pages
@@ -47,6 +51,51 @@ export const STEAM_CHART_PAGE_SIZE = 100;
 // com/app/<id>/...">...</a>. Splitting on the href prefix and reading each
 // chunk up to the next one is simpler and more robust than balancing tags.
 const ROW_SPLIT = '<a href="https://store.steampowered.com/app/';
+
+const decodeEntities = (text: string): string =>
+  text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+
+// A result's review summary:
+//   <span class="search_review_summary mixed"
+//         data-tooltip-html="賛否両論&lt;br&gt;…レビュー13,300件中50%が好評です&lt;br&gt;…">
+// The class gives the verdict's sentiment, the tooltip its label (up to the
+// first <br>) and the numbers: the share of positive reviews is the one with a
+// percent sign, the review count the other (their order depends on the
+// language).
+export const parseReviewSummary = (row: string): StoreRating | undefined => {
+  const match =
+    /search_review_summary\s+(positive|mixed|negative)[^"]*"\s+data-tooltip-html="([^"]*)"/.exec(
+      row,
+    );
+  if (!match) {
+    return undefined;
+  }
+  const sentiment = match[1] as 'positive' | 'mixed' | 'negative';
+  const tooltip = decodeEntities(match[2]);
+  const label = tooltip.split(/<br\s*\/?>/i)[0].trim();
+  if (!label) {
+    return undefined;
+  }
+  let percent: number | undefined;
+  let count: number | undefined;
+  for (const m of tooltip.matchAll(/(\d[\d,.]*)(%?)/g)) {
+    const value = Number(m[1].replace(/[,.]/g, ''));
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    if (m[2] === '%') {
+      percent = percent ?? Number(m[1]);
+    } else if (count === undefined) {
+      count = value;
+    }
+  }
+  return {kind: 'review', label, sentiment, percent, count};
+};
 
 export const parseResultsHtml = (html: string): SteamChartEntry[] => {
   const rows = html.split(ROW_SPLIT).slice(1);
@@ -74,6 +123,7 @@ export const parseResultsHtml = (html: string): SteamChartEntry[] => {
       originalPrice: originalMatch?.[1],
       discountPercent:
         pctMatch && Number(pctMatch[1]) > 0 ? Number(pctMatch[1]) : undefined,
+      rating: parseReviewSummary(row),
     });
   }
   return entries;
