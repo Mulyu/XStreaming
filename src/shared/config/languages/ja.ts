@@ -299,6 +299,8 @@ export default {
     GfnLaunchStarting: 'セッションを開始しています…',
     GfnConnectingRegion: '接続先リージョン: {{region}}',
     GfnLaunchFailed: 'ストリームを開始できませんでした。',
+    GfnLaunchQueued: 'GeForce NOW の順番待ち — {{n}} 番目',
+    GfnQueueNotifyPosition: 'GeForce NOW の順番待ち: {{n}} 番目',
     GfnQueueKeepAlive: 'GeForce NOW の順番待ち中…',
     GfnReadyNotifyBody: '順番が来ました。タップして開始します。',
     StreamReadyNotifyBody: '接続しました。タップしてゲームに戻ります。',
