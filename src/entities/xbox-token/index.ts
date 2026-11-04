@@ -33,6 +33,17 @@ export {
   isStreamTokenValid,
 } from './model/streamTokenStore';
 
+export {
+  CONTENT_ACCESS_RELYING_PARTY,
+  fetchStreamingTime,
+  decodeAccountStreamingTime,
+  remainingStreamingSeconds,
+} from './api/contentAccess';
+export type {
+  StreamingGameplayTime,
+  StreamingProgramData,
+} from './api/contentAccess';
+
 export {fetchXboxProfile, parseXboxProfile} from './api/profile';
 export {
   getCachedXboxProfile,

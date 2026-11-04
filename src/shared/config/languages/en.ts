@@ -398,6 +398,12 @@ export default {
       'Copies a log of recent app foreground/background and screen activity to the clipboard, for reporting a bug (e.g. a black screen after resuming from the background).',
     AppDebugCopyEmpty: 'No log recorded yet.',
     AppDebugCopyFailed: 'Could not copy the log.',
+    GameTimeWarning: 'About {{minutes}} min of cloud gaming time left',
+    XboxPlaytimeTitle: 'Cloud gaming time remaining',
+    XboxPlaytimeLoading: 'Checking remaining time…',
+    XboxPlaytimeUnavailable: "Couldn't check remaining time",
+    XboxPlaytimeNone: 'No time limit on this account',
+    XboxPlaytimeRemaining: '{{hours}}h {{minutes}}m left',
     GfnPlaytimeTitle: 'Playtime remaining this month',
     GfnPlaytimeSignedOutDesc:
       'Sign in to see how much playtime is left in your current billing period.',

@@ -13,3 +13,9 @@ export {default as XcloudSessionClient} from './api/xcloudSessionClient';
 // own concern, not a shared transport.
 export {default as webRTCClient} from './lib/webrtc';
 export type {PointerWireData} from './lib/webrtc/Channel/Input';
+
+export {
+  SYSTEM_UI_TARGET_GAME_TIME,
+  SYSTEM_UI_TYPE_GAME_TIME,
+} from './model/gameTime';
+export {useGameTimeWarnings} from './model/useGameTimeWarnings';

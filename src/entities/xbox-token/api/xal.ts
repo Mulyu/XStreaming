@@ -539,16 +539,18 @@ export default class Xal {
 
   async getMsalToken(tokenStore: TokenStore): Promise<MsalToken> {
     const userToken = tokenStore.getUserToken();
-    if (userToken === undefined)
+    if (userToken === undefined) {
       throw new Error('User token is missing. Please authenticate first');
+    }
 
     return await this.exchangeRefreshTokenForXcloudTransferToken(userToken);
   }
 
   async getWebToken(tokenStore: TokenStore): Promise<XstsToken> {
     const sisuToken = tokenStore.getSisuToken();
-    if (sisuToken === undefined)
+    if (sisuToken === undefined) {
       throw new Error('Sisu token is missing. Please authenticate first');
+    }
 
     if (
       this._webToken === undefined ||
@@ -564,6 +566,19 @@ export default class Xal {
     } else {
       return this._webToken;
     }
+  }
+
+  // A fresh XSTS token for another service's relying party (not cached: the
+  // caller asks rarely and the token is used at once).
+  async getTokenForRelyingParty(
+    tokenStore: TokenStore,
+    relyingParty: string,
+  ): Promise<XstsToken> {
+    const sisuToken = tokenStore.getSisuToken();
+    if (sisuToken === undefined) {
+      throw new Error('Sisu token is missing. Please authenticate first');
+    }
+    return this.doXstsAuthorization(sisuToken, relyingParty);
   }
 
   getStreamToken(
@@ -621,8 +636,9 @@ export default class Xal {
     xCloudToken?: StreamingToken;
   }> {
     const sisuToken = tokenStore.getSisuToken();
-    if (sisuToken === undefined)
+    if (sisuToken === undefined) {
       throw new Error('Sisu token is missing. Please authenticate first');
+    }
 
     const xstsToken = await this.doXstsAuthorization(
       sisuToken,

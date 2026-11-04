@@ -15,9 +15,13 @@ import {
   isWebTokenValid,
   XboxProfile,
 } from '../../../entities/xbox-token';
-import {clearXcloudData} from '../../../entities/catalog-title';
+import {
+  clearXcloudData,
+  deriveMarketLanguage,
+} from '../../../entities/catalog-title';
 import {useGfnSignIn} from '../../../features/gfn-auth';
-import {useXcloudLogin} from '../../../features/xbox-auth';
+import {useXcloudLogin, loadStreamingTime} from '../../../features/xbox-auth';
+import type {StreamingTimeResult} from '../../../features/xbox-auth';
 import {
   isPsPlusSignedIn,
   getNpsso,
@@ -39,6 +43,7 @@ import {
   GfnRegionOption,
 } from '../../../features/gfn-session';
 import {getSettings, saveSettings} from '../../../shared/lib/settings';
+import {getSystemRegion} from '../../../shared/lib/locale';
 import {
   basesSettings as bases,
   displaySettings as display,
@@ -179,6 +184,37 @@ export function useSettingsScreen(navigation: any, route: any) {
       unsubscribe();
     };
   }, [isAuthed, navigation]);
+
+  // The account's remaining cloud gaming time (Xbox started limiting it per
+  // month), asked of Xbox's content-access service. Re-run on focus like the
+  // profile above; undefined = not asked yet.
+  const [xboxStreamingTime, setXboxStreamingTime] = React.useState<
+    StreamingTimeResult | undefined
+  >();
+  React.useEffect(() => {
+    if (!isAuthed || !authentication) {
+      setXboxStreamingTime(undefined);
+      return;
+    }
+    let cancelled = false;
+    const load = () => {
+      const {market} = deriveMarketLanguage(
+        getSettings().preferred_game_language,
+        getSystemRegion(),
+      );
+      loadStreamingTime(authentication, market).then(result => {
+        if (!cancelled) {
+          setXboxStreamingTime(result);
+        }
+      });
+    };
+    load();
+    const unsubscribe = navigation.addListener('focus', load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [isAuthed, authentication, navigation]);
 
   // xCloud's signaling-region list lives on the token, not in storage, so it
   // has to be re-read every render rather than loaded into state once.
@@ -458,6 +494,23 @@ export function useSettingsScreen(navigation: any, route: any) {
     };
   }, [gfnSignedIn]);
 
+  const xboxPlaytimeDescription = (): string => {
+    if (!xboxStreamingTime) {
+      return t('XboxPlaytimeLoading');
+    }
+    if (!xboxStreamingTime.ok) {
+      return t('XboxPlaytimeUnavailable');
+    }
+    if (xboxStreamingTime.seconds === null) {
+      return t('XboxPlaytimeNone');
+    }
+    const totalMinutes = Math.floor(xboxStreamingTime.seconds / 60);
+    return t('XboxPlaytimeRemaining', {
+      hours: Math.floor(totalMinutes / 60),
+      minutes: totalMinutes % 60,
+    });
+  };
+
   const gfnPlaytimeDescription = (): string => {
     if (!gfnSignedIn) {
       return t('GfnPlaytimeSignedOutDesc');
@@ -532,6 +585,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     signalingCloudValue,
     gfnRegionOptions,
     xboxAccount,
+    xboxPlaytimeDescription: xboxPlaytimeDescription(),
     gfnAccount,
     psAccount,
     gfnPlaytimeDescription: gfnPlaytimeDescription(),

@@ -24,6 +24,9 @@ import {
   XcloudSessionClient,
   webRTCClient,
   PointerWireData,
+  SYSTEM_UI_TARGET_GAME_TIME,
+  SYSTEM_UI_TYPE_GAME_TIME,
+  useGameTimeWarnings,
 } from '../../features/xcloud-session';
 import {getSettings, saveSettings} from '../../shared/lib/settings';
 import {
@@ -48,6 +51,7 @@ import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../../shared/lib/debug';
 import {GAMEPAD_MAPING, XBOX_360_GAMEPAD_MAPING} from '../../entities/gamepad';
 import PerfPanel from './ui/PerfPanel';
+import GameTimeBanner from './ui/GameTimeBanner';
 import StreamControlRail, {StreamInputMode} from './ui/StreamControlRail';
 import RTCFsrView from '../../shared/ui/RTCFsrView';
 import NativeTouchOverlay from './ui/NativeTouchOverlay';
@@ -417,7 +421,10 @@ export function NativeStreamScreenBase({
   // the turbo set below, since both are per-profile per-button config.
   const macroConfigsRef = React.useRef<Map<string, any>>(new Map());
   const manualLeftThumbPressedRef = React.useRef(false);
-  const supportedSystemUis = React.useMemo(() => [10, 19], []);
+  const supportedSystemUis = React.useMemo(
+    () => [10, 19, SYSTEM_UI_TYPE_GAME_TIME],
+    [],
+  );
 
   const isTriggerWork = React.useRef(false);
 
@@ -575,6 +582,8 @@ export function NativeStreamScreenBase({
     [cancelSystemKeyboard, completeSystemKeyboard, showNativeInputDialog, t],
   );
 
+  const {warningMinutes, onGameTime} = useGameTimeWarnings();
+
   const handleSystemUiEvent = React.useCallback(
     (event: any) => {
       if (!event || !event.target) {
@@ -687,6 +696,19 @@ export function NativeStreamScreenBase({
         return true;
       }
 
+      if (event.target === SYSTEM_UI_TARGET_GAME_TIME) {
+        // How much cloud gaming time is left (Xbox limits it per month).
+        onGameTime(event.payload ?? event.content);
+        if (
+          event.isTransaction &&
+          event.completion &&
+          typeof event.completion.cancel === 'function'
+        ) {
+          event.completion.cancel();
+        }
+        return true;
+      }
+
       if (event.target === SYSTEM_UI_TARGET_SHOW_VIRTUAL_KEYBOARD) {
         const payload = event.payload || {};
         openSystemKeyboardDialog(event, payload);
@@ -695,7 +717,7 @@ export function NativeStreamScreenBase({
 
       return false;
     },
-    [openSystemKeyboardDialog, t],
+    [openSystemKeyboardDialog, onGameTime, t],
   );
 
   const handleStreamingMessage = React.useCallback((event: any) => {
@@ -3684,6 +3706,12 @@ export function NativeStreamScreenBase({
       {renderStreamPlayer(styles.playerContainer, styles.player)}
 
       {renderPerformancePanel()}
+
+      {warningMinutes !== null && (
+        <GameTimeBanner
+          message={t('GameTimeWarning', {minutes: warningMinutes})}
+        />
+      )}
 
       {renderMouseTrackpad()}
 

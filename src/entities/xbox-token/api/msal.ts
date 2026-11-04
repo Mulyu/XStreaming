@@ -332,6 +332,24 @@ export default class Msal {
     return token;
   }
 
+  // A fresh XSTS token for another service's relying party.
+  async getTokenForRelyingParty(relyingParty: string): Promise<XstsToken> {
+    if (
+      this._xstsToken === undefined ||
+      this._xstsToken.getSecondsValid() <= 60
+    ) {
+      await this.doXstsAuthentication();
+    }
+
+    const userToken = this._xstsToken?.data.Token;
+
+    if (userToken === undefined) {
+      throw new Error('No user token found. Please authenticate first.');
+    }
+
+    return this.doXstsAuthorization(userToken, relyingParty);
+  }
+
   async getGssvToken(): Promise<XstsToken> {
     if (
       this._xstsToken === undefined ||

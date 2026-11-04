@@ -396,6 +396,12 @@ export default {
       'アプリのバックグラウンド/フォアグラウンド復帰や画面遷移などの直近のログをクリップボードにコピーします。不具合報告の際にお使いください。',
     AppDebugCopyEmpty: 'まだログが記録されていません。',
     AppDebugCopyFailed: 'ログをコピーできませんでした。',
+    GameTimeWarning: 'クラウドゲームの残り時間は、あと約{{minutes}}分です',
+    XboxPlaytimeTitle: 'クラウドゲームの残り時間',
+    XboxPlaytimeLoading: '残り時間を確認中…',
+    XboxPlaytimeUnavailable: '残り時間を確認できませんでした',
+    XboxPlaytimeNone: 'このアカウントに時間制限はありません',
+    XboxPlaytimeRemaining: '残り {{hours}}時間{{minutes}}分',
     GfnPlaytimeTitle: '今月の残りプレイ時間',
     GfnPlaytimeSignedOutDesc:
       'サインインすると、今の請求期間内の残りプレイ時間を確認できます。',
