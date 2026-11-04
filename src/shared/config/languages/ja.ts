@@ -534,6 +534,8 @@ export default {
     View: '表示',
     Developer: '開発',
     Publisher: '発行',
+    AgeRating: '年齢区分',
+    Edition: 'エディション',
     Media: 'メディア',
     Description: '説明',
     Features: '対応機能',

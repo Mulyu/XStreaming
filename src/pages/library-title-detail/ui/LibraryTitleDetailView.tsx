@@ -19,6 +19,7 @@ import {
   isSteamSaleForDisplay,
   getPsStoreUrl,
   isPsStoreSaleForDisplay,
+  formatPsContentRating,
 } from '../../../entities/catalog-title';
 import {
   CAP_META,
@@ -66,6 +67,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   gfnDetails,
   steamPrices,
   psStorePrice,
+  psDetails,
   preference,
   owned,
   isFavorite,
@@ -136,10 +138,15 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     preference.gfnId === id &&
     preference.store === store;
 
+  const psBrief = psDetails?.brief;
   const genres =
     catalogTitle.genres.length > 0
       ? catalogTitle.genres
-      : gfnDetails?.genres ?? [];
+      : gfnDetails?.genres?.length
+      ? gfnDetails.genres
+      : psBrief?.genres ?? [];
+  // Xbox's rating when it has one; PlayStation's otherwise.
+  const shownRating = rating ?? psDetails?.rating ?? null;
   const description =
     details?.description ||
     gfnDetails?.longDescription ||
@@ -149,7 +156,18 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const publisher = details?.publisher || gfnDetails?.publisherName;
   const screenshots = details?.screenshots?.length
     ? details.screenshots
-    : gfnDetails?.screenshots ?? [];
+    : gfnDetails?.screenshots?.length
+    ? gfnDetails.screenshots
+    : psDetails?.screenshots ?? [];
+  const screenshotSource = details?.screenshots?.length
+    ? 'MSFT STORE'
+    : gfnDetails?.screenshots?.length
+    ? 'GFN'
+    : 'PS STORE';
+  const ageRating = psBrief?.contentRating
+    ? formatPsContentRating(psBrief.contentRating)
+    : undefined;
+  const edition = psBrief?.edition;
   const trailer = details?.trailers?.[0];
   const hasMedia = !!trailer || screenshots.length > 0;
 
@@ -207,16 +225,18 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     </Pressable>
   );
 
-  const ratingSection = rating ? (
+  const ratingSection = shownRating ? (
     <View style={styles.ratingRow}>
-      <View style={styles.starsRow}>{renderStars(rating.average)}</View>
-      <Text style={styles.ratingNum}>{rating.average.toFixed(1)}</Text>
-      <Text style={styles.ratingCount}>({rating.count.toLocaleString()})</Text>
+      <View style={styles.starsRow}>{renderStars(shownRating.average)}</View>
+      <Text style={styles.ratingNum}>{shownRating.average.toFixed(1)}</Text>
+      <Text style={styles.ratingCount}>
+        ({shownRating.count.toLocaleString()})
+      </Text>
     </View>
   ) : null;
 
   const metaSection =
-    developer || publisher ? (
+    developer || publisher || ageRating || edition ? (
       <View style={styles.metaRow}>
         {developer ? (
           <View style={styles.metaCol}>
@@ -228,6 +248,18 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           <View style={styles.metaCol}>
             <Text style={styles.metaKey}>{t('Publisher')}</Text>
             <Text style={styles.metaVal}>{publisher}</Text>
+          </View>
+        ) : null}
+        {ageRating ? (
+          <View style={styles.metaCol}>
+            <Text style={styles.metaKey}>{t('AgeRating')}</Text>
+            <Text style={styles.metaVal}>{ageRating}</Text>
+          </View>
+        ) : null}
+        {edition ? (
+          <View style={styles.metaCol}>
+            <Text style={styles.metaKey}>{t('Edition')}</Text>
+            <Text style={styles.metaVal}>{edition}</Text>
           </View>
         ) : null}
       </View>
@@ -998,9 +1030,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
             () => setViewerUri(uri),
             <>
               {idx === 0 && (
-                <Text style={styles.mediaSrc}>
-                  {details?.screenshots?.length ? 'MSFT STORE' : 'GFN'}
-                </Text>
+                <Text style={styles.mediaSrc}>{screenshotSource}</Text>
               )}
               <Image
                 source={{uri}}
@@ -1234,7 +1264,7 @@ const styles = StyleSheet.create({
   starsRow: {flexDirection: 'row'},
   ratingNum: {fontSize: 13, fontWeight: '700'},
   ratingCount: {fontSize: 11.5, color: palette.textSoft},
-  metaRow: {flexDirection: 'row', gap: 24},
+  metaRow: {flexDirection: 'row', flexWrap: 'wrap', columnGap: 24, rowGap: 8},
   metaCol: {gap: 1},
   metaKey: {
     fontSize: 10.5,
