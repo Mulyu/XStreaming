@@ -68,16 +68,26 @@ const xcloudGenres = (item: any): string[] => {
 };
 
 // What the account's subscriptions allow right now. `xboxActive: false` (the
-// Game Pass membership lapsed) makes every title's Xbox side read as not
-// owned: xCloud streams nothing without a membership, whatever the title list
-// still says (and the GFN listings that Game Pass provides stop counting as
-// owned); `psPlusActive: false` does the same for the PS side (owned
+// Game Pass membership lapsed) makes a title's Xbox side read as not owned,
+// whatever the title list still says (and the GFN listings that Game Pass
+// provides stop counting as owned) -- except a game bought outside Game Pass,
+// which xCloud streams for free with ads (see playableWithAds); `psPlusActive: false` does the same for the PS side (owned
 // games included, as PS cloud streaming needs Plus too). Left out, each means
 // active.
 export type CatalogOptions = {xboxActive?: boolean; psPlusActive?: boolean};
 
+// xCloud's program for playing a game the account bought, without Game Pass,
+// in exchange for ads. The title list names it in the account's own programs
+// for the title (`userPrograms`), next to the Game Pass ones when it has those.
+const AD_SUPPORTED_PROGRAM = 'FERDINAND';
+
+const playableWithAds = (item: any): boolean =>
+  Array.isArray(item?.details?.userPrograms) &&
+  item.details.userPrograms.includes(AD_SUPPORTED_PROGRAM);
+
 const xcloudEntitled = (item: any, opts: CatalogOptions): boolean =>
-  opts.xboxActive !== false && item?.details?.hasEntitlement === true;
+  item?.details?.hasEntitlement === true &&
+  (opts.xboxActive !== false || playableWithAds(item));
 
 export const buildUnifiedCatalog = (
   xcloudTitles: any[],

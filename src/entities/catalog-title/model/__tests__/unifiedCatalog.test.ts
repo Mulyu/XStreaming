@@ -24,6 +24,54 @@ describe('buildUnifiedCatalog xboxActive', () => {
     expect(isCatalogTitleOwned(item)).toBe(false);
   });
 
+  it('keeps a game bought outside Game Pass owned (it plays with ads)', () => {
+    const bought = [
+      {
+        ProductTitle: 'Halo',
+        details: {hasEntitlement: true, userPrograms: ['FERDINAND']},
+      },
+    ];
+    const [item] = buildUnifiedCatalog(bought, [], [], {xboxActive: false});
+    expect(item.xcloud?.hasEntitlement).toBe(true);
+    expect(isCatalogTitleOwned(item)).toBe(true);
+  });
+
+  it('still reads a Game Pass-only title as not owned once the membership lapsed', () => {
+    const gamePass = [
+      {
+        ProductTitle: 'Halo',
+        details: {hasEntitlement: true, userPrograms: ['GPULTIMATE']},
+      },
+    ];
+    const [item] = buildUnifiedCatalog(gamePass, [], [], {xboxActive: false});
+    expect(item.xcloud?.hasEntitlement).toBe(false);
+  });
+
+  it('owns a bought game that Game Pass also lists', () => {
+    const both = [
+      {
+        ProductTitle: 'Halo',
+        details: {
+          hasEntitlement: true,
+          userPrograms: ['GPULTIMATE', 'FERDINAND'],
+        },
+      },
+    ];
+    const [item] = buildUnifiedCatalog(both, [], [], {xboxActive: false});
+    expect(item.xcloud?.hasEntitlement).toBe(true);
+  });
+
+  it('does not own a title the account has no entitlement for, programs or not', () => {
+    const none = [
+      {
+        ProductTitle: 'Halo',
+        details: {hasEntitlement: false, userPrograms: ['FERDINAND']},
+      },
+    ];
+    const [item] = buildUnifiedCatalog(none, [], [], {xboxActive: false});
+    expect(item.xcloud?.hasEntitlement).toBe(false);
+  });
+
   it('leaves the other services alone', () => {
     const [item] = buildUnifiedCatalog(
       xcloud(true),
