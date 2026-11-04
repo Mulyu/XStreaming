@@ -13,6 +13,9 @@ import {
   isSaleForDisplay,
   PriceInfo,
   ProductBasics,
+  PsStoreBrief,
+  RatingInfo,
+  StoreRating,
   WishlistRefs,
   WishlistSnapshot,
   normalizeTitle,
@@ -43,8 +46,24 @@ export type StoreRow = {
   originalPrice?: string;
   // Whole-number percent off when on sale (e.g. 30 for -30%).
   discountPercent?: number;
+  // The store's own user rating (stars on Xbox/PlayStation, a verdict on
+  // Steam), when it publishes one for the title.
+  rating?: StoreRating;
+  // The store's genres as it names them (Xbox's are English tokens still to
+  // be translated -- see xboxGenreLabel; PlayStation's arrive localized).
+  genres?: string[];
   catalogTitle: CatalogTitle | null;
 };
+
+// What the Xbox store knows about a product beyond its price, keyed by the
+// uppercase Store id (the price cache's ratingMap / genreMap).
+export type XboxStoreExtras = {
+  ratings?: Record<string, RatingInfo>;
+  genres?: Record<string, string>;
+};
+
+export const starsRating = (info?: RatingInfo): StoreRating | undefined =>
+  info ? {kind: 'stars', average: info.average, count: info.count} : undefined;
 
 // Whether another page is worth requesting after one that left the cursor at
 // `cumulativeStart`. Steam's search endpoint doesn't reliably return a full
@@ -102,6 +121,7 @@ export const buildXboxStoreRows = (
   // it is dropped as before.
   basics: Record<string, ProductBasics> = {},
   availableOnly = true,
+  extras: XboxStoreExtras = {},
 ): StoreRow[] => {
   const result: StoreRow[] = [];
   productIds.forEach((productId, index) => {
@@ -116,6 +136,7 @@ export const buildXboxStoreRows = (
       return;
     }
     const priceInfo = getPrice(priceMap, productId);
+    const genre = extras.genres?.[productId.toUpperCase()];
     result.push({
       id: productId,
       rank: index + 1,
@@ -132,6 +153,8 @@ export const buildXboxStoreRows = (
         priceInfo && isSaleForDisplay(priceInfo)
           ? discountPercent(priceInfo)
           : undefined,
+      rating: starsRating(extras.ratings?.[productId.toUpperCase()]),
+      genres: genre ? [genre] : undefined,
       catalogTitle,
     });
   });
@@ -167,6 +190,7 @@ export const buildGfnStoreRows = (
       price: entry.price,
       originalPrice: entry.originalPrice,
       discountPercent: entry.discountPercent || undefined,
+      rating: entry.rating,
       catalogTitle,
     };
   });
@@ -193,6 +217,9 @@ export const buildGfnStoreRows = (
 export const buildPsStoreRows = (
   entries: PsStoreChartEntry[],
   psPlusGames: any[],
+  // Genres and rating per product id, fetched lazily as rows come into the
+  // list (the category listing itself carries neither).
+  briefs: Record<string, PsStoreBrief> = {},
 ): StoreRow[] => {
   const byProductId = new Map<string, any>();
   psPlusGames.forEach(game => {
@@ -206,6 +233,7 @@ export const buildPsStoreRows = (
   return entries.map((entry, index) => {
     const game = byProductId.get(entry.productId);
     const catalogTitle = game ? buildPsPlusCatalogTitle(game) : null;
+    const brief = briefs[entry.productId];
     return {
       id: entry.productId,
       rank: index + 1,
@@ -214,6 +242,10 @@ export const buildPsStoreRows = (
       price: entry.price,
       originalPrice: entry.originalPrice,
       discountPercent: entry.discountPercent || undefined,
+      rating: brief?.averageRating
+        ? {kind: 'stars', average: brief.averageRating}
+        : undefined,
+      genres: brief?.genres.length ? brief.genres : undefined,
       catalogTitle,
     };
   });
