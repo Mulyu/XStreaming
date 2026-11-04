@@ -217,7 +217,13 @@ export const fetchStreamingTime = async (
     responseType: 'arraybuffer',
     timeout: 15000,
   });
-  const data = decodeAccountStreamingTime(new Uint8Array(res.data));
+  let data: StreamingProgramData | null;
+  try {
+    data = decodeAccountStreamingTime(new Uint8Array(res.data));
+  } catch (e: any) {
+    // The service answered, but not in the shape expected.
+    throw new Error(`decode: ${e?.message ?? e}`);
+  }
   log.info('streaming time:', JSON.stringify(data));
   return data;
 };

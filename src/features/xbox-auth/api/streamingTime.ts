@@ -7,11 +7,25 @@ import {debugFactory} from '../../../shared/lib/debug';
 
 const log = debugFactory('xboxStreamingTime');
 
+// "token 401 (XErr 2148916233)" / "request 403" / "decode: ..." -- short enough
+// to show on the row, enough to tell which service said no.
+const describeFailure = (step: string, error: any): string => {
+  const status = error?.response?.status;
+  const xerr = error?.response?.data?.XErr;
+  if (status) {
+    return `${step} ${status}${xerr ? ` (XErr ${xerr})` : ''}`;
+  }
+  const message = String(error?.message ?? error ?? '');
+  return message.startsWith('decode') ? message : `${step}: ${message}`;
+};
+
 // What Settings shows for the account's cloud gaming time.
 export type StreamingTimeResult =
   // Seconds left; null when the account carries no streaming time (no limit
   // applies to it, as far as the service says).
-  {ok: true; seconds: number | null} | {ok: false};
+  | {ok: true; seconds: number | null}
+  // `reason` says which step failed and how (shown next to the failure).
+  | {ok: false; reason?: string};
 
 // Settings re-reads on every focus; the figure moves slowly.
 const CACHE_MS = 2 * 60 * 1000;
@@ -30,6 +44,7 @@ export const loadStreamingTime = async (
   if (cached && cached.key === key && now - cached.at < CACHE_MS) {
     return cached.result;
   }
+  let step = 'token';
   try {
     const store = authentication?._tokenStore;
     const method = store?.getAuthenticationMethod?.();
@@ -44,8 +59,9 @@ export const loadStreamingTime = async (
         CONTENT_ACCESS_RELYING_PARTY,
       );
     } else {
-      return {ok: false};
+      return {ok: false, reason: 'no sign-in'};
     }
+    step = 'request';
     const data = await fetchStreamingTime(
       {
         token: xsts?.data?.Token,
@@ -60,7 +76,7 @@ export const loadStreamingTime = async (
     cached = {at: now, key, result};
     return result;
   } catch (e) {
-    log.info('loadStreamingTime failed:', e);
-    return {ok: false};
+    log.info('loadStreamingTime failed:', step, e);
+    return {ok: false, reason: describeFailure(step, e)};
   }
 };
