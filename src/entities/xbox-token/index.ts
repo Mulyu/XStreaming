@@ -37,11 +37,13 @@ export {
   CONTENT_ACCESS_RELYING_PARTY,
   fetchStreamingTime,
   decodeAccountStreamingTime,
-  remainingStreamingSeconds,
+  summarizeStreamingTime,
 } from './api/contentAccess';
 export type {
   StreamingGameplayTime,
   StreamingProgramData,
+  StreamingTimeSummary,
+  TimeLeft,
 } from './api/contentAccess';
 
 export {fetchXboxProfile, parseXboxProfile} from './api/profile';

@@ -400,11 +400,14 @@ export default {
     XboxCopyContentAccessAuthTitle: '残り時間用のAuthorizationをコピー（一時）',
     XboxCopyContentAccessAuthDesc:
       '残り時間の取得に使うAuthorizationヘッダーをクリップボードにコピーします。調査用の一時的な機能です。',
+    XboxPlaytimeAdFree: '広告なし 残り{{hours}}時間{{minutes}}分',
+    XboxPlaytimeAdFreeUnlimited: '広告なし 無制限',
+    XboxPlaytimeAdSupported: '広告つき 残り{{hours}}時間{{minutes}}分',
+    XboxPlaytimeAdSupportedUnlimited: '広告つき 無制限',
     XboxPlaytimeTitle: 'クラウドゲームの残り時間',
     XboxPlaytimeLoading: '残り時間を確認中…',
     XboxPlaytimeUnavailable: '残り時間を確認できませんでした',
     XboxPlaytimeNone: 'このアカウントに時間制限はありません',
-    XboxPlaytimeRemaining: '残り {{hours}}時間{{minutes}}分',
     GfnPlaytimeTitle: '今月の残りプレイ時間',
     GfnPlaytimeSignedOutDesc:
       'サインインすると、今の請求期間内の残りプレイ時間を確認できます。',

@@ -403,11 +403,14 @@ export default {
       'Copy the cloud gaming time Authorization (temporary)',
     XboxCopyContentAccessAuthDesc:
       'Copies the Authorization header used to read the remaining time, to the clipboard. For investigation; remove after use.',
+    XboxPlaytimeAdFree: 'Ad-free: {{hours}}h {{minutes}}m left',
+    XboxPlaytimeAdFreeUnlimited: 'Ad-free: unlimited',
+    XboxPlaytimeAdSupported: 'With ads: {{hours}}h {{minutes}}m left',
+    XboxPlaytimeAdSupportedUnlimited: 'With ads: unlimited',
     XboxPlaytimeTitle: 'Cloud gaming time remaining',
     XboxPlaytimeLoading: 'Checking remaining time…',
     XboxPlaytimeUnavailable: "Couldn't check remaining time",
     XboxPlaytimeNone: 'No time limit on this account',
-    XboxPlaytimeRemaining: '{{hours}}h {{minutes}}m left',
     GfnPlaytimeTitle: 'Playtime remaining this month',
     GfnPlaytimeSignedOutDesc:
       'Sign in to see how much playtime is left in your current billing period.',

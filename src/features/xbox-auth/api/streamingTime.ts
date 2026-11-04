@@ -1,7 +1,8 @@
+import type {StreamingTimeSummary} from '../../../entities/xbox-token';
 import {
   CONTENT_ACCESS_RELYING_PARTY,
   fetchStreamingTime,
-  remainingStreamingSeconds,
+  summarizeStreamingTime,
 } from '../../../entities/xbox-token';
 import {debugFactory} from '../../../shared/lib/debug';
 
@@ -21,9 +22,8 @@ const describeFailure = (step: string, error: any): string => {
 
 // What Settings shows for the account's cloud gaming time.
 export type StreamingTimeResult =
-  // Seconds left; null when the account carries no streaming time (no limit
-  // applies to it, as far as the service says).
-  | {ok: true; seconds: number | null}
+  // The time left; null when the account carries no streaming time.
+  | {ok: true; summary: StreamingTimeSummary | null}
   // `reason` says which step failed and how (shown next to the failure).
   | {ok: false; reason?: string};
 
@@ -92,7 +92,7 @@ export const loadStreamingTime = async (
     const data = await fetchStreamingTime(token, market);
     const result: StreamingTimeResult = {
       ok: true,
-      seconds: remainingStreamingSeconds(data),
+      summary: summarizeStreamingTime(data),
     };
     cached = {at: now, key, result};
     return result;

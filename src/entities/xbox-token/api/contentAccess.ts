@@ -13,16 +13,25 @@ const CONTENT_ACCESS_URL = 'https://contentaccess.exp.xboxservices.com/all/v1';
 // The service answers in protobuf, and only a few fields of it are wanted, so
 // this reads just the wire format rather than pulling in a library.
 
-type Field = {no: number; wire: number; value: number; bytes?: Uint8Array};
+type Field = {
+  no: number;
+  wire: number;
+  value: number;
+  // The low 32 bits of a varint, signed (an int32 sent as -1 is a 10-byte
+  // varint, far beyond what a JS number holds exactly).
+  int32: number;
+  bytes?: Uint8Array;
+};
 
 const readVarint = (
   buf: Uint8Array,
   pos: number,
-): {value: number; next: number} => {
-  // Up to 10 bytes. Numbers beyond 2^53 lose precision, which none of the
-  // fields read here (seconds, epoch times) come near.
+): {value: number; int32: number; next: number} => {
+  // Up to 10 bytes. `value` loses precision beyond 2^53 (epoch times and
+  // lengths come nowhere near); `int32` is exact for the int32 fields.
   let value = 0;
   let scale = 1;
+  let low = 0;
   let next = pos;
   for (let i = 0; i < 10; i++) {
     if (next >= buf.length) {
@@ -30,8 +39,11 @@ const readVarint = (
     }
     const byte = buf[next++];
     value += (byte & 0x7f) * scale;
+    if (i < 5) {
+      low |= (byte & 0x7f) << (7 * i);
+    }
     if (!(byte & 0x80)) {
-      return {value, next};
+      return {value, int32: low | 0, next};
     }
     scale *= 128;
   }
@@ -49,7 +61,7 @@ const readFields = (buf: Uint8Array): Field[] => {
     if (wire === 0) {
       const v = readVarint(buf, pos);
       pos = v.next;
-      fields.push({no, wire, value: v.value});
+      fields.push({no, wire, value: v.value, int32: v.int32});
     } else if (wire === 2) {
       const len = readVarint(buf, pos);
       pos = len.next;
@@ -60,6 +72,7 @@ const readFields = (buf: Uint8Array): Field[] => {
         no,
         wire,
         value: 0,
+        int32: 0,
         bytes: buf.subarray(pos, pos + len.value),
       });
       pos += len.value;
@@ -73,10 +86,6 @@ const readFields = (buf: Uint8Array): Field[] => {
   }
   return fields;
 };
-
-// A protobuf int32 sent negative is a 10-byte varint; read as a plain number
-// it is huge, so fold it back.
-const toInt32 = (v: number): number => (v >= 2 ** 63 ? v - 2 ** 64 : v);
 
 // ---- ContentAccessProto.StreamingGameplayData ---------------------------
 
@@ -115,11 +124,11 @@ const decodeGameplayTime = (buf: Uint8Array): StreamingGameplayTime => {
       continue;
     }
     if (f.no === 2) {
-      time.remainingSeconds = toInt32(f.value);
+      time.remainingSeconds = f.int32;
     } else if (f.no === 3) {
       time.lastUpdated = f.value;
     } else if (f.no === 4) {
-      time.maxSeconds = toInt32(f.value);
+      time.maxSeconds = f.int32;
     } else if (f.no === 5) {
       time.resetFrequency = RESET_FREQUENCY[f.value] ?? 'unknown';
     }
@@ -175,25 +184,44 @@ export const decodeAccountStreamingTime = (
 
 // ---- What Settings shows ------------------------------------------------
 
-// Seconds of cloud gaming left: the ad-free time (the monthly allowance plus
-// any bought time). When the account has none of that, the ad-supported time.
+// Time left of one kind. The service sends -1 for "no limit".
+export type TimeLeft = {unlimited: true} | {unlimited: false; seconds: number};
+
+export type StreamingTimeSummary = {
+  // Time without ads: the monthly allowance plus any bought time.
+  adFree: TimeLeft;
+  // Time with ads (what a game bought outside Game Pass plays with); absent
+  // when the account has none.
+  adSupported?: TimeLeft;
+};
+
+const timeLeft = (times: StreamingGameplayTime[]): TimeLeft => {
+  if (times.some(t => t.remainingSeconds < 0)) {
+    return {unlimited: true};
+  }
+  return {
+    unlimited: false,
+    seconds: times.reduce((sum, t) => sum + t.remainingSeconds, 0),
+  };
+};
+
 // null when the account carries no streaming time at all.
-export const remainingStreamingSeconds = (
+export const summarizeStreamingTime = (
   data: StreamingProgramData | null,
-): number | null => {
+): StreamingTimeSummary | null => {
   if (!data) {
     return null;
   }
   const adFree = [data.periodicAdFree, data.persistentAdFree].filter(
-    (t): t is StreamingGameplayTime => !!t && t.remainingSeconds >= 0,
+    (t): t is StreamingGameplayTime => !!t,
   );
-  if (adFree.length > 0) {
-    return adFree.reduce((sum, t) => sum + t.remainingSeconds, 0);
+  if (adFree.length === 0 && !data.adSupported) {
+    return null;
   }
-  if (data.adSupported && data.adSupported.remainingSeconds >= 0) {
-    return data.adSupported.remainingSeconds;
-  }
-  return null;
+  return {
+    adFree: timeLeft(adFree),
+    adSupported: data.adSupported ? timeLeft([data.adSupported]) : undefined,
+  };
 };
 
 // Asks the service for the signed-in account's streaming time. `token` is an
@@ -213,6 +241,8 @@ export const fetchStreamingTime = async (
     headers: {
       Authorization: `XBL3.0 x=${token.userHash};${token.token}`,
       'Calling-App-Name': 'Xbox Cloud Gaming Web',
+      // Required: without a correlation vector the service answers 400.
+      'MS-CV': '0',
     },
     responseType: 'arraybuffer',
     timeout: 15000,

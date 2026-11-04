@@ -2,7 +2,7 @@ const mockFetch = jest.fn();
 jest.mock('../../../../entities/xbox-token', () => ({
   CONTENT_ACCESS_RELYING_PARTY: 'http://mp.microsoft.com/',
   fetchStreamingTime: (...a: any[]) => mockFetch(...a),
-  remainingStreamingSeconds: (d: any) => d?.seconds ?? null,
+  summarizeStreamingTime: (d: any) => d?.summary ?? null,
 }));
 
 import {loadStreamingTime} from '../streamingTime';
@@ -23,9 +23,14 @@ describe('loadStreamingTime', () => {
 
   it('returns the remaining seconds, using the mp.microsoft.com token', async () => {
     const getToken = jest.fn().mockResolvedValue(xsts);
-    mockFetch.mockResolvedValue({seconds: 3600});
+    mockFetch.mockResolvedValue({
+      summary: {adFree: {unlimited: false, seconds: 3600}},
+    });
     const result = await loadStreamingTime(xalAuth(getToken), 'JP', nextNow());
-    expect(result).toEqual({ok: true, seconds: 3600});
+    expect(result).toEqual({
+      ok: true,
+      summary: {adFree: {unlimited: false, seconds: 3600}},
+    });
     expect(getToken.mock.calls[0][1]).toBe('http://mp.microsoft.com/');
     expect(mockFetch.mock.calls[0][0]).toEqual({
       token: 'tok',
