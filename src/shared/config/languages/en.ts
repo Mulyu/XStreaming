@@ -511,6 +511,8 @@ export default {
     Chart: 'Charts',
     SortDiscount: 'Biggest discount',
     LibraryChipCatalog: 'Catalog',
+    LibraryWishlistEmpty:
+      'Your wishlist is empty. Turn off Wishlist to browse the whole store.',
     StoreTabXbox: 'Xbox',
     StoreTabSteam: 'Steam',
     StoreTabPlayStation: 'PlayStation',

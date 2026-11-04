@@ -126,7 +126,7 @@ export type SortMode = 'reco' | 'newest' | 'popular' | 'recent' | 'discount';
 // picked there when they switch away and back.
 const DEFAULT_SORT: Record<LibraryMode, SortMode> = {
   owned: 'recent',
-  notOwned: 'newest',
+  notOwned: 'discount',
 };
 
 const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
@@ -266,12 +266,13 @@ export function useLibraryScreen() {
   const [filterGfn, setFilterGfn] = React.useState(false);
   const [filterPsPlus, setFilterPsPlus] = React.useState(false);
   const [filterFavorite, setFilterFavorite] = React.useState(false);
-  const [filterWishlist, setFilterWishlist] = React.useState(false);
+  // On by default: the Store side opens on the user's own wishlist (it has no
+  // effect on the Library side).
+  const [filterWishlist, setFilterWishlist] = React.useState(true);
   const toggleFilterWishlist = React.useCallback(
     () => setFilterWishlist(v => !v),
     [],
   );
-  const [filterOnSale, setFilterOnSale] = React.useState(false);
   // On or off: only titles in Game Pass or the PS catalog.
   const [filterCatalog, setFilterCatalog] = React.useState(false);
   const toggleCatalog = React.useCallback(() => setFilterCatalog(v => !v), []);
@@ -1095,9 +1096,6 @@ export function useLibraryScreen() {
             (!!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog))
         : isCatalogTitleOwned(item);
     list = list.filter(item => isOwned(item) === ownedMode);
-    if (!ownedMode && filterOnSale) {
-      list = list.filter(item => saleDiscount(item) > 0);
-    }
     if (!ownedMode && filterCatalog) {
       list = list.filter(
         item => isInGamePass(item, gamePassMap) || isInPsCatalog(item),
@@ -1115,10 +1113,8 @@ export function useLibraryScreen() {
     filterWishlist,
     wishlistKeys,
     wishlistStubs,
-    filterOnSale,
     filterCatalog,
     gamePassMap,
-    saleDiscount,
   ]);
 
   const filtered = React.useMemo(() => {
@@ -1221,9 +1217,9 @@ export function useLibraryScreen() {
           {value: 'reco', label: t('SortByName')},
         ]
       : [
+          {value: 'discount', label: t('SortDiscount')},
           {value: 'newest', label: t('SortNewest')},
           {value: 'reco', label: t('SortByName')},
-          {value: 'discount', label: t('SortDiscount')},
         ];
   const activeSortLabel =
     sortOptions.find(o => o.value === sortMode)?.label || sortOptions[0].label;
@@ -1303,8 +1299,6 @@ export function useLibraryScreen() {
     toggleFavorite,
     toggleWishlist,
     mode,
-    filterOnSale,
-    setFilterOnSale,
     filterCatalog,
     toggleCatalog,
     gamePassMap,
