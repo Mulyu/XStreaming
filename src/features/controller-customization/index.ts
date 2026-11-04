@@ -68,7 +68,3 @@ export {default as GamepadButton} from './ui/GamepadButton';
 export {default as KeyChip} from './ui/KeyChip';
 export {default as CoverLayoutOverlay} from './ui/CoverLayoutOverlay';
 export {default as CustomVirtualGamepad} from './ui/CustomVirtualGamepad';
-export {
-  default as PortraitVirtualGamepad,
-  type PortraitGamepadControl,
-} from './ui/PortraitVirtualGamepad';

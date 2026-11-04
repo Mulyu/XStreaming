@@ -39,7 +39,6 @@ import {
   getValidGfnJwt,
   getValidGfnUserId,
 } from '../../../entities/gfn-account';
-import {getAppDebugLog} from '../../../shared/lib/appDebugLog';
 import {
   fetchGfnSubscription,
   fetchGfnVpcId,
@@ -268,16 +267,6 @@ export function useSettingsScreen(navigation: any, route: any) {
     restartDelayed();
   };
 
-  const handleUseMsalLoginChange = (value: boolean) => {
-    clearStreamToken();
-    clearWebToken();
-    clearXcloudData();
-    authentication._tokenStore.clear();
-    CookieManager.clearAll();
-    applyAndSave({use_msal_login: value});
-    restartDelayed();
-  };
-
   const handlePreferredLanguageChange = (value: string) => {
     clearXcloudData();
     updateSetting('preferred_game_language', value);
@@ -425,25 +414,6 @@ export function useSettingsScreen(navigation: any, route: any) {
   // PlayStation: the npsso cookie.
   const handleCopyPsPlusToken = () => {
     copyToken(getNpsso());
-  };
-
-  // Debug aid for reports that aren't specific to any one streaming provider,
-  // e.g. the Home/Library screen occasionally coming back black after the app
-  // is backgrounded and resumed -- see shared/lib/appDebugLog.ts for what this
-  // actually reads (app/Activity lifecycle events, not a streaming session).
-  const handleCopyAppDebugInfo = () => {
-    getAppDebugLog()
-      .then(debugLog => {
-        if (!debugLog) {
-          ToastAndroid.show(t('AppDebugCopyEmpty'), ToastAndroid.SHORT);
-          return;
-        }
-        Clipboard.setString(debugLog);
-        ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
-      })
-      .catch(() => {
-        ToastAndroid.show(t('AppDebugCopyFailed'), ToastAndroid.SHORT);
-      });
   };
 
   // Fetches the MES (subscription/quota) API for the signed-in GFN account --
@@ -638,7 +608,6 @@ export function useSettingsScreen(navigation: any, route: any) {
     updateSetting,
     onLocaleChange: handleLocaleChange,
     onForceRegionChange: handleForceRegionChange,
-    onUseMsalLoginChange: handleUseMsalLoginChange,
     onPreferredLanguageChange: handlePreferredLanguageChange,
     onLowLatencyDecoderChange: handleLowLatencyDecoderChange,
     onSignalingCloudChange: handleSignalingCloudChange,
@@ -647,15 +616,9 @@ export function useSettingsScreen(navigation: any, route: any) {
     onCopyContentAccessAuth: handleCopyContentAccessAuth,
     onCopyGfnToken: handleCopyGfnToken,
     onCopyPsPlusToken: handleCopyPsPlusToken,
-    onCopyAppDebugInfo: handleCopyAppDebugInfo,
     onPsPlusAccountPress: handlePsPlusAccountPress,
     onXcloudAccountPress: handleXcloudAccountPress,
     onNavigateInputMapping: () => navigation.navigate('InputMapping'),
-    onNavigateHistory: () => navigation.navigate('History'),
-    onNavigateDs5Left: () =>
-      navigation.navigate({name: 'Ds5', params: {type: 'left'}}),
-    onNavigateDs5Right: () =>
-      navigation.navigate({name: 'Ds5', params: {type: 'right'}}),
   };
 }
 

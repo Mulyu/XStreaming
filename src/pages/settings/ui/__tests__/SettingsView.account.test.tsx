@@ -200,4 +200,15 @@ describe('copying a provider token', () => {
       expect(out.join('|')).not.toMatch(/DebugInfo|AccountInfo/);
     }
   });
+
+  it('the retired settings are gone from the list', () => {
+    // 更新履歴 / アプリのログ (common), DualSense / 認証コードログイン / 縦向きモード (Xbox).
+    const lanes = ['common', 'xbox'];
+    const all = lanes
+      .map(lane => texts(render({lane, isAuthed: true})).join('|'))
+      .join('|');
+    expect(all).not.toMatch(/HistoryTitle|AppCopyDebugInfo|SectionDebug/);
+    expect(all).not.toMatch(/DualSense|SectionControllers/);
+    expect(all).not.toMatch(/useMsalLogin|Native portrait mode/);
+  });
 });

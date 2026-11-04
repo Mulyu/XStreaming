@@ -6,7 +6,6 @@ import {
 } from '../../../entities/catalog-title';
 import {getTitleStreamingId} from './shortcut';
 import {recordRecentLaunch} from './recentLaunches';
-import {getSettings} from '../../../shared/lib/settings';
 
 // Launches a merged catalog title via a specific provider (and, for GFN, a
 // specific store), remembering the choice so the next tap on this title from
@@ -33,9 +32,7 @@ export const launchWithProvider = (
     recordTitlePlayed(catalogTitle.key);
     recordRecentLaunch({provider: 'xcloud', titleItem: raw});
     navigation.navigate({
-      name: getSettings().native_portrait_mode
-        ? 'NativePortraitStream'
-        : 'NativeStream',
+      name: 'NativeStream',
       params: {
         sessionId,
         streamType: 'cloud',

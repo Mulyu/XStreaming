@@ -4,7 +4,6 @@ import RNRestart from 'react-native-restart';
 import {useDispatch, useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
 import {debugFactory} from '../../../shared/lib/debug';
-import {getSettings} from '../../../shared/lib/settings';
 import {
   ensureAuthentication,
   setInteractiveFailureHandler,
@@ -113,10 +112,6 @@ export function useXcloudLogin(navigation: any, route: any) {
       if (hasTokens) {
         // Saved tokens are being refreshed in the background; the loading
         // state ends when Redux reports the sign-in.
-        return;
-      }
-      if (getSettings().use_msal_login) {
-        startMsal(authentication);
         return;
       }
       try {

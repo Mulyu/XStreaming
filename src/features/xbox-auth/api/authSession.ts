@@ -1,5 +1,4 @@
 import store from '../../../shared/lib/reduxStore';
-import {getSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
 import Authentication from '../../../Authentication';
 import MsalAuthentication from '../../../MsalAuthentication';
@@ -59,10 +58,7 @@ export const ensureAuthentication = (): any => {
     authenticationFailed,
   );
   authentication._tokenStore.load();
-  if (
-    getSettings().use_msal_login ||
-    authentication._tokenStore.getAuthenticationMethod() === MSAL
-  ) {
+  if (authentication._tokenStore.getAuthenticationMethod() === MSAL) {
     log.info('Using MSAL authentication method.');
     authentication = new MsalAuthentication(
       authenticationCompleted,

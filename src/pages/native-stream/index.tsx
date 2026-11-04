@@ -11,7 +11,6 @@ import {
   Vibration,
   AppState,
   DeviceEventEmitter,
-  StatusBar,
   Dimensions,
   useWindowDimensions,
 } from 'react-native';
@@ -74,8 +73,6 @@ import {
 } from '../../features/virtual-keyboard';
 import {
   CustomVirtualGamepad,
-  PortraitVirtualGamepad,
-  PortraitGamepadControl,
   SensorConfig,
   SwipeConfig,
 } from '../../features/controller-customization';
@@ -251,13 +248,11 @@ const gpState = createGamepadState(0);
 type NativeStreamScreenProps = {
   navigation: any;
   route: any;
-  portraitMode?: boolean;
 };
 
 export function NativeStreamScreenBase({
   navigation,
   route,
-  portraitMode = false,
 }: NativeStreamScreenProps) {
   const {t} = useTranslation();
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
@@ -348,8 +343,6 @@ export function NativeStreamScreenBase({
     const s = Number(getSettings().gfn_mouse_trackpad_sensitivity);
     return Number.isFinite(s) && s > 0 ? Math.max(0.5, Math.min(3, s)) : 1.4;
   });
-  const [portraitGamepadEditing, setPortraitGamepadEditing] =
-    React.useState(false);
   const [openMicro, setOpenMicro] = React.useState(false);
   // Picture-in-picture was removed; keep the flag as a constant so the many
   // render conditions that referenced it stay valid.
@@ -457,11 +450,7 @@ export function NativeStreamScreenBase({
     }
     let layoutTimer: any = null;
     const lockTimer = setTimeout(() => {
-      if (portraitMode) {
-        Orientation.lockToPortrait();
-      } else {
-        Orientation.lockToLandscape();
-      }
+      Orientation.lockToLandscape();
 
       layoutTimer = setTimeout(() => {}, 100);
     }, 500);
@@ -474,11 +463,10 @@ export function NativeStreamScreenBase({
       // Re-lock to portrait rather than unlocking: unlockAllOrientations()
       // forces SCREEN_ORIENTATION_SENSOR, which ignores the OS rotation
       // lock and leaves the rest of the (portrait-only) app free-rotating
-      // once this effect's cleanup runs on the next portraitMode change or
-      // on unmount when leaving the stream.
+      // once this effect's cleanup runs on unmount when leaving the stream.
       Orientation.lockToPortrait();
     };
-  }, [route.params?.sessionId, route.params?.streamType, portraitMode]);
+  }, [route.params?.sessionId, route.params?.streamType]);
 
   const closeSystemKeyboardModal = React.useCallback(() => {
     NativeInputDialog?.dismiss?.();
@@ -863,11 +851,7 @@ export function NativeStreamScreenBase({
       }
     };
 
-    if (portraitMode) {
-      FullScreenManager.immersiveModeOff();
-    } else {
-      FullScreenManager.immersiveModeOn();
-    }
+    FullScreenManager.immersiveModeOn();
 
     const stopVibrate = () => {
       GamepadManager.vibrate(10, 0, 0, 0, 0, 3);
@@ -1068,10 +1052,10 @@ export function NativeStreamScreenBase({
           0,
           0,
           0,
-          _settings.left_trigger_type || 0,
-          _settings.left_trigger_effects || [],
-          _settings.right_trigger_type || 0,
-          _settings.right_trigger_effects || [],
+          0,
+          [],
+          0,
+          [],
         );
       }
       usbGpEventListener.current = eventEmitter.addListener(
@@ -1103,7 +1087,7 @@ export function NativeStreamScreenBase({
           // above -- USB-wired controllers report button state as a polled
           // bitmask instead of discrete key events, so the press/hold/release
           // has to be derived here instead.
-          if (!portraitMode && !isInPictureInPicture) {
+          if (!isInPictureInPicture) {
             if (keys.includes('Menu')) {
               if (!menuLongPressTimer.current) {
                 menuLongPressTriggered.current = false;
@@ -1168,7 +1152,6 @@ export function NativeStreamScreenBase({
 
           if (
             keyName === 'Menu' &&
-            !portraitMode &&
             !isInPictureInPicture &&
             !menuLongPressTimer.current
           ) {
@@ -1426,37 +1409,7 @@ export function NativeStreamScreenBase({
     // Back action
     const beforeRemoveListener = navigation.addListener('beforeRemove', e => {
       stopVibrate();
-      if (portraitMode && e.data.action.type === 'GO_BACK') {
-        e.preventDefault();
-        Alert.alert(t('Warning'), t('Exit stream?'), [
-          {
-            text: t('Cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('Confirm'),
-            style: 'destructive',
-            onPress: async () => {
-              const _streamApi =
-                route.params?.streamType === 'cloud'
-                  ? xCloudApiRef.current
-                  : xHomeApiRef.current;
-              isRequestExit.current = true;
-              setLoading(true);
-              setLoadingText(t('Disconnecting...'));
-              setIsExiting(true);
-              webrtcClient && webrtcClient.close();
-              if (!Platform.isTV) {
-                Orientation.lockToPortrait();
-              }
-              await waitStopStream(_streamApi);
-              finishStreamExit();
-            },
-          },
-        ]);
-        return;
-      }
-      // Landscape (TV included -- the quick-menu button that used to open
+      // TV included -- the quick-menu button that used to open
       // this panel is gone, this is the only way in now): back opens the
       // control rail instead of exiting, same as tapping its own Disconnect
       // button inside is the actual way to leave.
@@ -1680,10 +1633,6 @@ export function NativeStreamScreenBase({
               .catch(() => {});
           }
 
-          if (portraitMode) {
-            setShowVirtualGamepad(true);
-          }
-
           setRemote(remoteStream.current.toURL());
 
           const sendFrame = () => {
@@ -1789,10 +1738,10 @@ export function NativeStreamScreenBase({
               0,
               strongMagnitude, // left motor
               weakMagnitude, // right motor
-              _settings.left_trigger_type || 0,
-              _settings.left_trigger_effects || [],
-              _settings.right_trigger_type || 0,
-              _settings.right_trigger_effects || [],
+              0,
+              [],
+              0,
+              [],
             );
           } else {
             let weakMagnitude = rumbleData.weakMagnitude * 32767;
@@ -2209,7 +2158,6 @@ export function NativeStreamScreenBase({
     finishStreamExit,
     waitStopStream,
     supportedSystemUis,
-    portraitMode,
     isInPictureInPicture,
     setManualLeftThumbPressed,
     syncLeftThumbButton,
@@ -3002,27 +2950,6 @@ export function NativeStreamScreenBase({
     setShowGamepadEditor(false);
   };
 
-  const savePortraitGamepadLayout = React.useCallback(
-    (layout: PortraitGamepadControl[]) => {
-      const nextSettings = {
-        ...getSettings(),
-        native_portrait_gamepad_layout: layout,
-      };
-      saveSettings(nextSettings);
-      setSettings(nextSettings);
-    },
-    [],
-  );
-
-  const resetPortraitGamepadLayout = React.useCallback(() => {
-    const nextSettings = {
-      ...getSettings(),
-      native_portrait_gamepad_layout: [],
-    };
-    saveSettings(nextSettings);
-    setSettings(nextSettings);
-  }, []);
-
   const handleSetInputMode = React.useCallback(
     (mode: StreamInputMode) => {
       if (mode !== 'gamepad' && showVirtualGamepad) {
@@ -3137,9 +3064,6 @@ export function NativeStreamScreenBase({
   }, [showControlRail]);
 
   const renderVirtualGamepad = () => {
-    if (portraitMode) {
-      return null;
-    }
     if (isInPictureInPicture || !showVirtualGamepad) {
       return null;
     }
@@ -3352,7 +3276,6 @@ export function NativeStreamScreenBase({
   const gamepadKeyboardMouseEnabled =
     route.params?.streamType !== 'gfn' &&
     connectState === CONNECTED &&
-    !portraitMode &&
     !isInPictureInPicture;
   React.useEffect(() => {
     if (!gamepadKeyboardMouseEnabled) {
@@ -3371,7 +3294,6 @@ export function NativeStreamScreenBase({
   usePhysicalInput(
     route.params?.streamType === 'gfn' &&
       connectState === CONNECTED &&
-      !portraitMode &&
       !isInPictureInPicture,
     {
       onKey: handlePhysicalKey,
@@ -3394,7 +3316,6 @@ export function NativeStreamScreenBase({
 
   const renderMouseTrackpad = () => {
     if (
-      portraitMode ||
       isInPictureInPicture ||
       route.params?.streamType !== 'gfn' ||
       connectState !== CONNECTED ||
@@ -3417,7 +3338,6 @@ export function NativeStreamScreenBase({
 
   const renderVirtualKeyboard = () => {
     if (
-      portraitMode ||
       isInPictureInPicture ||
       route.params?.streamType !== 'gfn' ||
       connectState !== CONNECTED ||
@@ -3442,7 +3362,6 @@ export function NativeStreamScreenBase({
   // keyboard overlay above, not instead of it -- independent visibility.
   const renderCustomKeyButtons = () => {
     if (
-      portraitMode ||
       isInPictureInPicture ||
       route.params?.streamType !== 'gfn' ||
       connectState !== CONNECTED ||
@@ -3463,7 +3382,7 @@ export function NativeStreamScreenBase({
   };
 
   const renderPerformancePanel = () => {
-    if (!portraitMode && showPerformance && !isInPictureInPicture) {
+    if (showPerformance && !isInPictureInPicture) {
       return (
         <PerfPanel
           performance={performance}
@@ -3476,7 +3395,7 @@ export function NativeStreamScreenBase({
   };
 
   const renderControlRail = () => {
-    if (portraitMode || isInPictureInPicture) {
+    if (isInPictureInPicture) {
       return null;
     }
     const inputMode: StreamInputMode = showNativeTouch
@@ -3552,11 +3471,6 @@ export function NativeStreamScreenBase({
   const screen_position = settings.screen_position || 'center';
   const loadingPosterUrl =
     typeof route.params?.postUrl === 'string' ? route.params.postUrl : '';
-  const portraitSafeTop =
-    portraitMode && Platform.OS === 'android'
-      ? StatusBar.currentHeight || 0
-      : 0;
-  const portraitVideoHeight = Math.round((screenWidth * 9) / 16);
 
   const renderStreamPlayer = (containerStyle: any, playerStyle: any) => {
     if (loading || !remoteStream.current?.toURL()) {
@@ -3608,83 +3522,6 @@ export function NativeStreamScreenBase({
     );
   };
 
-  const renderPortraitVirtualGamepad = () => {
-    if (!portraitMode || connectState !== CONNECTED) {
-      return null;
-    }
-
-    return (
-      <PortraitVirtualGamepad
-        layout={settings.native_portrait_gamepad_layout}
-        opacity={0.7}
-        editing={portraitGamepadEditing}
-        onEditingChange={setPortraitGamepadEditing}
-        onLayoutChange={savePortraitGamepadLayout}
-        onResetDefault={resetPortraitGamepadLayout}
-        onPressIn={handleButtonPressIn}
-        onPressOut={handleButtonPressOut}
-        onStickMove={handleStickMove}
-      />
-    );
-  };
-
-  const confirmPortraitExit = () => {
-    Alert.alert(t('Warning'), t('Exit stream?'), [
-      {
-        text: t('Cancel'),
-        style: 'cancel',
-      },
-      {
-        text: t('Confirm'),
-        style: 'destructive',
-        onPress: () => requestExit(),
-      },
-    ]);
-  };
-
-  if (portraitMode) {
-    return (
-      <View style={styles.portraitContainer}>
-        {loading && (
-          <StreamHandshakeOverlay
-            streamType={route.params?.streamType}
-            gameTitle={
-              typeof route.params?.title === 'string'
-                ? route.params.title
-                : undefined
-            }
-            posterUrl={loadingPosterUrl || undefined}
-            phase={loadingPhase}
-            queuePosition={loadingQueuePosition}
-            detailText={loadingText}
-            onCancel={() => {
-              setLoading(false);
-              confirmPortraitExit();
-            }}
-          />
-        )}
-
-        <View
-          style={[
-            styles.portraitVideoFrame,
-            {
-              height: portraitVideoHeight,
-              marginTop: portraitSafeTop,
-            },
-          ]}>
-          {renderStreamPlayer(
-            styles.portraitPlayerContainer,
-            styles.portraitPlayer,
-          )}
-        </View>
-
-        <View style={styles.portraitControls}>
-          {renderPortraitVirtualGamepad()}
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       {loading && !isInPictureInPicture && (
@@ -3722,7 +3559,7 @@ export function NativeStreamScreenBase({
       {renderVirtualGamepad()}
 
       <VirtualGamepadEditor
-        visible={!portraitMode && showGamepadEditor && !isInPictureInPicture}
+        visible={showGamepadEditor && !isInPictureInPicture}
         profileName={gamepadProfile}
         profileLabel={route.params?.title}
         swipeSensitivity={getSwipeConfig(gamepadProfile).sensitivity}
@@ -3757,28 +3594,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     backgroundColor: palette.black,
-  },
-  portraitContainer: {
-    flex: 1,
-    backgroundColor: palette.black,
-  },
-  portraitVideoFrame: {
-    width: '100%',
-    backgroundColor: palette.black,
-  },
-  portraitPlayerContainer: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: palette.black,
-  },
-  portraitPlayer: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: palette.black,
-  },
-  portraitControls: {
-    flex: 1,
-    backgroundColor: palette.bg,
   },
 });
 

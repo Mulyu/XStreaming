@@ -1,5 +1,4 @@
 import {storage} from '../../../shared/lib/mmkv';
-import {appDebugLog} from '../../../shared/lib/appDebugLog';
 import {GfnGame, steamAppIdFromUrl} from './gfnPublicGames';
 import {getGfnLocaleSlug, getGfnGraphqlLocale} from './gfnLocale';
 
@@ -324,40 +323,6 @@ export const toOwnedGames = (app: RawApp): GfnGame[] => {
   }, []);
 };
 
-// What the library query says about each store variant, for the app debug log:
-// how many variants there are per store and status, then one line per app
-// that has an Xbox listing (title and every variant's store=status), up to
-// `maxApps`. It is how to tell, from a real account, which status GFN gives
-// the Xbox / Game Pass listings.
-export const summarizeLibraryStatuses = (
-  items: RawApp[],
-  maxApps = 40,
-): string[] => {
-  const counts = new Map<string, number>();
-  const xboxApps: string[] = [];
-  for (const app of items) {
-    const parts: string[] = [];
-    let hasXbox = false;
-    for (const v of app.variants ?? []) {
-      const store = (v.appStore ?? 'GFN').toUpperCase();
-      const status = v.gfn?.library?.status ?? 'none';
-      const sub = variantSubscription(v);
-      const key = `${store}=${status}${sub ? `+${sub}` : ''}`;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-      parts.push(key);
-      hasXbox = hasXbox || store.includes('XBOX');
-    }
-    if (hasXbox && xboxApps.length < maxApps) {
-      xboxApps.push(`${app.title ?? app.id}: ${parts.join(', ')}`);
-    }
-  }
-  const total = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([k, n]) => `${k} x${n}`)
-    .join(', ');
-  return [`apps=${items.length}; variants: ${total || 'none'}`, ...xboxApps];
-};
-
 type LibraryPage = {
   items: RawApp[];
   hasNextPage: boolean;
@@ -431,9 +396,6 @@ export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
       break;
     }
     cursor = result.endCursor;
-  }
-  for (const line of summarizeLibraryStatuses(items)) {
-    appDebugLog('GfnLibrary', line);
   }
   // Deliberately NOT re-sorted alphabetically: the server already returns
   // these in LIBRARY_SORT order (most-recently-played first), which the
