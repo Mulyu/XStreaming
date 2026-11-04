@@ -43,6 +43,7 @@ import {
 import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
 import {usePsStoreDetails} from './usePsStoreDetails';
+import {useSteamRating} from './useSteamRating';
 
 const {ShortcutManager} = NativeModules;
 
@@ -245,6 +246,10 @@ export function useLibraryTitleDetail() {
   }, [catalogTitle?.psplus?.raw]);
 
   const psDetails = usePsStoreDetails(catalogTitle);
+  const steamRating = useSteamRating(
+    catalogTitle,
+    deriveMarketLanguage(gameLanguage, deviceRegion).market,
+  );
 
   const playXcloud = () => {
     launchWithProvider(navigation, catalogTitle, {provider: 'xcloud'});
@@ -343,6 +348,7 @@ export function useLibraryTitleDetail() {
     steamPrices,
     psStorePrice,
     psDetails,
+    steamRating,
     preference,
     owned,
     isFavorite,

@@ -20,6 +20,7 @@ import {
   getPsStoreUrl,
   isPsStoreSaleForDisplay,
   formatPsContentRating,
+  StoreRatingLine,
 } from '../../../entities/catalog-title';
 import {
   CAP_META,
@@ -68,6 +69,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   steamPrices,
   psStorePrice,
   psDetails,
+  steamRating,
   preference,
   owned,
   isFavorite,
@@ -225,15 +227,29 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     </Pressable>
   );
 
-  const ratingSection = shownRating ? (
-    <View style={styles.ratingRow}>
-      <View style={styles.starsRow}>{renderStars(shownRating.average)}</View>
-      <Text style={styles.ratingNum}>{shownRating.average.toFixed(1)}</Text>
-      <Text style={styles.ratingCount}>
-        ({shownRating.count.toLocaleString()})
-      </Text>
-    </View>
-  ) : null;
+  // The Xbox / PlayStation star rating, and under it Steam's review verdict
+  // for a title that is on Steam.
+  const ratingSection =
+    shownRating || steamRating ? (
+      <View style={styles.ratingStack}>
+        {shownRating ? (
+          <View style={styles.ratingRow}>
+            <View style={styles.starsRow}>
+              {renderStars(shownRating.average)}
+            </View>
+            <Text style={styles.ratingNum}>
+              {shownRating.average.toFixed(1)}
+            </Text>
+            <Text style={styles.ratingCount}>
+              ({shownRating.count.toLocaleString()})
+            </Text>
+          </View>
+        ) : null}
+        {steamRating ? (
+          <StoreRatingLine rating={steamRating} source="Steam" />
+        ) : null}
+      </View>
+    ) : null;
 
   const metaSection =
     developer || publisher || ageRating || edition ? (
@@ -1260,6 +1276,7 @@ const styles = StyleSheet.create({
   tvGenres: {fontSize: 12, color: palette.textSoft},
   tvRight: {flex: 1},
   tvRightContent: {gap: 16, paddingBottom: 32},
+  ratingStack: {gap: 4},
   ratingRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
   starsRow: {flexDirection: 'row'},
   ratingNum: {fontSize: 13, fontWeight: '700'},

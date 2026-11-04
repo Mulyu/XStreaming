@@ -218,3 +218,85 @@ export const fetchSteamChart = async (
   }
   return {entries, totalCount};
 };
+
+// Steam's name for each of the app's languages (the store's `l` parameter).
+const STEAM_LANGUAGE: Record<string, string> = {
+  en: 'english',
+  zh: 'schinese',
+  zht: 'tchinese',
+  de: 'german',
+  es: 'spanish',
+  pt: 'brazilian',
+  ko: 'koreana',
+  ja: 'japanese',
+  hi: 'english',
+};
+
+export const steamLanguageFor = (locale: string): string =>
+  STEAM_LANGUAGE[locale] || 'english';
+
+const RATING_TTL_MS = 24 * 60 * 60 * 1000;
+const ratingCacheKey = (appId: string, cc: string, language: string): string =>
+  `store.steamRating.${language}.${cc}.${appId}`;
+
+// The review verdict of one Steam app. Steam's JSON review endpoint is not
+// reachable the way the store pages are, so this asks the store search that
+// the charts use -- by the app's name -- and takes the verdict off the result
+// with the same app id (the search is the one place the localized verdict
+// label comes ready-made). null when the search does not list the app or it
+// has no verdict yet (too few reviews); never rejects.
+export const fetchSteamRating = async (
+  appId: string,
+  title: string,
+  cc = 'US',
+  language = 'english',
+): Promise<StoreRating | null> => {
+  const key = ratingCacheKey(appId, cc, language);
+  try {
+    const raw = storage.getString(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (
+        parsed &&
+        typeof parsed.ts === 'number' &&
+        Date.now() - parsed.ts < RATING_TTL_MS
+      ) {
+        return (parsed.rating as StoreRating | null) ?? null;
+      }
+    }
+  } catch {}
+  const term = title.trim();
+  if (!appId || !term) {
+    return null;
+  }
+  try {
+    const res = await axios.get(SEARCH_URL, {
+      params: {
+        term,
+        query: '',
+        start: '0',
+        count: '25',
+        dynamic_data: '',
+        infinite: '1',
+        cc,
+        l: language,
+        category1: '998',
+      },
+      timeout: 15000,
+    });
+    const html = res?.data?.results_html;
+    if (typeof html !== 'string') {
+      return null;
+    }
+    const rating =
+      parseResultsHtml(html).find(entry => entry.appId === appId)?.rating ??
+      null;
+    try {
+      storage.set(key, JSON.stringify({ts: Date.now(), rating}));
+    } catch {}
+    return rating;
+  } catch (e) {
+    log.info('fetchSteamRating failed:', e);
+    return null;
+  }
+};
