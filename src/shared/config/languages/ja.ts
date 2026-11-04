@@ -121,9 +121,9 @@ export default {
     CatalogStatusLoading: '読み込み中…',
     CatalogStatusFailed: '読み込みに失敗しました — タップして再試行',
     CatalogStatusEmpty: '対象タイトルがありません — タップして再読み込み',
-    CatalogStatusComplete: '{{count}}件読み込み済み — タップして再読み込み',
+    CatalogStatusComplete: '{{waiting}}件読み込み済み — タップして再読み込み',
     CatalogStatusPartial:
-      '{{count}}件読み込み(一部取得できず) — タップして再読み込み',
+      '{{waiting}}件読み込み(一部取得できず) — タップして再読み込み',
     GfnSettings: 'GeForce NOW',
     CommonSettings: '共通',
     SectionAccount: 'アカウント',
@@ -407,6 +407,10 @@ export default {
     GfnPlaytimeUnavailable:
       '残りプレイ時間を確認できませんでした（タップして再試行）',
     GfnPlaytimeRemaining: '今月の残り {{hours}}時間{{minutes}}分',
+    GfnQueueTitle: 'サーバーの待機状況',
+    GfnQueueValue: '約{{waiting}}人待ち · 想定待機 約{{minutes}}分（非公式）',
+    GfnQueueLoading: '待機状況を確認中…',
+    GfnQueueUnavailable: '待機状況を取得できません',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle max duration (minutes)': 'アンチアイドル',

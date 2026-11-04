@@ -86,6 +86,7 @@ const SettingsView: React.FC<Props> = ({
   gfnAccount,
   psAccount,
   gfnPlaytimeDescription,
+  gfnQueueDescription,
   onChangeLane,
   updateSetting,
   onLocaleChange,
@@ -301,6 +302,11 @@ const SettingsView: React.FC<Props> = ({
           <InfoRow
             title={t('GfnPlaytimeTitle')}
             value={gfnPlaytimeDescription}
+            accent={palette.provider.gfn}
+          />
+          <InfoRow
+            title={t('GfnQueueTitle')}
+            value={gfnQueueDescription}
             accent={palette.provider.gfn}
           />
 

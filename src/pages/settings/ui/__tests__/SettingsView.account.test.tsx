@@ -45,6 +45,7 @@ const makeProps = (overrides: Record<string, unknown>) => {
     gfnAccount: {userName: undefined, planTitle: undefined},
     psAccount: {userName: undefined},
     gfnPlaytimeDescription: '',
+    gfnQueueDescription: '',
     xboxPlaytimeDescription: '',
     ...overrides,
   };
@@ -139,11 +140,14 @@ describe('provider account rows', () => {
       gfnSignedIn: true,
       gfnAccount: {userName: 'gamer', planTitle: 'Performance'},
       gfnPlaytimeDescription: '12h 30m left',
+      gfnQueueDescription: '78 waiting',
       onGfnAccountPress,
     });
     expect(texts(tree)).toContain('Current user: gamer · Performance');
     expect(texts(tree)).toContain('GfnPlaytimeTitle');
     expect(texts(tree)).toContain('12h 30m left');
+    expect(texts(tree)).toContain('GfnQueueTitle');
+    expect(texts(tree)).toContain('78 waiting');
     press(tree, 'GfnAccountTitle');
     expect(onGfnAccountPress).toHaveBeenCalledTimes(1);
   });

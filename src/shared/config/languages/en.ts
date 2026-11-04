@@ -123,9 +123,9 @@ export default {
     CatalogStatusLoading: 'Loading…',
     CatalogStatusFailed: 'Failed to load — tap to retry',
     CatalogStatusEmpty: 'No titles found — tap to reload',
-    CatalogStatusComplete: '{{count}} titles loaded — tap to reload',
+    CatalogStatusComplete: '{{waiting}} titles loaded — tap to reload',
     CatalogStatusPartial:
-      '{{count}} titles loaded (incomplete) — tap to reload',
+      '{{waiting}} titles loaded (incomplete) — tap to reload',
     GfnSettings: 'GeForce NOW',
     CommonSettings: 'Common',
     SectionAccount: 'Account',
@@ -408,6 +408,11 @@ export default {
     GfnPlaytimeUnlimited: 'Unlimited',
     GfnPlaytimeUnavailable: "Couldn't check remaining playtime — tap to retry",
     GfnPlaytimeRemaining: '{{hours}}h {{minutes}}m left this month',
+    GfnQueueTitle: 'Server queue',
+    GfnQueueValue:
+      'About {{waiting}} waiting · est. wait about {{minutes}} min (unofficial)',
+    GfnQueueLoading: 'Checking the queue…',
+    GfnQueueUnavailable: 'Queue status unavailable',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle max duration (minutes)': 'Anti-idle',

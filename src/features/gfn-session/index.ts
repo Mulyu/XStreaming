@@ -24,4 +24,7 @@ export type {
   GfnLaunchProgress,
 } from './api/session';
 
+export {fetchGfnQueueStatus} from './api/queueStatus';
+export type {GfnQueueStatus} from './api/queueStatus';
+
 export {GfnStreamAdapter, gpStateToGfnInput} from './api/streamAdapter';
