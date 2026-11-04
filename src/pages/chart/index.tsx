@@ -112,7 +112,7 @@ const MIN_VISIBLE_ROWS = 15;
 type Provider = 'xcloud' | 'gfn' | 'psstore';
 type ChartKind = 'best' | 'new';
 
-function StoreScreen() {
+function ChartScreen() {
   const {t} = useTranslation();
   const navigation = useNavigation<any>();
   const streamingTokens = useSelector((state: any) => state.streamingTokens);
@@ -1287,7 +1287,7 @@ function StoreScreen() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('Store')}</Text>
+        <Text style={styles.title}>{t('Chart')}</Text>
         {Platform.isTV ? (
           // TV: the Library's toolbar buttons, so the focused one reads the
           // same way here as there.
@@ -1642,4 +1642,4 @@ const styles = StyleSheet.create({
   centreText: {fontSize: 13, color: palette.textSoft},
 });
 
-export default StoreScreen;
+export default ChartScreen;

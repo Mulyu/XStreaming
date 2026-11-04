@@ -23,9 +23,10 @@ import type {LibraryScreenViewModel} from '../model/useLibraryScreen';
 import {
   useTVFocus,
   tvFocusRing,
+  tvFocusBold,
   TV_FOCUS_COLOR,
 } from '../../../shared/ui/tvFocus';
-import {AppButton, ToggleGroup} from '../../../shared/ui/Buttons';
+import {AppButton} from '../../../shared/ui/Buttons';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
 import {alpha, palette} from '../../../shared/config/palette';
 
@@ -55,6 +56,65 @@ type GridCardProps = CardCommon & {
   actionOn: boolean;
   onToggleFavorite: (item: CatalogTitle) => void;
   onToggleWishlist: (item: CatalogTitle) => void;
+};
+
+// One labelled filter chip -- the same pill the Store chart's kind chips use,
+// so the filters read as words instead of icon-only buttons. `tone` picks the
+// "on" fill: the accent for most, the sale colour for the sale chip.
+const FilterChip: React.FC<{
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  icon?: string;
+  badge?: number;
+  tone?: 'accent' | 'sale';
+  trailingIcon?: string;
+}> = ({label, active, onPress, icon, badge, tone = 'accent', trailingIcon}) => {
+  const focus = useTVFocus();
+  const onFill = tone === 'sale' ? styles.chipOnSale : styles.chipOn;
+  return (
+    <Pressable
+      style={[
+        styles.chip,
+        Platform.isTV && styles.chipTv,
+        active && onFill,
+        focus.focused && tvFocusBold,
+      ]}
+      onPress={onPress}
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+      accessibilityRole="button"
+      accessibilityState={{selected: active}}
+      accessibilityLabel={label}>
+      {!!icon && (
+        <Icon
+          source={icon}
+          size={Platform.isTV ? 16 : 14}
+          color={active ? palette.onAccent : palette.textSoft}
+        />
+      )}
+      <Text
+        style={[
+          styles.chipText,
+          Platform.isTV && styles.chipTextTv,
+          active && styles.chipTextOn,
+        ]}>
+        {label}
+      </Text>
+      {!!badge && badge > 0 && (
+        <View style={styles.chipBadge}>
+          <Text style={styles.chipBadgeText}>{badge}</Text>
+        </View>
+      )}
+      {!!trailingIcon && (
+        <Icon
+          source={trailingIcon}
+          size={14}
+          color={active ? palette.onAccent : palette.textSoft}
+        />
+      )}
+    </Pressable>
+  );
 };
 
 // The card's favorite / wishlist toggle. A sibling of the card's own
@@ -370,8 +430,7 @@ const LibraryView: React.FC<Props> = ({
   wishlistKeys,
   toggleFavorite,
   toggleWishlist,
-  filterOwnership,
-  cycleOwnership,
+  mode,
   filterOnSale,
   setFilterOnSale,
   filterCatalog,
@@ -389,14 +448,6 @@ const LibraryView: React.FC<Props> = ({
   openTitleDetail,
   saleDiscount,
 }) => {
-  // One chip cycles owned -> not owned -> all; its label names the state.
-  const ownershipLabel = t(
-    filterOwnership === 'owned'
-      ? 'LibraryFilterOwned'
-      : filterOwnership === 'notOwned'
-      ? 'LibraryFilterNotOwned'
-      : 'LibraryFilterOwnershipAll',
-  );
   const searchFocus = useTVFocus();
   const tvSearchInputFocus = useTVFocus();
   const tvSearchCloseFocus = useTVFocus();
@@ -547,7 +598,9 @@ const LibraryView: React.FC<Props> = ({
       <View style={styles.header}>
         {(Platform.isTV || !phoneSearchOpen) && (
           <View style={styles.titleRow}>
-            <Text style={styles.title}>{t('Library')}</Text>
+            <Text style={styles.title}>
+              {t(mode === 'owned' ? 'Library' : 'Store')}
+            </Text>
             {catalog.length > 0 && (
               <Text style={styles.count}>
                 {filtered.length}/{catalog.length}
@@ -706,194 +759,72 @@ const LibraryView: React.FC<Props> = ({
         ) : null}
         <View style={styles.filterRow}>
           <View style={styles.chipsRow}>
-            {Platform.isTV ? (
+            {/* Providers (multi-select, OR) are shared by both screens. */}
+            <FilterChip
+              label={t('LibraryFilterXcloud')}
+              active={filterXcloud}
+              onPress={() => setFilterXcloud(v => !v)}
+            />
+            <FilterChip
+              label={t('LibraryFilterGfn')}
+              active={filterGfn}
+              onPress={() => setFilterGfn(v => !v)}
+            />
+            <FilterChip
+              label={t('LibraryFilterPsPlus')}
+              active={filterPsPlus}
+              onPress={() => setFilterPsPlus(v => !v)}
+            />
+            <View style={styles.chipDivider} />
+            {mode === 'owned' ? (
+              <FilterChip
+                icon={filterFavorite ? 'heart' : 'heart-outline'}
+                label={t('LibraryFilterFavorite')}
+                active={filterFavorite}
+                onPress={() => setFilterFavorite(v => !v)}
+              />
+            ) : (
               <>
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  letter="X"
-                  label={t('LibraryFilterXcloud')}
-                  active={filterXcloud}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterXcloud(v => !v)}
-                />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  letter="N"
-                  label={t('LibraryFilterGfn')}
-                  active={filterGfn}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterGfn(v => !v)}
-                />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  letter="PS"
-                  label={t('LibraryFilterPsPlus')}
-                  active={filterPsPlus}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterPsPlus(v => !v)}
-                />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
-                  icon="heart-outline"
-                  label={t('LibraryFilterFavorite')}
-                  active={filterFavorite}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setFilterFavorite(v => !v)}
-                />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
+                <FilterChip
                   icon={filterWishlist ? 'bookmark' : 'bookmark-outline'}
                   label={t('LibraryFilterWishlist')}
                   active={filterWishlist}
-                  accent={palette.accent}
                   badge={wishlistSaleCount}
-                  fill
                   onPress={toggleFilterWishlist}
                 />
-              </>
-            ) : (
-              <>
-                <ToggleGroup
-                  accent={palette.accent}
-                  options={[
-                    {
-                      key: 'xcloud',
-                      letter: 'X',
-                      label: t('LibraryFilterXcloud'),
-                      active: filterXcloud,
-                      onPress: () => setFilterXcloud(v => !v),
-                    },
-                    {
-                      key: 'gfn',
-                      letter: 'N',
-                      label: t('LibraryFilterGfn'),
-                      active: filterGfn,
-                      onPress: () => setFilterGfn(v => !v),
-                    },
-                    {
-                      key: 'psplus',
-                      letter: 'PS',
-                      label: t('LibraryFilterPsPlus'),
-                      active: filterPsPlus,
-                      onPress: () => setFilterPsPlus(v => !v),
-                    },
-                  ]}
-                />
-                <ToggleGroup
-                  accent={palette.accent}
-                  options={[
-                    {
-                      key: 'favorite',
-                      icon: filterFavorite ? 'heart' : 'heart-outline',
-                      label: t('LibraryFilterFavorite'),
-                      active: filterFavorite,
-                      onPress: () => setFilterFavorite(v => !v),
-                    },
-                    {
-                      key: 'wishlist',
-                      icon: filterWishlist ? 'bookmark' : 'bookmark-outline',
-                      label: t('LibraryFilterWishlist'),
-                      active: filterWishlist,
-                      badge: wishlistSaleCount,
-                      onPress: toggleFilterWishlist,
-                    },
-                  ]}
-                />
-              </>
-            )}
-            {!Platform.isTV && (
-              <ToggleGroup
-                accent={palette.accent}
-                options={[
-                  {
-                    key: 'sale',
-                    icon: 'tag-outline',
-                    label: t('LibraryFilterOnSale'),
-                    active: filterOnSale,
-                    onPress: () => setFilterOnSale(v => !v),
-                  },
-                  {
-                    key: 'catalog',
-                    icon: 'gift-outline',
-                    label: t('LibraryFilterCatalog'),
-                    active: filterCatalog,
-                    onPress: toggleCatalog,
-                  },
-                ]}
-              />
-            )}
-            <AppButton
-              iconOnly
-              compact={!Platform.isTV}
-              icon={
-                filterOwnership === 'notOwned'
-                  ? 'close-circle-outline'
-                  : 'check-circle-outline'
-              }
-              label={ownershipLabel}
-              active={filterOwnership !== 'all'}
-              accent={palette.accent}
-              fill
-              onPress={cycleOwnership}
-            />
-            {Platform.isTV && (
-              <>
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
+                <FilterChip
                   icon="tag-outline"
                   label={t('LibraryFilterOnSale')}
                   active={filterOnSale}
-                  accent={palette.accent}
-                  fill
+                  tone="sale"
                   onPress={() => setFilterOnSale(v => !v)}
                 />
-                <AppButton
-                  iconOnly
-                  compact={!Platform.isTV}
+                <FilterChip
                   icon="gift-outline"
-                  label={t('LibraryFilterCatalog')}
+                  label={t('LibraryChipCatalog')}
                   active={filterCatalog}
-                  accent={palette.accent}
-                  fill
                   onPress={toggleCatalog}
                 />
               </>
             )}
             <View style={styles.sortChipTv}>
-              {Platform.isTV ? (
-                // TV: the current order is written out, and each press moves
-                // to the next one (no dropdown to pick from with a remote).
-                <AppButton
-                  icon="sort"
-                  label={activeSortLabel}
-                  active={sortMode !== 'recent'}
-                  accent={palette.accent}
-                  fill
-                  onPress={cycleSort}
-                />
-              ) : (
-                <AppButton
-                  iconOnly
-                  compact
-                  icon="sort"
-                  trailingIcon={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
-                  label={`${t('Sort')}: ${activeSortLabel}`}
-                  active={sortMode !== 'recent'}
-                  accent={palette.accent}
-                  fill
-                  onPress={() => setSortMenuOpen(v => !v)}
-                />
-              )}
+              {/* TV: each press moves to the next order (no dropdown to pick
+                  from with a remote); phone opens the menu below. */}
+              <FilterChip
+                icon="sort"
+                label={activeSortLabel}
+                active={sortMode !== sortOptions[0].value}
+                trailingIcon={
+                  Platform.isTV
+                    ? undefined
+                    : sortMenuOpen
+                    ? 'chevron-up'
+                    : 'chevron-down'
+                }
+                onPress={
+                  Platform.isTV ? cycleSort : () => setSortMenuOpen(v => !v)
+                }
+              />
             </View>
           </View>
 
@@ -926,9 +857,6 @@ const LibraryView: React.FC<Props> = ({
                     )}
                     <Text style={styles.sortItemLabel}>{option.label}</Text>
                   </View>
-                  {!!option.scope && (
-                    <Text style={styles.sortItemScope}>{option.scope}</Text>
-                  )}
                 </Pressable>
               ))}
             </View>
@@ -1052,6 +980,38 @@ const styles = StyleSheet.create({
     backgroundColor: alpha(palette.text, 0.18),
   },
   filterRow: {position: 'relative'},
+  chip: {
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: alpha(palette.text, 0.14),
+  },
+  chipTv: {height: 36, paddingHorizontal: 16, gap: 6},
+  chipOn: {backgroundColor: palette.accent},
+  chipOnSale: {backgroundColor: palette.sale},
+  chipText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
+  chipTextTv: {fontSize: 14},
+  chipTextOn: {color: palette.onAccent},
+  chipBadge: {
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.sale,
+  },
+  chipBadgeText: {fontSize: 10, fontWeight: '800', color: palette.onAccent},
+  // The small divider between the provider chips and the screen's own chips.
+  chipDivider: {
+    width: 1,
+    height: 16,
+    marginHorizontal: 2,
+    backgroundColor: alpha(palette.text, 0.25),
+  },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1090,7 +1050,6 @@ const styles = StyleSheet.create({
   },
   sortItemLabelRow: {flexDirection: 'row', alignItems: 'center', gap: 5},
   sortItemLabel: {fontSize: 13, fontWeight: '700'},
-  sortItemScope: {fontSize: 10, color: palette.textSoft, paddingLeft: 18},
   centre: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10},
   centreText: {color: palette.textSoft, fontSize: 14},
   list: {paddingHorizontal: 6, paddingBottom: 20},

@@ -114,14 +114,20 @@ import {
   RankTable,
 } from './rankSort';
 
-export type OwnershipFilter = 'owned' | 'notOwned' | 'all';
-const OWNERSHIP_NEXT: Record<OwnershipFilter, OwnershipFilter> = {
-  owned: 'notOwned',
-  notOwned: 'all',
-  all: 'owned',
-};
+// The two halves of the old Library, now separate bottom-tab entries that
+// share this one screen instance (HubTabBar navigates to 'Library' with
+// `{mode}`): 'owned' is the Library (titles playable now), 'notOwned' is the
+// Store (everything else: wishlist, sales, catalog membership).
+export type LibraryMode = 'owned' | 'notOwned';
 
-export type SortMode = 'reco' | 'newest' | 'popular' | 'recent';
+export type SortMode = 'reco' | 'newest' | 'popular' | 'recent' | 'discount';
+
+// Each mode opens on its own default order and keeps the order the user
+// picked there when they switch away and back.
+const DEFAULT_SORT: Record<LibraryMode, SortMode> = {
+  owned: 'recent',
+  notOwned: 'newest',
+};
 
 const EMPTY_PRICE_MAP: Record<string, PriceInfo> = {};
 const EMPTY_RATING_MAP: Record<string, RatingInfo> = {};
@@ -176,12 +182,23 @@ export function useLibraryScreen() {
     () => getCachedCatalogGames() || [],
   );
   const [keyword, setKeyword] = React.useState('');
-  const [sortMode, setSortMode] = React.useState<SortMode>('recent');
+  const mode: LibraryMode =
+    route.params?.mode === 'notOwned' ? 'notOwned' : 'owned';
+  const [sortModes, setSortModes] =
+    React.useState<Record<LibraryMode, SortMode>>(DEFAULT_SORT);
+  const sortMode = sortModes[mode];
+  const setSortMode = React.useCallback(
+    (value: SortMode) => setSortModes(prev => ({...prev, [mode]: value})),
+    [mode],
+  );
   // The popularity / release-date orders (an xCloud list, two GFN catalog
   // crawls, ~14 pages of the PS Store) only matter to the non-default sorts,
   // so they are fetched once one of those is picked, not at every launch.
   const rankNeeded = sortMode !== 'recent';
   const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
+  // Switching between Library and Store reuses this screen, so a menu left
+  // open on one side must not carry over to the other.
+  React.useEffect(() => setSortMenuOpen(false), [mode]);
   // Which tile currently has D-pad/remote focus -- Android TV moves this via
   // standard View focus as the user navigates with the remote, but nothing
   // rendered that fact until now, so a tile focused by the remote looked
@@ -237,30 +254,20 @@ export function useLibraryScreen() {
   const [psNewestTable, setPsNewestTable] =
     React.useState<RankTable>(EMPTY_RANK_TABLE);
 
-  // Filter chips: provider (OR between active ones; neither active = all)
-  // plus Favorite/Owned/On Sale, each an independent AND filter. Owned
-  // defaults on; the rest default off.
+  // Filter chips: provider (OR between active ones; neither active = all),
+  // shared by both modes, plus the mode's own chips -- Favorite on the
+  // Library side; Wishlist / On Sale / Catalog on the Store side -- each an
+  // independent AND filter, all off by default. A chip that belongs to the
+  // other mode never applies (see providerOwnedFiltered).
   const [filterXcloud, setFilterXcloud] = React.useState(false);
   const [filterGfn, setFilterGfn] = React.useState(false);
   const [filterPsPlus, setFilterPsPlus] = React.useState(false);
   const [filterFavorite, setFilterFavorite] = React.useState(false);
   const [filterWishlist, setFilterWishlist] = React.useState(false);
-  // Three states, cycled by one chip: only titles playable now ('owned',
-  // the default), only the ones that aren't ('notOwned'), or everything.
-  const [filterOwnership, setFilterOwnership] =
-    React.useState<OwnershipFilter>('owned');
-  const cycleOwnership = React.useCallback(
-    () => setFilterOwnership(v => OWNERSHIP_NEXT[v]),
+  const toggleFilterWishlist = React.useCallback(
+    () => setFilterWishlist(v => !v),
     [],
   );
-  // The wishlist is by definition titles that aren't owned, so turning it on
-  // widens the default "owned only" view to everything.
-  const toggleFilterWishlist = React.useCallback(() => {
-    if (!filterWishlist) {
-      setFilterOwnership('all');
-    }
-    setFilterWishlist(!filterWishlist);
-  }, [filterWishlist]);
   const [filterOnSale, setFilterOnSale] = React.useState(false);
   // On or off: only titles in Game Pass or the PS catalog.
   const [filterCatalog, setFilterCatalog] = React.useState(false);
@@ -1036,8 +1043,13 @@ export function useLibraryScreen() {
   }, []);
 
   const providerOwnedFiltered = React.useMemo(() => {
-    let list = filterWishlist ? [...catalog, ...wishlistStubs] : catalog;
-    if (filterXcloud || filterGfn || filterPsPlus) {
+    const ownedMode = mode === 'owned';
+    // Wishlisted titles outside every loaded catalog are not owned by
+    // definition, so they only join the Store side's wishlist view.
+    const wishlistOn = !ownedMode && filterWishlist;
+    let list = wishlistOn ? [...catalog, ...wishlistStubs] : catalog;
+    const providerFilterActive = filterXcloud || filterGfn || filterPsPlus;
+    if (providerFilterActive) {
       list = list.filter(
         item =>
           (filterXcloud && item.xcloud) ||
@@ -1045,46 +1057,42 @@ export function useLibraryScreen() {
           (filterPsPlus && item.psplus),
       );
     }
-    if (filterWishlist) {
+    if (wishlistOn) {
       list = list.filter(item => wishlistKeys.has(item.key));
     }
-    if (filterFavorite) {
+    if (ownedMode && filterFavorite) {
       // Favorites are owned-only.
       list = list.filter(
         item => favoriteKeys.has(item.key) && isCatalogTitleOwned(item),
       );
     }
-    if (filterOwnership !== 'all') {
-      // Plain "Owned" (no provider filter) means playable via any service --
-      // isCatalogTitleOwned's OR-across-providers is right there. But
-      // combined with a provider filter (e.g. "PS Plus" + "Owned"), the user
-      // means "owned on that service", not "present under that service and
-      // owned on some other one" -- the OR check let a PS Plus title merely
-      // present in the catalog (not actually owned) pass as long as it
-      // happened to be owned via xCloud/GFN. Mirrors ps-plus-library's own
-      // filter, which checks only that service's isOwned. "Not owned" is the
-      // exact complement of the same test.
-      const providerFilterActive = filterXcloud || filterGfn || filterPsPlus;
-      const isOwned = (item: CatalogTitle) =>
-        providerFilterActive
-          ? (filterXcloud && !!item.xcloud?.hasEntitlement) ||
-            (filterGfn && !!item.gfn?.variants.some(v => v.owned)) ||
-            (filterPsPlus &&
-              (!!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog))
-          : isCatalogTitleOwned(item);
-      const wantOwned = filterOwnership === 'owned';
-      list = list.filter(item => isOwned(item) === wantOwned);
-    }
-    if (filterOnSale) {
+    // Plain Library/Store (no provider chip) splits on playable via any
+    // service -- isCatalogTitleOwned's OR-across-providers. With a provider
+    // chip it means "owned on that service", not "present under that service
+    // and owned on some other one" -- the OR check let a PS Plus title merely
+    // present in the catalog (not actually owned) pass as long as it
+    // happened to be owned via xCloud/GFN. Mirrors ps-plus-library's own
+    // filter, which checks only that service's isOwned. The Store side is
+    // the exact complement of the same test.
+    const isOwned = (item: CatalogTitle) =>
+      providerFilterActive
+        ? (filterXcloud && !!item.xcloud?.hasEntitlement) ||
+          (filterGfn && !!item.gfn?.variants.some(v => v.owned)) ||
+          (filterPsPlus &&
+            (!!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog))
+        : isCatalogTitleOwned(item);
+    list = list.filter(item => isOwned(item) === ownedMode);
+    if (!ownedMode && filterOnSale) {
       list = list.filter(item => saleDiscount(item) > 0);
     }
-    if (filterCatalog) {
+    if (!ownedMode && filterCatalog) {
       list = list.filter(
         item => isInGamePass(item, gamePassMap) || isInPsCatalog(item),
       );
     }
     return list;
   }, [
+    mode,
     catalog,
     filterXcloud,
     filterPsPlus,
@@ -1094,7 +1102,6 @@ export function useLibraryScreen() {
     filterWishlist,
     wishlistKeys,
     wishlistStubs,
-    filterOwnership,
     filterOnSale,
     filterCatalog,
     gamePassMap,
@@ -1165,6 +1172,12 @@ export function useLibraryScreen() {
           popularityScore(a, sortTables) - popularityScore(b, sortTables) ||
           a.title.localeCompare(b.title),
       );
+    } else if (sortMode === 'discount') {
+      // Biggest cut first; an undiscounted title (0) sorts after every sale.
+      list.sort(
+        (a, b) =>
+          saleDiscount(b) - saleDiscount(a) || a.title.localeCompare(b.title),
+      );
     } else if (sortMode === 'recent') {
       // Local play history, not a provider API -- see
       // entities/catalog-title/model/playHistory.ts. Keyed directly by the
@@ -1178,21 +1191,27 @@ export function useLibraryScreen() {
       );
     }
     return list;
-  }, [filtered, sortMode, sortTables, playHistory]);
+  }, [filtered, sortMode, sortTables, playHistory, saleDiscount]);
 
   // 'reco' was never an actual recommendation ranking -- it's just the
   // catalog's own unsorted order, which is alphabetical (publicGames.ts and
   // catalog.ts's mergeOwnedGames both sort by title before this screen ever
   // sees the list). Labeled for what it actually does instead of implying a
   // ranking that isn't there.
-  const sortOptions: {value: SortMode; label: string; scope: string}[] = [
-    {value: 'reco', label: t('SortByName'), scope: ''},
-    {value: 'newest', label: t('SortNewest'), scope: ''},
-    {value: 'popular', label: t('Popular'), scope: ''},
-    {value: 'recent', label: t('SortRecent'), scope: ''},
-  ];
+  const sortOptions: {value: SortMode; label: string}[] =
+    mode === 'owned'
+      ? [
+          {value: 'recent', label: t('SortRecent')},
+          {value: 'newest', label: t('SortNewest')},
+          {value: 'reco', label: t('SortByName')},
+        ]
+      : [
+          {value: 'newest', label: t('SortNewest')},
+          {value: 'reco', label: t('SortByName')},
+          {value: 'discount', label: t('SortDiscount')},
+        ];
   const activeSortLabel =
-    sortOptions.find(o => o.value === sortMode)?.label || t('SortRecent');
+    sortOptions.find(o => o.value === sortMode)?.label || sortOptions[0].label;
 
   // Square-tile grid. A denser 110/150 target read as too small for
   // browsing comfortably (was 260/300 before that pass) -- back up to a
@@ -1268,8 +1287,7 @@ export function useLibraryScreen() {
     wishlistKeys,
     toggleFavorite,
     toggleWishlist,
-    filterOwnership,
-    cycleOwnership,
+    mode,
     filterOnSale,
     setFilterOnSale,
     filterCatalog,
