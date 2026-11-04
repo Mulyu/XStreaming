@@ -100,6 +100,30 @@ export const LAYOUT_SNAP_GRID = 20;
 export const snapToGrid = (value: number, grid = LAYOUT_SNAP_GRID): number =>
   Math.round(value / grid) * grid;
 
+// Where a dragged element ended up (react-native-draggable's `bounds`).
+export type DragBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+// Snap an element so that its CENTER lands on a grid point, not its top-left
+// corner: a button, stick or pad of any size then lines up with the grid (and
+// with the others) around its middle. `left`/`top`/`width`/`height` describe
+// the element where it was dropped; the result is its new top-left, which is
+// what layouts store.
+export const snapCenterToGrid = (
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+  grid = LAYOUT_SNAP_GRID,
+): {x: number; y: number} => ({
+  x: snapToGrid(left + width / 2, grid) - width / 2,
+  y: snapToGrid(top + height / 2, grid) - height / 2,
+});
+
 // The single canonical default layout, shared by the in-game renderer and both
 // editors so the default (unedited) layout is identical everywhere. Positions
 // are top-left, in the play surface's pixel space.
