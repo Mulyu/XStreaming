@@ -52,7 +52,7 @@ import NativeStreamScreen from './pages/native-stream';
 import SettingsScreen from './pages/settings';
 import LibraryScreen from './pages/library';
 import LibraryTitleDetailScreen from './pages/library-title-detail';
-import StoreScreen from './pages/store';
+import ChartScreen from './pages/chart';
 import NativeGameMapScreen from './pages/native-game-map';
 import GameMapDetailScreen from './pages/game-map-detail';
 import InputMappingScreen from './pages/input-mapping';
@@ -149,7 +149,7 @@ const withTabScreen = (ScreenComponent: any) => {
 };
 
 const LibraryTabScreen = withTabScreen(LibraryScreen);
-const StoreTabScreen = withTabScreen(StoreScreen);
+const ChartTabScreen = withTabScreen(ChartScreen);
 const SettingsTabScreen = withTabScreen(SettingsScreen);
 
 const LoginBackgroundScreen = withPageBackground(LoginScreen);
@@ -175,7 +175,7 @@ function MainTabs() {
       screenOptions={{headerShown: false}}
       tabBar={props => <HubTabBar {...props} />}>
       <MainTab.Screen name="Library" component={LibraryTabScreen} />
-      <MainTab.Screen name="Store" component={StoreTabScreen} />
+      <MainTab.Screen name="Chart" component={ChartTabScreen} />
       <MainTab.Screen name="Settings" component={SettingsTabScreen} />
     </MainTab.Navigator>
   );

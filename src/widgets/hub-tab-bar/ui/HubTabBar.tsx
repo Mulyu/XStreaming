@@ -20,14 +20,37 @@ const ACCENT = palette.accent;
 // below explains why).
 export const TV_RAIL_WIDTH = 72;
 
-// Meta for each tab route, keyed by the route name registered in the bottom-tab
-// navigator. Keeping this here (not in the navigator) lets the bar stay a pure
+// The bar's entries. Library and Store are two views of the one 'Library'
+// route (its `mode` param picks owned / not owned -- a single screen instance
+// keeps the heavy catalog loading from running twice), so entries are not
+// 1:1 with routes: each names the route it goes to, plus the params that
+// select it. Keeping this here (not in the navigator) lets the bar stay a pure
 // presentational component driven by the navigation state.
-const TAB_META: Record<string, {labelKey: string; icon: string}> = {
-  Library: {labelKey: 'Library', icon: 'view-grid'},
-  Store: {labelKey: 'Store', icon: 'cart'},
-  Settings: {labelKey: 'Settings', icon: 'cog'},
+type TabEntry = {
+  key: string;
+  route: string;
+  params?: {mode: 'owned' | 'notOwned'};
+  labelKey: string;
+  icon: string;
 };
+const TAB_ENTRIES: TabEntry[] = [
+  {
+    key: 'library',
+    route: 'Library',
+    params: {mode: 'owned'},
+    labelKey: 'Library',
+    icon: 'view-grid',
+  },
+  {
+    key: 'store',
+    route: 'Library',
+    params: {mode: 'notOwned'},
+    labelKey: 'Store',
+    icon: 'cart',
+  },
+  {key: 'chart', route: 'Chart', labelKey: 'Chart', icon: 'chart-box'},
+  {key: 'settings', route: 'Settings', labelKey: 'Settings', icon: 'cog'},
+];
 
 // Custom tabBar for the bottom-tab navigator. It renders once and persists
 // across tab switches — only the screen content above it changes — so switching
@@ -65,31 +88,37 @@ function HubTabBar({state, navigation}: any) {
   // wherever the user already was. Kept for the rail too (a physical
   // controller's D-pad Down is still a valid way in, even though the rail
   // itself is also one D-pad Left away from anywhere).
+  const activeRoute = state.routes[state.index];
+  const activeMode =
+    activeRoute?.params?.mode === 'notOwned' ? 'notOwned' : 'owned';
+  const tabs = TAB_ENTRIES.flatMap(meta => {
+    const route = state.routes.find((r: any) => r.name === meta.route);
+    if (!route) {
+      return [];
+    }
+    const isActive =
+      activeRoute?.name === meta.route &&
+      (!meta.params || meta.params.mode === activeMode);
+    return [{route, meta, isActive}];
+  });
+
+  const activeKey = tabs.find((tab: any) => tab.isActive)?.meta.key;
+
   React.useEffect(() => {
     const sub = DeviceEventEmitter.addListener('onDpadDownLongPress', () => {
-      const activeRoute = state.routes[state.index];
-      const ref = activeRoute && tabRefs.current[activeRoute.key];
-      ref?.focus?.();
+      tabRefs.current[activeKey as string]?.focus?.();
     });
     return () => sub.remove();
-  }, [state]);
+  }, [activeKey]);
 
-  const tabs = state.routes
-    .map((route: any, index: number) => ({
-      route,
-      index,
-      meta: TAB_META[route.name],
-    }))
-    .filter((entry: any) => !!entry.meta);
-
-  const makeOnPress = (route: any, isActive: boolean) => () => {
+  const makeOnPress = (route: any, meta: TabEntry, isActive: boolean) => () => {
     const event = navigation.emit({
       type: 'tabPress',
       target: route.key,
       canPreventDefault: true,
     });
     if (!isActive && !event.defaultPrevented) {
-      navigation.navigate(route.name);
+      navigation.navigate(meta.route, meta.params);
     }
   };
 
@@ -107,22 +136,21 @@ function HubTabBar({state, navigation}: any) {
             paddingBottom: 16 + insets.bottom,
           },
         ]}>
-        {tabs.map(({route, index, meta}: any) => {
-          const isActive = state.index === index;
-          const isFocused = focusedKey === route.key;
+        {tabs.map(({route, meta, isActive}: any) => {
+          const isFocused = focusedKey === meta.key;
           const color = isActive ? ACCENT : inactiveColor;
           const icon = isActive ? meta.icon : `${meta.icon}-outline`;
 
           return (
             <Pressable
-              key={route.key}
+              key={meta.key}
               ref={r => {
-                tabRefs.current[route.key] = r;
+                tabRefs.current[meta.key] = r;
               }}
-              onPress={makeOnPress(route, isActive)}
-              onFocus={() => setFocusedKey(route.key)}
+              onPress={makeOnPress(route, meta, isActive)}
+              onFocus={() => setFocusedKey(meta.key)}
               onBlur={() =>
-                setFocusedKey(prev => (prev === route.key ? null : prev))
+                setFocusedKey(prev => (prev === meta.key ? null : prev))
               }
               android_ripple={{
                 color: alpha(palette.text, 0.15),
@@ -162,26 +190,25 @@ function HubTabBar({state, navigation}: any) {
           paddingBottom: 9 + insets.bottom,
         },
       ]}>
-      {tabs.map(({route, index, meta}: any) => {
-        const isActive = state.index === index;
+      {tabs.map(({route, meta, isActive}: any) => {
         const color = isActive ? ACCENT : inactiveColor;
 
         return (
           <Pressable
-            key={route.key}
+            key={meta.key}
             ref={r => {
-              tabRefs.current[route.key] = r;
+              tabRefs.current[meta.key] = r;
             }}
-            onPress={makeOnPress(route, isActive)}
-            onFocus={() => setFocusedKey(route.key)}
+            onPress={makeOnPress(route, meta, isActive)}
+            onFocus={() => setFocusedKey(meta.key)}
             onBlur={() =>
-              setFocusedKey(prev => (prev === route.key ? null : prev))
+              setFocusedKey(prev => (prev === meta.key ? null : prev))
             }
             android_ripple={{
               color: alpha(palette.text, 0.15),
               borderless: true,
             }}
-            style={[styles.tab, focusedKey === route.key && styles.tabFocused]}
+            style={[styles.tab, focusedKey === meta.key && styles.tabFocused]}
             accessibilityRole="button"
             accessibilityState={isActive ? {selected: true} : {}}
             accessibilityLabel={t(meta.labelKey)}>
