@@ -77,6 +77,13 @@ const press = (tree: renderer.ReactTestRenderer, title: string) => {
   act(() => target?.props.onPress());
 };
 
+const longPress = (tree: renderer.ReactTestRenderer, title: string) => {
+  const target = tree.root
+    .findAllByType(Pressable)
+    .find(p => p.findAll(n => n.props?.children === title).length > 0);
+  act(() => target?.props.onLongPress());
+};
+
 describe('provider account rows', () => {
   it('Xbox: a plain row with the user name; tapping signs in or out', () => {
     const onXcloudAccountPress = jest.fn();
@@ -131,5 +138,40 @@ describe('provider account rows', () => {
     expect(texts(tree)).toContain('Current user: psfan');
     press(tree, 'PsPlusAccountTitle');
     expect(onPsPlusAccountPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('copying a provider token', () => {
+  it("holding each account row copies that provider's token", () => {
+    const onCopyXboxToken = jest.fn();
+    longPress(
+      render({lane: 'xbox', isAuthed: true, onCopyXboxToken}),
+      'XboxAccountTitle',
+    );
+    expect(onCopyXboxToken).toHaveBeenCalledTimes(1);
+
+    const onCopyGfnToken = jest.fn();
+    longPress(
+      render({lane: 'gfn', gfnSignedIn: true, onCopyGfnToken}),
+      'GfnAccountTitle',
+    );
+    expect(onCopyGfnToken).toHaveBeenCalledTimes(1);
+
+    const onCopyPsPlusToken = jest.fn();
+    longPress(
+      render({lane: 'psplus', psPlusSignedIn: true, onCopyPsPlusToken}),
+      'PsPlusAccountTitle',
+    );
+    expect(onCopyPsPlusToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('the provider debug rows are gone', () => {
+    for (const lane of ['gfn', 'psplus']) {
+      const out = texts(
+        render({lane, gfnSignedIn: true, psPlusSignedIn: true}),
+      );
+      expect(out).not.toContain('SectionDebug');
+      expect(out.join('|')).not.toMatch(/DebugInfo|AccountInfo/);
+    }
   });
 });

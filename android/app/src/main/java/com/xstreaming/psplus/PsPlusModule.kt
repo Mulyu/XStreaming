@@ -214,18 +214,6 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 		}
 	}
 
-	/** Diagnostics: what Sony says about the account behind [npsso] (secrets hidden), or null. */
-	@ReactMethod
-	fun fetchAccountDiag(npsso: String?, promise: Promise) {
-		thread(name = "PsPlusAccountDiag") {
-			try {
-				promise.resolve(cloudCatalogFetchAccountDiag(npsso))
-			} catch (e: Exception) {
-				promise.resolve(null)
-			}
-		}
-	}
-
 	@ReactMethod
 	fun invalidateCatalogCache() {
 		val cacheDir = File(reactApplicationContext.cacheDir, "psplus-catalog")
@@ -345,32 +333,8 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 
 	// Overwritten (fopen "w+") by chiaki at the start of every startSession(),
 	// so it only ever holds the current/most recent session's log -- no
-	// rotation/cleanup needed. App-internal storage: no permissions required,
-	// and it's flushed after every line (log.c's log_cb_android_file), so
-	// getDebugLog() below sees current content even mid-session.
+	// rotation/cleanup needed. App-internal storage: no permissions required.
 	private fun debugLogFile(): File = File(reactApplicationContext.filesDir, "psplus_chiaki.log")
-
-	// No adb on most of this app's install base -- this is the only way for a
-	// user to hand over the native chiaki log (e.g. for a black-screen/resume
-	// report) at all. Capped well under Android's binder transaction limit
-	// (~1MB) so a long session's log can't fail to cross the RN bridge; the
-	// most recent lines matter most for a live repro, so trimming is from the
-	// front, not the back.
-	@ReactMethod
-	fun getDebugLog(promise: Promise) {
-		try {
-			val file = debugLogFile()
-			if (!file.exists()) {
-				promise.resolve("")
-				return
-			}
-			val text = file.readText()
-			val maxChars = 200_000
-			promise.resolve(if (text.length > maxChars) text.takeLast(maxChars) else text)
-		} catch (e: Exception) {
-			promise.reject("psplus_debug_log_failed", e.message, e)
-		}
-	}
 
 	@ReactMethod
 	fun setControllerState(state: ReadableMap) {

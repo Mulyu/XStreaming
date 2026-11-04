@@ -8,9 +8,16 @@ type Props = {
   title: string;
   description?: string;
   onPress: () => void;
+  // Long press (hold OK on a TV remote); optional.
+  onLongPress?: () => void;
 };
 
-const SettingItem: React.FC<Props> = ({title, description, onPress}) => {
+const SettingItem: React.FC<Props> = ({
+  title,
+  description,
+  onPress,
+  onLongPress,
+}) => {
   const {focused, onFocus, onBlur} = useTVFocus();
   const handlePress = () => {
     onPress && onPress();
@@ -30,6 +37,7 @@ const SettingItem: React.FC<Props> = ({title, description, onPress}) => {
           />
         )}
         onPress={handlePress}
+        onLongPress={onLongPress}
         onFocus={onFocus}
         onBlur={onBlur}
         style={focused && tvFocusRow}

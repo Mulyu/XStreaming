@@ -28,6 +28,7 @@ export default {
       'XAL認証に失敗しました。MSALログインを試してください。エラー:',
     'Loading...': '読み込み中...',
     'Press Nexus': 'Nexusを押す',
+    TokenCopyFailed: 'トークンをコピーできませんでした。',
     Disconnect: '切断',
     Input: '入力',
     Audio: 'オーディオ',
@@ -321,11 +322,6 @@ export default {
     GfnAccountSignedOutDesc: '未サインイン — タップしてサインイン',
     GfnSignOutConfirm: 'この端末でGeForce NOWからサインアウトしますか？',
     SectionDebug: 'デバッグ',
-    GfnCopyDebugInfoTitle: 'GFNデバッグ情報をコピー',
-    GfnCopyDebugInfoDesc:
-      'カタログの所有判定を調査するため、GFNのセッショントークンをクリップボードにコピーします。',
-    GfnDebugCopyFailed:
-      'コピーできませんでした — 再度サインインしてお試しください。',
     PsPlusSettings: 'PS Plus',
     PsPlusLogin: 'PlayStationにサインイン',
     PsPlusLoginPrompt:
@@ -383,15 +379,6 @@ export default {
     PsPlusBitrateTitle: 'ビットレート',
     PsPlusBitrateDesc:
       'PS Plusクラウドストリーミングのビットレートを設定します(注:回線が弱い場合、ビットレートを下げると改善することがあります)。',
-    PsPlusAccountInfoTitle: 'PS Plusのアカウント情報を確認',
-    PsPlusAccountInfoDesc:
-      'Sonyのセッション応答と、読み取り専用のアカウント照会の結果を表示（とコピー）します。PS Plusの契約状態がどこに出るかを調べるための診断です。秘密の値は伏せます。',
-    PsPlusAccountInfoFailed: 'アカウント情報を取得できませんでした。',
-    PsPlusCopyDebugInfoTitle: 'PS Plusのログをコピー',
-    PsPlusCopyDebugInfoDesc:
-      '直前のPS Plusセッションのログをクリップボードにコピーします。不具合報告の際にお使いください。',
-    PsPlusDebugCopyEmpty: 'まだPS Plusのセッションが実行されていません。',
-    PsPlusDebugCopyFailed: 'ログをコピーできませんでした。',
     AppCopyDebugInfoTitle: 'アプリのログをコピー',
     AppCopyDebugInfoDesc:
       'アプリのバックグラウンド/フォアグラウンド復帰や画面遷移などの直近のログをクリップボードにコピーします。不具合報告の際にお使いください。',

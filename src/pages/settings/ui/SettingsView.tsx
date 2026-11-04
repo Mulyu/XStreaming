@@ -95,9 +95,9 @@ const SettingsView: React.FC<Props> = ({
   onLowLatencyDecoderChange,
   onSignalingCloudChange,
   onGfnAccountPress,
-  onCopyGfnDebugInfo,
-  onCopyPsPlusDebugInfo,
-  onShowPsPlusAccountInfo,
+  onCopyXboxToken,
+  onCopyGfnToken,
+  onCopyPsPlusToken,
   onCopyAppDebugInfo,
   onPsPlusAccountPress,
   onXcloudAccountPress,
@@ -246,6 +246,7 @@ const SettingsView: React.FC<Props> = ({
                 : t('XcloudAccountSignedOutDesc')
             }
             onPress={onXcloudAccountPress}
+            onLongPress={onCopyXboxToken}
           />
 
           <SectionLabel title={t('SectionVideo')} />
@@ -329,6 +330,7 @@ const SettingsView: React.FC<Props> = ({
                 : t('GfnAccountSignedOutDesc')
             }
             onPress={onGfnAccountPress}
+            onLongPress={onCopyGfnToken}
           />
           <InfoRow
             title={t('GfnPlaytimeTitle')}
@@ -382,17 +384,6 @@ const SettingsView: React.FC<Props> = ({
             accent={palette.provider.gfn}
             emptyLabel={t('Auto')}
           />
-
-          {gfnSignedIn && (
-            <>
-              <SectionLabel title={t('SectionDebug')} />
-              <SettingItem
-                title={t('GfnCopyDebugInfoTitle')}
-                description={t('GfnCopyDebugInfoDesc')}
-                onPress={onCopyGfnDebugInfo}
-              />
-            </>
-          )}
         </ScrollView>
       )}
 
@@ -407,6 +398,7 @@ const SettingsView: React.FC<Props> = ({
                 : t('PsPlusAccountSignedOutDesc')
             }
             onPress={onPsPlusAccountPress}
+            onLongPress={onCopyPsPlusToken}
           />
 
           <SectionLabel title={t('SectionVideo')} />
@@ -446,18 +438,6 @@ const SettingsView: React.FC<Props> = ({
               accent={palette.provider.ps}
             />
           )}
-
-          <SectionLabel title={t('SectionDebug')} />
-          <SettingItem
-            title={t('PsPlusCopyDebugInfoTitle')}
-            description={t('PsPlusCopyDebugInfoDesc')}
-            onPress={onCopyPsPlusDebugInfo}
-          />
-          <SettingItem
-            title={t('PsPlusAccountInfoTitle')}
-            description={t('PsPlusAccountInfoDesc')}
-            onPress={onShowPsPlusAccountInfo}
-          />
         </ScrollView>
       )}
 

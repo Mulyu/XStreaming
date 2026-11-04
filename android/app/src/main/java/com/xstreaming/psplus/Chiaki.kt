@@ -196,7 +196,6 @@ private class ChiakiNative
 		@JvmStatic external fun cloudCatalogInvalidateCache(cacheDir: String)
 		@JvmStatic external fun cloudCatalogFetchOnlineId(npsso: String?): String?
 		@JvmStatic external fun cloudCatalogFetchPlusStatus(npsso: String?): Int
-		@JvmStatic external fun cloudCatalogFetchAccountDiag(npsso: String?): ByteArray?
 		@JvmStatic external fun cloudGaikaiLanguage(locale: String?): String
 		@JvmStatic external fun cloudSupportedLanguages(): Array<String>
 
@@ -402,10 +401,6 @@ fun cloudCatalogFetchOnlineId(npsso: String?): String? = ChiakiNative.cloudCatal
 
 /** The PS Plus membership state for [npsso]: 0 unknown, 1 active, 2 lapsed. Blocking -- background thread. */
 fun cloudCatalogFetchPlusStatus(npsso: String?): Int = ChiakiNative.cloudCatalogFetchPlusStatus(npsso)
-
-/** Diagnostics: the Kamaji session's account block as JSON (secrets hidden), or null. Blocking -- background thread. */
-fun cloudCatalogFetchAccountDiag(npsso: String?): String? =
-	ChiakiNative.cloudCatalogFetchAccountDiag(npsso)?.toString(Charsets.UTF_8)
 
 /** Delete every lib-owned cache file under [cacheDir] (e.g. on locale change). */
 fun cloudCatalogInvalidateCache(cacheDir: String) = ChiakiNative.cloudCatalogInvalidateCache(cacheDir)
