@@ -10,7 +10,6 @@ import {getSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
 import 'react-native-url-polyfill/auto';
 import TokenStore from './tokenstore';
-import {describeAuthError} from './authError';
 
 interface CodeChallenge {
   value: string;
@@ -472,32 +471,22 @@ export default class Xal {
       throw new Error('User token is missing. Please authenticate first');
     }
 
-    // Each step is named in the failure, so a 401 says whether the Microsoft
-    // account token, the device token or the Xbox sign-in rejected it.
-    const step = async <T>(name: string, run: () => Promise<T>): Promise<T> => {
-      try {
-        return await run();
-      } catch (error: any) {
-        log.error(`[refreshTokens] ${name} err:`, error);
-        throw new Error('[refreshTokens] ' + describeAuthError(name, error));
-      }
-    };
+    try {
+      const userToken = await this.refreshUserToken(curUserToken);
+      const deviceToken = await this.getDeviceTokenHack();
+      const sisuToken = await this.doSisuAuthorization(userToken, deviceToken);
 
-    const userToken = await step('refresh user token', () =>
-      this.refreshUserToken(curUserToken),
-    );
-    const deviceToken = await step('device token', () =>
-      this.getDeviceTokenHack(),
-    );
-    const sisuToken = await step('sisu authorization', () =>
-      this.doSisuAuthorization(userToken, deviceToken),
-    );
+      tokenStore.setUserToken(userToken);
+      tokenStore.setSisuToken(sisuToken);
+      tokenStore.save();
 
-    tokenStore.setUserToken(userToken);
-    tokenStore.setSisuToken(sisuToken);
-    tokenStore.save();
-
-    return {userToken, deviceToken, sisuToken};
+      return {userToken, deviceToken, sisuToken};
+    } catch (error: any) {
+      log.error('[refreshTokens] err:', error);
+      throw new Error(
+        '[refreshTokens] Failed to refresh tokens: ' + JSON.stringify(error),
+      );
+    }
   }
 
   exchangeRefreshTokenForXcloudTransferToken(
