@@ -42,8 +42,10 @@ import {
 import {
   fetchGfnSubscription,
   fetchGfnVpcId,
+  fetchGfnQueueStatus,
   fetchGfnRegions,
   GfnSubscriptionInfo,
+  GfnQueueStatus,
   GfnRegionOption,
 } from '../../../features/gfn-session';
 import {getSettings, saveSettings} from '../../../shared/lib/settings';
@@ -136,6 +138,9 @@ export function useSettingsScreen(navigation: any, route: any) {
     React.useState<GfnSubscriptionInfo | null>(null);
   const [gfnPlaytimeLoading, setGfnPlaytimeLoading] = React.useState(false);
   const [gfnPlaytimeFailed, setGfnPlaytimeFailed] = React.useState(false);
+  // Waiting-for-a-server figure for the account's zone; null = no figure.
+  const [gfnQueue, setGfnQueue] = React.useState<GfnQueueStatus | null>(null);
+  const [gfnQueueLoading, setGfnQueueLoading] = React.useState(false);
   const [gfnRegions, setGfnRegions] = React.useState<GfnRegionOption[]>([]);
 
   const sisuToken = authentication._tokenStore.getSisuToken();
@@ -425,6 +430,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     if (!gfnSignedIn) {
       setGfnSubscription(null);
       setGfnPlaytimeFailed(false);
+      setGfnQueue(null);
       return;
     }
     setGfnPlaytimeLoading(true);
@@ -437,6 +443,12 @@ export function useSettingsScreen(navigation: any, route: any) {
         return;
       }
       const vpcId = (await fetchGfnVpcId(token)) ?? undefined;
+      // The queue figure is a separate, best-effort source: it loads in
+      // parallel and never affects the playtime row.
+      setGfnQueueLoading(true);
+      (vpcId ? fetchGfnQueueStatus(vpcId) : Promise.resolve(null))
+        .then(setGfnQueue)
+        .finally(() => setGfnQueueLoading(false));
       const info = await fetchGfnSubscription(token, userId, vpcId);
       if (info) {
         setGfnSubscription(info);
@@ -552,6 +564,16 @@ export function useSettingsScreen(navigation: any, route: any) {
     return t('GfnPlaytimeLoading');
   };
 
+  const gfnQueueDescription = (): string => {
+    if (gfnQueue) {
+      return t('GfnQueueValue', {
+        waiting: gfnQueue.waiting,
+        minutes: gfnQueue.etaMinutes,
+      });
+    }
+    return gfnQueueLoading ? t('GfnQueueLoading') : t('GfnQueueUnavailable');
+  };
+
   const gfnRegionOptions = [
     {value: '', text: t('Auto')},
     ...gfnRegions.map(r => ({value: r.url, text: r.name})),
@@ -604,6 +626,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     gfnAccount,
     psAccount,
     gfnPlaytimeDescription: gfnPlaytimeDescription(),
+    gfnQueueDescription: gfnQueueDescription(),
     onChangeLane: setLane,
     updateSetting,
     onLocaleChange: handleLocaleChange,
