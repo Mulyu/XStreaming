@@ -75,7 +75,7 @@ export default {
     'Joystick dead zone': 'デッドゾーン',
     'Config joystick dead zone':
       'スティックのドリフトを抑えるために設定してください।',
-    'Set region': '地域設定',
+    'Set region': 'サーバーリージョン',
     'Changing the region allows you to use XGPU services without a proxy':
       '地域変更でプロキシなしで利用可能।',
     'The signaling server is a server for stream negotiation. If the host cannot connect, please try modifying this option':
@@ -104,9 +104,9 @@ export default {
     'Auto check update': '自動更新',
     'Whether check AnyStreaming updates automatically':
       '自動更新を確認するかどうか',
-    BasesSettings: '基本設定',
-    DisplaySettings: 'ディスプレイ設定',
-    GamepadSettings: 'ゲームパッド設定',
+    BasesSettings: '基本',
+    DisplaySettings: '表示',
+    GamepadSettings: 'ゲームパッド',
     vGamepadSettings: '仮想パッド設定',
     AudioSettings: 'オーディオ設定',
     XboxSettings: 'Xbox',
@@ -191,7 +191,7 @@ export default {
     GfnPlanRenews: '次回の更新日　{{date}}',
     SectionVideo: '映像',
     SectionRegionSignaling: 'リージョン・シグナリング',
-    SectionSignInLanguage: 'サインイン・言語',
+    SectionSignInLanguage: '言語',
     FlagGfnNoOp: '⚠️ GeForce NOW ストリーム中は効果がありません',
     Custom: 'カスタム',
     Size: 'サイズ',
@@ -338,7 +338,7 @@ export default {
     PsPlusSignedInButton: 'サインインしました',
     PsPlusLoginFailedDesc:
       'サインインを確認できませんでした — 上で完全にサインインしてから、もう一度お試しください。',
-    PsPlusAccountTitle: 'PlayStation Networkアカウント',
+    PsPlusAccountTitle: 'PS Plus アカウント',
     PsPlusSignedIn: 'サインイン済み',
     PsPlusAccountSignedOutDesc: '未サインイン — タップしてサインイン',
     PsPlusSignOutConfirm:
@@ -393,7 +393,7 @@ export default {
     XboxPlaytimeAdFreeUnlimited: '広告なし 無制限',
     XboxPlaytimeAdSupported: '広告つき 残り{{hours}}時間{{minutes}}分',
     XboxPlaytimeAdSupportedUnlimited: '広告つき 無制限',
-    XboxPlaytimeTitle: 'クラウドゲームの残り時間',
+    XboxPlaytimeTitle: '今月の残りプレイ時間',
     XboxPlaytimeLoading: '残り時間を確認中…',
     XboxPlaytimeUnavailable: '残り時間を確認できませんでした',
     XboxPlaytimeNone: 'このアカウントに時間制限はありません',
@@ -407,8 +407,7 @@ export default {
     GfnPlaytimeRemaining: '今月の残り {{hours}}時間{{minutes}}分',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
-    'Anti-idle max duration (minutes)':
-      'アンチアイドル: 維持する時間（分、0で無効）',
+    'Anti-idle max duration (minutes)': 'アンチアイドル',
     AntiIdleMaxDesc:
       'バックグラウンド中、最長この分数までセッションを維持し、超過すると切断を許可します。Xbox Cloud/GeForce NOWではカメラを微小に動かして放置切断を防ぐ方式です（注意: カメラが動くためゲームに影響することがあります）。PS Plusには防ぐべき放置切断がないため、時間経過後にそのまま切断します。0でこの制限を無効化（バックグラウンド中も無期限に接続が維持される場合があります）。',
     'Ultra low latency decoding': '超低遅延デコード',

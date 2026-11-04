@@ -53,7 +53,7 @@ const xcloud = [
   {
     name: 'signaling_cloud',
     type: 'radio',
-    title: t('Signal server') + '(xCloud)',
+    title: t('Signal server'),
     description: t(
       'The signaling server is a server for stream negotiation. If the host cannot connect, please try modifying this option',
     ),
