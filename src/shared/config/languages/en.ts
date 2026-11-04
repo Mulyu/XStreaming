@@ -305,6 +305,8 @@ export default {
     GfnLaunchStarting: 'Starting your session…',
     GfnConnectingRegion: 'Connecting via {{region}}…',
     GfnLaunchFailed: 'Could not start the stream.',
+    GfnLaunchQueued: 'In the GeForce NOW queue — position {{n}}',
+    GfnQueueNotifyPosition: 'GeForce NOW queue: position {{n}}',
     GfnQueueKeepAlive: 'Waiting in the GeForce NOW queue…',
     GfnReadyNotifyBody: 'Your session is ready — tap to start.',
     StreamReadyNotifyBody: 'Connected — tap to return to your game.',
