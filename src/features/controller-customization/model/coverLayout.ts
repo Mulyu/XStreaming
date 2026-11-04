@@ -65,3 +65,18 @@ export const saveCoverLayout = (profileName: string, layout: CoverButton[]) => {
   map[profileName || ''] = layout;
   storage.set(STORE_KEY, JSON.stringify(map));
 };
+
+// Gives `to` its own copy of `from`'s cover layout (nothing when `from` has
+// none, so `to` keeps following the default).
+export const copyCoverLayout = (from: string, to: string) => {
+  const map = readMap();
+  const layout = map[from || ''];
+  if (Array.isArray(layout) && layout.length) {
+    map[to || ''] = layout.map(button => ({...button}));
+  } else {
+    delete map[to || ''];
+  }
+  storage.set(STORE_KEY, JSON.stringify(map));
+};
+
+export const clearCoverLayouts = () => storage.delete(STORE_KEY);

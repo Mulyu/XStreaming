@@ -30,7 +30,6 @@ export type Settings = {
   native_portrait_mode: boolean;
   native_portrait_gamepad_layout: any[];
   native_low_latency_decoder: boolean;
-  custom_virtual_gamepad: string;
   gamepad_maping: Record<string, number> | null;
   native_gamepad_maping: Record<string, number> | null;
   polling_rate: number;
@@ -98,7 +97,6 @@ const defaultSettings: Settings = {
   native_portrait_mode: false,
   native_portrait_gamepad_layout: [],
   native_low_latency_decoder: false,
-  custom_virtual_gamepad: '',
   gamepad_maping: null,
   native_gamepad_maping: null,
   polling_rate: 62.5,

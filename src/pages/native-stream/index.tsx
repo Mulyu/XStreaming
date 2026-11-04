@@ -29,7 +29,8 @@ import {getSettings, saveSettings} from '../../shared/lib/settings';
 import {
   saveVirtualGamepadLayout as saveGamepadLayout,
   getVirtualGamepadLayouts as getGamepadLayouts,
-  deleteVirtualGamepadLayout as deleteGamepadProfile,
+  ensureGameProfile,
+  resetGameProfile,
   getSwipeConfig,
   setSwipeConfig,
   getJoystickMode,
@@ -37,10 +38,7 @@ import {
   getSensorConfig,
   setSensorConfig,
   getCoverEnabled,
-  getLastProfileForGame,
-  setLastProfileForGame,
   getCoverLayout,
-  buildDefaultLayout,
   SWIPE_AIM_NAME,
   createDefaultSwipePad,
 } from '../../features/controller-customization';
@@ -48,11 +46,7 @@ import {useTranslation} from 'react-i18next';
 import {GfnStreamAdapter} from '../../features/gfn-session';
 import BackgroundTimer from 'react-native-background-timer';
 import {debugFactory} from '../../shared/lib/debug';
-import {
-  GAMEPAD_MAPING,
-  XBOX_360_GAMEPAD_MAPING,
-  VirtualGamepad,
-} from '../../entities/gamepad';
+import {GAMEPAD_MAPING, XBOX_360_GAMEPAD_MAPING} from '../../entities/gamepad';
 import PerfPanel from './ui/PerfPanel';
 import StreamControlRail, {StreamInputMode} from './ui/StreamControlRail';
 import RTCFsrView from '../../shared/ui/RTCFsrView';
@@ -100,7 +94,6 @@ const CONNECTED = 'connected';
 const CLOSED = 'closed';
 const FAILED = 'failed';
 const DUALSENSE = 'DualSenseController';
-const LIVE_GAMEPAD_PROFILE = 'LiveLayout';
 // Mouse aim when the profile has no swipe-aim sensitivity (0 = off for the
 // touch trackpad, but a mouse still needs to aim).
 const PHYSICAL_MOUSE_SENSITIVITY = 20;
@@ -318,8 +311,22 @@ export function NativeStreamScreenBase({
   const [performance, setPerformance] = React.useState<any>({});
   const [showPerformance, setShowPerformance] = React.useState(false);
   const [showGamepadEditor, setShowGamepadEditor] = React.useState(false);
-  const [editorProfile, setEditorProfile] = React.useState('');
-  const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
+  // This game's own touch-controller profile: made from the default the first
+  // time the game is launched, and only changed by customizing the controller
+  // in the game. The key is per game and per service (an xCloud title carries
+  // it as `sessionId`; GFN launches never set that, only `appId`).
+  const gameProfileKey =
+    route.params?.streamType === 'gfn'
+      ? route.params?.appId
+        ? `gfn:${route.params.appId}`
+        : ''
+      : route.params?.sessionId
+      ? `xcloud:${route.params.sessionId}`
+      : '';
+  const gamepadProfile = React.useMemo(
+    () => ensureGameProfile(gameProfileKey),
+    [gameProfileKey],
+  );
   const [gamepadLayoutVersion, setGamepadLayoutVersion] = React.useState(0);
   const [swipeConfigVersion, setSwipeConfigVersion] = React.useState(0);
   // Mirrors which macro name(s) currently own a running loop/turbo, but as
@@ -1313,7 +1320,7 @@ export function NativeStreamScreenBase({
     // (which source, and its baked-in sensitivity scale) can only be
     // (re)started, so picking up a different profile's gyro config needs a
     // reconnect, same as this block's global predecessor always did.
-    const sensorCfg = getSensorConfig(_settings.custom_virtual_gamepad || '');
+    const sensorCfg = getSensorConfig(gamepadProfile);
     if (sensorCfg.mode) {
       const sensorManager =
         sensorCfg.mode === 2 ? GamepadSensorModule : SensorModule;
@@ -2160,6 +2167,7 @@ export function NativeStreamScreenBase({
     };
   }, [
     t,
+    gamepadProfile,
     route.params?.sessionId,
     route.params?.streamType,
     route.params?.appId,
@@ -2654,18 +2662,21 @@ export function NativeStreamScreenBase({
   // React to cover present-capability changes (device opened/closed): keep the
   // availability + presented flags in sync and auto-present the cover controls
   // when the device is unfolded during a game, so no manual step is needed.
-  const handleCoverStatus = React.useCallback((s: string) => {
-    setCoverAvailable(s === 'AVAILABLE' || s === 'ACTIVE');
-    setCoverPresented(s === 'ACTIVE');
-    if (
-      s === 'AVAILABLE' &&
-      connectStateRef.current === CONNECTED &&
-      !coverHiddenRef.current &&
-      getCoverEnabled(getSettings().custom_virtual_gamepad || '')
-    ) {
-      CoverDisplayManager?.present?.('XCoverScreen')?.catch?.(() => {});
-    }
-  }, []);
+  const handleCoverStatus = React.useCallback(
+    (s: string) => {
+      setCoverAvailable(s === 'AVAILABLE' || s === 'ACTIVE');
+      setCoverPresented(s === 'ACTIVE');
+      if (
+        s === 'AVAILABLE' &&
+        connectStateRef.current === CONNECTED &&
+        !coverHiddenRef.current &&
+        getCoverEnabled(gamepadProfile)
+      ) {
+        CoverDisplayManager?.present?.('XCoverScreen')?.catch?.(() => {});
+      }
+    },
+    [gamepadProfile],
+  );
 
   React.useEffect(() => {
     const sub = DeviceEventEmitter.addListener(
@@ -2688,9 +2699,7 @@ export function NativeStreamScreenBase({
       onPressOut: name => coverPressOutRef.current(name),
     });
     // Cover buttons follow the active touch-controller profile.
-    coverGamepadBus.setLayout(
-      getCoverLayout(getSettings().custom_virtual_gamepad || ''),
-    );
+    coverGamepadBus.setLayout(getCoverLayout(gamepadProfile));
     coverGamepadBus.setActive(true);
     CoverDisplayManager?.getStatus?.()
       .then(handleCoverStatus)
@@ -2701,7 +2710,7 @@ export function NativeStreamScreenBase({
       CoverDisplayManager?.dismiss?.();
       setCoverPresented(false);
     };
-  }, [connectState, handleCoverStatus]);
+  }, [connectState, handleCoverStatus, gamepadProfile]);
 
   // Virtual gamepad stick move
   const handleStickMove = (id, data) => {
@@ -2734,9 +2743,9 @@ export function NativeStreamScreenBase({
   // Swipe-aim is configured per touch-controller profile, so it follows the
   // active profile. Re-read when the profile or its saved config changes.
   const activeSwipe = React.useMemo(
-    () => getSwipeConfig(settings.custom_virtual_gamepad || ''),
+    () => getSwipeConfig(gamepadProfile),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [settings.custom_virtual_gamepad, swipeConfigVersion],
+    [gamepadProfile, swipeConfigVersion],
   );
 
   // The swipe-aim trackpad rectangle for the active profile (from its layout;
@@ -2744,25 +2753,18 @@ export function NativeStreamScreenBase({
   const activeSwipeRect = React.useMemo(() => {
     const {width, height} = Dimensions.get('window');
     const fallback = createDefaultSwipePad(width, height);
-    const name = settings.custom_virtual_gamepad;
-    if (name) {
-      const layout = getGamepadLayouts()[name];
-      const pad = Array.isArray(layout)
-        ? layout.find((b: any) => b?.name === SWIPE_AIM_NAME)
-        : null;
-      if (pad) {
-        return pad;
-      }
-    }
-    return fallback;
+    const layout = getGamepadLayouts()[gamepadProfile];
+    const pad = Array.isArray(layout)
+      ? layout.find((b: any) => b?.name === SWIPE_AIM_NAME)
+      : null;
+    return pad || fallback;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.custom_virtual_gamepad, gamepadLayoutVersion]);
+  }, [gamepadProfile, gamepadLayoutVersion]);
 
   // Rebuild the set of turbo-enabled button names, and the Macro1/2/3 button
   // configs, for the active profile.
   React.useEffect(() => {
-    const name = settings.custom_virtual_gamepad;
-    const layout = name ? getGamepadLayouts()[name] : null;
+    const layout = getGamepadLayouts()[gamepadProfile];
     const set = new Set<string>();
     const macroConfigs = new Map<string, any>();
     const holdSet = new Set<string>();
@@ -2782,7 +2784,7 @@ export function NativeStreamScreenBase({
     turboSetRef.current = set;
     holdToggleSetRef.current = holdSet;
     macroConfigsRef.current = macroConfigs;
-  }, [settings.custom_virtual_gamepad, gamepadLayoutVersion]);
+  }, [gamepadProfile, gamepadLayoutVersion]);
 
   // Clear any running turbo timers when leaving the stream screen.
   React.useEffect(() => {
@@ -2795,10 +2797,10 @@ export function NativeStreamScreenBase({
   // Virtual-stick mode (0 = fixed, 1 = free) for the active profile; the
   // per-profile override wins, else Free by default.
   const activeJoystickMode = React.useMemo(() => {
-    const stored = getJoystickMode(settings.custom_virtual_gamepad || '');
+    const stored = getJoystickMode(gamepadProfile);
     return stored === null ? 1 : stored;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.custom_virtual_gamepad, swipeConfigVersion]);
+  }, [gamepadProfile, swipeConfigVersion]);
 
   // Swipe-to-aim: translate a finger drag into right-stick (camera) velocity,
   // then recentre shortly after the finger stops moving so a still finger means
@@ -2941,92 +2943,9 @@ export function NativeStreamScreenBase({
     handleCloseControlRail();
   }, [handleCloseControlRail, t, webrtcClient]);
 
-  const getActiveProfileName = React.useCallback(() => {
-    return settings.custom_virtual_gamepad || LIVE_GAMEPAD_PROFILE;
-  }, [settings.custom_virtual_gamepad]);
-
-  const refreshGamepadProfiles = React.useCallback(() => {
-    setGamepadProfiles(Object.keys(getGamepadLayouts()));
-  }, []);
-
   const handleOpenGamepadEditor = React.useCallback(() => {
-    refreshGamepadProfiles();
-    setEditorProfile(getActiveProfileName());
     setShowGamepadEditor(true);
-  }, [getActiveProfileName, refreshGamepadProfiles]);
-
-  // The stable per-title id the last-used-profile memory is keyed on. xCloud
-  // titles carry it as `sessionId`; GFN launches never set that (only
-  // `appId`, see features/launch-title/App.tsx shortcut relaunch), so
-  // falling back to `sessionId` alone silently no-ops the feature for every
-  // GFN game.
-  const getProfileGameId = React.useCallback(() => {
-    return route.params?.streamType === 'gfn'
-      ? String(route.params?.appId || '')
-      : String(route.params?.sessionId || '');
-  }, [route.params?.streamType, route.params?.sessionId, route.params?.appId]);
-
-  // Switch the live/active touch layout. '' selects the built-in Default.
-  const applyActiveProfile = React.useCallback(
-    (name: string) => {
-      const next = {...getSettings(), custom_virtual_gamepad: name};
-      saveSettings(next);
-      setSettings(next);
-      setEditorProfile(name || LIVE_GAMEPAD_PROFILE);
-      setGamepadLayoutVersion(prev => prev + 1);
-      setSwipeConfigVersion(prev => prev + 1);
-      coverGamepadBus.setLayout(getCoverLayout(name || ''));
-      setShowVirtualGamepad(true);
-      // Remember this as the profile last used for this game so it is restored
-      // the next time the game launches.
-      setLastProfileForGame(getProfileGameId(), name);
-    },
-    [getProfileGameId],
-  );
-
-  const handleSwitchGamepadProfile = React.useCallback(
-    (name: string) => {
-      applyActiveProfile(name);
-    },
-    [applyActiveProfile],
-  );
-
-  const handleCreateGamepadProfile = React.useCallback(
-    (rawName: string, copyFrom = '') => {
-      const name = rawName.trim();
-      if (!name) {
-        return;
-      }
-      const layouts = getGamepadLayouts();
-      if (!layouts[name]) {
-        const source = copyFrom && layouts[copyFrom];
-        const seed = Array.isArray(source)
-          ? // Copy an existing profile's layout as the starting point.
-            source.map((button: any) => ({...button}))
-          : (() => {
-              const {width, height} = Dimensions.get('window');
-              return buildDefaultLayout(width, height);
-            })();
-        saveGamepadLayout(name, seed);
-      }
-      refreshGamepadProfiles();
-      applyActiveProfile(name);
-    },
-    [applyActiveProfile, refreshGamepadProfiles],
-  );
-
-  const handleDeleteGamepadProfile = React.useCallback(
-    (name: string) => {
-      if (!name) {
-        return;
-      }
-      deleteGamepadProfile(name);
-      refreshGamepadProfiles();
-      // Fall back to the built-in Default after removing the active profile.
-      applyActiveProfile('');
-    },
-    [applyActiveProfile, refreshGamepadProfiles],
-  );
+  }, []);
 
   const handleSaveGamepadLayout = (
     layout: ButtonConfig[],
@@ -3034,76 +2953,32 @@ export function NativeStreamScreenBase({
     joystickMode?: number,
     sensor?: SensorConfig,
   ) => {
-    const profileName = editorProfile || getActiveProfileName();
-    saveGamepadLayout(profileName, layout);
+    saveGamepadLayout(gamepadProfile, layout);
     if (swipe) {
-      // Swipe-aim is per-profile; store it under the profile that will be
-      // active after this save (the render gate keys off that name).
-      setSwipeConfig(profileName, swipe);
+      setSwipeConfig(gamepadProfile, swipe);
     }
     if (joystickMode === 0 || joystickMode === 1) {
-      setJoystickMode(profileName, joystickMode);
+      setJoystickMode(gamepadProfile, joystickMode);
     }
     if (sensor) {
-      setSensorConfig(profileName, sensor);
+      setSensorConfig(gamepadProfile, sensor);
     }
-    if (!settings.custom_virtual_gamepad) {
-      settings.custom_virtual_gamepad = profileName;
-    }
-    saveSettings(settings);
-    setSettings({...settings});
     setGamepadLayoutVersion(prev => prev + 1);
     setSwipeConfigVersion(prev => prev + 1);
     setShowVirtualGamepad(true);
     setShowGamepadEditor(false);
-    setLastProfileForGame(
-      getProfileGameId(),
-      settings.custom_virtual_gamepad || '',
-    );
   };
 
-  // On launch, switch to the touch-controller profile last used for this game.
-  const profileRestoredRef = React.useRef(false);
-  React.useEffect(() => {
-    if (profileRestoredRef.current) {
-      return;
-    }
-    profileRestoredRef.current = true;
-    const gameId = getProfileGameId();
-    if (!gameId) {
-      return;
-    }
-    const last = getLastProfileForGame(gameId);
-    if (last === null) {
-      return;
-    }
-    // '' (Default) is always valid; a named profile must still exist.
-    if (last !== '' && !getGamepadLayouts()[last]) {
-      return;
-    }
-    const cur = getSettings();
-    if ((cur.custom_virtual_gamepad || '') === last) {
-      return;
-    }
-    const next = {...cur, custom_virtual_gamepad: last};
-    saveSettings(next);
-    setSettings(next);
+  // Throws away this game's customizations: its profile is made again from
+  // the default as it is now.
+  const handleResetGamepadProfile = () => {
+    resetGameProfile(gameProfileKey);
+    coverGamepadBus.setLayout(getCoverLayout(gamepadProfile));
     setGamepadLayoutVersion(prev => prev + 1);
     setSwipeConfigVersion(prev => prev + 1);
-  }, [getProfileGameId]);
-
-  // Once connected, remember whatever profile is active for this game, so a
-  // game the user never re-profiles still restores its current layout.
-  React.useEffect(() => {
-    if (connectState !== CONNECTED) {
-      return;
-    }
-    const gameId = getProfileGameId();
-    if (!gameId) {
-      return;
-    }
-    setLastProfileForGame(gameId, getSettings().custom_virtual_gamepad || '');
-  }, [connectState, getProfileGameId]);
+    setShowVirtualGamepad(true);
+    setShowGamepadEditor(false);
+  };
 
   const savePortraitGamepadLayout = React.useCallback(
     (layout: PortraitGamepadControl[]) => {
@@ -3281,33 +3156,19 @@ export function NativeStreamScreenBase({
       swipeAimIsActive: isSwipeAimActive,
     };
 
-    const useCustomVirtualGamepad = settings.custom_virtual_gamepad !== '';
-    if (useCustomVirtualGamepad) {
-      return (
-        <CustomVirtualGamepad
-          title={settings.custom_virtual_gamepad}
-          opacity={0.7}
-          joystickMode={activeJoystickMode}
-          onPressIn={handleButtonPressIn}
-          onPressOut={handleButtonPressOut}
-          onStickMove={handleStickMove}
-          refreshKey={gamepadLayoutVersion}
-          loopingMacroNames={loopingMacroNames}
-          {...swipeAimProps}
-        />
-      );
-    } else {
-      return (
-        <VirtualGamepad
-          opacity={0.7}
-          joystickMode={activeJoystickMode}
-          onPressIn={handleButtonPressIn}
-          onPressOut={handleButtonPressOut}
-          onStickMove={handleStickMove}
-          {...swipeAimProps}
-        />
-      );
-    }
+    return (
+      <CustomVirtualGamepad
+        title={gamepadProfile}
+        opacity={0.7}
+        joystickMode={activeJoystickMode}
+        onPressIn={handleButtonPressIn}
+        onPressOut={handleButtonPressOut}
+        onStickMove={handleStickMove}
+        refreshKey={gamepadLayoutVersion}
+        loopingMacroNames={loopingMacroNames}
+        {...swipeAimProps}
+      />
+    );
   };
 
   // GFN-only mouse trackpad: relative move + click/right-click/scroll for
@@ -3557,21 +3418,17 @@ export function NativeStreamScreenBase({
   // profile, placed the same way as turbo/hold-toggle gamepad buttons (see
   // CustomGamepad.tsx / VirtualGamepadEditor.tsx). Shown alongside the full
   // keyboard overlay above, not instead of it -- independent visibility.
-  // Like turbo/macro/hold-toggle, this only works for a named custom profile:
-  // the built-in Default (settings.custom_virtual_gamepad === '') renders via
-  // the fully static VirtualGamepad, which has no layout data to read.
   const renderCustomKeyButtons = () => {
     if (
       portraitMode ||
       isInPictureInPicture ||
       route.params?.streamType !== 'gfn' ||
       connectState !== CONNECTED ||
-      !showNativeTouch ||
-      !settings.custom_virtual_gamepad
+      !showNativeTouch
     ) {
       return null;
     }
-    const layout = getGamepadLayouts()[settings.custom_virtual_gamepad] || [];
+    const layout = getGamepadLayouts()[gamepadProfile] || [];
     return (
       <CustomKeyButtons
         layout={layout}
@@ -3838,30 +3695,19 @@ export function NativeStreamScreenBase({
 
       <VirtualGamepadEditor
         visible={!portraitMode && showGamepadEditor && !isInPictureInPicture}
-        profileName={editorProfile || getActiveProfileName()}
-        profiles={gamepadProfiles}
-        activeProfile={settings.custom_virtual_gamepad || ''}
-        swipeSensitivity={
-          getSwipeConfig(editorProfile || getActiveProfileName()).sensitivity
-        }
-        swipeInvertY={
-          getSwipeConfig(editorProfile || getActiveProfileName()).invertY
-        }
-        swipeActivation={
-          getSwipeConfig(editorProfile || getActiveProfileName()).activation
-        }
-        swipeAcceleration={
-          getSwipeConfig(editorProfile || getActiveProfileName()).acceleration
-        }
-        joystickMode={
-          getJoystickMode(editorProfile || getActiveProfileName()) ?? 1
-        }
-        sensorConfig={getSensorConfig(editorProfile || getActiveProfileName())}
+        profileName={gamepadProfile}
+        profileLabel={route.params?.title}
+        swipeSensitivity={getSwipeConfig(gamepadProfile).sensitivity}
+        swipeInvertY={getSwipeConfig(gamepadProfile).invertY}
+        swipeActivation={getSwipeConfig(gamepadProfile).activation}
+        swipeAcceleration={getSwipeConfig(gamepadProfile).acceleration}
+        joystickMode={getJoystickMode(gamepadProfile) ?? 1}
+        sensorConfig={getSensorConfig(gamepadProfile)}
         onSave={handleSaveGamepadLayout}
         onCancel={() => setShowGamepadEditor(false)}
-        onSwitchProfile={handleSwitchGamepadProfile}
-        onCreateProfile={handleCreateGamepadProfile}
-        onDeleteProfile={handleDeleteGamepadProfile}
+        onResetToDefault={
+          gameProfileKey ? handleResetGamepadProfile : undefined
+        }
       />
 
       {renderControlRail()}

@@ -64,13 +64,10 @@ export default {
     'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
       '自訂虛擬按鍵位置可能跟實際渲染存在誤差，請以實際效果為準',
     'Customize virtual buttons': '自訂虚拟按键',
-    'Customize buttons of virtual gamepad':
-      '自訂属于自己的虚拟按键布局，可以编辑多套按键布局并按需使用',
     'Edit Virtual Gamepad': '編輯虛擬手柄',
     'Click on an element to set its size and display':
       '👆点击元素設定元素大小及顯示',
     'Drag elements to adjust their position': '✋拖动元素调整位置',
-    'Name can not be empty': '名称不能为空',
     noAllow:
       'Permission denied for streaming or cloud gaming. Please verify your login status and try logging in again. For cloud gaming, ensure you have an active XGPU subscription. For non-XGPU games, verify that you own the game',
     homeNoAllow: '串流權限檢查失敗，請檢查登入是否過期並嘗試重新登入',

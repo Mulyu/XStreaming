@@ -65,14 +65,11 @@ export default {
     'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
       'Custom virtual button positions may differ from actual rendering. Use the actual result as reference.',
     'Customize virtual buttons': 'Virtuelle Tasten anpassen',
-    'Customize buttons of virtual gamepad':
-      'Customize your virtual gamepad layout. You can edit multiple layouts and use them as needed.',
     'Edit Virtual Gamepad': 'Virtuelles Gamepad bearbeiten',
     'Click on an element to set its size and display':
       'Tap an element to set its size and visibility',
     'Drag elements to adjust their position':
       'Elemente ziehen, um ihre Position anzupassen',
-    'Name can not be empty': 'Name cannot be empty',
     noAllow:
       'You do not have permission to start cloud gaming. Check whether login has expired and log in again. For cloud games, make sure you have XGPU. For non-XGPU games, make sure you own the game.',
     homeNoAllow:

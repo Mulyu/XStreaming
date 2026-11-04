@@ -6,7 +6,8 @@ const log = debugFactory('touchProfileStore');
 // Per touch-controller-profile swipe-aim config, keyed by profile name
 // ('' = the built-in Default profile).
 const SWIPE_KEY = 'user.profileSwipe';
-// The profile last used for each game, keyed by the game's titleId.
+// What each game used to remember as its last-used profile (no longer read;
+// only cleared by clearTouchProfiles).
 const GAME_KEY = 'user.gameLastProfile';
 // Per-profile virtual-stick mode override (0 = fixed, 1 = free). Absent = fall
 // back to Free.
@@ -169,19 +170,27 @@ export const setCoverEnabled = (profileName: string, enabled: boolean) => {
   writeMap(COVER_KEY, map);
 };
 
-export const getLastProfileForGame = (gameId: string): string | null => {
-  if (!gameId) {
-    return null;
-  }
-  const value = readMap(GAME_KEY)[gameId];
-  return typeof value === 'string' ? value : null;
+// Copies everything a profile carries besides its button layout (swipe-aim,
+// stick mode, gyro-aim, cover flag) to another profile. Only what the source
+// actually has is copied, so an unset value stays unset (and keeps falling
+// back to its default) on the copy.
+export const copyTouchProfile = (from: string, to: string) => {
+  [SWIPE_KEY, JOYSTICK_KEY, SENSOR_KEY, COVER_KEY].forEach(key => {
+    const map = readMap(key);
+    const value = map[from || ''];
+    if (value === undefined) {
+      delete map[to || ''];
+    } else {
+      map[to || ''] = typeof value === 'object' ? {...value} : value;
+    }
+    writeMap(key, map);
+  });
 };
 
-export const setLastProfileForGame = (gameId: string, profileName: string) => {
-  if (!gameId) {
-    return;
-  }
-  const map = readMap(GAME_KEY);
-  map[gameId] = profileName || '';
-  writeMap(GAME_KEY, map);
+// Forgets every profile's touch settings and every game's remembered profile
+// (the one-time clean-out when profiles stopped being user-managed).
+export const clearTouchProfiles = () => {
+  [SWIPE_KEY, JOYSTICK_KEY, SENSOR_KEY, COVER_KEY, GAME_KEY].forEach(key =>
+    storage.delete(key),
+  );
 };

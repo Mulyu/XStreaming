@@ -2,8 +2,8 @@ import React from 'react';
 import {useCustomGamepad} from './model/useCustomGamepad';
 import {VirtualGamepadEditor} from '../../widgets/virtual-gamepad-editor';
 
-function CustomGamepadScreen({navigation, route}) {
-  const vm = useCustomGamepad(navigation, route);
+function CustomGamepadScreen({navigation}) {
+  const vm = useCustomGamepad(navigation);
   return <VirtualGamepadEditor {...vm} />;
 }
 

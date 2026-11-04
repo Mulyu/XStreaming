@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import {View, StyleSheet, Dimensions, Alert, ScrollView} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {
   Portal,
@@ -17,8 +11,6 @@ import {
   Divider,
   Button,
   IconButton,
-  TextInput,
-  Chip,
   Checkbox,
   Switch,
   useTheme,
@@ -58,11 +50,11 @@ export type {ButtonConfig};
 
 export interface VirtualGamepadEditorProps {
   visible: boolean;
+  // The profile being edited: the default, or one game's own.
   profileName: string;
-  // Saved custom-profile names (excluding the built-in Default).
-  profiles?: string[];
-  // Currently active selection: '' = built-in Default, else a profile name.
-  activeProfile?: string;
+  // What the toolbar calls the profile being edited (the game's name);
+  // "Default" when omitted.
+  profileLabel?: string;
   // This profile's swipe-aim config (per-profile, edited here).
   swipeSensitivity?: number;
   swipeInvertY?: boolean;
@@ -89,12 +81,10 @@ export interface VirtualGamepadEditorProps {
     sensor: SensorConfig,
   ) => void;
   onCancel: () => void;
-  // Switch the live/active layout: '' selects the built-in Default.
-  onSwitchProfile?: (name: string) => void;
-  // copyFrom: '' = seed from the built-in Default layout, else copy that
-  // existing profile's layout as the starting point.
-  onCreateProfile?: (name: string, copyFrom: string) => void;
-  onDeleteProfile?: (name: string) => void;
+  // Only in a game: throws away this game's customizations and makes its
+  // profile again from the default. When given, the toolbar's Reset does this
+  // (after a confirmation) instead of resetting to the built-in layout.
+  onResetToDefault?: () => void;
 }
 
 const buildDefaultButtons = (): ButtonConfig[] => {
@@ -163,33 +153,10 @@ const MacroButtonCheckboxItem: React.FC<{
   );
 };
 
-// Backs both the standalone "Default" chip and the profiles.map() chips in
-// the profile modal's "Copy from" row.
-const CopyFromChip: React.FC<{
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}> = ({label, selected, onPress}) => {
-  const {focused, onFocus, onBlur} = useTVFocus();
-  return (
-    <Chip
-      compact
-      selected={selected}
-      showSelectedCheck
-      onPress={onPress}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      style={[styles.copyChip, focused && tvFocusRing]}>
-      {label}
-    </Chip>
-  );
-};
-
 const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   visible,
   profileName,
-  profiles = [],
-  activeProfile = '',
+  profileLabel,
   swipeSensitivity = 0,
   swipeInvertY = false,
   swipeActivation = 4,
@@ -198,9 +165,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   sensorConfig = DEFAULT_SENSOR,
   onSave,
   onCancel,
-  onSwitchProfile,
-  onCreateProfile,
-  onDeleteProfile,
+  onResetToDefault,
 }) => {
   const {t} = useTranslation();
   const theme = useTheme();
@@ -224,9 +189,6 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     step: VirtualMacroStep;
   } | null>(null);
   const [showButtonModal, setShowButtonModal] = React.useState(false);
-  const [showProfileModal, setShowProfileModal] = React.useState(false);
-  const [newProfileName, setNewProfileName] = React.useState('');
-  const [copyFrom, setCopyFrom] = React.useState('');
   const [showSwipeModal, setShowSwipeModal] = React.useState(false);
   const [coverMode, setCoverMode] = React.useState(false);
   const [swipeSens, setSwipeSens] = React.useState(0);
@@ -270,10 +232,6 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const deleteMacroStepFocus = useTVFocus();
   const cancelMacroStepFocus = useTVFocus();
   const confirmMacroStepFocus = useTVFocus();
-  const addProfileFocus = useTVFocus();
-  const deleteProfileFocus = useTVFocus();
-  const closeProfileModalFocus = useTVFocus();
-  const profileChipToggleFocus = useTVFocus();
   const toggleGridFocus = useTVFocus();
   const openSwipeModalToolbarFocus = useTVFocus();
   const openGyroModalToolbarFocus = useTVFocus();
@@ -530,6 +488,17 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   };
 
   const handleReset = () => {
+    if (onResetToDefault) {
+      Alert.alert(t('Reset to default'), t('Reset to default message'), [
+        {text: t('Cancel'), style: 'cancel'},
+        {
+          text: t('Reset'),
+          style: 'destructive',
+          onPress: onResetToDefault,
+        },
+      ]);
+      return;
+    }
     setButtons(defaultButtons.map(button => ({...button})));
     setReloadKey(Date.now());
   };
@@ -1270,138 +1239,6 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     </Portal>
   );
 
-  const canManageProfiles = Boolean(
-    onSwitchProfile || onCreateProfile || onDeleteProfile,
-  );
-
-  const handleSelectProfile = (name: string) => {
-    setShowProfileModal(false);
-    if (name === activeProfile) {
-      return;
-    }
-    onSwitchProfile?.(name);
-  };
-
-  const openProfileModal = () => {
-    // Pre-select the currently active layout as the copy source so
-    // "duplicate what I'm on" is one tap.
-    setCopyFrom(activeProfile);
-    setNewProfileName('');
-    setShowProfileModal(true);
-  };
-
-  const handleAddProfile = () => {
-    const name = newProfileName.trim();
-    if (!name) {
-      return;
-    }
-    const source = copyFrom;
-    setNewProfileName('');
-    setShowProfileModal(false);
-    onCreateProfile?.(name, source);
-  };
-
-  const handleDeleteProfile = () => {
-    setShowProfileModal(false);
-    if (activeProfile) {
-      onDeleteProfile?.(activeProfile);
-    }
-  };
-
-  const renderProfileModal = () => (
-    <Portal>
-      <Modal
-        visible={showProfileModal}
-        onDismiss={() => setShowProfileModal(false)}
-        contentContainerStyle={styles.modal}>
-        <Card>
-          <Card.Content>
-            <View style={styles.title}>
-              <Text>{t('Touch controller profiles')}</Text>
-              <Divider style={styles.divider} />
-            </View>
-            <ScrollView style={styles.profileList} nestedScrollEnabled>
-              <RadioButton.Group
-                onValueChange={handleSelectProfile}
-                value={activeProfile}>
-                <RadioButton.Item label={t('Default')} value="" />
-                {profiles.map(name => (
-                  <RadioButton.Item key={name} label={name} value={name} />
-                ))}
-              </RadioButton.Group>
-            </ScrollView>
-
-            <Divider style={styles.divider} />
-            <TextInput
-              dense
-              mode="outlined"
-              label={t('New profile name')}
-              value={newProfileName}
-              onChangeText={setNewProfileName}
-              style={styles.profileInput}
-            />
-            <Text style={styles.copyFromLabel}>{t('Copy from')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.copyFromRow}>
-              <CopyFromChip
-                label={t('Default')}
-                selected={copyFrom === ''}
-                onPress={() => setCopyFrom('')}
-              />
-              {profiles.map(name => (
-                <CopyFromChip
-                  key={name}
-                  label={name}
-                  selected={copyFrom === name}
-                  onPress={() => setCopyFrom(name)}
-                />
-              ))}
-            </ScrollView>
-            <Button
-              mode="contained"
-              disabled={!newProfileName.trim()}
-              onPress={handleAddProfile}
-              onFocus={addProfileFocus.onFocus}
-              onBlur={addProfileFocus.onBlur}
-              style={[
-                styles.profileAction,
-                addProfileFocus.focused && tvFocusRing,
-              ]}>
-              {t('Add')}
-            </Button>
-            {activeProfile !== '' && (
-              <Button
-                mode="outlined"
-                onPress={handleDeleteProfile}
-                textColor={theme.colors.error}
-                onFocus={deleteProfileFocus.onFocus}
-                onBlur={deleteProfileFocus.onBlur}
-                style={[
-                  styles.profileAction,
-                  deleteProfileFocus.focused && tvFocusRing,
-                ]}>
-                {t('Delete current profile')}
-              </Button>
-            )}
-            <Button
-              mode="text"
-              onPress={() => setShowProfileModal(false)}
-              onFocus={closeProfileModalFocus.onFocus}
-              onBlur={closeProfileModalFocus.onBlur}
-              style={[
-                styles.profileAction,
-                closeProfileModalFocus.focused && tvFocusRing,
-              ]}>
-              {t('Close')}
-            </Button>
-          </Card.Content>
-        </Card>
-      </Modal>
-    </Portal>
-  );
-
   // In the editor, hidden controls are still drawn — dimmed — and stay
   // draggable/tappable, so a control set to "Hide" can be selected again and
   // turned back on. (The in-game overlay respects `show` and omits them.)
@@ -1523,7 +1360,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   if (coverMode) {
     return (
       <CoverLayoutOverlay
-        profileName={activeProfile}
+        profileName={profileName}
         onClose={() => setCoverMode(false)}
       />
     );
@@ -1535,7 +1372,6 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
         {renderTipsModal()}
         {renderButtonOptions()}
         {renderMacroStepModal()}
-        {canManageProfiles && renderProfileModal()}
         {renderSwipeModal()}
         {renderGyroModal()}
         <KeyPicker
@@ -1551,32 +1387,9 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
             of the play-area buttons, which cluster at the corners/bottom. */}
         <View style={styles.toolbar} pointerEvents="box-none">
           <View style={styles.toolbarInner}>
-            {canManageProfiles ? (
-              <TouchableOpacity
-                style={[
-                  styles.profileChip,
-                  profileChipToggleFocus.focused && tvFocusRing,
-                ]}
-                onPress={openProfileModal}
-                onFocus={profileChipToggleFocus.onFocus}
-                onBlur={profileChipToggleFocus.onBlur}>
-                <IconButton
-                  icon="controller-classic"
-                  size={18}
-                  style={styles.chipIcon}
-                />
-                <Text style={styles.chipText} numberOfLines={1}>
-                  {activeProfile || t('Default')}
-                </Text>
-                <IconButton
-                  icon="menu-down"
-                  size={18}
-                  style={styles.chipIcon}
-                />
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.chipText}>{profileName || t('Default')}</Text>
-            )}
+            <Text style={styles.chipText} numberOfLines={1}>
+              {profileLabel || t('Default')}
+            </Text>
 
             <View style={styles.toolbarDivider} />
 
@@ -1645,7 +1458,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               onFocus={resetFocus.onFocus}
               onBlur={resetFocus.onBlur}
               style={[styles.toolbarButton, resetFocus.focused && tvFocusRing]}>
-              {t('Reset')}
+              {onResetToDefault ? t('Reset to default') : t('Reset')}
             </Button>
             <Button
               compact
@@ -1692,9 +1505,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
   },
-  profileList: {
-    maxHeight: 260,
-  },
   divider: {
     marginTop: 10,
   },
@@ -1727,15 +1537,6 @@ const styles = StyleSheet.create({
   },
   toolbarButton: {
     marginHorizontal: 3,
-  },
-  profileChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    maxWidth: 160,
-  },
-  chipIcon: {
-    margin: 0,
-    marginHorizontal: -4,
   },
   chipText: {
     color: palette.white,
@@ -1770,19 +1571,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     opacity: 0.7,
     fontSize: 12,
-  },
-  profileInput: {
-    marginTop: 8,
-  },
-  copyFromLabel: {
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  copyFromRow: {
-    paddingVertical: 2,
-  },
-  copyChip: {
-    marginRight: 6,
   },
   profileAction: {
     marginTop: 8,
