@@ -27,7 +27,7 @@ export {
   saveCoverLayout,
 } from './model/coverLayout';
 
-export type {ButtonConfig} from './lib/gamepadLayout';
+export type {ButtonConfig, DragBounds} from './lib/gamepadLayout';
 export {
   SWIPE_AIM_NAME,
   SWIPE_AIM_MIN,
@@ -36,6 +36,7 @@ export {
   getButtonBaseSize,
   LAYOUT_SNAP_GRID,
   snapToGrid,
+  snapCenterToGrid,
   buildDefaultLayout,
 } from './lib/gamepadLayout';
 

@@ -21,7 +21,7 @@ import Draggable from 'react-native-draggable';
 import Slider from '@react-native-community/slider';
 import GridBackground from '../../../shared/ui/GridBackground';
 import {coverGamepadBus} from '../lib/coverGamepadBus';
-import {snapToGrid} from '../lib/gamepadLayout';
+import {snapCenterToGrid, type DragBounds} from '../lib/gamepadLayout';
 import {getCoverEnabled, setCoverEnabled} from '../model/touchProfile';
 import {
   getCoverLayout,
@@ -89,11 +89,16 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
     coverGamepadBus.setLayout(next);
   };
 
-  const handleDrag = (name: string, px: number, py: number) => {
+  const handleDrag = (name: string, bounds: DragBounds) => {
     // Snap to the same coarse grid as the inner editor so buttons land in even
-    // steps instead of needing pixel-by-pixel fine-tuning.
-    const sx = snapToGrid(px);
-    const sy = snapToGrid(py);
+    // steps instead of needing pixel-by-pixel fine-tuning; the button's
+    // center, not its top-left corner, lands on the grid.
+    const {x: sx, y: sy} = snapCenterToGrid(
+      bounds.left,
+      bounds.top,
+      bounds.right - bounds.left,
+      bounds.bottom - bounds.top,
+    );
     apply(
       buttons.map(b => {
         if (b.name !== name) {
@@ -192,7 +197,7 @@ const CoverLayoutOverlay: React.FC<CoverLayoutOverlayProps> = ({
                 setShowModal(true);
               }}
               onDragRelease={(_, __, bounds) => {
-                handleDrag(b.name, bounds.left, bounds.top);
+                handleDrag(b.name, bounds);
                 setReloadKey(k => k + 1);
               }}>
               <View

@@ -44,6 +44,8 @@ import {
   VirtualMacroStep,
   buildDefaultLayout,
   snapToGrid,
+  snapCenterToGrid,
+  type DragBounds,
   ButtonConfig,
   SWIPE_AIM_NAME,
   SWIPE_AIM_MIN,
@@ -333,12 +335,19 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     return null;
   }
 
-  const handleDrag = (name: string, x: number, y: number) => {
+  const handleDrag = (name: string, bounds: DragBounds) => {
     // Snap to a coarse grid so positions land in even steps rather than needing
-    // pixel-by-pixel fine-tuning.
+    // pixel-by-pixel fine-tuning. The element's center, not its top-left
+    // corner, lands on the grid.
+    const {x, y} = snapCenterToGrid(
+      bounds.left,
+      bounds.top,
+      bounds.right - bounds.left,
+      bounds.bottom - bounds.top,
+    );
     const next = buttons.map(button => {
       if (button.name === name) {
-        return {...button, x: snapToGrid(x), y: snapToGrid(y)};
+        return {...button, x, y};
       }
       return button;
     });
@@ -402,8 +411,8 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
           kind: 'key',
           keyVk: picked.vk,
           keyLabel: picked.label,
-          x: snapToGrid(width / 2 - 25),
-          y: snapToGrid(height / 2 - 25),
+          x: snapToGrid(width / 2) - 25,
+          y: snapToGrid(height / 2) - 25,
           show: true,
           scale: 1,
         },
@@ -1414,7 +1423,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                   setShowSwipeModal(true);
                 }}
                 onDragRelease={(_, __, bounds) => {
-                  handleDrag(button.name, bounds.left, bounds.top);
+                  handleDrag(button.name, bounds);
                   setReloadKey(Date.now());
                 }}>
                 <View
@@ -1456,7 +1465,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
                 setShowButtonModal(true);
               }}
               onDragRelease={(_, __, bounds) => {
-                handleDrag(button.name, bounds.left, bounds.top);
+                handleDrag(button.name, bounds);
                 setReloadKey(Date.now());
               }}
             />
@@ -1485,7 +1494,7 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
               setShowButtonModal(true);
             }}
             onDragRelease={(_, __, bounds) => {
-              handleDrag(button.name, bounds.left, bounds.top);
+              handleDrag(button.name, bounds);
               setReloadKey(Date.now());
             }}>
             <View style={hidden ? styles.hiddenButton : undefined}>
