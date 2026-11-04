@@ -345,25 +345,36 @@ export default class XcloudSessionClient {
                 return;
               }
 
-              tokenPromise.then((msalToken: MsalToken) => {
-                this.sendMSALAuth(msalToken.data.lpt).then(() => {
-                  this.waitState()
-                    .then(state => {
-                      resolve(state);
-                    })
-                    .catch(error => {
-                      reject(error);
-                    });
+              // Every step rejects instead of leaving the promise pending: a
+              // refused token or /connect used to hang on "connecting" with no
+              // message at all.
+              tokenPromise
+                .then((msalToken: MsalToken) =>
+                  this.sendMSALAuth(msalToken.data.lpt),
+                )
+                .then(() => this.waitState())
+                .then(state => {
+                  resolve(state);
+                })
+                .catch(error => {
+                  log.info('[waitState] connect error:', error);
+                  reject(error);
                 });
-              });
               break;
             }
-            case 'Failed':
-              reject('Streaming failed: ' + _state.errorDetails.message);
+            case 'Failed': {
+              // The service names the cause in code/message; show both so a
+              // title that will not start says why.
+              const details = _state.errorDetails;
+              const reason = [details?.code, details?.message]
+                .filter(Boolean)
+                .join(' ');
+              reject('Streaming failed: ' + (reason || 'unknown'));
               break;
+            }
             default:
               log.info('unknown state:', _state);
-              reject('Streaming failed');
+              reject(`Streaming failed (state: ${_state?.state})`);
               break;
           }
         })

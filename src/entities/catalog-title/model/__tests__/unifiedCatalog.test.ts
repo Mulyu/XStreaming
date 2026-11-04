@@ -129,4 +129,26 @@ describe('buildUnifiedCatalog GFN listings through Game Pass', () => {
     const [only] = buildUnifiedCatalog([], [gfn[0]], [], {xboxActive: false});
     expect(isCatalogTitleOwned(only)).toBe(false);
   });
+
+  it('keeps the listing owned when xCloud says the title was bought', () => {
+    const bought = (programs: string[]) => ({
+      ProductTitle: 'Halo',
+      details: {hasEntitlement: true, userPrograms: programs},
+    });
+    // Bought outright: xCloud lists the ad-supported program for the account.
+    const [kept] = buildUnifiedCatalog([bought(['FERDINAND'])], [gfn[0]], [], {
+      xboxActive: false,
+    });
+    expect(kept.gfn?.variants.map(v => v.owned)).toEqual([true]);
+    // Entitled through some other program (Game Pass itself): still lapses.
+    const [lapsed] = buildUnifiedCatalog(
+      [bought(['GPULTIMATE'])],
+      [gfn[0]],
+      [],
+      {
+        xboxActive: false,
+      },
+    );
+    expect(lapsed.gfn?.variants.map(v => v.owned)).toEqual([false]);
+  });
 });
