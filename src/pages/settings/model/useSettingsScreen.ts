@@ -499,7 +499,9 @@ export function useSettingsScreen(navigation: any, route: any) {
       return t('XboxPlaytimeLoading');
     }
     if (!xboxStreamingTime.ok) {
-      return t('XboxPlaytimeUnavailable');
+      return xboxStreamingTime.reason
+        ? `${t('XboxPlaytimeUnavailable')} (${xboxStreamingTime.reason})`
+        : t('XboxPlaytimeUnavailable');
     }
     if (xboxStreamingTime.seconds === null) {
       return t('XboxPlaytimeNone');
