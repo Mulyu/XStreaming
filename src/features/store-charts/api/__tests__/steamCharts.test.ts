@@ -1,4 +1,4 @@
-import {parseResultsHtml} from '../steamCharts';
+import {parseResultsHtml, parseReviewSummary} from '../steamCharts';
 
 // Fixtures mirror the real shape of a Steam search results row -- each row
 // starts at `<a href="https://store.steampowered.com/app/<id>/...">`, which
@@ -136,5 +136,67 @@ describe('parseResultsHtml', () => {
 
   it('returns an empty array for a page with zero result rows', () => {
     expect(parseResultsHtml('<div>no results</div>')).toEqual([]);
+  });
+});
+
+describe('review summary', () => {
+  const summary = (cls: string, tooltip: string) =>
+    `<span class="search_review_summary ${cls}" data-tooltip-html="${tooltip}"></span>`;
+
+  it('reads the Japanese tooltip: count before percent', () => {
+    expect(
+      parseReviewSummary(
+        summary(
+          'mixed',
+          '賛否両論&lt;br&gt;このゲームのユーザーレビュー13,300件中50%が好評です&lt;br&gt;&lt;br&gt;この製品のレビュースコアは、個人設定に基づいて…',
+        ),
+      ),
+    ).toEqual({
+      kind: 'review',
+      label: '賛否両論',
+      sentiment: 'mixed',
+      percent: 50,
+      count: 13300,
+    });
+  });
+
+  it('reads the English tooltip: percent before count', () => {
+    expect(
+      parseReviewSummary(
+        summary(
+          'positive',
+          'Very Positive&lt;br&gt;93% of the 835,380 user reviews for this game are positive.',
+        ),
+      ),
+    ).toEqual({
+      kind: 'review',
+      label: 'Very Positive',
+      sentiment: 'positive',
+      percent: 93,
+      count: 835380,
+    });
+  });
+
+  it('is nothing without a summary, or without a verdict class', () => {
+    expect(
+      parseReviewSummary('<span class="title">Game</span>'),
+    ).toBeUndefined();
+    expect(parseReviewSummary(summary('', 'No user reviews'))).toBeUndefined();
+  });
+
+  it('is attached to the parsed entry', () => {
+    const html = row(
+      '1245620/ELDEN_RING/">' +
+        '<span class="title">ELDEN RING</span>' +
+        summary(
+          'positive',
+          'Very Positive&lt;br&gt;93% of the 835,380 user reviews',
+        ) +
+        '<div class="discount_final_price">$59.99</div>',
+    );
+    expect(parseResultsHtml(html)[0].rating).toMatchObject({
+      label: 'Very Positive',
+      percent: 93,
+    });
   });
 });
