@@ -194,7 +194,10 @@ export function useLibraryScreen() {
   // The popularity / release-date orders (an xCloud list, two GFN catalog
   // crawls, ~14 pages of the PS Store) only matter to the non-default sorts,
   // so they are fetched once one of those is picked, not at every launch.
-  const rankNeeded = sortMode !== 'recent';
+  // Each order is fetched only for the sort that uses it: the Store side opens
+  // on Newest, which must not also pull the popularity lists nothing shows.
+  const newestNeeded = sortMode === 'newest';
+  const popularNeeded = sortMode === 'popular';
   const [sortMenuOpen, setSortMenuOpen] = React.useState(false);
   // Switching between Library and Store reuses this screen, so a menu left
   // open on one side must not carry over to the other.
@@ -403,7 +406,7 @@ export function useLibraryScreen() {
   // "Most popular on cloud" ranking, cached (24h) exactly like Cloud.tsx.
   const popularMarketRef = React.useRef('');
   React.useEffect(() => {
-    if (!rankNeeded) {
+    if (!popularNeeded) {
       return;
     }
     const {market, language} = deriveMarketLanguage(gameLanguage, deviceRegion);
@@ -426,7 +429,7 @@ export function useLibraryScreen() {
       savePopularOrder(order, market);
       setPopularRank(buildPopularRank(order));
     });
-  }, [gameLanguage, deviceRegion, rankNeeded]);
+  }, [gameLanguage, deviceRegion, popularNeeded]);
 
   // Release dates from the Microsoft display catalog (the Game Pass
   // hydration carries none), cached alongside the rest of the xCloud blob.
@@ -547,25 +550,29 @@ export function useLibraryScreen() {
   // anonymously (same precondition as the owned-library query above) -- so
   // these two sorts simply stay xCloud-only while signed out.
   React.useEffect(() => {
-    if (!rankNeeded || !isSignedIn()) {
+    if ((!popularNeeded && !newestNeeded) || !isSignedIn()) {
       return;
     }
-    const cachedPopular = getFreshGfnRankOrder('popular');
+    const cachedPopular = popularNeeded
+      ? getFreshGfnRankOrder('popular')
+      : null;
     if (cachedPopular) {
       setGfnPopularRank(buildPopularRank(cachedPopular));
     }
-    const cachedNewest = getFreshGfnRankOrder('newest');
+    const cachedNewest = newestNeeded ? getFreshGfnRankOrder('newest') : null;
     if (cachedNewest) {
       setGfnNewestRank(buildPopularRank(cachedNewest));
     }
-    if (cachedPopular && cachedNewest) {
+    const needPopularFetch = popularNeeded && !cachedPopular;
+    const needNewestFetch = newestNeeded && !cachedNewest;
+    if (!needPopularFetch && !needNewestFetch) {
       return;
     }
     getValidGfnJwt().then(token => {
       if (!token) {
         return;
       }
-      if (!cachedPopular) {
+      if (needPopularFetch) {
         fetchGfnCatalogOrder(token, GFN_SORT_MOST_POPULAR).then(order => {
           if (order.length > 0) {
             saveGfnRankOrder('popular', order);
@@ -573,7 +580,7 @@ export function useLibraryScreen() {
           }
         });
       }
-      if (!cachedNewest) {
+      if (needNewestFetch) {
         fetchGfnCatalogOrder(token, GFN_SORT_LAST_ADDED).then(order => {
           if (order.length > 0) {
             saveGfnRankOrder('newest', order);
@@ -582,7 +589,7 @@ export function useLibraryScreen() {
         });
       }
     });
-  }, [rankNeeded]);
+  }, [popularNeeded, newestNeeded]);
 
   // Pull-to-refresh: re-runs the same fetches the mount-time effects above
   // do (xCloud entitlements/recent, GFN public+owned catalog, GFN rank
@@ -739,34 +746,40 @@ export function useLibraryScreen() {
 
   // PS Store popularity / release-date orders, fetched once the PS catalog is
   // known (cached 12h by the fetch itself).
-  const psRankingLoadedRef = React.useRef(false);
+  const psPopularLoadedRef = React.useRef(false);
+  const psNewestLoadedRef = React.useRef(false);
   React.useEffect(() => {
-    if (!rankNeeded || psPlusGames.length === 0 || psRankingLoadedRef.current) {
+    if (psPlusGames.length === 0) {
       return;
     }
-    psRankingLoadedRef.current = true;
-    let cancelled = false;
-    Promise.all([
+    // No cancel-on-cleanup here: the effect re-runs when the sort changes,
+    // and that must not throw away a fetch another run already started.
+    if (popularNeeded && !psPopularLoadedRef.current) {
+      psPopularLoadedRef.current = true;
       // Top sellers is a 30-day window, so older catalog titles sit deep in
       // it: take a longer prefix than for new releases.
-      fetchPsStoreRanking('topsellers', 1000),
-      fetchPsStoreRanking('new', 400),
-    ]).then(([popular, newest]) => {
-      if (cancelled) {
-        return;
-      }
-      if (popular.entries.length === 0 && newest.entries.length === 0) {
-        // Both failed: allow a retry on the next catalog update.
-        psRankingLoadedRef.current = false;
-        return;
-      }
-      setPsPopularTable(buildPsRankTable(popular.entries, popular.totalCount));
-      setPsNewestTable(buildPsRankTable(newest.entries, newest.totalCount));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [psPlusGames, rankNeeded]);
+      fetchPsStoreRanking('topsellers', 1000).then(popular => {
+        if (popular.entries.length === 0) {
+          // Failed: allow a retry on the next catalog update.
+          psPopularLoadedRef.current = false;
+          return;
+        }
+        setPsPopularTable(
+          buildPsRankTable(popular.entries, popular.totalCount),
+        );
+      });
+    }
+    if (newestNeeded && !psNewestLoadedRef.current) {
+      psNewestLoadedRef.current = true;
+      fetchPsStoreRanking('new', 400).then(newest => {
+        if (newest.entries.length === 0) {
+          psNewestLoadedRef.current = false;
+          return;
+        }
+        setPsNewestTable(buildPsRankTable(newest.entries, newest.totalCount));
+      });
+    }
+  }, [psPlusGames, popularNeeded, newestNeeded]);
 
   // xCloud release dates, turned into an ordinal rank (0 = newest known
   // date) so they combine fairly with GFN's ordinal "last added" rank --
@@ -1159,38 +1172,40 @@ export function useLibraryScreen() {
     if (sortMode === 'reco') {
       return filtered;
     }
-    const list = [...filtered];
+    // Scores are computed once per title, not inside the comparator: a
+    // Store-side list is the whole catalog (thousands of titles), and each
+    // comparison used to rebuild its scores. Ties keep `filtered`'s own order
+    // (the catalog is already name-ordered and Array.sort is stable), which
+    // also saves a localeCompare per tie.
+    const byScore = (
+      score: (item: CatalogTitle) => number,
+      descending = false,
+    ) => {
+      const scores = new Map<string, number>();
+      filtered.forEach(item => scores.set(item.key, score(item)));
+      const sign = descending ? -1 : 1;
+      return [...filtered].sort(
+        (a, b) =>
+          sign *
+          ((scores.get(a.key) as number) - (scores.get(b.key) as number)),
+      );
+    };
     if (sortMode === 'newest') {
-      list.sort(
-        (a, b) =>
-          newestScore(a, sortTables) - newestScore(b, sortTables) ||
-          a.title.localeCompare(b.title),
-      );
-    } else if (sortMode === 'popular') {
-      list.sort(
-        (a, b) =>
-          popularityScore(a, sortTables) - popularityScore(b, sortTables) ||
-          a.title.localeCompare(b.title),
-      );
-    } else if (sortMode === 'discount') {
-      // Biggest cut first; an undiscounted title (0) sorts after every sale.
-      list.sort(
-        (a, b) =>
-          saleDiscount(b) - saleDiscount(a) || a.title.localeCompare(b.title),
-      );
-    } else if (sortMode === 'recent') {
-      // Local play history, not a provider API -- see
-      // entities/catalog-title/model/playHistory.ts. Keyed directly by the
-      // unified catalog key, so it ranks xCloud/GFN/PS Plus titles alike
-      // (unlike the provider-derived ranks for Newest/Popular). A title never
-      // launched from this device sorts last.
-      list.sort(
-        (a, b) =>
-          (playHistory[b.key] ?? 0) - (playHistory[a.key] ?? 0) ||
-          a.title.localeCompare(b.title),
-      );
+      return byScore(item => newestScore(item, sortTables));
     }
-    return list;
+    if (sortMode === 'popular') {
+      return byScore(item => popularityScore(item, sortTables));
+    }
+    if (sortMode === 'discount') {
+      // Biggest cut first; an undiscounted title (0) sorts after every sale.
+      return byScore(saleDiscount, true);
+    }
+    // 'recent': local play history, not a provider API -- see
+    // entities/catalog-title/model/playHistory.ts. Keyed directly by the
+    // unified catalog key, so it ranks xCloud/GFN/PS Plus titles alike
+    // (unlike the provider-derived ranks for Newest/Popular). A title never
+    // launched from this device sorts last.
+    return byScore(item => playHistory[item.key] ?? 0, true);
   }, [filtered, sortMode, sortTables, playHistory, saleDiscount]);
 
   // 'reco' was never an actual recommendation ranking -- it's just the
