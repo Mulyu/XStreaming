@@ -251,6 +251,10 @@ typedef enum cc_owned_result_t
 CCOwnedResult cc_fetch_owned(ChiakiLog *log, const char *npsso,
 	struct json_object **out_games, struct json_object **out_component_ids);
 
+/** PS Plus membership state from a list of entitlements: 0 unknown, 1 active, 2 lapsed.
+ *  Exposed for unit tests. */
+int cc_plus_status_from_entitlements(struct json_object *entitlements);
+
 #ifdef __cplusplus
 }
 #endif

@@ -97,6 +97,8 @@ import {
   getCachedCatalogGames,
   getFreshCatalogGames,
   saveCatalogGames,
+  loadPsPlusMembership,
+  isPsPlusMembershipActive,
 } from '../../../features/ps-plus-session';
 import {fetchPsStoreRanking} from '../../../features/store-charts';
 import {getSettings} from '../../../shared/lib/settings';
@@ -804,10 +806,31 @@ export function useLibraryScreen() {
     }, []),
   );
 
+  // Same for the PS Plus membership (read from the purchase history).
+  const [psPlusActive, setPsPlusActive] = React.useState(
+    isPsPlusMembershipActive,
+  );
+  useFocusEffect(
+    React.useCallback(() => {
+      let cancelled = false;
+      loadPsPlusMembership().then(status => {
+        if (!cancelled) {
+          setPsPlusActive(status !== 'lapsed');
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
   const catalog = React.useMemo(
     () =>
-      buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames, {xboxActive}),
-    [xcloudTitles, gfnGames, psPlusGames, xboxActive],
+      buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames, {
+        xboxActive,
+        psPlusActive,
+      }),
+    [xcloudTitles, gfnGames, psPlusGames, xboxActive, psPlusActive],
   );
 
   // Discount percent for the sale badge/filter: the best of xCloud's own

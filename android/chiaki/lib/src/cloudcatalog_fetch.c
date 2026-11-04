@@ -1155,6 +1155,100 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_online_id(
 	return out[0] ? CHIAKI_ERR_SUCCESS : CHIAKI_ERR_UNKNOWN;
 }
 
+// --- PS Plus membership state ------------------------------------------------
+
+static bool contains_ci(const char *haystack, const char *needle)
+{
+	size_t n = strlen(needle);
+	for(; *haystack; haystack++)
+	{
+		size_t i = 0;
+		while(i < n && haystack[i] && tolower((unsigned char)haystack[i]) == tolower((unsigned char)needle[i]))
+			i++;
+		if(i == n)
+			return true;
+	}
+	return false;
+}
+
+// The Plus membership appears in the purchase history as service entitlements: content ids
+// that start with "IP9" and carry "PLUS" (e.g. IP9105-NPIA90009_00-PLUS00 or a product like
+// IP9105-PPSA07181_00-PLUS3T01M0000000), each with an active_flag that is on while the period
+// runs. Lapsed means such entitlements exist and none of them is active; with none at all
+// (never a member, or an id shape not seen here) the state is unknown rather than lapsed.
+int cc_plus_status_from_entitlements(struct json_object *entitlements)
+{
+	if(!entitlements)
+		return 0;
+	bool seen = false, active = false;
+	size_t n = json_object_array_length(entitlements);
+	for(size_t i = 0; i < n; i++)
+	{
+		struct json_object *ent = json_object_array_get_idx(entitlements, i);
+		const char *id = cc_json_str(ent, "id");
+		const char *product = cc_json_str(ent, "product_id");
+		bool is_plus = (strncmp(id, "IP9", 3) == 0 && contains_ci(id, "PLUS"))
+			|| (strncmp(product, "IP9", 3) == 0 && contains_ci(product, "PLUS"));
+		if(!is_plus)
+			continue;
+		seen = true;
+		if(cc_json_bool(ent, "active_flag"))
+			active = true;
+	}
+	return active ? 1 : (seen ? 2 : 0);
+}
+
+CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_plus_status(
+	const char *npsso, int *out_status, ChiakiLog *log)
+{
+	if(!out_status)
+		return CHIAKI_ERR_INVALID_DATA;
+	*out_status = 0;
+	if(!npsso || !*npsso)
+		return CHIAKI_ERR_INVALID_DATA;
+
+	char token[2048];
+	if(owned_oauth(log, npsso, token, sizeof(token)) != CC_OWNED_OK)
+		return CHIAKI_ERR_UNKNOWN;
+
+	char *bearer = NULL;
+	cc_http_make_bearer_header(&bearer, token);
+	const char *headers[] = { bearer, "Accept: application/json" };
+	CCHttpRequest req = { 0 };
+	// entitlement_type=1 holds the service entitlements (the Plus periods); the games the
+	// Library lists are type 5.
+	req.url = "https://commerce.api.np.km.playstation.net/commerce/api/v1/users/me/internal_entitlements"
+	          "?entitlement_type=1&start=0&size=300";
+	req.headers = headers;
+	req.header_count = 2;
+	req.follow_redirects = true;
+	req.timeout_ms = 15000;
+
+	CCHttpResponse resp;
+	ChiakiErrorCode e = cc_http_perform(log, &req, &resp);
+	free(bearer);
+	if(e != CHIAKI_ERR_SUCCESS)
+	{
+		cc_http_response_fini(&resp);
+		return CHIAKI_ERR_UNKNOWN;
+	}
+	ChiakiErrorCode result = CHIAKI_ERR_UNKNOWN;
+	if(resp.status_code == 200)
+	{
+		struct json_object *obj = parse_body(&resp);
+		struct json_object *list = obj ? cc_json_arr(obj, "entitlements") : NULL;
+		if(list)
+		{
+			*out_status = cc_plus_status_from_entitlements(list);
+			result = CHIAKI_ERR_SUCCESS;
+		}
+		if(obj)
+			json_object_put(obj);
+	}
+	cc_http_response_fini(&resp);
+	return result;
+}
+
 // --- Diagnostics: what does Sony say about this account? -------------------
 //
 // Used to find out whether, and where, Sony reports that a PS Plus subscription is

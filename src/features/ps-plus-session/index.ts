@@ -5,6 +5,12 @@
 // api/ directly.
 export {getNpsso, setNpsso, clearNpsso, isPsPlusSignedIn} from './api/auth';
 export {loadPsPlusOnlineId} from './api/onlineId';
+export {
+  loadPsPlusMembership,
+  isPsPlusMembershipActive,
+  plusStatusFromCode,
+} from './api/plusStatus';
+export type {PlusStatus} from './api/plusStatus';
 export {fetchUnifiedCatalog, CloudCategory} from './api/catalog';
 export type {CloudGame, UnifiedCatalogResult} from './api/catalog';
 export {

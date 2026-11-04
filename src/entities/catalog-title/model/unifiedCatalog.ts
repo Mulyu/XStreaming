@@ -70,8 +70,10 @@ const xcloudGenres = (item: any): string[] => {
 // What the account's subscriptions allow right now. `xboxActive: false` (the
 // Game Pass membership lapsed) makes every title's Xbox side read as not
 // owned: xCloud streams nothing without a membership, whatever the title list
-// still says. Left out, it means active.
-export type CatalogOptions = {xboxActive?: boolean};
+// still says; `psPlusActive: false` does the same for the PS side (owned
+// games included, as PS cloud streaming needs Plus too). Left out, each means
+// active.
+export type CatalogOptions = {xboxActive?: boolean; psPlusActive?: boolean};
 
 const xcloudEntitled = (item: any, opts: CatalogOptions): boolean =>
   opts.xboxActive !== false && item?.details?.hasEntitlement === true;
@@ -138,10 +140,12 @@ export const buildUnifiedCatalog = (
       genres: [],
     };
     entry.imageUrl = entry.imageUrl ?? game.imageUrl;
+    // PS cloud streaming needs a running Plus membership, owned game or not.
+    const plusOn = opts.psPlusActive !== false;
     entry.psplus = {
       raw: game,
-      isOwned: game?.isOwned === true,
-      inPlusCatalog: game?.plusCatalog === true,
+      isOwned: plusOn && game?.isOwned === true,
+      inPlusCatalog: plusOn && game?.plusCatalog === true,
     };
     byKey.set(key, entry);
   }

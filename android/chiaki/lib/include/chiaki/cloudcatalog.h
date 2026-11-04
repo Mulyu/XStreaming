@@ -122,6 +122,15 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_online_id(
 	const char *npsso, char *out, size_t out_size, ChiakiLog *log);
 
 /**
+ * The state of the account's PS Plus membership, read from its purchase history
+ * (the membership appears as "IP9..." service entitlements whose active_flag is on while
+ * it runs). @p out_status: 0 unknown, 1 active, 2 lapsed (Plus entitlements exist and none
+ * is active). Blocking (two HTTPS requests). Returns CHIAKI_ERR_SUCCESS when Sony answered.
+ */
+CHIAKI_EXPORT ChiakiErrorCode chiaki_cloudcatalog_fetch_plus_status(
+	const char *npsso, int *out_status, ChiakiLog *log);
+
+/**
  * Diagnostics: the account block of the Kamaji session for @p npsso as pretty JSON, with
  * secret-looking values hidden. @p out_json is malloc'd on success; free() it.
  */

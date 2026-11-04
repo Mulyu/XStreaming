@@ -1646,6 +1646,19 @@ JNIEXPORT jstring JNICALL JNI_FCN(cloudCatalogFetchOnlineId)(JNIEnv *env, jobjec
 	return E->NewStringUTF(env, online_id);
 }
 
+// The PS Plus membership state for an npsso (blocking -- background thread): 0 unknown,
+// 1 active, 2 lapsed. Any failure reads as unknown.
+JNIEXPORT jint JNICALL JNI_FCN(cloudCatalogFetchPlusStatus)(JNIEnv *env, jobject obj, jstring npsso_str)
+{
+	const char *npsso = npsso_str ? E->GetStringUTFChars(env, npsso_str, NULL) : NULL;
+	if(!npsso)
+		return 0;
+	int status = 0;
+	ChiakiErrorCode err = chiaki_cloudcatalog_fetch_plus_status(npsso, &status, &global_log);
+	E->ReleaseStringUTFChars(env, npsso_str, npsso);
+	return err == CHIAKI_ERR_SUCCESS ? status : 0;
+}
+
 // Diagnostics: the account block of the Kamaji session as UTF-8 JSON bytes (blocking --
 // background thread). Bytes rather than NewStringUTF because the values may be non-ASCII.
 JNIEXPORT jbyteArray JNICALL JNI_FCN(cloudCatalogFetchAccountDiag)(JNIEnv *env, jobject obj, jstring npsso_str)
