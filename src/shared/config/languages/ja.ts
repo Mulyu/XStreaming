@@ -508,6 +508,8 @@ export default {
     Chart: 'チャート',
     SortDiscount: '割引率順',
     LibraryChipCatalog: 'カタログ',
+    LibraryWishlistEmpty:
+      'ウィッシュリストにタイトルがありません。「ウィッシュリスト」を外すとストア全体を表示します',
     StoreTabXbox: 'Xbox',
     StoreTabSteam: 'Steam',
     StoreTabPlayStation: 'PlayStation',

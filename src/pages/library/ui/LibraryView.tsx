@@ -431,8 +431,6 @@ const LibraryView: React.FC<Props> = ({
   toggleFavorite,
   toggleWishlist,
   mode,
-  filterOnSale,
-  setFilterOnSale,
   filterCatalog,
   toggleCatalog,
   gamePassMap,
@@ -793,13 +791,6 @@ const LibraryView: React.FC<Props> = ({
                   onPress={toggleFilterWishlist}
                 />
                 <FilterChip
-                  icon="tag-outline"
-                  label={t('LibraryFilterOnSale')}
-                  active={filterOnSale}
-                  tone="sale"
-                  onPress={() => setFilterOnSale(v => !v)}
-                />
-                <FilterChip
                   icon="gift-outline"
                   label={t('LibraryChipCatalog')}
                   active={filterCatalog}
@@ -876,6 +867,17 @@ const LibraryView: React.FC<Props> = ({
           numColumns={numColumns}
           keyExtractor={item => item.key}
           renderItem={renderItem}
+          ListEmptyComponent={
+            <View style={styles.emptyList}>
+              <Text style={styles.centreText}>
+                {t(
+                  mode === 'notOwned' && filterWishlist
+                    ? 'LibraryWishlistEmpty'
+                    : 'NoResults',
+                )}
+              </Text>
+            </View>
+          }
           contentContainerStyle={styles.list}
           // A smaller virtualized window trades a bit of scroll-ahead
           // smoothness for a lot less concurrently-decoded image memory --
@@ -1053,6 +1055,7 @@ const styles = StyleSheet.create({
   centre: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10},
   centreText: {color: palette.textSoft, fontSize: 14},
   list: {paddingHorizontal: 6, paddingBottom: 20},
+  emptyList: {padding: 24, alignItems: 'center'},
   cell: {padding: 4},
   // Raises the whole cell (and the card's focus scale-up inside it) above
   // its row siblings, so the popped-out tile never paints underneath the
