@@ -28,9 +28,10 @@ const GFN_USER_AGENT =
 // title's `title` text is locale-specific, and the app's language only ever
 // changes via a full restart, so there's no risk of serving a stale-locale
 // list mid-session.
-// v2: the list now holds only the store variants the account actually owns
-// (before, every store variant of an owned app), so v1 entries are not reused.
-const ownedCacheKey = (): string => `gfn.ownedGames.v2.${getGfnLocaleSlug()}`;
+// v2: the list holds only the store variants the account actually owns (before,
+// every store variant of an owned app). v3: each variant carries its
+// `subscription`. Older entries are not reused.
+const ownedCacheKey = (): string => `gfn.ownedGames.v3.${getGfnLocaleSlug()}`;
 const OWNED_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h
 
 const deviceHeaders = {
@@ -157,7 +158,7 @@ const LIBRARY_QUERY = `query GetLibraryApps(
         id
         appStore
         storeUrl
-        gfn { library { status } }
+        gfn { library { status subscription } }
       }
     }
   }
@@ -167,7 +168,14 @@ type RawVariant = {
   id?: string;
   appStore?: string;
   storeUrl?: string;
-  gfn?: {library?: {status?: string}};
+  gfn?: {library?: {status?: string; subscription?: string | null}};
+};
+
+// The subscription a library entry exists through ('XBOX_GAME_PASS', ...);
+// 'NONE' / missing means it was bought or added by hand.
+const variantSubscription = (v: RawVariant): string | undefined => {
+  const sub = v.gfn?.library?.subscription;
+  return sub && sub !== 'NONE' ? sub : undefined;
 };
 
 export type RawApp = {
@@ -301,6 +309,7 @@ export const toOwnedGames = (app: RawApp): GfnGame[] => {
       imageUrl: image,
       owned: true,
       appId,
+      subscription: variantSubscription(variant),
       steamAppId:
         store.toUpperCase() === 'STEAM'
           ? steamAppIdFromUrl(variant.storeUrl)
@@ -327,7 +336,8 @@ export const summarizeLibraryStatuses = (
     for (const v of app.variants ?? []) {
       const store = (v.appStore ?? 'GFN').toUpperCase();
       const status = v.gfn?.library?.status ?? 'none';
-      const key = `${store}=${status}`;
+      const sub = variantSubscription(v);
+      const key = `${store}=${status}${sub ? `+${sub}` : ''}`;
       counts.set(key, (counts.get(key) ?? 0) + 1);
       parts.push(key);
       hasXbox = hasXbox || store.includes('XBOX');
@@ -475,6 +485,7 @@ export const toBrowseGames = (app: RawApp): GfnGame[] => {
           ? isOwnedLibraryStatus(variant.gfn.library.status)
           : undefined),
       appId,
+      subscription: variantSubscription(variant),
       steamAppId:
         store.toUpperCase() === 'STEAM'
           ? steamAppIdFromUrl(variant.storeUrl)
@@ -510,7 +521,7 @@ const BROWSE_QUERY = `query GetStoreBrowseApps(
         id
         appStore
         storeUrl
-        gfn { library { status } }
+        gfn { library { status subscription } }
       }
     }
   }
@@ -524,7 +535,7 @@ const BROWSE_QUERY = `query GetStoreBrowseApps(
 // match and passes an already-true `owned` through unchanged otherwise (see
 // its own comment) -- there was no path back to false without a fresh fetch.
 // Changing the key forces exactly one such fetch per affected device.
-const FULL_CATALOG_CACHE_VERSION = 2;
+const FULL_CATALOG_CACHE_VERSION = 3;
 const fullCatalogCacheKey = (): string =>
   `gfn.fullCatalog.v${FULL_CATALOG_CACHE_VERSION}.${getGfnLocaleSlug()}`;
 const fullCatalogStatusKey = (): string =>
@@ -1010,6 +1021,7 @@ export const mergeOwnedGames = (
       ...g,
       owned: true,
       appId: g.appId ?? owned.appId,
+      subscription: owned.subscription ?? g.subscription,
       steamAppId: g.steamAppId ?? owned.steamAppId,
     };
   });

@@ -265,3 +265,52 @@ describe('summarizeLibraryStatuses', () => {
     expect(summarizeLibraryStatuses(items, 2)).toHaveLength(3);
   });
 });
+
+describe('library subscription', () => {
+  const app = {
+    id: 'app-uuid',
+    title: 'Halo',
+    variants: [
+      {
+        id: '101',
+        appStore: 'XBOX',
+        gfn: {
+          library: {status: 'PLATFORM_SYNC', subscription: 'XBOX_GAME_PASS'},
+        },
+      },
+      {
+        id: '102',
+        appStore: 'STEAM',
+        gfn: {library: {status: 'PLATFORM_SYNC', subscription: 'NONE'}},
+      },
+    ],
+  };
+
+  it('carries the subscription of a variant, but not "NONE"', () => {
+    const owned = toOwnedGames(app);
+    expect(owned.find(g => g.store === 'XBOX')?.subscription).toBe(
+      'XBOX_GAME_PASS',
+    );
+    expect(owned.find(g => g.store === 'STEAM')?.subscription).toBeUndefined();
+    const browse = toBrowseGames(app);
+    expect(browse.find(g => g.store === 'XBOX')?.subscription).toBe(
+      'XBOX_GAME_PASS',
+    );
+  });
+
+  it('shows up in the status summary', () => {
+    expect(summarizeLibraryStatuses([app])[0]).toContain(
+      'XBOX=PLATFORM_SYNC+XBOX_GAME_PASS x1',
+    );
+  });
+
+  it('is kept when an owned game is merged into the public catalog', () => {
+    const owned = toOwnedGames(app);
+    const merged = mergeOwnedGames(
+      [{id: '101', title: 'Halo', store: 'XBOX', genres: []}],
+      owned,
+    );
+    expect(merged[0].owned).toBe(true);
+    expect(merged[0].subscription).toBe('XBOX_GAME_PASS');
+  });
+});

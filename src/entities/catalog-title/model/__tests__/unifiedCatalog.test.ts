@@ -53,3 +53,32 @@ describe('buildUnifiedCatalog psPlusActive', () => {
     expect(isCatalogTitleOwned(item)).toBe(false);
   });
 });
+
+describe('buildUnifiedCatalog GFN listings through Game Pass', () => {
+  const gfn = [
+    {
+      id: '1',
+      title: 'Halo',
+      store: 'XBOX',
+      genres: [],
+      owned: true,
+      subscription: 'XBOX_GAME_PASS',
+    },
+    {id: '2', title: 'Halo', store: 'STEAM', genres: [], owned: true},
+  ];
+
+  it('keeps them owned while the membership runs (or is not stated)', () => {
+    const [a] = buildUnifiedCatalog([], gfn);
+    const [b] = buildUnifiedCatalog([], gfn, [], {xboxActive: true});
+    expect(a.gfn?.variants.map(v => v.owned)).toEqual([true, true]);
+    expect(b.gfn?.variants.map(v => v.owned)).toEqual([true, true]);
+  });
+
+  it('stops counting them as owned once Game Pass has lapsed, bought ones stay', () => {
+    const [item] = buildUnifiedCatalog([], gfn, [], {xboxActive: false});
+    expect(item.gfn?.variants.map(v => v.owned)).toEqual([false, true]);
+    expect(isCatalogTitleOwned(item)).toBe(true);
+    const [only] = buildUnifiedCatalog([], [gfn[0]], [], {xboxActive: false});
+    expect(isCatalogTitleOwned(only)).toBe(false);
+  });
+});

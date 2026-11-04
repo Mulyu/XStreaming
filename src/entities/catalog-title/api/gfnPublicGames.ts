@@ -27,6 +27,14 @@ export type GfnGame = {
   /** True when the signed-in user owns this title (from the authed library). */
   owned?: boolean;
   /**
+   * Set when the library lists this store variant only because of a
+   * subscription (GFN's library.subscription, e.g. 'XBOX_GAME_PASS' for the
+   * Xbox / Ubisoft / Battle.net listings that Game Pass provides), not
+   * because it was bought. It counts as owned only while that subscription
+   * runs.
+   */
+  subscription?: string;
+  /**
    * GFN's own app-level uuid (distinct from `id`, which is the per-store
    * numeric CloudMatch launch id) -- only known for titles resolved through
    * an authenticated apps() response (owned library, catalog rank), since
