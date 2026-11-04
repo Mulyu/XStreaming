@@ -386,3 +386,61 @@ describe('mergeXcloudLookup', () => {
     expect(merged.get('AAA')).toBe(catalogItem);
   });
 });
+
+describe('store row ratings and genres', () => {
+  it('attaches an Xbox row its star rating and genre by uppercase Store id', () => {
+    const xcloud = new Map<string, any>([
+      [
+        'AAA',
+        {
+          ProductTitle: 'Game A',
+          Image_Tile: {URL: '//img/a.jpg'},
+          details: {hasEntitlement: true},
+        },
+      ],
+    ]);
+    const rows = buildXboxStoreRows(['aaa'], xcloud, {}, {}, true, {
+      ratings: {AAA: {average: 4.3, count: 1204}},
+      genres: {AAA: 'Shooter'},
+    });
+    expect(rows[0].rating).toEqual({kind: 'stars', average: 4.3, count: 1204});
+    expect(rows[0].genres).toEqual(['Shooter']);
+  });
+
+  it('leaves an Xbox row without a rating or genre when the store has none', () => {
+    const xcloud = new Map<string, any>([
+      ['AAA', {ProductTitle: 'Game A', details: {hasEntitlement: true}}],
+    ]);
+    const rows = buildXboxStoreRows(['AAA'], xcloud, {});
+    expect(rows[0].rating).toBeUndefined();
+    expect(rows[0].genres).toBeUndefined();
+  });
+
+  it('carries the Steam review verdict onto a GFN row', () => {
+    const rating = {
+      kind: 'review' as const,
+      label: 'Very Positive',
+      sentiment: 'positive' as const,
+      percent: 92,
+      count: 5000,
+    };
+    const rows = buildGfnStoreRows([{appId: '1', title: 'Game A', rating}], []);
+    expect(rows[0].rating).toEqual(rating);
+  });
+
+  it('attaches a PS row its brief once fetched, and nothing before', () => {
+    const entries: PsStoreChartEntry[] = [
+      {productId: 'UP1', title: 'Game A'},
+      {productId: 'UP2', title: 'Game B'},
+    ];
+    const rows = buildPsStoreRows(entries, [], {
+      UP1: {genres: ['アクション', 'RPG'], averageRating: 4.6},
+      UP2: {genres: []},
+    });
+    expect(rows[0].rating).toEqual({kind: 'stars', average: 4.6});
+    expect(rows[0].genres).toEqual(['アクション', 'RPG']);
+    expect(rows[1].rating).toBeUndefined();
+    expect(rows[1].genres).toBeUndefined();
+    expect(buildPsStoreRows(entries, [])[0].genres).toBeUndefined();
+  });
+});

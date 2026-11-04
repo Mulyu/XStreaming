@@ -49,6 +49,8 @@ import {
   removeFromWishlist,
   isCatalogTitleWishlisted,
   buildWishlistEntry,
+  RatingInfo,
+  xboxGenreLabel,
 } from '../../entities/catalog-title';
 import {isSignedIn, getValidGfnJwt} from '../../entities/gfn-account';
 import {isXboxMembershipActive} from '../../entities/xbox-token';
@@ -86,6 +88,8 @@ import {
   rowWishlistExtra,
   mergeXcloudLookup,
 } from './storeLogic';
+import {usePsBriefs} from './model/usePsBriefs';
+import {RatingLine, GenreChips} from './ui/StoreRowMeta';
 import {alpha, palette} from '../../shared/config/palette';
 
 // Both Xbox's and Steam's charts are live search scans, not curated top-N
@@ -173,6 +177,14 @@ function StoreScreen() {
   // Ids whose basics were already requested this session (answered or not),
   // so a failed lookup is not retried on every render.
   const xboxBasicsRequestedRef = React.useRef(new Set<string>());
+  // Store rating / genre per product id, from the same responses as the
+  // prices (and cached with them).
+  const [xboxRatingMap, setXboxRatingMap] = React.useState<
+    Record<string, RatingInfo>
+  >({});
+  const [xboxGenreMap, setXboxGenreMap] = React.useState<
+    Record<string, string>
+  >({});
   // The chart kind ('best'/'new') each provider's currently-held entries
   // were loaded for, so switching tabs back to a provider that already has
   // *this* kind loaded reuses what's there instead of throwing away
@@ -425,6 +437,14 @@ function StoreScreen() {
     const cache = getFreshPriceCache(market);
     if (cache) {
       setXboxPriceMap(prev => ({...cache.priceMap, ...prev}));
+      if (cache.ratingMap) {
+        const cachedRatings = cache.ratingMap;
+        setXboxRatingMap(prev => ({...cachedRatings, ...prev}));
+      }
+      if (cache.genreMap) {
+        const cachedGenres = cache.genreMap;
+        setXboxGenreMap(prev => ({...cachedGenres, ...prev}));
+      }
       // (A cache written before Game Pass ids were stored has no map.)
       if (
         cache.sig === sig &&
@@ -439,6 +459,8 @@ function StoreScreen() {
         if (Object.keys(prices).length > 0) {
           setXboxPriceMap(prev => ({...prev, ...prices}));
         }
+        setXboxRatingMap(prev => ({...prev, ...ratings}));
+        setXboxGenreMap(prev => ({...prev, ...genres}));
         if (ok) {
           savePriceCache(prices, ratings, market, sig, gamePass, genres);
         }
@@ -462,14 +484,18 @@ function StoreScreen() {
       return;
     }
     wanted.forEach(id => xboxBasicsRequestedRef.current.add(id.toUpperCase()));
-    fetchProductBasics(wanted, market, language).then(({basics, prices}) => {
-      if (Object.keys(basics).length > 0) {
-        setXboxBasics(prev => ({...prev, ...basics}));
-      }
-      if (Object.keys(prices).length > 0) {
-        setXboxPriceMap(prev => ({...prev, ...prices}));
-      }
-    });
+    fetchProductBasics(wanted, market, language).then(
+      ({basics, prices, ratings, genres}) => {
+        if (Object.keys(basics).length > 0) {
+          setXboxBasics(prev => ({...prev, ...basics}));
+        }
+        setXboxRatingMap(prev => ({...prev, ...ratings}));
+        setXboxGenreMap(prev => ({...prev, ...genres}));
+        if (Object.keys(prices).length > 0) {
+          setXboxPriceMap(prev => ({...prev, ...prices}));
+        }
+      },
+    );
   }, [
     provider,
     xboxAvailableOnly,
@@ -964,6 +990,12 @@ function StoreScreen() {
     }
   };
 
+  const psEntryIds = React.useMemo(
+    () => psStoreEntries.map(entry => entry.productId),
+    [psStoreEntries],
+  );
+  const psBriefs = usePsBriefs(psEntryIds, provider === 'psstore');
+
   // Match this provider's raw chart against this provider's own catalog,
   // keeping the chart's own rank so a filtered-out title still leaves a
   // visible gap rather than silently compacting the list.
@@ -976,10 +1008,11 @@ function StoreScreen() {
             xboxPriceMap,
             xboxBasics,
             xboxAvailableOnly,
+            {ratings: xboxRatingMap, genres: xboxGenreMap},
           )
         : provider === 'gfn'
         ? buildGfnStoreRows(steamEntries, gfnFullCatalog)
-        : buildPsStoreRows(psStoreEntries, psPlusGames),
+        : buildPsStoreRows(psStoreEntries, psPlusGames, psBriefs),
     [
       provider,
       xboxProductIds,
@@ -987,10 +1020,13 @@ function StoreScreen() {
       xboxPriceMap,
       xboxBasics,
       xboxAvailableOnly,
+      xboxRatingMap,
+      xboxGenreMap,
       steamEntries,
       gfnFullCatalog,
       psStoreEntries,
       psPlusGames,
+      psBriefs,
     ],
   );
 
@@ -1171,6 +1207,11 @@ function StoreScreen() {
         : 'WishlistAdd',
     );
     const actionOnColor = owned ? palette.sale : palette.accent;
+    // Xbox hands its genre out as one English token; the other stores' are
+    // already in the user's language.
+    const genreLabels = item.genres?.map(genre =>
+      provider === 'xcloud' ? xboxGenreLabel(genre, t) : genre,
+    );
     return (
       <Pressable
         style={[styles.row, isFocused && tvFocusRow]}
@@ -1193,6 +1234,8 @@ function StoreScreen() {
           <Text style={styles.rowTitle} numberOfLines={2}>
             {item.title}
           </Text>
+          {!!item.rating && <RatingLine rating={item.rating} />}
+          {!!genreLabels?.length && <GenreChips genres={genreLabels} />}
           {!!item.price && (
             <View style={styles.priceRow}>
               {!!item.discountPercent && (
@@ -1571,8 +1614,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   cover: {
-    width: 48,
-    height: 48,
+    width: 64,
+    height: 64,
     borderRadius: 8,
     backgroundColor: palette.surfaceHigh,
   },
