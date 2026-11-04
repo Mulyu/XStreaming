@@ -474,7 +474,7 @@ export default {
     LibraryFilterGfn: 'GeForce NOW',
     LibraryFilterPsPlus: 'PS Plus',
     LibraryFilterFavorite: 'お気に入り',
-    LibraryFilterWishlist: 'ウィッシュリスト',
+    LibraryFilterWishlist: 'ウィッシュ',
     FavoriteAdd: 'お気に入りに追加',
     FavoriteRemove: 'お気に入りから外す',
     WishlistAdd: 'ウィッシュリストに追加',
@@ -511,7 +511,7 @@ export default {
     SortDiscount: '割引率順',
     LibraryChipCatalog: 'カタログ',
     LibraryWishlistEmpty:
-      'ウィッシュリストにタイトルがありません。「ウィッシュリスト」を外すとストア全体を表示します',
+      'ウィッシュリストにタイトルがありません。「ウィッシュ」を外すとストア全体を表示します',
     StoreTabXbox: 'Xbox',
     StoreTabSteam: 'Steam',
     StoreTabPlayStation: 'PlayStation',
