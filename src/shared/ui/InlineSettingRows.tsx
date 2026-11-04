@@ -32,6 +32,7 @@ type RowShellProps = {
   tail?: React.ReactNode;
   children?: React.ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void;
 };
 
 // Every inline row shares this shape: a title line, then a line pairing the
@@ -47,11 +48,19 @@ const RowShell: React.FC<RowShellProps> = ({
   tail,
   children,
   onPress,
+  onLongPress,
 }) => {
-  const Wrapper: any = onPress ? Pressable : View;
+  const {focused, onFocus, onBlur} = useTVFocus();
+  const interactive = !!(onPress || onLongPress);
+  const Wrapper: any = interactive ? Pressable : View;
+  const interaction = interactive
+    ? {onPress, onLongPress, onFocus, onBlur}
+    : undefined;
   return (
     <>
-      <Wrapper style={styles.row} onPress={onPress}>
+      <Wrapper
+        style={[styles.row, interactive && focused && tvFocusBold]}
+        {...interaction}>
         <Text style={styles.rowTitle}>{title}</Text>
         <View style={styles.metaLine}>
           {desc ? (
@@ -125,9 +134,12 @@ export const InfoRow: React.FC<{
   title: string;
   value: string;
   accent?: string;
-}> = ({title, value, accent = palette.accent}) => (
+  // Holding the row (e.g. to copy something behind the value).
+  onLongPress?: () => void;
+}> = ({title, value, accent = palette.accent, onLongPress}) => (
   <RowShell
     title={title}
+    onLongPress={onLongPress}
     tail={<Text style={[styles.infoValue, {color: accent}]}>{value}</Text>}
   />
 );

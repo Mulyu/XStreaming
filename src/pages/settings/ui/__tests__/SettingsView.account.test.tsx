@@ -118,18 +118,18 @@ describe('provider account rows', () => {
     expect(texts(tree)).toContain('10h 30m left');
   });
 
-  it('Xbox signed in: a temporary row copies the content-access Authorization', () => {
+  it('Xbox signed in: holding the cloud gaming time row copies the content-access Authorization', () => {
     const onCopyContentAccessAuth = jest.fn();
     const tree = render({
       lane: 'xbox',
       isAuthed: true,
+      xboxPlaytimeDescription: '広告つき 無制限',
       onCopyContentAccessAuth,
     });
-    expect(texts(tree)).toContain('XboxCopyContentAccessAuthTitle');
-    press(tree, 'XboxCopyContentAccessAuthTitle');
+    longPress(tree, 'XboxPlaytimeTitle');
     expect(onCopyContentAccessAuth).toHaveBeenCalledTimes(1);
-    const signedOut = render({lane: 'xbox', isAuthed: false});
-    expect(texts(signedOut)).not.toContain('XboxCopyContentAccessAuthTitle');
+    // The temporary Debug row for it is gone.
+    expect(texts(tree)).not.toContain('XboxCopyContentAccessAuthTitle');
   });
 
   it('GeForce NOW: user name and plan on the row, playtime on its own row', () => {

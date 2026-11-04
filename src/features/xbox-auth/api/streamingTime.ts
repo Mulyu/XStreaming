@@ -58,9 +58,9 @@ const getContentAccessToken = async (
   };
 };
 
-// TEMPORARY, for investigating the content-access service off-device: the
-// Authorization header value its requests carry. Only meant to be copied to the
-// clipboard by the user (see Settings > Xbox > Debug).
+// The Authorization header value the content-access service's requests carry,
+// for inspecting its answer off-device. Only meant to be copied to the
+// clipboard by the user (hold the cloud gaming time row in Settings > Xbox).
 export const getContentAccessAuthorization = async (
   authentication: any,
 ): Promise<string | null> => {
