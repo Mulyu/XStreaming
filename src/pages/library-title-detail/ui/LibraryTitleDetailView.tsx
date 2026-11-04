@@ -660,7 +660,12 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                     </View>
                     <View style={styles.storeRowEnd}>
                       {variant.owned && (
-                        <Text style={styles.ownedText}>{t('GfnOwned')}</Text>
+                        <Text style={styles.ownedText}>
+                          {/* A listing Game Pass provides is not a purchase. */}
+                          {variant.subscription === 'XBOX_GAME_PASS'
+                            ? t('IncludedWithGamePass')
+                            : t('GfnOwned')}
+                        </Text>
                       )}
                       {variant.steamAppId && (
                         <Pressable
