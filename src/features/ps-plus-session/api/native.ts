@@ -165,6 +165,10 @@ class PsPlusChiakiClient {
 
   // The PSN online ID behind an npsso, or null when it can't be read.
   fetchOnlineId(npsso: string | undefined): Promise<string | null> {
+    // Sony's HTTPS endpoints need the CA bundle set up first (see catalog.ts);
+    // without it every request fails TLS verification, which is what happened
+    // whenever this ran before the first catalog load in a fresh process.
+    this.initNativeSsl();
     return PsPlusChiakiNative?.fetchOnlineId
       ? PsPlusChiakiNative.fetchOnlineId(npsso)
       : Promise.resolve(null);
@@ -173,6 +177,7 @@ class PsPlusChiakiClient {
   // Diagnostics: the account block of Sony's session reply (secrets hidden), or
   // null when it can't be read.
   fetchAccountDiag(npsso: string | undefined): Promise<string | null> {
+    this.initNativeSsl(); // same reason as fetchOnlineId
     return PsPlusChiakiNative?.fetchAccountDiag
       ? PsPlusChiakiNative.fetchAccountDiag(npsso)
       : Promise.resolve(null);
