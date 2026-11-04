@@ -404,8 +404,8 @@ export function useSettingsScreen(navigation: any, route: any) {
     );
   };
 
-  // TEMPORARY: the Authorization header the content-access service (cloud
-  // gaming time) is called with, to look at its answer off-device.
+  // Holding the cloud gaming time row copies the Authorization header the
+  // content-access service is called with, to look at its answer off-device.
   const handleCopyContentAccessAuth = () => {
     getContentAccessAuthorization(authentication)
       .then(copyToken)

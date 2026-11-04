@@ -397,9 +397,6 @@ export default {
     AppDebugCopyEmpty: 'まだログが記録されていません。',
     AppDebugCopyFailed: 'ログをコピーできませんでした。',
     GameTimeWarning: 'クラウドゲームの残り時間は、あと約{{minutes}}分です',
-    XboxCopyContentAccessAuthTitle: '残り時間用のAuthorizationをコピー（一時）',
-    XboxCopyContentAccessAuthDesc:
-      '残り時間の取得に使うAuthorizationヘッダーをクリップボードにコピーします。調査用の一時的な機能です。',
     XboxPlaytimeAdFree: '広告なし 残り{{hours}}時間{{minutes}}分',
     XboxPlaytimeAdFreeUnlimited: '広告なし 無制限',
     XboxPlaytimeAdSupported: '広告つき 残り{{hours}}時間{{minutes}}分',

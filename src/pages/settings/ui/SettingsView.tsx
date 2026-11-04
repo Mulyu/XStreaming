@@ -255,6 +255,7 @@ const SettingsView: React.FC<Props> = ({
               title={t('XboxPlaytimeTitle')}
               value={xboxPlaytimeDescription}
               accent={palette.provider.xbox}
+              onLongPress={onCopyContentAccessAuth}
             />
           )}
 
@@ -324,17 +325,6 @@ const SettingsView: React.FC<Props> = ({
             description={`${t('DualSense_adaptive_trigger_right_desc')}`}
             onPress={onNavigateDs5Right}
           />
-
-          {isAuthed && (
-            <>
-              <SectionLabel title={t('SectionDebug')} />
-              <SettingItem
-                title={t('XboxCopyContentAccessAuthTitle')}
-                description={t('XboxCopyContentAccessAuthDesc')}
-                onPress={onCopyContentAccessAuth}
-              />
-            </>
-          )}
         </ScrollView>
       )}
 
