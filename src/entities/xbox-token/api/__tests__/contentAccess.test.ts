@@ -1,6 +1,6 @@
 import {
   decodeAccountStreamingTime,
-  remainingStreamingSeconds,
+  summarizeStreamingTime,
 } from '../contentAccess';
 
 // A tiny protobuf encoder, enough to build the service's answer.
@@ -87,7 +87,42 @@ describe('decodeAccountStreamingTime', () => {
   });
 });
 
-describe('remainingStreamingSeconds', () => {
+// An int32 of -1 goes on the wire as a 10-byte varint.
+const NEGATIVE_ONE = [
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01,
+];
+const vNeg = (no: number) => [...varint(no * 8), ...NEGATIVE_ONE];
+
+describe('a real answer (an account without Game Pass)', () => {
+  // What the service sent for an account whose ad-free time is used up and
+  // whose ad-supported time has no limit: -1 remaining, -1 maximum.
+  const answer = response([
+    ...lField(2, [...vField(3, 1793790672), ...vField(5, 1)]),
+    ...lField(3, [...vField(3, 1793790672), ...vField(5, 1)]),
+    ...lField(4, [
+      ...vNeg(2),
+      ...vField(3, 1793790672),
+      ...vNeg(4),
+      ...vField(5, 1),
+    ]),
+  ]);
+
+  it('reads -1 as -1', () => {
+    const data = decodeAccountStreamingTime(answer);
+    expect(data?.adSupported?.remainingSeconds).toBe(-1);
+    expect(data?.adSupported?.maxSeconds).toBe(-1);
+    expect(data?.periodicAdFree?.remainingSeconds).toBe(0);
+  });
+
+  it('summarizes it as no ad-free time and unlimited time with ads', () => {
+    expect(summarizeStreamingTime(decodeAccountStreamingTime(answer))).toEqual({
+      adFree: {unlimited: false, seconds: 0},
+      adSupported: {unlimited: true},
+    });
+  });
+});
+
+describe('summarizeStreamingTime', () => {
   const t = (remainingSeconds: number) => ({
     remainingSeconds,
     maxSeconds: 0,
@@ -97,27 +132,35 @@ describe('remainingStreamingSeconds', () => {
 
   it('adds up the ad-free time (monthly allowance plus bought time)', () => {
     expect(
-      remainingStreamingSeconds({
+      summarizeStreamingTime({
         periodicAdFree: t(3600),
         persistentAdFree: t(1800),
-        adSupported: t(99999),
+        adSupported: t(900),
       }),
-    ).toBe(5400);
+    ).toEqual({
+      adFree: {unlimited: false, seconds: 5400},
+      adSupported: {unlimited: false, seconds: 900},
+    });
   });
 
-  it('falls back to the ad-supported time, and to null with none', () => {
-    expect(remainingStreamingSeconds({adSupported: t(900)})).toBe(900);
-    expect(remainingStreamingSeconds({})).toBeNull();
-    expect(remainingStreamingSeconds(null)).toBeNull();
+  it('calls ad-free time with a -1 unlimited', () => {
+    expect(summarizeStreamingTime({periodicAdFree: t(-1)})?.adFree).toEqual({
+      unlimited: true,
+    });
   });
 
-  it('ignores a negative (unset) figure', () => {
+  it('leaves out the kind the account does not have', () => {
+    expect(summarizeStreamingTime({adSupported: t(600)})).toEqual({
+      adFree: {unlimited: false, seconds: 0},
+      adSupported: {unlimited: false, seconds: 600},
+    });
     expect(
-      remainingStreamingSeconds({periodicAdFree: t(-1), adSupported: t(600)}),
-    ).toBe(600);
+      summarizeStreamingTime({periodicAdFree: t(60)})?.adSupported,
+    ).toBeUndefined();
   });
 
-  it('reports zero as zero', () => {
-    expect(remainingStreamingSeconds({periodicAdFree: t(0)})).toBe(0);
+  it('is null when the account carries no streaming time', () => {
+    expect(summarizeStreamingTime({})).toBeNull();
+    expect(summarizeStreamingTime(null)).toBeNull();
   });
 });

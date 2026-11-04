@@ -26,6 +26,7 @@ import {
   getContentAccessAuthorization,
 } from '../../../features/xbox-auth';
 import type {StreamingTimeResult} from '../../../features/xbox-auth';
+import type {TimeLeft} from '../../../entities/xbox-token';
 import {
   isPsPlusSignedIn,
   getNpsso,
@@ -515,14 +516,44 @@ export function useSettingsScreen(navigation: any, route: any) {
         ? `${t('XboxPlaytimeUnavailable')} (${xboxStreamingTime.reason})`
         : t('XboxPlaytimeUnavailable');
     }
-    if (xboxStreamingTime.seconds === null) {
+    const summary = xboxStreamingTime.summary;
+    if (!summary) {
       return t('XboxPlaytimeNone');
     }
-    const totalMinutes = Math.floor(xboxStreamingTime.seconds / 60);
-    return t('XboxPlaytimeRemaining', {
-      hours: Math.floor(totalMinutes / 60),
-      minutes: totalMinutes % 60,
-    });
+    const left = (time: TimeLeft, key: string, unlimitedKey: string) => {
+      if (time.unlimited) {
+        return t(unlimitedKey);
+      }
+      const totalMinutes = Math.floor(time.seconds / 60);
+      return t(key, {
+        hours: Math.floor(totalMinutes / 60),
+        minutes: totalMinutes % 60,
+      });
+    };
+    // Ad-free time, when there is any (or no limit on it); with ads, when the
+    // account has that kind. An account with neither shows 0.
+    const parts: string[] = [];
+    if (summary.adFree.unlimited || summary.adFree.seconds > 0) {
+      parts.push(
+        left(
+          summary.adFree,
+          'XboxPlaytimeAdFree',
+          'XboxPlaytimeAdFreeUnlimited',
+        ),
+      );
+    }
+    if (summary.adSupported) {
+      parts.push(
+        left(
+          summary.adSupported,
+          'XboxPlaytimeAdSupported',
+          'XboxPlaytimeAdSupportedUnlimited',
+        ),
+      );
+    }
+    return parts.length > 0
+      ? parts.join(' · ')
+      : t('XboxPlaytimeAdFree', {hours: 0, minutes: 0});
   };
 
   const gfnPlaytimeDescription = (): string => {
