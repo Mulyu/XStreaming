@@ -131,6 +131,10 @@ const getVpcId = async (token: string): Promise<string | null> => {
 const LIBRARY_FILTER = {
   variants: {gfn: {library: {status: {notEquals: 'NOT_OWNED'}}}},
 };
+// 200 per page, up to 20 pages (4,000 apps) -- far beyond any real library; the
+// cap only stops a server that never ends its pages.
+const LIBRARY_PAGE_SIZE = 200;
+const LIBRARY_MAX_PAGES = 20;
 const LIBRARY_SORT =
   'variants.gfn.library.lastPlayedDate:DESC,computedValues.libraryAddedDate:DESC,sortName:ASC';
 
@@ -150,6 +154,7 @@ const LIBRARY_QUERY = `query GetLibraryApps(
     after: $cursor,
     filters: $filters
   ) {
+    pageInfo { hasNextPage endCursor }
     items {
       id
       title
@@ -353,16 +358,20 @@ export const summarizeLibraryStatuses = (
   return [`apps=${items.length}; variants: ${total || 'none'}`, ...xboxApps];
 };
 
-// Fetch the signed-in user's owned GFN games (one page, up to 200 — covers
-// virtually every library). Returns [] on any failure.
-export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
-  const vpcId = await getVpcId(token);
-  if (!vpcId) {
-    return [];
-  }
-  let res: Response;
+type LibraryPage = {
+  items: RawApp[];
+  hasNextPage: boolean;
+  endCursor: string;
+};
+
+// One page of the owned-library query; null on any failure.
+const fetchLibraryPage = async (
+  token: string,
+  vpcId: string,
+  cursor: string,
+): Promise<LibraryPage | null> => {
   try {
-    res = await fetch(GRAPHQL_URL, {
+    const res = await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: graphqlHeaders(token),
       body: JSON.stringify({
@@ -371,25 +380,58 @@ export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
           vpcId,
           locale: getGfnGraphqlLocale(),
           sortString: LIBRARY_SORT,
-          fetchCount: 200,
-          cursor: '',
+          fetchCount: LIBRARY_PAGE_SIZE,
+          cursor,
           filters: LIBRARY_FILTER,
         },
       }),
     });
+    if (!res.ok) {
+      return null;
+    }
+    const apps = (await res.json())?.data?.apps;
+    return {
+      items: apps?.items ?? [],
+      hasNextPage: !!apps?.pageInfo?.hasNextPage,
+      endCursor: apps?.pageInfo?.endCursor ?? '',
+    };
   } catch {
+    return null;
+  }
+};
+
+// Fetch the signed-in user's owned GFN games, page by page (a library can be
+// larger than one page: a real account had 315 apps against a 200 page).
+// Returns [] on a failure of the first page; if a later page fails the games
+// read so far are returned but not cached, so the next load tries again.
+export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
+  const vpcId = await getVpcId(token);
+  if (!vpcId) {
     return [];
   }
-  if (!res.ok) {
-    return [];
+  const items: RawApp[] = [];
+  let cursor = '';
+  let complete = true;
+  for (let page = 0; page < LIBRARY_MAX_PAGES; page++) {
+    const result = await fetchLibraryPage(token, vpcId, cursor);
+    if (!result) {
+      if (page === 0) {
+        return [];
+      }
+      complete = false;
+      break;
+    }
+    items.push(...result.items);
+    // A cursor that does not advance would loop until the page cap.
+    if (
+      !result.hasNextPage ||
+      !result.endCursor ||
+      result.endCursor === cursor
+    ) {
+      break;
+    }
+    cursor = result.endCursor;
   }
-  let payload: any;
-  try {
-    payload = await res.json();
-  } catch {
-    return [];
-  }
-  const items: RawApp[] = payload?.data?.apps?.items ?? [];
   for (const line of summarizeLibraryStatuses(items)) {
     appDebugLog('GfnLibrary', line);
   }
@@ -398,9 +440,11 @@ export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
   // Library screen's "Recently played" sort reuses as-is. Callers that want
   // alphabetical order (mergeOwnedGames) already re-sort their own output.
   const games = items.flatMap(toOwnedGames);
-  try {
-    storage.set(ownedCacheKey(), JSON.stringify({ts: Date.now(), games}));
-  } catch {}
+  if (complete) {
+    try {
+      storage.set(ownedCacheKey(), JSON.stringify({ts: Date.now(), games}));
+    } catch {}
+  }
   return games;
 };
 

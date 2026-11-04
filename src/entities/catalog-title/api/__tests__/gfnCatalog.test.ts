@@ -4,6 +4,7 @@ import {
   isConfirmedPlayable,
   toBrowseGames,
   toOwnedGames,
+  fetchGfnOwnedGames,
   summarizeLibraryStatuses,
 } from '../gfnCatalog';
 import {GfnGame} from '../gfnPublicGames';
@@ -312,5 +313,71 @@ describe('library subscription', () => {
     );
     expect(merged[0].owned).toBe(true);
     expect(merged[0].subscription).toBe('XBOX_GAME_PASS');
+  });
+});
+
+describe('fetchGfnOwnedGames paging', () => {
+  const app = (n: number) => ({
+    id: `app-${n}`,
+    title: `Game ${n}`,
+    variants: [
+      {
+        id: String(1000 + n),
+        appStore: 'STEAM',
+        gfn: {library: {status: 'PLATFORM_SYNC', subscription: 'NONE'}},
+      },
+    ],
+  });
+  const json = (body: unknown, ok = true) =>
+    Promise.resolve({ok, json: () => Promise.resolve(body)} as Response);
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  const mockFetch = (pages: any[]) => {
+    const libraryCalls: any[] = [];
+    let i = 0;
+    global.fetch = jest.fn((url: any, init?: any) => {
+      if (String(url).includes('serverInfo')) {
+        return json({requestStatus: {serverId: 'vpc-paging'}});
+      }
+      libraryCalls.push(JSON.parse(init.body).variables.cursor);
+      const page = pages[Math.min(i++, pages.length - 1)];
+      return page === 'fail' ? json({}, false) : json({data: {apps: page}});
+    }) as any;
+    return libraryCalls;
+  };
+
+  it('reads every page until there is no next one', async () => {
+    const cursors = mockFetch([
+      {items: [app(1), app(2)], pageInfo: {hasNextPage: true, endCursor: 'c1'}},
+      {items: [app(3)], pageInfo: {hasNextPage: false, endCursor: 'c2'}},
+    ]);
+    const games = await fetchGfnOwnedGames('token-paging-1');
+    expect(games.map(g => g.title)).toEqual(['Game 1', 'Game 2', 'Game 3']);
+    expect(cursors).toEqual(['', 'c1']);
+  });
+
+  it('stops when the cursor does not advance', async () => {
+    const cursors = mockFetch([
+      {items: [app(1)], pageInfo: {hasNextPage: true, endCursor: 'same'}},
+      {items: [app(2)], pageInfo: {hasNextPage: true, endCursor: 'same'}},
+    ]);
+    const games = await fetchGfnOwnedGames('token-paging-2');
+    expect(games).toHaveLength(2);
+    expect(cursors).toEqual(['', 'same']);
+  });
+
+  it('returns nothing when the first page fails, and what it has when a later one does', async () => {
+    mockFetch(['fail']);
+    expect(await fetchGfnOwnedGames('token-paging-3')).toEqual([]);
+    mockFetch([
+      {items: [app(1)], pageInfo: {hasNextPage: true, endCursor: 'c1'}},
+      'fail',
+    ]);
+    expect(
+      (await fetchGfnOwnedGames('token-paging-4')).map(g => g.title),
+    ).toEqual(['Game 1']);
   });
 });
