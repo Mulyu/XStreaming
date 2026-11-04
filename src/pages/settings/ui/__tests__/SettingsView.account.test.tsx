@@ -45,6 +45,7 @@ const makeProps = (overrides: Record<string, unknown>) => {
     gfnAccount: {userName: undefined, planTitle: undefined},
     psAccount: {userName: undefined},
     gfnPlaytimeDescription: '',
+    xboxPlaytimeDescription: '',
     ...overrides,
   };
   return new Proxy(values, {
@@ -101,9 +102,20 @@ describe('provider account rows', () => {
     expect(texts(tree)).not.toContain('AccountPlan');
   });
 
-  it('Xbox signed out: says how to sign in', () => {
+  it('Xbox signed out: says how to sign in, with no playtime row', () => {
     const tree = render({lane: 'xbox', isAuthed: false});
     expect(texts(tree)).toContain('XcloudAccountSignedOutDesc');
+    expect(texts(tree)).not.toContain('XboxPlaytimeTitle');
+  });
+
+  it('Xbox signed in: the remaining cloud gaming time on its own row', () => {
+    const tree = render({
+      lane: 'xbox',
+      isAuthed: true,
+      xboxPlaytimeDescription: '10h 30m left',
+    });
+    expect(texts(tree)).toContain('XboxPlaytimeTitle');
+    expect(texts(tree)).toContain('10h 30m left');
   });
 
   it('GeForce NOW: user name and plan on the row, playtime on its own row', () => {

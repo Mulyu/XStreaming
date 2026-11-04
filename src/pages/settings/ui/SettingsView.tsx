@@ -83,6 +83,7 @@ const SettingsView: React.FC<Props> = ({
   signalingCloudValue,
   gfnRegionOptions,
   xboxAccount,
+  xboxPlaytimeDescription,
   gfnAccount,
   psAccount,
   gfnPlaytimeDescription,
@@ -248,6 +249,13 @@ const SettingsView: React.FC<Props> = ({
             onPress={onXcloudAccountPress}
             onLongPress={onCopyXboxToken}
           />
+          {isAuthed && (
+            <InfoRow
+              title={t('XboxPlaytimeTitle')}
+              value={xboxPlaytimeDescription}
+              accent={palette.provider.xbox}
+            />
+          )}
 
           <SectionLabel title={t('SectionVideo')} />
           <SegmentedRow
