@@ -173,3 +173,38 @@ index 92623d2..fa41ada 100644
          >
            {content}
          </Pressable>
+diff --git a/node_modules/react-native-paper/lib/typescript/components/Checkbox/CheckboxItem.d.ts b/node_modules/react-native-paper/lib/typescript/components/Checkbox/CheckboxItem.d.ts
+index 6780c3b..0f020b1 100644
+--- a/node_modules/react-native-paper/lib/typescript/components/Checkbox/CheckboxItem.d.ts
++++ b/node_modules/react-native-paper/lib/typescript/components/Checkbox/CheckboxItem.d.ts
+@@ -1,5 +1,5 @@
+ import * as React from 'react';
+-import { ColorValue, GestureResponderEvent, PressableAndroidRippleConfig, StyleProp, TextStyle, ViewStyle } from 'react-native';
++import { ColorValue, GestureResponderEvent, NativeSyntheticEvent, PressableAndroidRippleConfig, StyleProp, TargetedEvent, TextStyle, ViewStyle } from 'react-native';
+ import type { ThemeProp, MD3TypescaleKey } from '../../types';
+ export declare type Props = {
+     /**
+@@ -22,6 +22,14 @@ export declare type Props = {
+      * Function to execute on long press.
+      */
+     onLongPress?: (e: GestureResponderEvent) => void;
++    /**
++     * Function to execute on focus (e.g. Android TV/Google TV D-pad focus).
++     */
++    onFocus?: (e: NativeSyntheticEvent<TargetedEvent>) => void;
++    /**
++     * Function to execute on blur.
++     */
++    onBlur?: (e: NativeSyntheticEvent<TargetedEvent>) => void;
+     /**
+      * Type of background drawabale to display the feedback (Android).
+      * https://reactnative.dev/docs/pressable#rippleconfig
+@@ -109,7 +117,7 @@ export declare type Props = {
+  *```
+  */
+ declare const CheckboxItem: {
+-    ({ style, status, label, onPress, onLongPress, labelStyle, theme: themeOverrides, testID, mode, position, accessibilityLabel, disabled, labelVariant, labelMaxFontSizeMultiplier, rippleColor, background, ...props }: Props): React.JSX.Element;
++    ({ style, status, label, onPress, onLongPress, onFocus, onBlur, labelStyle, theme: themeOverrides, testID, mode, position, accessibilityLabel, disabled, labelVariant, labelMaxFontSizeMultiplier, rippleColor, background, ...props }: Props): React.JSX.Element;
+     displayName: string;
+ };
+ export default CheckboxItem;

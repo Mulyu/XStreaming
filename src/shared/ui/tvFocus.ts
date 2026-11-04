@@ -59,9 +59,9 @@ export type TVFocusState = {
 // place this app also factors out a couple of whole focusable components.
 export function useTVFocus(): TVFocusState {
   const [focused, setFocused] = React.useState(false);
-  return {
-    focused,
-    onFocus: () => setFocused(true),
-    onBlur: () => setFocused(false),
-  };
+  // Stable between renders, so an effect or a memoised child that takes them
+  // does not re-run on every render.
+  const onFocus = React.useCallback(() => setFocused(true), []);
+  const onBlur = React.useCallback(() => setFocused(false), []);
+  return {focused, onFocus, onBlur};
 }

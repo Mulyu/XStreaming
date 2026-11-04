@@ -139,7 +139,9 @@ function main() {
   );
   for (const f of findings) {
     const rel = path.relative(process.cwd(), f.file);
-    console.error(`  ${rel}:${f.line}  <${f.tagName}> has onPress but no onFocus`);
+    console.error(
+      `  ${rel}:${f.line}  <${f.tagName}> has onPress but no onFocus`,
+    );
   }
   console.error(
     `\nGoogle TV/Android TV D-pad navigation has no visible hover -- each element above needs an\n` +
