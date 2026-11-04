@@ -194,7 +194,6 @@ export default {
     SectionVideo: 'Video',
     SectionRegionSignaling: 'Region & Signaling',
     SectionSignInLanguage: 'Sign-in & Language',
-    SectionControllers: 'Controllers',
     FlagGfnNoOp: '⚠️ Has no effect during a GeForce NOW stream',
     Custom: 'Custom',
     Size: 'Size',
@@ -240,7 +239,6 @@ export default {
     Cancel: 'Cancel',
     Back: 'Back',
     Save: 'Save',
-    Saved: 'Saved',
     'Save Maping': 'Save',
     Reset: 'Reset',
     Delete: 'Delete',
@@ -392,11 +390,6 @@ export default {
     PsPlusBitrateTitle: 'Bitrate',
     PsPlusBitrateDesc:
       'Set the streaming bitrate for PS Plus cloud streaming (Note: a lower bitrate can help on weaker networks).',
-    AppCopyDebugInfoTitle: 'Copy app debug log',
-    AppCopyDebugInfoDesc:
-      'Copies a log of recent app foreground/background and screen activity to the clipboard, for reporting a bug (e.g. a black screen after resuming from the background).',
-    AppDebugCopyEmpty: 'No log recorded yet.',
-    AppDebugCopyFailed: 'Could not copy the log.',
     GameTimeWarning: 'About {{minutes}} min of cloud gaming time left',
     XboxPlaytimeAdFree: 'Ad-free: {{hours}}h {{minutes}}m left',
     XboxPlaytimeAdFreeUnlimited: 'Ad-free: unlimited',
@@ -419,22 +412,10 @@ export default {
       'Anti-idle: keep awake for (minutes, 0 = off)',
     AntiIdleMaxDesc:
       "While backgrounded, keep the session connected for at most this many minutes, then let it disconnect. On Xbox Cloud/GeForce NOW this works by sending a tiny camera nudge so the session isn't kicked for inactivity (note: this moves the camera, so it can affect the game) -- PS Plus has no such inactivity timeout to spoof, so it disconnects outright once the time is up instead. Set to 0 to turn this off (the session may then stay connected indefinitely while backgrounded).",
-    'Native portrait mode': 'Native portrait mode',
-    NativePortraitModeDesc:
-      'After enabling this, native streaming uses a portrait page with video on top and virtual buttons below.',
     'Ultra low latency decoding': 'Ultra low latency decoding',
     UltraLowLatencyDecoderDesc:
       'Enable ultra low latency decoding. Note that this feature does not work on all Android devices. Disable this option if black screen or other issues occur.',
     'Exit stream?': 'Exit streaming?',
-    DualSense_adaptive_trigger_left: 'Set DualSense left trigger',
-    DualSense_adaptive_trigger_left_desc:
-      'Set the DualSense left trigger to resistance/trigger/automatic rifle trigger. To enable this, turn on Android override driver in Settings and connect the DualSense controller by cable.',
-    DualSense_adaptive_trigger_right: 'Set DualSense right trigger',
-    DualSense_adaptive_trigger_right_desc:
-      'Set the DualSense right trigger to resistance/trigger/automatic rifle trigger. To enable this, turn on Android override driver in Settings and connect the DualSense controller by cable.',
-    Resistance: 'Resistance',
-    Trigger: 'Trigger',
-    'Automatic Trigger': 'Automatic rifle',
     Volume: 'Volume',
     'Polling rate': 'Polling rate',
     'Modify controller response rate': 'Modify controller response rate',
@@ -453,13 +434,8 @@ export default {
       'Network changed and reconnection failed. Please reconnect.',
     Refresh: 'Refresh',
     History: 'History',
-    HistoryTitle: 'Update log',
-    HistoryDesc: 'View AnyStreaming update history',
     fsr_sharpness_title: 'FSR sharpness',
     fsr_sharpness_desc: 'Adjust FSR sharpness',
-    useMsalLoginTitle: 'Auth code login',
-    useMsalLoginDesc:
-      'Force auth code login. Try enabling this if login or cloud gaming does not work properly.',
     Completed: 'Completed',
     CoopTips: 'Entered co-op mode',
     Microphone_title: 'Enable microphone (experimental)',

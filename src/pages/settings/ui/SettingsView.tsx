@@ -90,7 +90,6 @@ const SettingsView: React.FC<Props> = ({
   updateSetting,
   onLocaleChange,
   onForceRegionChange,
-  onUseMsalLoginChange,
   onPreferredLanguageChange,
   onLowLatencyDecoderChange,
   onSignalingCloudChange,
@@ -99,13 +98,9 @@ const SettingsView: React.FC<Props> = ({
   onCopyContentAccessAuth,
   onCopyGfnToken,
   onCopyPsPlusToken,
-  onCopyAppDebugInfo,
   onPsPlusAccountPress,
   onXcloudAccountPress,
   onNavigateInputMapping,
-  onNavigateHistory,
-  onNavigateDs5Left,
-  onNavigateDs5Right,
 }) => {
   const laneButtons: {
     value: Lane;
@@ -219,18 +214,6 @@ const SettingsView: React.FC<Props> = ({
             onChange={v => updateSetting('anti_idle_max_minutes', v)}
             formatValue={v => `${v}m`}
           />
-          <SettingItem
-            title={t('HistoryTitle')}
-            description={`${t('HistoryDesc')}`}
-            onPress={onNavigateHistory}
-          />
-
-          <SectionLabel title={t('SectionDebug')} />
-          <SettingItem
-            title={t('AppCopyDebugInfoTitle')}
-            description={t('AppCopyDebugInfoDesc')}
-            onPress={onCopyAppDebugInfo}
-          />
         </ScrollView>
       )}
 
@@ -272,13 +255,6 @@ const SettingsView: React.FC<Props> = ({
             value={settings.codec}
             onChange={v => updateSetting('codec', v)}
           />
-          <SwitchRow
-            title={M('native_portrait_mode').title}
-            desc={M('native_portrait_mode').description}
-            value={settings.native_portrait_mode}
-            onChange={v => updateSetting('native_portrait_mode', v)}
-            accent={palette.accent}
-          />
 
           <SectionLabel title={t('SectionRegionSignaling')} />
           <ChoiceRow
@@ -304,24 +280,6 @@ const SettingsView: React.FC<Props> = ({
             options={M('preferred_game_language').data}
             value={settings.preferred_game_language}
             onChange={onPreferredLanguageChange}
-          />
-          <SwitchRow
-            title={M('use_msal_login').title}
-            desc={M('use_msal_login').description}
-            value={settings.use_msal_login}
-            onChange={onUseMsalLoginChange}
-          />
-
-          <SectionLabel title={t('SectionControllers')} />
-          <SettingItem
-            title={t('DualSense_adaptive_trigger_left')}
-            description={`${t('DualSense_adaptive_trigger_left_desc')}`}
-            onPress={onNavigateDs5Left}
-          />
-          <SettingItem
-            title={t('DualSense_adaptive_trigger_right')}
-            description={`${t('DualSense_adaptive_trigger_right_desc')}`}
-            onPress={onNavigateDs5Right}
           />
         </ScrollView>
       )}

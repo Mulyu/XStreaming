@@ -16,16 +16,6 @@ const display = [
     ],
   },
   {
-    name: 'native_portrait_mode',
-    type: 'radio',
-    title: t('Native portrait mode'),
-    description: t('NativePortraitModeDesc'),
-    data: [
-      {value: false, text: t('Disable')},
-      {value: true, text: t('Enable')},
-    ],
-  },
-  {
     name: 'native_low_latency_decoder',
     type: 'radio',
     title: t('Ultra low latency decoding'),

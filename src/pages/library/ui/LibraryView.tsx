@@ -27,7 +27,6 @@ import {
 } from '../../../shared/ui/tvFocus';
 import {AppButton, ToggleGroup} from '../../../shared/ui/Buttons';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
-import {appDebugLog} from '../../../shared/lib/appDebugLog';
 import {alpha, palette} from '../../../shared/config/palette';
 
 // Same dim treatment library-title-detail's own per-provider rows use for a
@@ -449,14 +448,6 @@ const LibraryView: React.FC<Props> = ({
       if (!Platform.isTV) {
         return;
       }
-      appDebugLog(
-        'Library',
-        `OK-hold enabled (GamepadManager ${
-          NativeModules.GamepadManager?.setCenterLongPressEnabled
-            ? 'present'
-            : 'missing'
-        })`,
-      );
       NativeModules.GamepadManager?.setCenterLongPressEnabled?.(true);
       const sub = DeviceEventEmitter.addListener(
         'onDpadCenterLongPress',
@@ -465,10 +456,6 @@ const LibraryView: React.FC<Props> = ({
           const item = key
             ? sortedRef.current.find(entry => entry.key === key)
             : undefined;
-          appDebugLog(
-            'Library',
-            `OK held: focused=${key ?? 'none'} found=${item ? 'yes' : 'no'}`,
-          );
           if (item) {
             openTitleDetailRef.current(item);
           }

@@ -1,9 +1,6 @@
-const mockSettings: {use_msal_login?: boolean} = {};
+const mockToken = {method: 'xal'};
 const mockGfn = {signedIn: false, refresh: jest.fn(() => Promise.resolve())};
 
-jest.mock('../../../../shared/lib/settings', () => ({
-  getSettings: () => mockSettings,
-}));
 jest.mock('../../../../shared/lib/debug', () => ({
   debugFactory: () => ({info: jest.fn(), error: jest.fn(), warn: jest.fn()}),
 }));
@@ -16,7 +13,10 @@ jest.mock('../../../../Authentication', () => {
   class MockAuth {
     completed: any;
     failed: any;
-    _tokenStore = {load: jest.fn(), getAuthenticationMethod: () => 'xal'};
+    _tokenStore = {
+      load: jest.fn(),
+      getAuthenticationMethod: () => mockToken.method,
+    };
     checkAuthentication = jest.fn(() => Promise.resolve(true));
     constructor(completed: any, failed: any) {
       this.completed = completed;
@@ -48,7 +48,7 @@ const reset = () => {
   store.dispatch({type: 'SET_LOGIN', payload: false});
   store.dispatch({type: 'SET_STREAMING_TOKEN', payload: {}});
   setInteractiveFailureHandler(null);
-  mockSettings.use_msal_login = false;
+  mockToken.method = 'xal';
   mockGfn.signedIn = false;
   mockGfn.refresh.mockClear();
 };
@@ -64,8 +64,8 @@ describe('xbox auth session', () => {
     expect(ensureAuthentication()).toBe(first);
   });
 
-  it('uses MSAL when the setting asks for it', () => {
-    mockSettings.use_msal_login = true;
+  it('uses MSAL for a session that was signed in with MSAL', () => {
+    mockToken.method = 'msal';
     expect(ensureAuthentication()).toBeInstanceOf(MockMsal);
   });
 

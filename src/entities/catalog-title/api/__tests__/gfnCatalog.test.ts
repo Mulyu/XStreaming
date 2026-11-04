@@ -5,7 +5,6 @@ import {
   toBrowseGames,
   toOwnedGames,
   fetchGfnOwnedGames,
-  summarizeLibraryStatuses,
 } from '../gfnCatalog';
 import {GfnGame} from '../gfnPublicGames';
 
@@ -239,34 +238,6 @@ describe('toOwnedGames', () => {
   });
 });
 
-describe('summarizeLibraryStatuses', () => {
-  it('counts variants per store and status and lists apps with an Xbox listing', () => {
-    const lines = summarizeLibraryStatuses([
-      {
-        title: 'A',
-        variants: [
-          {id: '1', appStore: 'STEAM', gfn: {library: {status: 'MANUAL'}}},
-          {id: '2', appStore: 'XBOX', gfn: {library: {status: 'NOT_OWNED'}}},
-        ],
-      },
-      {title: 'B', variants: [{id: '3', appStore: 'STEAM'}]},
-    ]);
-    expect(lines[0]).toContain('apps=2');
-    expect(lines[0]).toContain('STEAM=MANUAL x1');
-    expect(lines[0]).toContain('XBOX=NOT_OWNED x1');
-    expect(lines[0]).toContain('STEAM=none x1');
-    expect(lines.slice(1)).toEqual(['A: STEAM=MANUAL, XBOX=NOT_OWNED']);
-  });
-
-  it('caps the per-app lines', () => {
-    const items = Array.from({length: 5}, (_, i) => ({
-      title: `T${i}`,
-      variants: [{id: String(i), appStore: 'XBOX'}],
-    }));
-    expect(summarizeLibraryStatuses(items, 2)).toHaveLength(3);
-  });
-});
-
 describe('library subscription', () => {
   const app = {
     id: 'app-uuid',
@@ -296,12 +267,6 @@ describe('library subscription', () => {
     const browse = toBrowseGames(app);
     expect(browse.find(g => g.store === 'XBOX')?.subscription).toBe(
       'XBOX_GAME_PASS',
-    );
-  });
-
-  it('shows up in the status summary', () => {
-    expect(summarizeLibraryStatuses([app])[0]).toContain(
-      'XBOX=PLATFORM_SYNC+XBOX_GAME_PASS x1',
     );
   });
 

@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Alert,
-  AppState,
   DeviceEventEmitter,
   Linking,
   NativeModules,
@@ -36,7 +35,6 @@ import {
 import merge from 'deepmerge';
 import {Provider} from 'react-redux';
 import store from './shared/lib/reduxStore';
-import {getSettings} from './shared/lib/settings';
 import {
   findTitleByProductId,
   findPsPlusGameByProductId,
@@ -44,7 +42,6 @@ import {
   recordRecentLaunch,
 } from './features/launch-title';
 import {normalizeTitle, recordTitlePlayed} from './entities/catalog-title';
-import {appDebugLog} from './shared/lib/appDebugLog';
 
 import customDarkTheme from './shared/config/theme';
 import SplashScreen from 'react-native-splash-screen';
@@ -52,7 +49,6 @@ import {useXboxAuthBootstrap} from './features/xbox-auth';
 
 import LoginScreen from './pages/login';
 import NativeStreamScreen from './pages/native-stream';
-import NativePortraitStreamScreen from './pages/native-stream/portrait';
 import SettingsScreen from './pages/settings';
 import LibraryScreen from './pages/library';
 import LibraryTitleDetailScreen from './pages/library-title-detail';
@@ -61,8 +57,6 @@ import NativeGameMapScreen from './pages/native-game-map';
 import GameMapDetailScreen from './pages/game-map-detail';
 import InputMappingScreen from './pages/input-mapping';
 import CustomGamepadScreen from './pages/custom-gamepad';
-import Ds5SettingsScreen from './pages/ds5-settings';
-import HistoryScreen from './pages/history';
 import PsPlusLoginScreen from './pages/ps-plus-login';
 import PsPlusStreamScreen from './pages/ps-plus-stream';
 import updater from './shared/lib/updater';
@@ -165,9 +159,7 @@ const LibraryTitleDetailBackgroundScreen = withPageBackground(
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
 const InputMappingBackgroundScreen = withPageBackground(InputMappingScreen);
-const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const PsPlusLoginBackgroundScreen = withPageBackground(PsPlusLoginScreen);
-const HistoryBackgroundScreen = withPageBackground(HistoryScreen);
 
 // The two hub screens live in a bottom-tab navigator so the tab bar persists
 // and only the content swaps between them (Library / Settings). Detail,
@@ -205,22 +197,6 @@ function App() {
     status: 'idle',
     totalBytes: 0,
   });
-
-  // Lands in the same shared log/timeline as MainActivity's own
-  // onCreate/onResume/onPause/onDestroy calls to AppDebugLog.log() -- see
-  // shared/lib/appDebugLog.ts's own comment on why this exists (diagnosing
-  // reports like the Home/Library screen occasionally coming back black
-  // after the app is backgrounded and resumed, which isn't specific to any
-  // one screen or streaming provider and so has nowhere else to log to).
-  React.useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextState => {
-      appDebugLog('AppState', `change -> ${nextState}`);
-    });
-    appDebugLog('AppState', `initial -> ${AppState.currentState}`);
-    return () => {
-      subscription.remove();
-    };
-  }, []);
 
   React.useEffect(() => {
     const subscription = DeviceEventEmitter.addListener(
@@ -323,9 +299,7 @@ function App() {
         recordRecentLaunch({provider: 'xcloud', titleItem});
       }
       navigationRef.navigate({
-        name: getSettings().native_portrait_mode
-          ? 'NativePortraitStream'
-          : 'NativeStream',
+        name: 'NativeStream',
         params: {
           sessionId,
           streamType: 'cloud',
@@ -512,11 +486,6 @@ function App() {
                   options={{headerShown: false}}
                 />
                 <RootStack.Screen
-                  name="NativePortraitStream"
-                  component={NativePortraitStreamScreen}
-                  options={{headerShown: false}}
-                />
-                <RootStack.Screen
                   name="CustomGamepad"
                   component={CustomGamepadScreen}
                   options={{headerShown: false}}
@@ -527,19 +496,9 @@ function App() {
                   options={{title: t('InputMapping')}}
                 />
                 <RootStack.Screen
-                  name="History"
-                  component={HistoryBackgroundScreen}
-                  options={{title: t('HistoryTitle')}}
-                />
-                <RootStack.Screen
                   name="NativeGameMap"
                   component={NativeGameMapBackgroundScreen}
                   options={{title: t('GameMap')}}
-                />
-                <RootStack.Screen
-                  name="Ds5"
-                  component={Ds5SettingsBackgroundScreen}
-                  options={{title: t('DualSense')}}
                 />
                 <RootStack.Screen
                   name="PsPlusLogin"

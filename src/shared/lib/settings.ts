@@ -27,21 +27,14 @@ export type Settings = {
   video_format: string;
   screen_position: string;
   anti_idle_max_minutes: number;
-  native_portrait_mode: boolean;
-  native_portrait_gamepad_layout: any[];
   native_low_latency_decoder: boolean;
   gamepad_maping: Record<string, number> | null;
   native_gamepad_maping: Record<string, number> | null;
   polling_rate: number;
-  left_trigger_type: number;
-  left_trigger_effects: [];
-  right_trigger_type: number;
-  right_trigger_effects: [];
   fsr_display_options: DisplayOptions;
   ipv6: boolean;
   fsr: boolean;
   coop: boolean;
-  use_msal_login: boolean;
   /** In-app game volume (0.0-1.0 in 0.1 steps, 1 = full), applied
    * independently of the Android system volume via the remote audio track's
    * gain. */
@@ -94,16 +87,10 @@ const defaultSettings: Settings = {
   video_format: '',
   screen_position: 'center',
   anti_idle_max_minutes: 30,
-  native_portrait_mode: false,
-  native_portrait_gamepad_layout: [],
   native_low_latency_decoder: false,
   gamepad_maping: null,
   native_gamepad_maping: null,
   polling_rate: 62.5,
-  left_trigger_type: 0,
-  left_trigger_effects: [],
-  right_trigger_type: 0,
-  right_trigger_effects: [],
   ipv6: false,
   fsr_display_options: {
     sharpness: 2,
@@ -113,7 +100,6 @@ const defaultSettings: Settings = {
   },
   fsr: false,
   coop: false,
-  use_msal_login: false,
   audio_gain: 1,
   background_mute: true,
   gfn_resolution: '1920x1080',
