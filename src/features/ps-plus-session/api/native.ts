@@ -174,6 +174,15 @@ class PsPlusChiakiClient {
       : Promise.resolve(null);
   }
 
+  // The PS Plus membership state read from the purchase history: 0 unknown,
+  // 1 active, 2 lapsed (see plusStatus.ts).
+  fetchPlusStatus(npsso: string | undefined): Promise<number> {
+    this.initNativeSsl(); // same reason as fetchOnlineId
+    return PsPlusChiakiNative?.fetchPlusStatus
+      ? PsPlusChiakiNative.fetchPlusStatus(npsso)
+      : Promise.resolve(0);
+  }
+
   // Diagnostics: the account block of Sony's session reply (secrets hidden), or
   // null when it can't be read.
   fetchAccountDiag(npsso: string | undefined): Promise<string | null> {

@@ -202,6 +202,18 @@ class PsPlusModule(reactContext: ReactApplicationContext) :
 		}
 	}
 
+	/** The PS Plus membership state for [npsso]: 0 unknown, 1 active, 2 lapsed. */
+	@ReactMethod
+	fun fetchPlusStatus(npsso: String?, promise: Promise) {
+		thread(name = "PsPlusStatus") {
+			try {
+				promise.resolve(cloudCatalogFetchPlusStatus(npsso))
+			} catch (e: Exception) {
+				promise.resolve(0)
+			}
+		}
+	}
+
 	/** Diagnostics: what Sony says about the account behind [npsso] (secrets hidden), or null. */
 	@ReactMethod
 	fun fetchAccountDiag(npsso: String?, promise: Promise) {

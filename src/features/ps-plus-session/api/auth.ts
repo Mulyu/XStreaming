@@ -19,6 +19,9 @@ export const setNpsso = (npsso: string): void => {
 export const clearNpsso = (): void => {
   storage.delete(NPSSO_KEY);
   storage.delete(ONLINE_ID_KEY);
+  // Its membership state belongs to the account that just signed out (the
+  // module keys it by npsso, so a leftover would be ignored, but drop it).
+  storage.delete('psplus.membership');
 };
 
 // The account's PSN online ID, remembered with the npsso it was read for so a

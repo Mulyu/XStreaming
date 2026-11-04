@@ -59,6 +59,7 @@ import {
   getCachedCatalogGames,
   getFreshCatalogGames,
   saveCatalogGames,
+  isPsPlusMembershipActive,
 } from '../../features/ps-plus-session';
 import {getSettings} from '../../shared/lib/settings';
 import {getSystemRegion} from '../../shared/lib/locale';
@@ -1062,6 +1063,7 @@ function StoreScreen() {
   // The Library keeps this flag fresh; a lapsed Game Pass membership makes the
   // Xbox side of a title read as not owned on its detail screen too.
   const xboxActive = isXboxMembershipActive();
+  const psPlusActive = isPsPlusMembershipActive();
   const catalogIndex = React.useMemo(() => {
     const gfnGames = mergeOwnedGames(
       gfnFullCatalog,
@@ -1070,9 +1072,10 @@ function StoreScreen() {
     return new Map(
       buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames, {
         xboxActive,
+        psPlusActive,
       }).map(item => [item.key, item]),
     );
-  }, [xcloudTitles, gfnFullCatalog, psPlusGames, xboxActive]);
+  }, [xcloudTitles, gfnFullCatalog, psPlusGames, xboxActive, psPlusActive]);
 
   // Favorites (owned titles) and the wishlist (the rest) shown on each row's
   // button; reloaded on focus since the detail screen toggles them too.
