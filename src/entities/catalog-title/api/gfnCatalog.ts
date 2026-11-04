@@ -1,4 +1,5 @@
 import {storage} from '../../../shared/lib/mmkv';
+import {appDebugLog} from '../../../shared/lib/appDebugLog';
 import {GfnGame, steamAppIdFromUrl} from './gfnPublicGames';
 import {getGfnLocaleSlug, getGfnGraphqlLocale} from './gfnLocale';
 
@@ -27,7 +28,9 @@ const GFN_USER_AGENT =
 // title's `title` text is locale-specific, and the app's language only ever
 // changes via a full restart, so there's no risk of serving a stale-locale
 // list mid-session.
-const ownedCacheKey = (): string => `gfn.ownedGames.${getGfnLocaleSlug()}`;
+// v2: the list now holds only the store variants the account actually owns
+// (before, every store variant of an owned app), so v1 entries are not reused.
+const ownedCacheKey = (): string => `gfn.ownedGames.v2.${getGfnLocaleSlug()}`;
 const OWNED_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h
 
 const deviceHeaders = {
@@ -237,14 +240,24 @@ const isNumeric = (v?: string): boolean => !!v && /^\d+$/.test(v);
 // distinct numeric store variant instead of collapsing to a single guess, so
 // the caller (the unified Library's provider/store picker) can offer all of
 // them instead of silently picking one.
-const toOwnedGames = (app: RawApp): GfnGame[] => {
+export const toOwnedGames = (app: RawApp): GfnGame[] => {
   const title = app.title?.trim();
   if (!title) {
     return [];
   }
   const variants = app.variants ?? [];
   const numericVariants = variants.filter(v => isNumeric(v.id));
-  const usable = numericVariants.length > 0 ? numericVariants : variants;
+  const launchable = numericVariants.length > 0 ? numericVariants : variants;
+  // The library filter matches an app when any of its store variants is not
+  // NOT_OWNED, but the app's other store variants (the Xbox or Epic listing of
+  // a game owned on Steam) are not owned and must not read as owned in the
+  // detail screen. So keep the variants whose own status says owned; when none
+  // does (a status value not in the allowlist), the server's filter is all
+  // there is to go on and every variant stays, as before.
+  const ownedVariants = launchable.filter(v =>
+    isOwnedLibraryStatus(v.gfn?.library?.status ?? ''),
+  );
+  const usable = ownedVariants.length > 0 ? ownedVariants : launchable;
   const image = firstImage(app.images, [
     'HERO_IMAGE',
     'TV_BANNER',
@@ -297,6 +310,39 @@ const toOwnedGames = (app: RawApp): GfnGame[] => {
   }, []);
 };
 
+// What the library query says about each store variant, for the app debug log:
+// how many variants there are per store and status, then one line per app
+// that has an Xbox listing (title and every variant's store=status), up to
+// `maxApps`. It is how to tell, from a real account, which status GFN gives
+// the Xbox / Game Pass listings.
+export const summarizeLibraryStatuses = (
+  items: RawApp[],
+  maxApps = 40,
+): string[] => {
+  const counts = new Map<string, number>();
+  const xboxApps: string[] = [];
+  for (const app of items) {
+    const parts: string[] = [];
+    let hasXbox = false;
+    for (const v of app.variants ?? []) {
+      const store = (v.appStore ?? 'GFN').toUpperCase();
+      const status = v.gfn?.library?.status ?? 'none';
+      const key = `${store}=${status}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      parts.push(key);
+      hasXbox = hasXbox || store.includes('XBOX');
+    }
+    if (hasXbox && xboxApps.length < maxApps) {
+      xboxApps.push(`${app.title ?? app.id}: ${parts.join(', ')}`);
+    }
+  }
+  const total = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `${k} x${n}`)
+    .join(', ');
+  return [`apps=${items.length}; variants: ${total || 'none'}`, ...xboxApps];
+};
+
 // Fetch the signed-in user's owned GFN games (one page, up to 200 — covers
 // virtually every library). Returns [] on any failure.
 export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
@@ -334,6 +380,9 @@ export const fetchGfnOwnedGames = async (token: string): Promise<GfnGame[]> => {
     return [];
   }
   const items: RawApp[] = payload?.data?.apps?.items ?? [];
+  for (const line of summarizeLibraryStatuses(items)) {
+    appDebugLog('GfnLibrary', line);
+  }
   // Deliberately NOT re-sorted alphabetically: the server already returns
   // these in LIBRARY_SORT order (most-recently-played first), which the
   // Library screen's "Recently played" sort reuses as-is. Callers that want

@@ -3,6 +3,8 @@ import {
   mergeOwnedGames,
   isConfirmedPlayable,
   toBrowseGames,
+  toOwnedGames,
+  summarizeLibraryStatuses,
 } from '../gfnCatalog';
 import {GfnGame} from '../gfnPublicGames';
 
@@ -200,5 +202,66 @@ describe('mergeOwnedGames', () => {
     const epicEntry = merged.find(g => g.store === 'Epic');
     expect(steamEntry?.owned).toBe(true);
     expect(epicEntry?.owned).toBeFalsy();
+  });
+});
+
+describe('toOwnedGames', () => {
+  const app = (statuses: Record<string, string | undefined>) => ({
+    id: 'app-uuid',
+    title: 'Halo',
+    variants: Object.entries(statuses).map(([store, status], i) => ({
+      id: String(100 + i),
+      appStore: store,
+      gfn: status ? {library: {status}} : undefined,
+    })),
+  });
+
+  it('keeps only the store variants that are owned', () => {
+    const games = toOwnedGames(
+      app({STEAM: 'MANUAL', XBOX: 'NOT_OWNED', EPIC: 'NOT_OWNED'}),
+    );
+    expect(games.map(g => g.store)).toEqual(['STEAM']);
+    expect(games[0].owned).toBe(true);
+  });
+
+  it('keeps every owned variant', () => {
+    const games = toOwnedGames(
+      app({STEAM: 'PLATFORM_SYNC', XBOX: 'IN_LIBRARY', EPIC: 'NOT_OWNED'}),
+    );
+    expect(games.map(g => g.store)).toEqual(['STEAM', 'XBOX']);
+  });
+
+  it('falls back to every variant when none carries a known owned status', () => {
+    const games = toOwnedGames(app({STEAM: 'SOMETHING_NEW', XBOX: undefined}));
+    expect(games.map(g => g.store)).toEqual(['STEAM', 'XBOX']);
+    expect(games.every(g => g.owned)).toBe(true);
+  });
+});
+
+describe('summarizeLibraryStatuses', () => {
+  it('counts variants per store and status and lists apps with an Xbox listing', () => {
+    const lines = summarizeLibraryStatuses([
+      {
+        title: 'A',
+        variants: [
+          {id: '1', appStore: 'STEAM', gfn: {library: {status: 'MANUAL'}}},
+          {id: '2', appStore: 'XBOX', gfn: {library: {status: 'NOT_OWNED'}}},
+        ],
+      },
+      {title: 'B', variants: [{id: '3', appStore: 'STEAM'}]},
+    ]);
+    expect(lines[0]).toContain('apps=2');
+    expect(lines[0]).toContain('STEAM=MANUAL x1');
+    expect(lines[0]).toContain('XBOX=NOT_OWNED x1');
+    expect(lines[0]).toContain('STEAM=none x1');
+    expect(lines.slice(1)).toEqual(['A: STEAM=MANUAL, XBOX=NOT_OWNED']);
+  });
+
+  it('caps the per-app lines', () => {
+    const items = Array.from({length: 5}, (_, i) => ({
+      title: `T${i}`,
+      variants: [{id: String(i), appStore: 'XBOX'}],
+    }));
+    expect(summarizeLibraryStatuses(items, 2)).toHaveLength(3);
   });
 });
