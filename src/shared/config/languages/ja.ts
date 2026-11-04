@@ -45,6 +45,9 @@ export default {
     XboxGenreSports: 'スポーツ',
     XboxGenreStrategy: 'ストラテジー',
     Disconnect: '切断',
+    'Reset to default': 'デフォルトに戻す',
+    'Reset to default message':
+      'このゲームのコントローラーをデフォルトの内容に戻します。このゲームでの変更は失われます。',
     Input: '入力',
     Audio: 'オーディオ',
     Display: '表示',
@@ -90,14 +93,12 @@ export default {
     'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
       'ボタン位置が実際と異なる場合があります।',
     'Customize virtual buttons': 'ボタンのカスタマイズ',
-    'Customize buttons of virtual gamepad': '仮想パッドのレイアウト編集',
     CustomizeButtonsWithMacroHint:
       '仮想パッドのレイアウトを編集(マクロボタン3個を含む)。編集画面でマクロボタンをタップすると、そのボタン専用のアクション列を設定できます。',
     'Edit Virtual Gamepad': '仮想パッドを編集',
     'Click on an element to set its size and display':
       'クリックしてサイズと表示を設定।',
     'Drag elements to adjust their position': 'ドラッグして位置調整।',
-    'Name can not be empty': '名前は必須です',
     noAllow: '権限がありません。ログインとサブスクを確認してください।',
     homeNoAllow: '確認に失敗しました।再ログインしてください।',
     'Auto check update': '自動更新',
@@ -133,8 +134,8 @@ export default {
       'つないだコントローラーの各ボタンが、どのボタンとして働くかを決めます。',
     InputMappingOpenGamepad: 'ゲームパッドの割り当てを開く',
     InputMappingVirtualNote:
-      '画面上のボタンの配置・大きさ・マクロを編集します。',
-    InputMappingOpenVirtual: '仮想コントローラーを編集',
+      'すべてのゲームのもとになるデフォルトの配置・大きさ・マクロを編集します。ゲームごとのコントローラーは、初めて起動したときにデフォルトからコピーされ、ゲーム内のカスタマイズで変更できます。',
+    InputMappingOpenVirtual: 'デフォルトの仮想コントローラーを編集',
     InputMappingKbmNote:
       'キーボードとマウスをつないだときの、Xbox と PlayStation でのコントローラーへの変換です。GeForce NOW はそのままゲームへ送るので対象外です。行をタップして変更します。',
     InputMappingUnbound: '未割り当て',
@@ -259,11 +260,7 @@ export default {
     'Streaming in background': 'バックグラウンドでストリーミング中',
     BackgroundKeepAliveNotification: 'タップでゲームに戻る',
     BackgroundKeepAliveAntiIdle: 'セッションを維持中 · タップでゲームに戻る',
-    'Touch controller profiles': 'タッチコントローラーのプロファイル',
-    'New profile name': '新しいプロファイル名',
-    'Copy from': 'コピー元',
     Add: '追加',
-    'Delete current profile': '現在のプロファイルを削除',
     'Swipe aim': 'スワイプエイム',
     'Swipe aim sensitivity (0 = off)': 'スワイプエイム感度（0で無効）',
     SwipeAimDesc:

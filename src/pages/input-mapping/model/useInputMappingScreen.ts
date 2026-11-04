@@ -172,7 +172,7 @@ export function useInputMappingScreen(navigation: any) {
     onToggleReverseY: toggleReverseY,
     onReset: handleReset,
     onOpenGamepadMap: () => navigation.navigate('NativeGameMap'),
-    onOpenVirtualGamepad: () => navigation.navigate('VirtualGamepadSettings'),
+    onOpenVirtualGamepad: () => navigation.navigate('CustomGamepad'),
   };
 }
 

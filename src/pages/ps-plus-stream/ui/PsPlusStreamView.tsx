@@ -2,7 +2,6 @@ import React from 'react';
 import {View, StyleSheet, TextInput, useWindowDimensions} from 'react-native';
 import {Text, Button} from 'react-native-paper';
 import {PsPlusStreamView as NativePsPlusStreamView} from '../../../features/ps-plus-session';
-import {VirtualGamepad} from '../../../entities/gamepad';
 import {CustomVirtualGamepad} from '../../../features/controller-customization';
 import {VirtualGamepadEditor} from '../../../widgets/virtual-gamepad-editor';
 import PsPlusControlRail from './PsPlusControlRail';
@@ -31,6 +30,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   onStickMove,
   onRequestExit,
   activeProfile,
+  gameName,
   joystickMode,
   showControlRail,
   onCloseControlRail,
@@ -51,15 +51,11 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
   onCycleVideoFormat,
   onEditGamepadLayout,
   showGamepadEditor,
-  editorProfile,
-  gamepadProfiles,
   editorSwipeConfig,
   editorSensorConfig,
   onSaveGamepadLayout,
   onCancelGamepadEditor,
-  onSwitchGamepadProfile,
-  onCreateGamepadProfile,
-  onDeleteGamepadProfile,
+  onResetGamepadProfile,
   gamepadLayoutVersion,
   swipeAimEnabled,
   swipeAimSensitivity,
@@ -159,8 +155,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
 
       {connectState === 'connected' &&
         !showControlRail &&
-        showVirtualGamepad &&
-        (activeProfile ? (
+        showVirtualGamepad && (
           <CustomVirtualGamepad
             title={activeProfile}
             opacity={0.7}
@@ -171,16 +166,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
             onStickMove={onStickMove}
             {...swipeAimProps}
           />
-        ) : (
-          <VirtualGamepad
-            opacity={0.7}
-            joystickMode={joystickMode}
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}
-            onStickMove={onStickMove}
-            {...swipeAimProps}
-          />
-        ))}
+        )}
 
       {touchpadVisible && (
         <TouchpadZone
@@ -222,9 +208,8 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
 
       <VirtualGamepadEditor
         visible={showGamepadEditor}
-        profileName={editorProfile || activeProfile}
-        profiles={gamepadProfiles}
-        activeProfile={activeProfile}
+        profileName={activeProfile}
+        profileLabel={gameName}
         swipeSensitivity={editorSwipeConfig.sensitivity}
         swipeInvertY={editorSwipeConfig.invertY}
         swipeActivation={editorSwipeConfig.activation}
@@ -233,9 +218,7 @@ const PsPlusStreamScreenView: React.FC<Props> = ({
         sensorConfig={editorSensorConfig}
         onSave={onSaveGamepadLayout}
         onCancel={onCancelGamepadEditor}
-        onSwitchProfile={onSwitchGamepadProfile}
-        onCreateProfile={onCreateGamepadProfile}
-        onDeleteProfile={onDeleteGamepadProfile}
+        onResetToDefault={onResetGamepadProfile}
       />
 
       {!!pinRequest && (

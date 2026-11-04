@@ -66,12 +66,10 @@ export default {
     'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
       'बटन की स्थिति स्क्रीन पर थोड़ी अलग हो सकती.।',
     'Customize virtual buttons': 'वर्चुअल बटन कस्टमाइज़ करें',
-    'Customize buttons of virtual gamepad': 'वर्चुअल पैड के लेआउट को बदलें।',
     'Edit Virtual Gamepad': 'वर्चुअल पैड संपादित करें',
     'Click on an element to set its size and display':
       'आकार और दिखावट सेट करने के लिए क्लिक करें।',
     'Drag elements to adjust their position': 'स्थिति बदलने के लिए खींचें।',
-    'Name can not be empty': 'नाम खाली नहीं हो सकता',
     noAllow:
       'गेम शुरू करने की अनुमति नहीं है। कृपया लॉगिन और सदस्यता की जाँच करें।',
     homeNoAllow: 'अनुमति जाँच विफल रही। फिर से लॉगिन करें।',

@@ -65,13 +65,11 @@ export default {
     'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
       'La posición de los botones puede variar ligeramente.',
     'Customize virtual buttons': 'Personalizar botones virtuales',
-    'Customize buttons of virtual gamepad': 'Editar diseño del mando virtual.',
     'Edit Virtual Gamepad': 'Editar mando virtual',
     'Click on an element to set its size and display':
       'Pulsa un elemento para ajustar tamaño y visibilidad.',
     'Drag elements to adjust their position':
       'Arrastra para ajustar la posición.',
-    'Name can not be empty': 'El nombre no puede estar vacío',
     noAllow: 'Sin permiso para iniciar. Revisa el login y la suscripción.',
     homeNoAllow: 'Fallo en la comprobación de permisos. Reicia sesión.',
     'Auto check update': 'Actualización automática',

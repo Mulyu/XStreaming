@@ -44,6 +44,9 @@ export default {
     XboxGenreSports: 'Sports',
     XboxGenreStrategy: 'Strategy',
     Disconnect: 'Disconnect',
+    'Reset to default': 'Reset to default',
+    'Reset to default message':
+      "Reset this game's controller to the default? Your changes for this game will be lost.",
     Input: 'Input',
     Audio: 'Audio',
     Display: 'Display',
@@ -89,8 +92,6 @@ export default {
     'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
       'Custom virtual button positions may differ from actual rendering. Use the actual result as reference.',
     'Customize virtual buttons': 'Customize virtual buttons',
-    'Customize buttons of virtual gamepad':
-      'Customize your virtual gamepad layout. You can edit multiple layouts and use them as needed.',
     CustomizeButtonsWithMacroHint:
       'Customize your virtual gamepad layout, including the 3 macro buttons -- tap one in the editor to set its own action sequence.',
     'Edit Virtual Gamepad': 'Edit Virtual Gamepad',
@@ -98,7 +99,6 @@ export default {
       'Tap an element to set its size and visibility',
     'Drag elements to adjust their position':
       'Drag elements to adjust their position',
-    'Name can not be empty': 'Name cannot be empty',
     noAllow:
       'You do not have permission to start cloud gaming. Check whether login has expired and log in again. For cloud games, make sure you have XGPU. For non-XGPU games, make sure you own the game.',
     homeNoAllow:
@@ -136,8 +136,8 @@ export default {
       'Choose which gamepad button each button on a connected controller stands for.',
     InputMappingOpenGamepad: 'Open gamepad button mapping',
     InputMappingVirtualNote:
-      'Edit the on-screen buttons: their layout, size and macros.',
-    InputMappingOpenVirtual: 'Edit the virtual controller',
+      'Edit the default layout, size and macros that every game starts from. Each game gets its own copy the first time it is launched, and you change that copy from the in-game customization.',
+    InputMappingOpenVirtual: 'Edit the default virtual controller',
     InputMappingKbmNote:
       'How a connected keyboard and mouse act as a controller on Xbox and PlayStation. GeForce NOW receives them as they are, so this does not apply there. Tap a row to change it.',
     InputMappingUnbound: 'Not assigned',
@@ -265,11 +265,7 @@ export default {
     BackgroundKeepAliveNotification: 'Tap to return to the game',
     BackgroundKeepAliveAntiIdle:
       'Keeping the session awake · tap to return to the game',
-    'Touch controller profiles': 'Touch controller profiles',
-    'New profile name': 'New profile name',
-    'Copy from': 'Copy from',
     Add: 'Add',
-    'Delete current profile': 'Delete current profile',
     'Swipe aim': 'Swipe aim',
     'Swipe aim sensitivity (0 = off)': 'Swipe aim sensitivity (0 = off)',
     SwipeAimDesc:

@@ -56,3 +56,20 @@ export const getSettings = (): any => {
     return defaultSettings;
   }
 };
+
+// Gives `to` its own copy of `from`'s button layout (nothing when `from` has
+// none saved, so `to` renders the built-in layout like `from` does).
+export const copyLayout = (from: string, to: string) => {
+  const settings = getSettings();
+  const layout = settings[from];
+  if (Array.isArray(layout)) {
+    saveSettings(
+      to,
+      layout.map((button: any) => ({...button})),
+    );
+  } else if (settings[to] !== undefined) {
+    deleteSetting(to);
+  }
+};
+
+export const clearLayouts = () => storage.delete(STORE_KEY);

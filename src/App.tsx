@@ -59,7 +59,6 @@ import LibraryTitleDetailScreen from './pages/library-title-detail';
 import StoreScreen from './pages/store';
 import NativeGameMapScreen from './pages/native-game-map';
 import GameMapDetailScreen from './pages/game-map-detail';
-import VirtualGamepadSettingsScreen from './pages/virtual-gamepad-settings';
 import InputMappingScreen from './pages/input-mapping';
 import CustomGamepadScreen from './pages/custom-gamepad';
 import Ds5SettingsScreen from './pages/ds5-settings';
@@ -165,9 +164,6 @@ const LibraryTitleDetailBackgroundScreen = withPageBackground(
 );
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
-const VirtualGamepadSettingsBackgroundScreen = withPageBackground(
-  VirtualGamepadSettingsScreen,
-);
 const InputMappingBackgroundScreen = withPageBackground(InputMappingScreen);
 const Ds5SettingsBackgroundScreen = withPageBackground(Ds5SettingsScreen);
 const PsPlusLoginBackgroundScreen = withPageBackground(PsPlusLoginScreen);
@@ -524,11 +520,6 @@ function App() {
                   name="CustomGamepad"
                   component={CustomGamepadScreen}
                   options={{headerShown: false}}
-                />
-                <RootStack.Screen
-                  name="VirtualGamepadSettings"
-                  component={VirtualGamepadSettingsBackgroundScreen}
-                  options={{title: t('Custom')}}
                 />
                 <RootStack.Screen
                   name="InputMapping"

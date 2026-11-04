@@ -1,8 +1,13 @@
 export {
   saveSettings as saveVirtualGamepadLayout,
-  deleteSetting as deleteVirtualGamepadLayout,
   getSettings as getVirtualGamepadLayouts,
 } from './model/virtualGamepadLayout';
+export {
+  DEFAULT_PROFILE,
+  ensureGameProfile,
+  resetGameProfile,
+  getDefaultProfile,
+} from './model/gamepadProfiles';
 
 export type {SwipeConfig, SensorConfig} from './model/touchProfile';
 export {
@@ -13,8 +18,6 @@ export {
   setJoystickMode,
   getCoverEnabled,
   setCoverEnabled,
-  getLastProfileForGame,
-  setLastProfileForGame,
   DEFAULT_SENSOR,
   getSensorConfig,
   setSensorConfig,

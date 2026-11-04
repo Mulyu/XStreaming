@@ -30,15 +30,13 @@ import {
   setSensorConfig,
   getVirtualGamepadLayouts as getGamepadLayouts,
   saveVirtualGamepadLayout as saveGamepadLayout,
-  deleteVirtualGamepadLayout as deleteGamepadProfile,
-  buildDefaultLayout,
+  ensureGameProfile,
+  resetGameProfile,
   createDefaultSwipePad,
   SWIPE_AIM_NAME,
   getCoverEnabled,
   getCoverLayout,
   coverGamepadBus,
-  getLastProfileForGame,
-  setLastProfileForGame,
 } from '../../../features/controller-customization';
 import type {
   ButtonConfig,
@@ -271,15 +269,22 @@ export function usePsPlusStream(navigation: any, route: any) {
     [],
   );
 
-  // The saved on-screen gamepad profile/layout and its joystick mode --
-  // shared with every other streaming provider (native-stream reads the
-  // exact same setting), so a profile made for xCloud/GFN carries straight
-  // over here instead of PS Plus always rendering the built-in default.
-  const [activeProfile, setActiveProfile] = React.useState(
-    () => getSettings().custom_virtual_gamepad || '',
+  // This game's own on-screen gamepad profile -- shared with every other
+  // streaming provider (native-stream keeps its profiles the same way): made
+  // from the default the first time the game is launched, and only changed by
+  // customizing the controller in the game. The key is prefixed so a PS Plus
+  // product id can never collide with an xCloud session id or GFN app id.
+  const profileGameId = params.productId
+    ? `psplus:${params.productId}`
+    : params.streamIdentifier
+    ? `psplus:${params.streamIdentifier}`
+    : '';
+  const activeProfile = React.useMemo(
+    () => ensureGameProfile(profileGameId),
+    [profileGameId],
   );
-  // Bumped by the in-place gamepad editor below on every profile switch/
-  // create/delete/save, so activeJoystickMode (and the on-screen layout
+  // Bumped by the in-place gamepad editor below on every save/reset, so
+  // activeJoystickMode (and the on-screen layout
   // itself, via PsPlusStreamView's refreshKey) re-reads storage even when
   // the active profile's *name* didn't change -- e.g. editing the currently-
   // active profile's own layout or joystick mode in place.
@@ -316,132 +321,15 @@ export function usePsPlusStream(navigation: any, route: any) {
   // on the UI thread, which is what made the app appear to freeze whenever a
   // player opened the editor mid-game.
   const [showGamepadEditor, setShowGamepadEditor] = React.useState(false);
-  const [editorProfile, setEditorProfile] = React.useState('');
-  const [gamepadProfiles, setGamepadProfiles] = React.useState<string[]>([]);
-
-  const refreshGamepadProfiles = React.useCallback(() => {
-    setGamepadProfiles(Object.keys(getGamepadLayouts()));
-  }, []);
 
   const onEditGamepadLayout = React.useCallback(() => {
     closeControlRail();
-    refreshGamepadProfiles();
-    setEditorProfile(activeProfile);
     setShowGamepadEditor(true);
-  }, [closeControlRail, refreshGamepadProfiles, activeProfile]);
+  }, [closeControlRail]);
 
   const onCancelGamepadEditor = React.useCallback(() => {
     setShowGamepadEditor(false);
   }, []);
-
-  // The stable per-title key the last-used-profile memory is stored under
-  // (the same per-game memory native-stream keeps for xCloud/GFN, in the same
-  // store). Prefixed so a PS Plus product id can never collide with an
-  // xCloud session id or GFN app id.
-  const profileGameId = params.productId
-    ? `psplus:${params.productId}`
-    : params.streamIdentifier
-    ? `psplus:${params.streamIdentifier}`
-    : '';
-
-  // Switch (or newly select) the live/active layout; '' selects the built-in
-  // Default. Mirrors native-stream's own applyActiveProfile.
-  const applyActiveProfile = React.useCallback(
-    (name: string) => {
-      saveSettings({...getSettings(), custom_virtual_gamepad: name});
-      setActiveProfile(name);
-      setEditorProfile(name);
-      setGamepadLayoutVersion(v => v + 1);
-      // Cover buttons follow the active touch-controller profile too.
-      coverGamepadBus.setLayout(getCoverLayout(name || ''));
-      // Remember it as this game's profile so the next launch restores it.
-      setLastProfileForGame(profileGameId, name);
-    },
-    [profileGameId],
-  );
-
-  // On launch, switch to the touch-controller profile last used for this game.
-  // Declared before the cover-screen effect further down so that effect reads
-  // the restored profile out of settings.
-  const profileRestoredRef = React.useRef(false);
-  React.useEffect(() => {
-    if (profileRestoredRef.current) {
-      return;
-    }
-    profileRestoredRef.current = true;
-    if (!profileGameId) {
-      return;
-    }
-    const last = getLastProfileForGame(profileGameId);
-    if (last === null) {
-      return;
-    }
-    // '' (Default) is always valid; a named profile must still exist.
-    if (last !== '' && !getGamepadLayouts()[last]) {
-      return;
-    }
-    const current = getSettings();
-    if ((current.custom_virtual_gamepad || '') === last) {
-      return;
-    }
-    saveSettings({...current, custom_virtual_gamepad: last});
-    setActiveProfile(last);
-    setGamepadLayoutVersion(v => v + 1);
-    coverGamepadBus.setLayout(getCoverLayout(last));
-  }, [profileGameId]);
-
-  const onSwitchGamepadProfile = React.useCallback(
-    (name: string) => applyActiveProfile(name),
-    [applyActiveProfile],
-  );
-
-  // Once connected, remember whatever profile is active for this game, so a
-  // game the user never re-profiles still restores its current layout.
-  React.useEffect(() => {
-    if (connectState !== 'connected' || !profileGameId) {
-      return;
-    }
-    setLastProfileForGame(
-      profileGameId,
-      getSettings().custom_virtual_gamepad || '',
-    );
-  }, [connectState, profileGameId]);
-
-  const onCreateGamepadProfile = React.useCallback(
-    (rawName: string, copyFrom = '') => {
-      const name = rawName.trim();
-      if (!name) {
-        return;
-      }
-      const layouts = getGamepadLayouts();
-      if (!layouts[name]) {
-        const source = copyFrom && layouts[copyFrom];
-        const seed: ButtonConfig[] = Array.isArray(source)
-          ? source.map((button: ButtonConfig) => ({...button}))
-          : (() => {
-              const {width, height} = Dimensions.get('window');
-              return buildDefaultLayout(width, height);
-            })();
-        saveGamepadLayout(name, seed);
-      }
-      refreshGamepadProfiles();
-      applyActiveProfile(name);
-    },
-    [applyActiveProfile, refreshGamepadProfiles],
-  );
-
-  const onDeleteGamepadProfile = React.useCallback(
-    (name: string) => {
-      if (!name) {
-        return;
-      }
-      deleteGamepadProfile(name);
-      refreshGamepadProfiles();
-      // Fall back to the built-in Default after removing the active profile.
-      applyActiveProfile('');
-    },
-    [applyActiveProfile, refreshGamepadProfiles],
-  );
 
   const onSaveGamepadLayout = React.useCallback(
     (
@@ -450,40 +338,37 @@ export function usePsPlusStream(navigation: any, route: any) {
       nextJoystickMode: number,
       sensor: SensorConfig,
     ) => {
-      const profileName = editorProfile || activeProfile;
-      saveGamepadLayout(profileName, layout);
-      setSwipeConfig(profileName, swipe);
-      setJoystickMode(profileName, nextJoystickMode);
-      setSensorConfig(profileName, sensor);
-      // A profile edited before anything was ever made active (e.g. the very
-      // first customization) becomes the active one.
-      const current = getSettings();
-      if (!current.custom_virtual_gamepad && profileName) {
-        saveSettings({...current, custom_virtual_gamepad: profileName});
-        setActiveProfile(profileName);
-      }
+      saveGamepadLayout(activeProfile, layout);
+      setSwipeConfig(activeProfile, swipe);
+      setJoystickMode(activeProfile, nextJoystickMode);
+      setSensorConfig(activeProfile, sensor);
       setGamepadLayoutVersion(v => v + 1);
       setShowGamepadEditor(false);
-      setLastProfileForGame(
-        profileGameId,
-        getSettings().custom_virtual_gamepad || '',
-      );
     },
-    [editorProfile, activeProfile, profileGameId],
+    [activeProfile],
   );
+
+  // Throws away this game's customizations: its profile is made again from
+  // the default as it is now.
+  const onResetGamepadProfile = React.useCallback(() => {
+    resetGameProfile(profileGameId);
+    coverGamepadBus.setLayout(getCoverLayout(activeProfile));
+    setGamepadLayoutVersion(v => v + 1);
+    setShowGamepadEditor(false);
+  }, [profileGameId, activeProfile]);
 
   // The profile the editor is (about to be) open for -- its saved swipe-aim/
   // gyro-aim config, so opening the editor shows what's actually configured
   // instead of resetting to defaults on every save.
   const editorSwipeConfig = React.useMemo(
-    () => getSwipeConfig(editorProfile || activeProfile),
+    () => getSwipeConfig(activeProfile),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editorProfile, activeProfile, gamepadLayoutVersion],
+    [activeProfile, gamepadLayoutVersion],
   );
   const editorSensorConfig = React.useMemo(
-    () => getSensorConfig(editorProfile || activeProfile),
+    () => getSensorConfig(activeProfile),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editorProfile, activeProfile, gamepadLayoutVersion],
+    [activeProfile, gamepadLayoutVersion],
   );
 
   React.useEffect(() => {
@@ -607,23 +492,18 @@ export function usePsPlusStream(navigation: any, route: any) {
   const activeSwipeRect = React.useMemo(() => {
     const {width, height} = Dimensions.get('window');
     const fallback = createDefaultSwipePad(width, height);
-    if (activeProfile) {
-      const layout = getGamepadLayouts()[activeProfile];
-      const pad = Array.isArray(layout)
-        ? layout.find((b: ButtonConfig) => b?.name === SWIPE_AIM_NAME)
-        : null;
-      if (pad) {
-        return pad;
-      }
-    }
-    return fallback;
+    const layout = getGamepadLayouts()[activeProfile];
+    const pad = Array.isArray(layout)
+      ? layout.find((b: ButtonConfig) => b?.name === SWIPE_AIM_NAME)
+      : null;
+    return pad || fallback;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfile, gamepadLayoutVersion]);
 
   // Rebuild the set of turbo/hold-toggle button names for the active profile
   // -- same rebuild native-stream's own effect does for its own refs.
   React.useEffect(() => {
-    const layout = activeProfile ? getGamepadLayouts()[activeProfile] : null;
+    const layout = getGamepadLayouts()[activeProfile];
     const set = new Set<string>();
     const holdSet = new Set<string>();
     if (Array.isArray(layout)) {
@@ -1341,18 +1221,21 @@ export function usePsPlusStream(navigation: any, route: any) {
   // the availability + presented flags in sync and auto-present the cover
   // controls when the device is unfolded during a game, so no manual step is
   // needed.
-  const handleCoverStatus = React.useCallback((s: string) => {
-    setCoverAvailable(s === 'AVAILABLE' || s === 'ACTIVE');
-    setCoverPresented(s === 'ACTIVE');
-    if (
-      s === 'AVAILABLE' &&
-      connectStateRef.current === 'connected' &&
-      !coverHiddenRef.current &&
-      getCoverEnabled(getSettings().custom_virtual_gamepad || '')
-    ) {
-      CoverDisplayManager?.present?.('XCoverScreen')?.catch?.(() => {});
-    }
-  }, []);
+  const handleCoverStatus = React.useCallback(
+    (s: string) => {
+      setCoverAvailable(s === 'AVAILABLE' || s === 'ACTIVE');
+      setCoverPresented(s === 'ACTIVE');
+      if (
+        s === 'AVAILABLE' &&
+        connectStateRef.current === 'connected' &&
+        !coverHiddenRef.current &&
+        getCoverEnabled(activeProfile)
+      ) {
+        CoverDisplayManager?.present?.('XCoverScreen')?.catch?.(() => {});
+      }
+    },
+    [activeProfile],
+  );
 
   React.useEffect(() => {
     const sub = DeviceEventEmitter.addListener(
@@ -1375,9 +1258,7 @@ export function usePsPlusStream(navigation: any, route: any) {
       onPressOut: name => coverPressOutRef.current(name),
     });
     // Cover buttons follow the active touch-controller profile.
-    coverGamepadBus.setLayout(
-      getCoverLayout(getSettings().custom_virtual_gamepad || ''),
-    );
+    coverGamepadBus.setLayout(getCoverLayout(activeProfile));
     coverGamepadBus.setActive(true);
     CoverDisplayManager?.getStatus?.()
       .then(handleCoverStatus)
@@ -1388,7 +1269,7 @@ export function usePsPlusStream(navigation: any, route: any) {
       CoverDisplayManager?.dismiss?.();
       setCoverPresented(false);
     };
-  }, [connectState, handleCoverStatus]);
+  }, [connectState, handleCoverStatus, activeProfile]);
 
   const onToggleCoverControls = React.useCallback(async () => {
     if (coverPresented) {
@@ -1641,6 +1522,7 @@ export function usePsPlusStream(navigation: any, route: any) {
     onStickMove: handleStickMove,
     onRequestExit: requestExit,
     activeProfile,
+    gameName: params.name,
     joystickMode,
     showControlRail,
     onOpenControlRail: openControlRail,
@@ -1666,15 +1548,11 @@ export function usePsPlusStream(navigation: any, route: any) {
     onToggleMic,
     onEditGamepadLayout,
     showGamepadEditor,
-    editorProfile,
-    gamepadProfiles,
     editorSwipeConfig,
     editorSensorConfig,
     onSaveGamepadLayout,
     onCancelGamepadEditor,
-    onSwitchGamepadProfile,
-    onCreateGamepadProfile,
-    onDeleteGamepadProfile,
+    onResetGamepadProfile: profileGameId ? onResetGamepadProfile : undefined,
     gamepadLayoutVersion,
     swipeAimEnabled,
     swipeAimSensitivity: swipeAimSensitivityRaw * SWIPE_AIM_SENSITIVITY_SCALE,

@@ -63,12 +63,10 @@ export default {
     'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
       '버튼 위치가 실제와 다를 수 있습니다.',
     'Customize virtual buttons': '가상 버튼 사용자 지정',
-    'Customize buttons of virtual gamepad': '가상 패드 레이아웃 편집',
     'Edit Virtual Gamepad': '가상 패드 편집',
     'Click on an element to set its size and display':
       '크기 및 표시 설정을 위해 클릭하세요.',
     'Drag elements to adjust their position': '드래그하여 위치 조정',
-    'Name can not be empty': '이름은 필수입니다.',
     noAllow: '권한이 없습니다. 로그인 및 구독을 확인하세요.',
     homeNoAllow: '권한 확인 실패. 다시 로그인하세요.',
     'Auto check update': '자동 업데이트',
