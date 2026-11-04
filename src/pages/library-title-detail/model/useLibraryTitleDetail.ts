@@ -42,6 +42,7 @@ import {
 } from '../../../features/launch-title';
 import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
+import {usePsStoreDetails} from './usePsStoreDetails';
 
 const {ShortcutManager} = NativeModules;
 
@@ -243,6 +244,8 @@ export function useLibraryTitleDetail() {
     };
   }, [catalogTitle?.psplus?.raw]);
 
+  const psDetails = usePsStoreDetails(catalogTitle);
+
   const playXcloud = () => {
     launchWithProvider(navigation, catalogTitle, {provider: 'xcloud'});
   };
@@ -339,6 +342,7 @@ export function useLibraryTitleDetail() {
     gfnDetails,
     steamPrices,
     psStorePrice,
+    psDetails,
     preference,
     owned,
     isFavorite,

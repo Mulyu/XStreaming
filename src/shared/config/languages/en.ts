@@ -542,6 +542,8 @@ export default {
     View: 'View',
     Developer: 'Developer',
     Publisher: 'Publisher',
+    AgeRating: 'Age rating',
+    Edition: 'Edition',
     Media: 'Media',
     Description: 'Description',
     Features: 'Features',
