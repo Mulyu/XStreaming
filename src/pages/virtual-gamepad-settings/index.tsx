@@ -22,7 +22,13 @@ function VirtualGamepadSettingsScreen({navigation}) {
         />
       ),
     });
-  }, [navigation, vm.onOpenAddModal, addFocus.focused]);
+  }, [
+    navigation,
+    vm.onOpenAddModal,
+    addFocus.focused,
+    addFocus.onFocus,
+    addFocus.onBlur,
+  ]);
 
   return <VirtualGamepadSettingsView {...vm} />;
 }
