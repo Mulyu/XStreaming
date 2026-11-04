@@ -183,15 +183,6 @@ class PsPlusChiakiClient {
       : Promise.resolve(0);
   }
 
-  // Diagnostics: the account block of Sony's session reply (secrets hidden), or
-  // null when it can't be read.
-  fetchAccountDiag(npsso: string | undefined): Promise<string | null> {
-    this.initNativeSsl(); // same reason as fetchOnlineId
-    return PsPlusChiakiNative?.fetchAccountDiag
-      ? PsPlusChiakiNative.fetchAccountDiag(npsso)
-      : Promise.resolve(null);
-  }
-
   invalidateCatalogCache(): void {
     PsPlusChiakiNative?.invalidateCatalogCache?.();
   }
@@ -202,14 +193,6 @@ class PsPlusChiakiClient {
 
   stopSession(): Promise<void> {
     return PsPlusChiakiNative.stopSession();
-  }
-
-  // The native chiaki log for the current/most recent session (see
-  // PsPlusModule.kt's debugLogFile() -- overwritten fresh by every
-  // startSession(), flushed after every line). Resolves '' if no session has
-  // ever logged to it yet.
-  getDebugLog(): Promise<string> {
-    return PsPlusChiakiNative?.getDebugLog?.() ?? Promise.resolve('');
   }
 
   setControllerState(state: ControllerStateInput): void {

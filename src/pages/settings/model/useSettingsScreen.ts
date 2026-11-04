@@ -23,7 +23,6 @@ import {
   getNpsso,
   clearNpsso,
   clearCatalogGames,
-  psPlusChiaki,
   loadPsPlusOnlineId,
 } from '../../../features/ps-plus-session';
 import {
@@ -339,65 +338,44 @@ export function useSettingsScreen(navigation: any, route: any) {
     startXcloudLogin();
   };
 
-  // Debug aid for the still-unresolved GFN catalog ownership issue: copies the
-  // live GFNJWT bearer token (the same one gfnCatalog.ts sends as
-  // `Authorization: GFNJWT <token>` on its GraphQL library/browse queries) so
-  // the actual raw API response -- specifically each variant's gfn.library.status
-  // -- can be inspected directly against a real account, off-device. Only ever
-  // copies locally to the clipboard, never sent anywhere on its own.
-  const handleCopyGfnDebugInfo = () => {
+  // Long-pressing a provider's account row copies the token that provider's
+  // requests are signed with, for inspecting its API off-device. It only goes
+  // to the clipboard, never anywhere else.
+  const copyToken = (value: string | undefined | null) => {
+    if (!value) {
+      ToastAndroid.show(t('TokenCopyFailed'), ToastAndroid.SHORT);
+      return;
+    }
+    Clipboard.setString(value);
+    ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
+  };
+
+  // xCloud: the gsToken and the region it is used against.
+  const handleCopyXboxToken = () => {
+    const token = streamingTokens.xCloudToken;
+    copyToken(
+      token?.data?.gsToken
+        ? JSON.stringify({
+            gsToken: token.data.gsToken,
+            baseUri: token.getDefaultRegion?.()?.baseUri,
+          })
+        : undefined,
+    );
+  };
+
+  // GeForce NOW: the GFNJWT bearer token and the user id.
+  const handleCopyGfnToken = () => {
     getValidGfnJwt()
       .then(async token => {
-        if (!token) {
-          ToastAndroid.show(t('GfnDebugCopyFailed'), ToastAndroid.SHORT);
-          return;
-        }
-        const userId = await getValidGfnUserId();
-        Clipboard.setString(JSON.stringify({gfnJwt: token, userId}));
-        ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
+        const userId = token ? await getValidGfnUserId() : undefined;
+        copyToken(token ? JSON.stringify({gfnJwt: token, userId}) : undefined);
       })
-      .catch(() => {
-        ToastAndroid.show(t('GfnDebugCopyFailed'), ToastAndroid.SHORT);
-      });
+      .catch(() => copyToken(undefined));
   };
 
-  // Debug aid for the still-fragile PS Plus background/resume path -- most
-  // users can't pull a logcat capture, so this is the only way they can hand
-  // over the native chiaki log for a report. See PsPlusModule.kt's
-  // debugLogFile()/getDebugLog() for what this actually reads.
-  const handleCopyPsPlusDebugInfo = () => {
-    psPlusChiaki
-      .getDebugLog()
-      .then(debugLog => {
-        if (!debugLog) {
-          ToastAndroid.show(t('PsPlusDebugCopyEmpty'), ToastAndroid.SHORT);
-          return;
-        }
-        Clipboard.setString(debugLog);
-        ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
-      })
-      .catch(() => {
-        ToastAndroid.show(t('PsPlusDebugCopyFailed'), ToastAndroid.SHORT);
-      });
-  };
-
-  // Diagnostic for a lapsed PS Plus subscription: what Sony's session reply says
-  // about the account. Shown in a dialog and copied, so it can be read off the
-  // screen (TV) or pasted into a report.
-  const handleShowPsPlusAccountInfo = () => {
-    psPlusChiaki
-      .fetchAccountDiag(getNpsso())
-      .then(info => {
-        if (!info) {
-          ToastAndroid.show(t('PsPlusAccountInfoFailed'), ToastAndroid.SHORT);
-          return;
-        }
-        Clipboard.setString(info);
-        Alert.alert(t('PsPlusAccountInfoTitle'), info);
-      })
-      .catch(() => {
-        ToastAndroid.show(t('PsPlusAccountInfoFailed'), ToastAndroid.SHORT);
-      });
+  // PlayStation: the npsso cookie.
+  const handleCopyPsPlusToken = () => {
+    copyToken(getNpsso());
   };
 
   // Debug aid for reports that aren't specific to any one streaming provider,
@@ -566,9 +544,9 @@ export function useSettingsScreen(navigation: any, route: any) {
     onLowLatencyDecoderChange: handleLowLatencyDecoderChange,
     onSignalingCloudChange: handleSignalingCloudChange,
     onGfnAccountPress: handleGfnAccountPress,
-    onCopyGfnDebugInfo: handleCopyGfnDebugInfo,
-    onCopyPsPlusDebugInfo: handleCopyPsPlusDebugInfo,
-    onShowPsPlusAccountInfo: handleShowPsPlusAccountInfo,
+    onCopyXboxToken: handleCopyXboxToken,
+    onCopyGfnToken: handleCopyGfnToken,
+    onCopyPsPlusToken: handleCopyPsPlusToken,
     onCopyAppDebugInfo: handleCopyAppDebugInfo,
     onPsPlusAccountPress: handlePsPlusAccountPress,
     onXcloudAccountPress: handleXcloudAccountPress,

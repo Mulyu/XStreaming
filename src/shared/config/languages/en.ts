@@ -27,6 +27,7 @@ export default {
     XalAuthFailDesc: 'XAL authentication failed. Please try MSAL login. Error:',
     'Loading...': 'Loading...',
     'Press Nexus': 'Press Nexus',
+    TokenCopyFailed: 'Could not copy the token.',
     Disconnect: 'Disconnect',
     Input: 'Input',
     Audio: 'Audio',
@@ -327,10 +328,6 @@ export default {
     GfnAccountSignedOutDesc: 'Not signed in — tap to sign in',
     GfnSignOutConfirm: 'Sign out of GeForce NOW on this device?',
     SectionDebug: 'Debug',
-    GfnCopyDebugInfoTitle: 'Copy GFN debug info',
-    GfnCopyDebugInfoDesc:
-      'Copies your GFN session token to the clipboard for investigating the catalog ownership issue.',
-    GfnDebugCopyFailed: 'Could not copy — try signing in again.',
     PsPlusSettings: 'PS Plus',
     PsPlusLogin: 'Sign in to PlayStation',
     PsPlusLoginPrompt: 'Sign in above, then tap the button below.',
@@ -385,15 +382,6 @@ export default {
     PsPlusBitrateTitle: 'Bitrate',
     PsPlusBitrateDesc:
       'Set the streaming bitrate for PS Plus cloud streaming (Note: a lower bitrate can help on weaker networks).',
-    PsPlusAccountInfoTitle: 'Check PS Plus account info',
-    PsPlusAccountInfoDesc:
-      "Shows (and copies) what Sony's session reply and a few read-only account lookups say about you, to find where a lapsed PS Plus subscription shows. Secret values are hidden.",
-    PsPlusAccountInfoFailed: 'Could not read the account info.',
-    PsPlusCopyDebugInfoTitle: 'Copy PS Plus logs',
-    PsPlusCopyDebugInfoDesc:
-      'Copies the native streaming log from your most recent PS Plus session to the clipboard, for reporting a bug.',
-    PsPlusDebugCopyEmpty: 'No PS Plus session has run yet.',
-    PsPlusDebugCopyFailed: 'Could not copy the log.',
     AppCopyDebugInfoTitle: 'Copy app debug log',
     AppCopyDebugInfoDesc:
       'Copies a log of recent app foreground/background and screen activity to the clipboard, for reporting a bug (e.g. a black screen after resuming from the background).',
