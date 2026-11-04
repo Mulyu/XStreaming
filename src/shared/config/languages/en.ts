@@ -74,7 +74,7 @@ export default {
     'Joystick dead zone': 'Joystick dead zone',
     'Config joystick dead zone':
       'If the controller drifts, configure the joystick center dead zone to reduce drift.',
-    'Set region': 'Set region',
+    'Set region': 'Server region',
     'Changing the region allows you to use XGPU services without a proxy':
       'Changing the region allows you to use XGPU services without a proxy',
     'The signaling server is a server for stream negotiation. If the host cannot connect, please try modifying this option':
@@ -108,7 +108,7 @@ export default {
       'Whether to check AnyStreaming updates automatically',
     BasesSettings: 'Basic',
     DisplaySettings: 'Display',
-    GamepadSettings: 'Gamepad and vibration',
+    GamepadSettings: 'Gamepad',
     vGamepadSettings: 'Virtual controller',
     AudioSettings: 'Audio',
     XboxSettings: 'Xbox',
@@ -193,7 +193,7 @@ export default {
     GfnPlanRenews: 'Renews on {{date}}',
     SectionVideo: 'Video',
     SectionRegionSignaling: 'Region & Signaling',
-    SectionSignInLanguage: 'Sign-in & Language',
+    SectionSignInLanguage: 'Language',
     FlagGfnNoOp: '⚠️ Has no effect during a GeForce NOW stream',
     Custom: 'Custom',
     Size: 'Size',
@@ -342,7 +342,7 @@ export default {
     PsPlusSignedInButton: "I've signed in",
     PsPlusLoginFailedDesc:
       "Couldn't confirm sign-in — make sure you're fully signed in above, then try again.",
-    PsPlusAccountTitle: 'PlayStation Network account',
+    PsPlusAccountTitle: 'PS Plus account',
     PsPlusSignedIn: 'Signed in',
     PsPlusAccountSignedOutDesc: 'Not signed in — tap to sign in',
     PsPlusSignOutConfirm: 'Sign out of PlayStation Network on this device?',
@@ -395,7 +395,7 @@ export default {
     XboxPlaytimeAdFreeUnlimited: 'Ad-free: unlimited',
     XboxPlaytimeAdSupported: 'With ads: {{hours}}h {{minutes}}m left',
     XboxPlaytimeAdSupportedUnlimited: 'With ads: unlimited',
-    XboxPlaytimeTitle: 'Cloud gaming time remaining',
+    XboxPlaytimeTitle: 'Playtime remaining this month',
     XboxPlaytimeLoading: 'Checking remaining time…',
     XboxPlaytimeUnavailable: "Couldn't check remaining time",
     XboxPlaytimeNone: 'No time limit on this account',
@@ -408,8 +408,7 @@ export default {
     GfnPlaytimeRemaining: '{{hours}}h {{minutes}}m left this month',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
-    'Anti-idle max duration (minutes)':
-      'Anti-idle: keep awake for (minutes, 0 = off)',
+    'Anti-idle max duration (minutes)': 'Anti-idle',
     AntiIdleMaxDesc:
       "While backgrounded, keep the session connected for at most this many minutes, then let it disconnect. On Xbox Cloud/GeForce NOW this works by sending a tiny camera nudge so the session isn't kicked for inactivity (note: this moves the camera, so it can affect the game) -- PS Plus has no such inactivity timeout to spoof, so it disconnects outright once the time is up instead. Set to 0 to turn this off (the session may then stay connected indefinitely while backgrounded).",
     'Ultra low latency decoding': 'Ultra low latency decoding',
