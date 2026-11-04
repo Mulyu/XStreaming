@@ -3,5 +3,8 @@
 export {useXboxAuthBootstrap} from './model/useXboxAuthBootstrap';
 export {useXcloudLogin} from './model/useXcloudLogin';
 export {ensureAuthentication} from './api/authSession';
-export {loadStreamingTime} from './api/streamingTime';
+export {
+  loadStreamingTime,
+  getContentAccessAuthorization,
+} from './api/streamingTime';
 export type {StreamingTimeResult} from './api/streamingTime';

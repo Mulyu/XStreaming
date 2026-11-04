@@ -97,6 +97,7 @@ const SettingsView: React.FC<Props> = ({
   onSignalingCloudChange,
   onGfnAccountPress,
   onCopyXboxToken,
+  onCopyContentAccessAuth,
   onCopyGfnToken,
   onCopyPsPlusToken,
   onCopyAppDebugInfo,
@@ -323,6 +324,17 @@ const SettingsView: React.FC<Props> = ({
             description={`${t('DualSense_adaptive_trigger_right_desc')}`}
             onPress={onNavigateDs5Right}
           />
+
+          {isAuthed && (
+            <>
+              <SectionLabel title={t('SectionDebug')} />
+              <SettingItem
+                title={t('XboxCopyContentAccessAuthTitle')}
+                description={t('XboxCopyContentAccessAuthDesc')}
+                onPress={onCopyContentAccessAuth}
+              />
+            </>
+          )}
         </ScrollView>
       )}
 

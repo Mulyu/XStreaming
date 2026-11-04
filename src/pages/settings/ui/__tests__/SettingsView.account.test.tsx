@@ -118,6 +118,20 @@ describe('provider account rows', () => {
     expect(texts(tree)).toContain('10h 30m left');
   });
 
+  it('Xbox signed in: a temporary row copies the content-access Authorization', () => {
+    const onCopyContentAccessAuth = jest.fn();
+    const tree = render({
+      lane: 'xbox',
+      isAuthed: true,
+      onCopyContentAccessAuth,
+    });
+    expect(texts(tree)).toContain('XboxCopyContentAccessAuthTitle');
+    press(tree, 'XboxCopyContentAccessAuthTitle');
+    expect(onCopyContentAccessAuth).toHaveBeenCalledTimes(1);
+    const signedOut = render({lane: 'xbox', isAuthed: false});
+    expect(texts(signedOut)).not.toContain('XboxCopyContentAccessAuthTitle');
+  });
+
   it('GeForce NOW: user name and plan on the row, playtime on its own row', () => {
     const onGfnAccountPress = jest.fn();
     const tree = render({

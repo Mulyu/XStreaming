@@ -397,6 +397,9 @@ export default {
     AppDebugCopyEmpty: 'まだログが記録されていません。',
     AppDebugCopyFailed: 'ログをコピーできませんでした。',
     GameTimeWarning: 'クラウドゲームの残り時間は、あと約{{minutes}}分です',
+    XboxCopyContentAccessAuthTitle: '残り時間用のAuthorizationをコピー（一時）',
+    XboxCopyContentAccessAuthDesc:
+      '残り時間の取得に使うAuthorizationヘッダーをクリップボードにコピーします。調査用の一時的な機能です。',
     XboxPlaytimeTitle: 'クラウドゲームの残り時間',
     XboxPlaytimeLoading: '残り時間を確認中…',
     XboxPlaytimeUnavailable: '残り時間を確認できませんでした',

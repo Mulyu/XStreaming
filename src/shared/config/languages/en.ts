@@ -399,6 +399,10 @@ export default {
     AppDebugCopyEmpty: 'No log recorded yet.',
     AppDebugCopyFailed: 'Could not copy the log.',
     GameTimeWarning: 'About {{minutes}} min of cloud gaming time left',
+    XboxCopyContentAccessAuthTitle:
+      'Copy the cloud gaming time Authorization (temporary)',
+    XboxCopyContentAccessAuthDesc:
+      'Copies the Authorization header used to read the remaining time, to the clipboard. For investigation; remove after use.',
     XboxPlaytimeTitle: 'Cloud gaming time remaining',
     XboxPlaytimeLoading: 'Checking remaining time…',
     XboxPlaytimeUnavailable: "Couldn't check remaining time",
