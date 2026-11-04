@@ -20,7 +20,11 @@ import {
   deriveMarketLanguage,
 } from '../../../entities/catalog-title';
 import {useGfnSignIn} from '../../../features/gfn-auth';
-import {useXcloudLogin, loadStreamingTime} from '../../../features/xbox-auth';
+import {
+  useXcloudLogin,
+  loadStreamingTime,
+  getContentAccessAuthorization,
+} from '../../../features/xbox-auth';
 import type {StreamingTimeResult} from '../../../features/xbox-auth';
 import {
   isPsPlusSignedIn,
@@ -399,6 +403,14 @@ export function useSettingsScreen(navigation: any, route: any) {
     );
   };
 
+  // TEMPORARY: the Authorization header the content-access service (cloud
+  // gaming time) is called with, to look at its answer off-device.
+  const handleCopyContentAccessAuth = () => {
+    getContentAccessAuthorization(authentication)
+      .then(copyToken)
+      .catch(() => copyToken(undefined));
+  };
+
   // GeForce NOW: the GFNJWT bearer token and the user id.
   const handleCopyGfnToken = () => {
     getValidGfnJwt()
@@ -601,6 +613,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     onSignalingCloudChange: handleSignalingCloudChange,
     onGfnAccountPress: handleGfnAccountPress,
     onCopyXboxToken: handleCopyXboxToken,
+    onCopyContentAccessAuth: handleCopyContentAccessAuth,
     onCopyGfnToken: handleCopyGfnToken,
     onCopyPsPlusToken: handleCopyPsPlusToken,
     onCopyAppDebugInfo: handleCopyAppDebugInfo,
