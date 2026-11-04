@@ -136,11 +136,17 @@ export const buildUnifiedCatalog = (
     }
     entry.gfn = entry.gfn ?? {variants: []};
     // A listing that exists only through Game Pass is owned only while the
-    // membership runs (the same rule as the Xbox side).
+    // membership runs (the same rule as the Xbox side). GFN labels an Xbox
+    // listing 'XBOX_GAME_PASS' even for a game that was bought (Kingdom Come:
+    // Deliverance II on an account with no membership), so when xCloud's own
+    // title list says the account owns the title outright (the ad-supported
+    // program, see playableWithAds) the listing stays owned.
+    const boughtOnXbox = !!entry.xcloud && playableWithAds(entry.xcloud.raw);
     entry.gfn.variants.push(
       opts.xboxActive === false &&
         game.owned &&
-        game.subscription === 'XBOX_GAME_PASS'
+        game.subscription === 'XBOX_GAME_PASS' &&
+        !boughtOnXbox
         ? {...game, owned: false}
         : game,
     );
