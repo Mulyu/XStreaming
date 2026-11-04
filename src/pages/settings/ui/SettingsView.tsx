@@ -6,11 +6,10 @@ import {useTVFocus, tvFocusBold} from '../../../shared/ui/tvFocus';
 import SettingItem from '../../../shared/ui/SettingItem';
 import {
   SwitchRow,
-  SegmentedRow,
-  DropdownRow,
+  ChoiceRow,
   SliderRow,
   InfoRow,
-} from '../../../shared/ui/InlineSettingRows';
+} from '../../../shared/ui/SettingRows';
 import {GfnSignInModal} from '../../../entities/gfn-account';
 import {MsalAuth} from '../../../entities/xbox-token';
 import {M} from '../model/useSettingsScreen';
@@ -171,7 +170,7 @@ const SettingsView: React.FC<Props> = ({
       {lane === 'common' && (
         <ScrollView style={styles.settingsScroll}>
           <SectionLabel title={t('BasesSettings')} />
-          <DropdownRow
+          <ChoiceRow
             title={M('locale').title}
             desc={M('locale').description}
             options={M('locale').data}
@@ -189,10 +188,9 @@ const SettingsView: React.FC<Props> = ({
           <SectionLabel title={t('GamepadSettings')} />
           <SettingItem
             title={t('InputMapping')}
-            description={t('InputMappingDesc')}
             onPress={onNavigateInputMapping}
           />
-          <DropdownRow
+          <ChoiceRow
             title={M('polling_rate').title}
             desc={M('polling_rate').description}
             options={M('polling_rate').data}
@@ -260,14 +258,14 @@ const SettingsView: React.FC<Props> = ({
           )}
 
           <SectionLabel title={t('SectionVideo')} />
-          <SegmentedRow
+          <ChoiceRow
             title={M('resolution').title}
             desc={M('resolution').description}
             options={M('resolution').data}
             value={settings.resolution}
             onChange={v => updateSetting('resolution', v)}
           />
-          <SegmentedRow
+          <ChoiceRow
             title={M('codec').title}
             desc={M('codec').description}
             options={M('codec').data}
@@ -283,14 +281,14 @@ const SettingsView: React.FC<Props> = ({
           />
 
           <SectionLabel title={t('SectionRegionSignaling')} />
-          <DropdownRow
+          <ChoiceRow
             title={M('force_region_ip').title}
             desc={M('force_region_ip').description}
             options={M('force_region_ip').data}
             value={settings.force_region_ip}
             onChange={onForceRegionChange}
           />
-          <DropdownRow
+          <ChoiceRow
             title={M('signaling_cloud').title}
             desc={M('signaling_cloud').description}
             options={signalingCloudOptions}
@@ -300,7 +298,7 @@ const SettingsView: React.FC<Props> = ({
           />
 
           <SectionLabel title={t('SectionSignInLanguage')} />
-          <DropdownRow
+          <ChoiceRow
             title={M('preferred_game_language').title}
             desc={M('preferred_game_language').description}
             options={M('preferred_game_language').data}
@@ -349,7 +347,7 @@ const SettingsView: React.FC<Props> = ({
           />
 
           <SectionLabel title={t('SectionVideo')} />
-          <SegmentedRow
+          <ChoiceRow
             title={M('gfn_resolution').title}
             desc={M('gfn_resolution').description}
             options={M('gfn_resolution').data}
@@ -357,7 +355,7 @@ const SettingsView: React.FC<Props> = ({
             onChange={v => updateSetting('gfn_resolution', v)}
             accent={palette.provider.gfn}
           />
-          <SegmentedRow
+          <ChoiceRow
             title={M('gfn_fps').title}
             desc={M('gfn_fps').description}
             options={M('gfn_fps').data}
@@ -365,7 +363,7 @@ const SettingsView: React.FC<Props> = ({
             onChange={v => updateSetting('gfn_fps', v)}
             accent={palette.provider.gfn}
           />
-          <SegmentedRow
+          <ChoiceRow
             title={M('gfn_bitrate_mode').title}
             desc={M('gfn_bitrate_mode').description}
             options={M('gfn_bitrate_mode').data}
@@ -385,7 +383,7 @@ const SettingsView: React.FC<Props> = ({
               accent={palette.provider.gfn}
             />
           )}
-          <DropdownRow
+          <ChoiceRow
             title={M('gfn_region').title}
             desc={M('gfn_region').description}
             options={gfnRegionOptions}
@@ -412,7 +410,7 @@ const SettingsView: React.FC<Props> = ({
           />
 
           <SectionLabel title={t('SectionVideo')} />
-          <SegmentedRow
+          <ChoiceRow
             title={M('psplus_resolution').title}
             desc={M('psplus_resolution').description}
             options={M('psplus_resolution').data}
@@ -420,7 +418,7 @@ const SettingsView: React.FC<Props> = ({
             onChange={v => updateSetting('psplus_resolution', v)}
             accent={palette.provider.ps}
           />
-          <SegmentedRow
+          <ChoiceRow
             title={M('psplus_fps').title}
             desc={M('psplus_fps').description}
             options={M('psplus_fps').data}
@@ -428,7 +426,7 @@ const SettingsView: React.FC<Props> = ({
             onChange={v => updateSetting('psplus_fps', v)}
             accent={palette.provider.ps}
           />
-          <SegmentedRow
+          <ChoiceRow
             title={M('psplus_bitrate_mode').title}
             desc={M('psplus_bitrate_mode').description}
             options={M('psplus_bitrate_mode').data}
