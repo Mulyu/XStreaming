@@ -50,6 +50,7 @@ import {
   isCatalogTitleWishlisted,
   buildWishlistEntry,
   RatingInfo,
+  StoreRatingLine,
   xboxGenreLabel,
 } from '../../entities/catalog-title';
 import {isSignedIn, getValidGfnJwt} from '../../entities/gfn-account';
@@ -72,6 +73,7 @@ import {
   XboxBrowseSort,
   fetchSteamChart,
   getFreshSteamChart,
+  steamLanguageFor,
   SteamChartEntry,
   fetchPsStoreChart,
   getFreshPsStoreChart,
@@ -89,7 +91,7 @@ import {
   mergeXcloudLookup,
 } from './storeLogic';
 import {usePsBriefs} from './model/usePsBriefs';
-import {RatingLine, GenreChips} from './ui/StoreRowMeta';
+import {GenreChips} from './ui/StoreRowMeta';
 import {alpha, palette} from '../../shared/config/palette';
 
 // Both Xbox's and Steam's charts are live search scans, not curated top-N
@@ -109,18 +111,6 @@ const MIN_VISIBLE_ROWS = 15;
 
 type Provider = 'xcloud' | 'gfn' | 'psstore';
 type ChartKind = 'best' | 'new';
-
-const STEAM_LANGUAGE: Record<string, string> = {
-  en: 'english',
-  zh: 'schinese',
-  zht: 'tchinese',
-  de: 'german',
-  es: 'spanish',
-  pt: 'brazilian',
-  ko: 'koreana',
-  ja: 'japanese',
-  hi: 'english',
-};
 
 function StoreScreen() {
   const {t} = useTranslation();
@@ -279,7 +269,7 @@ function StoreScreen() {
     market || 'US'
   ).toLowerCase()}`;
   const steamCc = market || 'US';
-  const steamLanguage = STEAM_LANGUAGE[getSettings().locale] || 'english';
+  const steamLanguage = steamLanguageFor(getSettings().locale);
 
   // xCloud's own catalog, for matching Xbox browse results back to a
   // launchable title (and the only source of the internal titleId a stream
@@ -1234,7 +1224,7 @@ function StoreScreen() {
           <Text style={styles.rowTitle} numberOfLines={2}>
             {item.title}
           </Text>
-          {!!item.rating && <RatingLine rating={item.rating} />}
+          {!!item.rating && <StoreRatingLine rating={item.rating} />}
           {!!genreLabels?.length && <GenreChips genres={genreLabels} />}
           {!!item.price && (
             <View style={styles.priceRow}>

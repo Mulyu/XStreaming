@@ -10,7 +10,9 @@ export type {XboxBrowseSort, XboxBrowsePage} from './api/xboxBrowse';
 
 export {
   fetchSteamChart,
+  fetchSteamRating,
   getFreshSteamChart,
+  steamLanguageFor,
   STEAM_CHART_PAGE_SIZE,
 } from './api/steamCharts';
 export type {

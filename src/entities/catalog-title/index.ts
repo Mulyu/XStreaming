@@ -15,6 +15,7 @@ export {
 export {isInGamePass, isInPsCatalog} from './model/gamePass';
 
 export type {StoreRating} from './model/storeRating';
+export {StoreRatingLine} from './ui/StoreRatingLine';
 export {xboxGenreLabel, formatPsContentRating} from './model/storeRating';
 export type {PsId, PsStoreBrief, PsStarRating} from './api/psStoreDetails';
 export {
