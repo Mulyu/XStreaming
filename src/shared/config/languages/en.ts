@@ -128,7 +128,6 @@ export default {
     CommonSettings: 'Common',
     SectionAccount: 'Account',
     InputMapping: 'Input mapping',
-    InputMappingDesc: 'Gamepad, keyboard and mouse, and virtual controller',
     InputMappingTabGamepad: 'Gamepad',
     InputMappingTabKbm: 'Keyboard & mouse',
     InputMappingTabVirtual: 'Virtual controller',

@@ -126,7 +126,6 @@ export default {
     CommonSettings: '共通',
     SectionAccount: 'アカウント',
     InputMapping: '入力マッピング',
-    InputMappingDesc: 'ゲームパッド・キーボードとマウス・仮想コントローラー',
     InputMappingTabGamepad: 'ゲームパッド',
     InputMappingTabKbm: 'キーボード・マウス',
     InputMappingTabVirtual: '仮想コントローラー',
