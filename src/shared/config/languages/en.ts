@@ -331,6 +331,8 @@ export default {
     LoadingPhaseStartingSub: 'priming video decoder',
     LoadingPhaseLive: 'Live',
     PsPlusLaunchHandshake: 'Authenticating with PlayStation Network',
+    PsPlusLockRejected:
+      'PlayStation refused to start streaming for this account. Check that no other device is cloud streaming, give a new PS Plus period a little time to take effect, then try again.',
     PsPlusLaunchNegotiating: 'Finding the fastest route to your console',
     PsPlusLaunchStarting: 'Preparing the stream',
     GfnOwned: 'Owned',

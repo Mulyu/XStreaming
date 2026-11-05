@@ -45,6 +45,16 @@ const mapProvisionStageToPhase = (
   return {phase: 'handshake', text: t('PsPlusLaunchHandshake')};
 };
 
+// Failures worth a plain-language line in front of the raw step/HTTP text. The
+// session lock is refused (HTTP 401) when Sony's service will not give this
+// account the stream right now -- seen right after a PS Plus period started, and
+// when another session of the account is still held -- so the player is told what
+// to try; the raw text stays below it for diagnosing.
+export const describeProvisionError = (message: string): string =>
+  message.includes('step10 lock http 401')
+    ? `${t('PsPlusLockRejected')}\n${message}`
+    : message;
+
 // xCloud/native-stream-style gpState button field -> chiaki ControllerState
 // bit value (see native.ts's ControllerButton and Chiaki.kt's ControllerState).
 const BUTTON_MAP: Array<[string, number]> = [
@@ -271,7 +281,9 @@ export class PsPlusSession {
     if (provisioned.err !== 0) {
       this.handlers.onState?.(
         'failed',
-        provisioned.errorMessage || `provision error ${provisioned.err}`,
+        describeProvisionError(
+          provisioned.errorMessage || `provision error ${provisioned.err}`,
+        ),
       );
       return;
     }
