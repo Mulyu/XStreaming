@@ -42,6 +42,9 @@ type CardCommon = {
   isFocused: boolean;
   discount: number;
   saleColor: string;
+  // The providers the list is looking at (all of them when no chip is on); the
+  // badges of the others are left off the card.
+  scope: Props['providerScope'];
   t: Props['t'];
   openTitle: Props['openTitle'];
   openTitleDetail: Props['openTitleDetail'];
@@ -70,7 +73,18 @@ const FilterChip: React.FC<{
   badge?: number;
   tone?: 'accent' | 'sale';
   trailingIcon?: string;
-}> = ({label, active, onPress, icon, badge, tone = 'accent', trailingIcon}) => {
+  // Dimmed and inert (e.g. the Catalog chip when only GeForce NOW is looked at).
+  disabled?: boolean;
+}> = ({
+  label,
+  active,
+  onPress,
+  icon,
+  badge,
+  tone = 'accent',
+  trailingIcon,
+  disabled,
+}) => {
   const focus = useTVFocus();
   const onFill = tone === 'sale' ? styles.chipOnSale : styles.chipOn;
   return (
@@ -79,13 +93,14 @@ const FilterChip: React.FC<{
         styles.chip,
         Platform.isTV && styles.chipTv,
         active && onFill,
+        disabled && styles.chipDisabled,
         focus.focused && tvFocusBold,
       ]}
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
       onFocus={focus.onFocus}
       onBlur={focus.onBlur}
       accessibilityRole="button"
-      accessibilityState={{selected: active}}
+      accessibilityState={{selected: active, disabled: !!disabled}}
       accessibilityLabel={label}>
       {!!icon && (
         <Icon
@@ -184,12 +199,13 @@ const CardArt: React.FC<{
   item: CatalogTitle;
   discount: number;
   saleColor: string;
+  scope: Props['providerScope'];
   inGamePass: boolean;
   big: boolean;
   // Leave room at the title's right for the card's action button.
   actionSpace?: boolean;
   t: Props['t'];
-}> = ({item, discount, saleColor, inGamePass, big, actionSpace, t}) => {
+}> = ({item, discount, saleColor, scope, inGamePass, big, actionSpace, t}) => {
   // Cover art itself grays out when the title isn't playable via any of
   // its listed services today (no Game Pass entitlement, no owned GFN
   // store variant, no owned PS Plus game).
@@ -228,7 +244,7 @@ const CardArt: React.FC<{
       <View style={styles.bottomScrim} pointerEvents="none" />
 
       <View style={[styles.availOverlay, big && styles.availOverlayBig]}>
-        {item.xcloud && (
+        {item.xcloud && scope.xcloud && (
           <View
             style={[
               dotStyle,
@@ -249,7 +265,7 @@ const CardArt: React.FC<{
           label={t('LibraryGamePassIncluded')}
           size={markSize}
         />
-        {item.gfn && (
+        {item.gfn && scope.gfn && (
           <View
             style={[
               dotStyle,
@@ -260,7 +276,7 @@ const CardArt: React.FC<{
             </Text>
           </View>
         )}
-        {item.psplus && (
+        {item.psplus && scope.psplus && (
           <View
             style={[
               dotStyle,
@@ -276,7 +292,7 @@ const CardArt: React.FC<{
           </View>
         )}
         <CatalogMark
-          show={!!item.psplus?.inPlusCatalog}
+          show={scope.psplus && !!item.psplus?.inPlusCatalog}
           color={palette.provider.ps}
           label={t('LibraryPsIncluded')}
           size={markSize}
@@ -316,6 +332,7 @@ const GridCard = React.memo(function GridCard({
   isFocused,
   discount,
   saleColor,
+  scope,
   numColumns,
   inGamePass,
   action,
@@ -345,6 +362,7 @@ const GridCard = React.memo(function GridCard({
           item={item}
           discount={discount}
           saleColor={saleColor}
+          scope={scope}
           inGamePass={inGamePass}
           big={false}
           actionSpace
@@ -383,6 +401,7 @@ const TvTile = React.memo(function TvTile({
   isFocused,
   discount,
   saleColor,
+  scope,
   numColumns,
   inGamePass,
   t,
@@ -404,6 +423,7 @@ const TvTile = React.memo(function TvTile({
             item={item}
             discount={discount}
             saleColor={saleColor}
+            scope={scope}
             inGamePass={inGamePass}
             big
             t={t}
@@ -444,6 +464,8 @@ const LibraryView: React.FC<Props> = ({
   mode,
   filterCatalog,
   toggleCatalog,
+  catalogAvailable,
+  providerScope,
   gamePassMap,
   focusedKey,
   setFocusedKey,
@@ -573,8 +595,9 @@ const LibraryView: React.FC<Props> = ({
           isFocused={focusedKey === item.key}
           discount={sale.percent}
           saleColor={saleBadgeColor(sale.provider)}
+          scope={providerScope}
           numColumns={numColumns}
-          inGamePass={isInGamePass(item, gamePassMap)}
+          inGamePass={providerScope.xcloud && isInGamePass(item, gamePassMap)}
           action={owned ? 'favorite' : 'wishlist'}
           actionOn={
             owned ? favoriteKeys.has(item.key) : wishlistKeys.has(item.key)
@@ -592,6 +615,7 @@ const LibraryView: React.FC<Props> = ({
       focusedKey,
       saleInfo,
       gamePassMap,
+      providerScope,
       favoriteKeys,
       wishlistKeys,
       stableToggleFavorite,
@@ -806,7 +830,8 @@ const LibraryView: React.FC<Props> = ({
                 <FilterChip
                   icon="gift-outline"
                   label={t('LibraryChipCatalog')}
-                  active={filterCatalog}
+                  active={filterCatalog && catalogAvailable}
+                  disabled={!catalogAvailable}
                   onPress={toggleCatalog}
                 />
               </>
@@ -1006,6 +1031,7 @@ const styles = StyleSheet.create({
   },
   chipTv: {height: 36, paddingHorizontal: 16, gap: 6},
   chipOn: {backgroundColor: palette.accent},
+  chipDisabled: {opacity: 0.4},
   chipOnSale: {backgroundColor: palette.sale},
   chipText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
   chipTextTv: {fontSize: 14},
