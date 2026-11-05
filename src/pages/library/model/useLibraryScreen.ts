@@ -120,6 +120,8 @@ import {
 // Store (everything else: wishlist, sales, catalog membership).
 export type LibraryMode = 'owned' | 'notOwned';
 
+export type SaleProvider = 'xbox' | 'gfn' | 'ps';
+
 export type SortMode = 'reco' | 'newest' | 'popular' | 'recent' | 'discount';
 
 // Each mode opens on its own default order and keeps the order the user
@@ -863,8 +865,11 @@ export function useLibraryScreen() {
   // price (Game Pass) and any of the title's GFN-linked Steam variants --
   // whichever is on sale, or the bigger discount if both are. 0 for anything
   // not on sale on either.
-  const saleDiscount = React.useCallback(
-    (item: CatalogTitle): number => {
+  // The best discount on any service and which service it comes from (the
+  // badge is drawn in that service's colour). Steam's sale belongs to the GFN
+  // side, since that is where a Steam price is attached.
+  const saleInfo = React.useCallback(
+    (item: CatalogTitle): {percent: number; provider: SaleProvider | null} => {
       const productId = item.xcloud?.raw?.productId;
       const xcloudPrice = productId ? getPrice(priceMap, productId) : null;
       const xcloudDiscount =
@@ -891,17 +896,33 @@ export function useLibraryScreen() {
           : 0;
 
       // A wishlisted title outside every loaded catalog is priced from the
-      // snapshot saved with it (refreshed below).
+      // snapshot saved with it (refreshed below); the store ref it was saved
+      // with says which service that price is from.
       const snapshotDiscount = item.store?.snapshot?.discountPercent || 0;
+      const refs = item.store?.refs;
+      const snapshotProvider: SaleProvider | null = refs?.ps
+        ? 'ps'
+        : refs?.steam
+        ? 'gfn'
+        : refs?.xbox
+        ? 'xbox'
+        : null;
 
-      return Math.max(
-        xcloudDiscount,
-        steamDiscount,
-        psDiscount,
-        snapshotDiscount,
+      const candidates: {percent: number; provider: SaleProvider | null}[] = [
+        {percent: xcloudDiscount, provider: 'xbox'},
+        {percent: steamDiscount, provider: 'gfn'},
+        {percent: psDiscount, provider: 'ps'},
+        {percent: snapshotDiscount, provider: snapshotProvider},
+      ];
+      return candidates.reduce((best, c) =>
+        c.percent > best.percent ? c : best,
       );
     },
     [priceMap, steamPriceMap, psSaleMap],
+  );
+  const saleDiscount = React.useCallback(
+    (item: CatalogTitle): number => saleInfo(item).percent,
+    [saleInfo],
   );
 
   // Store rating for the TV list row -- same xCloud-only source as
@@ -1313,6 +1334,7 @@ export function useLibraryScreen() {
     openTitle,
     openTitleDetail,
     saleDiscount,
+    saleInfo,
     titleRating,
   };
 }

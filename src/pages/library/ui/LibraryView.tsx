@@ -28,7 +28,7 @@ import {
 } from '../../../shared/ui/tvFocus';
 import {AppButton} from '../../../shared/ui/Buttons';
 import {InlineSpinner} from '../../../shared/ui/Spinner';
-import {alpha, palette} from '../../../shared/config/palette';
+import {alpha, palette, saleBadgeColor} from '../../../shared/config/palette';
 
 // Same dim treatment library-title-detail's own per-provider rows use for a
 // service a title isn't actually owned on.
@@ -41,6 +41,7 @@ type CardCommon = {
   item: CatalogTitle;
   isFocused: boolean;
   discount: number;
+  saleColor: string;
   t: Props['t'];
   openTitle: Props['openTitle'];
   openTitleDetail: Props['openTitleDetail'];
@@ -182,12 +183,13 @@ const CatalogMark: React.FC<{
 const CardArt: React.FC<{
   item: CatalogTitle;
   discount: number;
+  saleColor: string;
   inGamePass: boolean;
   big: boolean;
   // Leave room at the title's right for the card's action button.
   actionSpace?: boolean;
   t: Props['t'];
-}> = ({item, discount, inGamePass, big, actionSpace, t}) => {
+}> = ({item, discount, saleColor, inGamePass, big, actionSpace, t}) => {
   // Cover art itself grays out when the title isn't playable via any of
   // its listed services today (no Game Pass entitlement, no owned GFN
   // store variant, no owned PS Plus game).
@@ -282,7 +284,12 @@ const CardArt: React.FC<{
       </View>
 
       {discount > 0 && (
-        <View style={[styles.saleBadge, big && styles.saleBadgeBig]}>
+        <View
+          style={[
+            styles.saleBadge,
+            big && styles.saleBadgeBig,
+            {backgroundColor: saleColor},
+          ]}>
           <Text style={[styles.saleBadgeText, big && styles.saleBadgeTextBig]}>
             -{discount}%
           </Text>
@@ -308,6 +315,7 @@ const GridCard = React.memo(function GridCard({
   item,
   isFocused,
   discount,
+  saleColor,
   numColumns,
   inGamePass,
   action,
@@ -336,6 +344,7 @@ const GridCard = React.memo(function GridCard({
         <CardArt
           item={item}
           discount={discount}
+          saleColor={saleColor}
           inGamePass={inGamePass}
           big={false}
           actionSpace
@@ -373,6 +382,7 @@ const TvTile = React.memo(function TvTile({
   item,
   isFocused,
   discount,
+  saleColor,
   numColumns,
   inGamePass,
   t,
@@ -393,6 +403,7 @@ const TvTile = React.memo(function TvTile({
           <CardArt
             item={item}
             discount={discount}
+            saleColor={saleColor}
             inGamePass={inGamePass}
             big
             t={t}
@@ -444,7 +455,7 @@ const LibraryView: React.FC<Props> = ({
   onRefresh,
   openTitle,
   openTitleDetail,
-  saleDiscount,
+  saleInfo,
 }) => {
   const searchFocus = useTVFocus();
   const tvSearchInputFocus = useTVFocus();
@@ -555,11 +566,13 @@ const LibraryView: React.FC<Props> = ({
     ({item}: {item: CatalogTitle}) => {
       const Cell = Platform.isTV ? TvTile : GridCard;
       const owned = isCatalogTitleOwned(item);
+      const sale = saleInfo(item);
       return (
         <Cell
           item={item}
           isFocused={focusedKey === item.key}
-          discount={saleDiscount(item)}
+          discount={sale.percent}
+          saleColor={saleBadgeColor(sale.provider)}
           numColumns={numColumns}
           inGamePass={isInGamePass(item, gamePassMap)}
           action={owned ? 'favorite' : 'wishlist'}
@@ -577,7 +590,7 @@ const LibraryView: React.FC<Props> = ({
     },
     [
       focusedKey,
-      saleDiscount,
+      saleInfo,
       gamePassMap,
       favoriteKeys,
       wishlistKeys,
