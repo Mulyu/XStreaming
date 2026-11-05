@@ -328,6 +328,8 @@ export default {
     PsPlusLaunchHandshake: 'PlayStation Networkで認証中',
     PsPlusLockRejected:
       'PlayStation側がこのアカウントのストリーミング開始を拒否しました。他の機器でクラウドストリーミング中でないか確認し、PS Plusの契約が反映されるまで少し待ってから、もう一度お試しください。',
+    PsPlusConsoleTokenRequired:
+      'PlayStation側が、この接続元に機器の認証（コンソールトークン）を求めましたが、このアプリはまだ対応していません。公式のアプリでは接続できるアカウントでも、このアプリでは接続できない状態です。',
     PsPlusLaunchNegotiating: '最適なデータセンターを選択中',
     PsPlusLaunchStarting: 'ストリーミングを準備中',
     GfnOwned: '所有',

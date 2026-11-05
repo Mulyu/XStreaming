@@ -333,6 +333,8 @@ export default {
     PsPlusLaunchHandshake: 'Authenticating with PlayStation Network',
     PsPlusLockRejected:
       'PlayStation refused to start streaming for this account. Check that no other device is cloud streaming, give a new PS Plus period a little time to take effect, then try again.',
+    PsPlusConsoleTokenRequired:
+      "PlayStation asked this client for device verification (a console token), which this app does not support yet. The account can stream in Sony's own apps but not here.",
     PsPlusLaunchNegotiating: 'Finding the fastest route to your console',
     PsPlusLaunchStarting: 'Preparing the stream',
     GfnOwned: 'Owned',
