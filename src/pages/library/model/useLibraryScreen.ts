@@ -1234,11 +1234,13 @@ export function useLibraryScreen() {
     mode === 'owned'
       ? [
           {value: 'recent', label: t('SortRecent')},
+          {value: 'popular', label: t('Popular')},
           {value: 'newest', label: t('SortNewest')},
           {value: 'reco', label: t('SortByName')},
         ]
       : [
           {value: 'discount', label: t('SortDiscount')},
+          {value: 'popular', label: t('Popular')},
           {value: 'newest', label: t('SortNewest')},
           {value: 'reco', label: t('SortByName')},
         ];
