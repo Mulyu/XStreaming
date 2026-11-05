@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">AnyStreaming</string>
     <string name="widget_recent_label">Recent games</string>
-    <string name="widget_recent_description">The last four games you launched. Tap one to jump straight into its stream.</string>
+    <string name="widget_recent_description">The games you launched most recently. Resize it to show more or fewer. Tap one to jump straight into its stream.</string>
 </resources>

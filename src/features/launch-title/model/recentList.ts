@@ -1,7 +1,8 @@
 // The "recently launched" list behind the home-screen widget: pure list
 // logic, kept apart from storage and the native bridge so it is testable.
 
-export const RECENT_LAUNCH_LIMIT = 4;
+// Enough for the largest the widget can be resized to (5 x 6 tiles).
+export const RECENT_LAUNCH_LIMIT = 30;
 
 // Everything the widget needs to relaunch a title directly: the exact payload
 // buildShortcutRequest() produces (provider-specific ids, name, artwork URL).
