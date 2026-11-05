@@ -326,6 +326,8 @@ export default {
     LoadingPhaseStartingSub: 'デコーダーを準備中',
     LoadingPhaseLive: '配信中',
     PsPlusLaunchHandshake: 'PlayStation Networkで認証中',
+    PsPlusLockRejected:
+      'PlayStation側がこのアカウントのストリーミング開始を拒否しました。他の機器でクラウドストリーミング中でないか確認し、PS Plusの契約が反映されるまで少し待ってから、もう一度お試しください。',
     PsPlusLaunchNegotiating: '最適なデータセンターを選択中',
     PsPlusLaunchStarting: 'ストリーミングを準備中',
     GfnOwned: '所有',
