@@ -1,4 +1,5 @@
 import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
+import BackgroundTimer from 'react-native-background-timer';
 import {getSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
 import {Address6} from 'ip-address';
@@ -318,7 +319,11 @@ export default class XcloudSessionClient {
                 // reject('Streaming canceled');
                 reject('');
               } else {
-                setTimeout(() => {
+                // BackgroundTimer, not setTimeout: React Native pauses its own
+                // timers while the app is in the background, which stalled this
+                // poll (and the ICE poll below) until the app came back -- the
+                // GeForce NOW queue already polls this way.
+                BackgroundTimer.setTimeout(() => {
                   // Continue
                   this.waitState()
                     .then(state => {
@@ -554,7 +559,7 @@ export default class XcloudSessionClient {
 
           // If result is empty, continue check
           if (!iceResult) {
-            setTimeout(() => {
+            BackgroundTimer.setTimeout(() => {
               this.checkIceResponse()
                 .then(state => {
                   resolve(state);
