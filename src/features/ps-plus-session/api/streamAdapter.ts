@@ -45,15 +45,23 @@ const mapProvisionStageToPhase = (
   return {phase: 'handshake', text: t('PsPlusLaunchHandshake')};
 };
 
-// Failures worth a plain-language line in front of the raw step/HTTP text. The
-// session lock is refused (HTTP 401) when Sony's service will not give this
-// account the stream right now -- seen right after a PS Plus period started, and
-// when another session of the account is still held -- so the player is told what
-// to try; the raw text stays below it for diagnosing.
-export const describeProvisionError = (message: string): string =>
-  message.includes('step10 lock http 401')
-    ? `${t('PsPlusLockRejected')}\n${message}`
-    : message;
+// Failures worth a plain-language line in front of the raw step/HTTP text.
+// - `console token required`: Sony's service asked this client to prove it is a
+//   real console/Portal (a challenge this app does not answer) and then refused
+//   the session lock -- seen on accounts the service has switched to that check.
+// - a bare refused lock (HTTP 401): the service will not give this account the
+//   stream right now; the player is told what to try.
+// The raw text stays below the line for diagnosing.
+export const describeProvisionError = (message: string): string => {
+  if (message.includes('step10 lock http 401')) {
+    return `${t(
+      message.includes('console token required')
+        ? 'PsPlusConsoleTokenRequired'
+        : 'PsPlusLockRejected',
+    )}\n${message}`;
+  }
+  return message;
+};
 
 // xCloud/native-stream-style gpState button field -> chiaki ControllerState
 // bit value (see native.ts's ControllerButton and Chiaki.kt's ControllerState).

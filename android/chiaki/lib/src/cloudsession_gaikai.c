@@ -67,6 +67,7 @@ typedef struct
 	int ping_timeout_rtt;       // 0 = unset, -1 = every datacenter ping was unreachable
 	                            // (no RTT quality gate any more -- see gk_step12_select)
 	bool forced_dc_unavailable; // settings-forced datacenter not in this title's list
+	bool need_console_token;    // step9's reply asked for a console token (x-gaikai-need-consoletoken)
 	char fail_note[256];        // first failure (step + HTTP status + start of the body), for the error message
 } GaikaiCtx;
 
@@ -554,6 +555,15 @@ static ChiakiErrorCode gk_step9_authorize(GaikaiCtx *c, ChiakiCloudProvisionResu
 		return CHIAKI_ERR_UNKNOWN;
 	}
 	gk_update_session_key(c, &resp);
+	// Sony's newer Gaikai asks the client to prove it is a real console/Portal
+	// (x-gaikai-need-consoletoken, with an x-sie-validation-request challenge).
+	// This client does not answer it; remember that it was asked, so a refused lock
+	// right after is reported for what it is.
+	char *need = gk_header_value(resp.headers, "x-gaikai-need-consoletoken");
+	c->need_console_token = need && strcasecmp(need, "true") == 0;
+	if(c->need_console_token)
+		CHIAKI_LOGW(c->log, "[GAIKAI] step9: server asks for a console token (not supported by this client)");
+	free(need);
 	cc_http_response_fini(&resp);
 	return CHIAKI_ERR_SUCCESS;
 }
@@ -588,7 +598,13 @@ static ChiakiErrorCode gk_step10_lock(GaikaiCtx *c)
 			continue;
 		}
 		net_errors = 0;
-		if(resp.status_code != 200) { GK_FAIL(c, "[GAIKAI] step10 lock http %ld", resp.status_code); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
+		if(resp.status_code != 200)
+		{
+			GK_FAIL(c, "[GAIKAI] step10 lock http %ld%s", resp.status_code,
+				c->need_console_token ? " (console token required)" : "");
+			cc_http_response_fini(&resp);
+			return CHIAKI_ERR_UNKNOWN;
+		}
 		gk_update_session_key(c, &resp);
 		struct json_object *j = resp.data ? json_tokener_parse(resp.data) : NULL;
 		bool acquired = j && cc_json_bool(j, "lockAcquired");
