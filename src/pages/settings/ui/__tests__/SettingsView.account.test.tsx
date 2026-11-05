@@ -41,6 +41,7 @@ const makeProps = (overrides: Record<string, unknown>) => {
     signalingCloudOptions: [],
     signalingCloudValue: '',
     gfnRegionOptions: [],
+    psDatacenterOptions: [],
     xboxAccount: {userName: undefined, planTitle: undefined},
     gfnAccount: {userName: undefined, planTitle: undefined},
     psAccount: {userName: undefined},

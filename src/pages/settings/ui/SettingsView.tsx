@@ -81,6 +81,7 @@ const SettingsView: React.FC<Props> = ({
   signalingCloudOptions,
   signalingCloudValue,
   gfnRegionOptions,
+  psDatacenterOptions,
   xboxAccount,
   xboxPlaytimeDescription,
   gfnAccount,
@@ -410,6 +411,15 @@ const SettingsView: React.FC<Props> = ({
               accent={palette.provider.ps}
             />
           )}
+          <ChoiceRow
+            title={M('psplus_datacenter').title}
+            desc={M('psplus_datacenter').description}
+            options={psDatacenterOptions}
+            value={settings.psplus_datacenter}
+            onChange={v => updateSetting('psplus_datacenter', v)}
+            accent={palette.provider.ps}
+            emptyLabel={t('Auto')}
+          />
         </ScrollView>
       )}
 

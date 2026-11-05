@@ -394,6 +394,9 @@ export default {
     PsPlusBitrateTitle: 'ビットレート',
     PsPlusBitrateDesc:
       'PS Plusクラウドストリーミングのビットレートを設定します(注:回線が弱い場合、ビットレートを下げると改善することがあります)。',
+    PsPlusDatacenterTitle: '接続先サーバー',
+    PsPlusDatacenterDesc:
+      'PS Plusクラウドの接続先データセンターを固定します。「自動」では、応答が最も速いサーバーを選びます。一覧は、接続を試すたびに測った応答時間つきで更新されます（一度も試していないと、「自動」だけが表示されます）。指定したサーバーで起動できない場合は「自動」に戻してください。',
     GameTimeWarning: 'クラウドゲームの残り時間は、あと約{{minutes}}分です',
     XboxPlaytimeAdFree: '広告なし 残り{{hours}}時間{{minutes}}分',
     XboxPlaytimeAdFreeUnlimited: '広告なし 無制限',

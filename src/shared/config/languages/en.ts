@@ -396,6 +396,9 @@ export default {
     PsPlusBitrateTitle: 'Bitrate',
     PsPlusBitrateDesc:
       'Set the streaming bitrate for PS Plus cloud streaming (Note: a lower bitrate can help on weaker networks).',
+    PsPlusDatacenterTitle: 'Server',
+    PsPlusDatacenterDesc:
+      'Pins the PS Plus cloud datacenter to connect to. Auto picks the one that answers fastest. The list is refreshed, with the measured response times, every time you try to connect (until you have, only Auto is shown). If a chosen server will not start a game, go back to Auto.',
     GameTimeWarning: 'About {{minutes}} min of cloud gaming time left',
     XboxPlaytimeAdFree: 'Ad-free: {{hours}}h {{minutes}}m left',
     XboxPlaytimeAdFreeUnlimited: 'Ad-free: unlimited',
