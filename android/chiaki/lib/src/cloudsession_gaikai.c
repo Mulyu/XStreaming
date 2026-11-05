@@ -6,6 +6,7 @@
 // -> step9 authorize -> step10 lock -> step11 datacenters (ping/forced) ->
 // step12 select -> step13 allocate(+wait). Produces the stream-ready result.
 
+#include <stdarg.h>
 #include "cloudsession_internal.h"
 #include "cloudcatalog_internal.h"  // cc_json_* helpers
 #include "curl_http.h"
@@ -66,7 +67,21 @@ typedef struct
 	int ping_timeout_rtt;       // 0 = unset, -1 = every datacenter ping was unreachable
 	                            // (no RTT quality gate any more -- see gk_step12_select)
 	bool forced_dc_unavailable; // settings-forced datacenter not in this title's list
+	char fail_note[256];        // first failure (step + HTTP status + start of the body), for the error message
 } GaikaiCtx;
+
+// Remembers the first failure's description so a step that only logged still tells the
+// user which step failed and what the server said (see the end of cc_gaikai_allocate).
+static void gk_note(GaikaiCtx *c, const char *fmt, ...)
+{
+	if(c->fail_note[0]) return;
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(c->fail_note, sizeof(c->fail_note), fmt, ap);
+	va_end(ap);
+}
+// Log an error and keep it as the failure note.
+#define GK_FAIL(c, ...) do { CHIAKI_LOGE((c)->log, __VA_ARGS__); gk_note((c), __VA_ARGS__); } while(0)
 
 static void gk_progress(GaikaiCtx *c, const char *stage)
 {
@@ -178,7 +193,7 @@ static ChiakiErrorCode gk_oauth_code(GaikaiCtx *c, const char *url, char **out_c
 	if(!loc) { loc_hdr = gk_header_value(resp.headers, "Location"); loc = loc_hdr; }
 	if(resp.status_code != 302 || !loc)
 	{
-		CHIAKI_LOGE(c->log, "[GAIKAI] oauth: expected 302+Location, got %ld", resp.status_code);
+		GK_FAIL(c, "[GAIKAI] oauth: expected 302+Location, got %ld", resp.status_code);
 		free(loc_hdr); cc_http_response_fini(&resp);
 		return CHIAKI_ERR_UNKNOWN;
 	}
@@ -388,7 +403,7 @@ static ChiakiErrorCode gk_step0_client_ids(GaikaiCtx *c)
 	free(h_ua);
 	if(e != CHIAKI_ERR_SUCCESS || resp.status_code != 200 || !resp.data)
 	{
-		CHIAKI_LOGE(c->log, "[GAIKAI] step0 client_ids http %ld", resp.status_code);
+		GK_FAIL(c, "[GAIKAI] step0 client_ids http %ld", resp.status_code);
 		cc_http_response_fini(&resp);
 		return CHIAKI_ERR_UNKNOWN;
 	}
@@ -421,7 +436,7 @@ static ChiakiErrorCode gk_step7_config(GaikaiCtx *c)
 	free(h_ua);
 	if(e != CHIAKI_ERR_SUCCESS || resp.status_code != 200 || !resp.data)
 	{
-		CHIAKI_LOGE(c->log, "[GAIKAI] step7 config http %ld", resp.status_code);
+		GK_FAIL(c, "[GAIKAI] step7 config http %ld", resp.status_code);
 		cc_http_response_fini(&resp);
 		return CHIAKI_ERR_UNKNOWN;
 	}
@@ -453,7 +468,7 @@ static ChiakiErrorCode gk_step8_start(GaikaiCtx *c, ChiakiCloudProvisionResult *
 	free(h_ua); free(h_skey); json_object_put(wrap);
 	if(e != CHIAKI_ERR_SUCCESS || resp.status_code != 200)
 	{
-		CHIAKI_LOGE(c->log, "[GAIKAI] step8 start http %ld: %s", resp.status_code, resp.data ? resp.data : "");
+		GK_FAIL(c, "[GAIKAI] step8 start http %ld: %s", resp.status_code, resp.data ? resp.data : "");
 		if(resp.data) { free(out->error_message); out->error_message = strdup(resp.data); }
 		cc_http_response_fini(&resp);
 		return CHIAKI_ERR_UNKNOWN;
@@ -534,7 +549,7 @@ static ChiakiErrorCode gk_step9_authorize(GaikaiCtx *c, ChiakiCloudProvisionResu
 		// noGameForEntitlementId fallback fires when Gaikai rejects an owned entitlement
 		// at authorize (step9), not just at start (step8) -- matches both originals.
 		else if(resp.data) { free(out->error_message); out->error_message = strdup(resp.data); }
-		CHIAKI_LOGE(c->log, "[GAIKAI] step9 authorize http %ld: %s", resp.status_code, resp.data ? resp.data : "");
+		GK_FAIL(c, "[GAIKAI] step9 authorize http %ld: %s", resp.status_code, resp.data ? resp.data : "");
 		free(ev); cc_http_response_fini(&resp);
 		return CHIAKI_ERR_UNKNOWN;
 	}
@@ -562,7 +577,7 @@ static ChiakiErrorCode gk_step10_lock(GaikaiCtx *c)
 			if(gk_cancelled(c)) return CHIAKI_ERR_CANCELED;
 			if(++net_errors > GK_ALLOC_MAX_NET_ERRORS)
 			{
-				CHIAKI_LOGE(c->log, "[GAIKAI] lock failed after %d consecutive network errors", net_errors);
+				GK_FAIL(c, "[GAIKAI] lock failed after %d consecutive network errors", net_errors);
 				return e;
 			}
 			CHIAKI_LOGW(c->log, "[GAIKAI] lock network error (%d/%d), retrying in %ds",
@@ -573,7 +588,7 @@ static ChiakiErrorCode gk_step10_lock(GaikaiCtx *c)
 			continue;
 		}
 		net_errors = 0;
-		if(resp.status_code != 200) { CHIAKI_LOGE(c->log, "[GAIKAI] step10 lock http %ld", resp.status_code); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
+		if(resp.status_code != 200) { GK_FAIL(c, "[GAIKAI] step10 lock http %ld", resp.status_code); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
 		gk_update_session_key(c, &resp);
 		struct json_object *j = resp.data ? json_tokener_parse(resp.data) : NULL;
 		bool acquired = j && cc_json_bool(j, "lockAcquired");
@@ -743,14 +758,14 @@ static ChiakiErrorCode gk_step11_datacenters(GaikaiCtx *c)
 	CCHttpResponse resp = { 0 };
 	ChiakiErrorCode e = gk_post_session(c, "/datacenters", NULL, &resp);
 	if(e != CHIAKI_ERR_SUCCESS) { cc_http_response_fini(&resp); return e; }
-	if(resp.status_code != 200 || !resp.data) { CHIAKI_LOGE(c->log, "[GAIKAI] step11 http %ld", resp.status_code); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
+	if(resp.status_code != 200 || !resp.data) { GK_FAIL(c, "[GAIKAI] step11 http %ld", resp.status_code); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
 	gk_update_session_key(c, &resp);
 	struct json_object *dcs = json_tokener_parse(resp.data);
 	cc_http_response_fini(&resp);
 	if(!dcs || json_object_get_type(dcs) != json_type_array || json_object_array_length(dcs) == 0)
 	{
 		if(dcs) json_object_put(dcs);
-		CHIAKI_LOGE(c->log, "[GAIKAI] step11 no datacenters");
+		GK_FAIL(c, "[GAIKAI] step11 no datacenters");
 		return CHIAKI_ERR_UNKNOWN;
 	}
 	size_t n = json_object_array_length(dcs);
@@ -766,7 +781,7 @@ static ChiakiErrorCode gk_step11_datacenters(GaikaiCtx *c)
 			struct json_object *dc = json_object_array_get_idx(dcs, i);
 			if(strcmp(cc_json_str(dc, "dataCenter"), forced) == 0) { match = dc; break; }
 		}
-		if(!match) { c->forced_dc_unavailable = true; json_object_put(dcs); CHIAKI_LOGE(c->log, "[GAIKAI] forced datacenter '%s' not available", forced); return CHIAKI_ERR_UNKNOWN; }
+		if(!match) { c->forced_dc_unavailable = true; json_object_put(dcs); GK_FAIL(c, "[GAIKAI] forced datacenter '%s' not available", forced); return CHIAKI_ERR_UNKNOWN; }
 		// dummy ping (RTT 20, MTU 1454/1254); bypass pinging entirely.
 		json_object_array_add(c->ping_results, gk_ping_obj(forced, 20, 1454, 1254,
 			cc_json_int(match, "port"), cc_json_str(match, "publicIp"), cc_json_int(match, "maxBandwidth"), true));
@@ -950,7 +965,7 @@ static ChiakiErrorCode gk_step12_select(GaikaiCtx *c)
 		if(!measured)
 		{
 			// Rows are RTT-sorted, so an unmeasured best row means no ping succeeded.
-			CHIAKI_LOGE(c->log, "[GAIKAI] all datacenter pings failed");
+			GK_FAIL(c, "[GAIKAI] all datacenter pings failed");
 			c->ping_timeout_rtt = -1;
 			return CHIAKI_ERR_UNKNOWN; // unreachable
 		}
@@ -973,7 +988,7 @@ static ChiakiErrorCode gk_step12_select(GaikaiCtx *c)
 	CCHttpResponse resp = { 0 };
 	ChiakiErrorCode e = gk_post_session(c, "/datacenters/select", extra, &resp);
 	if(e != CHIAKI_ERR_SUCCESS) { cc_http_response_fini(&resp); return e; }
-	if(resp.status_code != 200) { CHIAKI_LOGE(c->log, "[GAIKAI] step12 select http %ld", resp.status_code); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
+	if(resp.status_code != 200) { GK_FAIL(c, "[GAIKAI] step12 select http %ld", resp.status_code); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
 	gk_update_session_key(c, &resp);
 	struct json_object *j = resp.data ? json_tokener_parse(resp.data) : NULL;
 	if(j)
@@ -1036,13 +1051,13 @@ static ChiakiErrorCode gk_step13_allocate(GaikaiCtx *c, ChiakiCloudProvisionResu
 				// unreachable server.
 				if(net_errors > GK_ALLOC_MAX_NET_ERRORS)
 				{
-					CHIAKI_LOGE(c->log, "[GAIKAI] allocate failed after %d consecutive network errors", net_errors);
+					GK_FAIL(c, "[GAIKAI] allocate failed after %d consecutive network errors", net_errors);
 					free(out->error_message);
 					out->error_message = strdup("Couldn't reach the cloud server (network error). Please try again.");
 				}
 				else
 				{
-					CHIAKI_LOGE(c->log, "[GAIKAI] allocate wait expired (%ds) during a network error", elapsed);
+					GK_FAIL(c, "[GAIKAI] allocate wait expired (%ds) during a network error", elapsed);
 					free(out->error_message);
 					out->error_message = strdup("Timed out waiting for a streaming slot. Please try again.");
 				}
@@ -1056,7 +1071,7 @@ static ChiakiErrorCode gk_step13_allocate(GaikaiCtx *c, ChiakiCloudProvisionResu
 			continue;
 		}
 		net_errors = 0; // request completed -> network is back
-		if(resp.status_code != 200) { CHIAKI_LOGE(c->log, "[GAIKAI] step13 allocate http %ld: %s", resp.status_code, resp.data ? resp.data : ""); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
+		if(resp.status_code != 200) { GK_FAIL(c, "[GAIKAI] step13 allocate http %ld: %s", resp.status_code, resp.data ? resp.data : ""); cc_http_response_fini(&resp); return CHIAKI_ERR_UNKNOWN; }
 		gk_update_session_key(c, &resp);
 		struct json_object *a = resp.data ? json_tokener_parse(resp.data) : NULL;
 		cc_http_response_fini(&resp);
@@ -1096,7 +1111,7 @@ static ChiakiErrorCode gk_step13_allocate(GaikaiCtx *c, ChiakiCloudProvisionResu
 					attempt, qpos, elapsed, max_wait, poll);
 			}
 			json_object_put(a);
-			if(elapsed >= max_wait) { CHIAKI_LOGE(c->log, "[GAIKAI] allocation wait timeout (%ds)", max_wait); return CHIAKI_ERR_TIMEOUT; }
+			if(elapsed >= max_wait) { GK_FAIL(c, "[GAIKAI] allocation wait timeout (%ds)", max_wait); return CHIAKI_ERR_TIMEOUT; }
 			if(poll > max_wait - elapsed) poll = max_wait - elapsed;
 			gk_progress(c, prog);
 			if(!gk_sleep_cancellable(c, poll)) return CHIAKI_ERR_CANCELED;
@@ -1106,7 +1121,7 @@ static ChiakiErrorCode gk_step13_allocate(GaikaiCtx *c, ChiakiCloudProvisionResu
 
 		// success
 		struct json_object *slot = cc_json_obj(a, "launchSlot");
-		if(!slot) { json_object_put(a); CHIAKI_LOGE(c->log, "[GAIKAI] allocate: no launchSlot"); return CHIAKI_ERR_UNKNOWN; }
+		if(!slot) { json_object_put(a); GK_FAIL(c, "[GAIKAI] allocate: no launchSlot"); return CHIAKI_ERR_UNKNOWN; }
 		snprintf(out->server_ip, sizeof(out->server_ip), "%s", cc_json_str(slot, "publicIp"));
 		out->server_port = cc_json_int(slot, "port");
 		const char *priv = cc_json_str(slot, "privateIp");
@@ -1196,6 +1211,10 @@ ChiakiErrorCode cc_gaikai_allocate(ChiakiLog *log,
 			cfg->forced_datacenter ? cfg->forced_datacenter : "");
 		out->error_message = strdup(m);
 	}
+	// Any other failure: say which step it was and what the server answered, rather than
+	// leaving the client with only a bare error code.
+	if(e != CHIAKI_ERR_SUCCESS && e != CHIAKI_ERR_CANCELED && !out->error_message && c.fail_note[0])
+		out->error_message = strdup(c.fail_note);
 
 	free(c.config_key); free(c.lock_session_key); free(c.gaikai_session_id);
 	free(c.gk_cloud_auth_code); free(c.ps3_auth_code); free(c.stream_server_auth_code);
