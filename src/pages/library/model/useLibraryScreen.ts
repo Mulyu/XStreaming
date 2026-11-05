@@ -68,10 +68,8 @@ import {
   RatingInfo,
   deriveMarketLanguage,
   fetchPricesWithRetry,
-  isInGamePass,
   hasGamePassIds,
   hasGenres,
-  isInPsCatalog,
   fetchPsStoreSales,
   lookupPsSale,
   getFreshPsSales,
@@ -106,6 +104,14 @@ import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
 
 import {
+  bestSale,
+  catalogAvailable as scopeHasCatalog,
+  getProviderScope,
+  inScopedCatalog,
+  scopeSortTables,
+} from './providerScope';
+import type {SaleProvider} from './providerScope';
+import {
   buildPsRankTable,
   EMPTY_RANK_TABLE,
   makeRankTable,
@@ -120,7 +126,7 @@ import {
 // Store (everything else: wishlist, sales, catalog membership).
 export type LibraryMode = 'owned' | 'notOwned';
 
-export type SaleProvider = 'xbox' | 'gfn' | 'ps';
+export type {SaleProvider} from './providerScope';
 
 export type SortMode = 'reco' | 'newest' | 'popular' | 'recent' | 'discount';
 
@@ -865,19 +871,26 @@ export function useLibraryScreen() {
   // price (Game Pass) and any of the title's GFN-linked Steam variants --
   // whichever is on sale, or the bigger discount if both are. 0 for anything
   // not on sale on either.
-  // The best discount on any service and which service it comes from (the
-  // badge is drawn in that service's colour). Steam's sale belongs to the GFN
-  // side, since that is where a Steam price is attached.
+  // Which providers everything below looks at (see providerScope.ts).
+  const providerScope = React.useMemo(
+    () => getProviderScope(filterXcloud, filterGfn, filterPsPlus),
+    [filterXcloud, filterGfn, filterPsPlus],
+  );
+  const catalogAvailable = scopeHasCatalog(providerScope);
+
+  // The best discount on the looked-at services and which one it comes from
+  // (the badge is drawn in that service's colour). Steam's sale belongs to the
+  // GFN side, since that is where a Steam price is attached.
   const saleInfo = React.useCallback(
     (item: CatalogTitle): {percent: number; provider: SaleProvider | null} => {
       const productId = item.xcloud?.raw?.productId;
       const xcloudPrice = productId ? getPrice(priceMap, productId) : null;
-      const xcloudDiscount =
+      const xbox =
         xcloudPrice && isSaleForDisplay(xcloudPrice)
           ? discountPercent(xcloudPrice)
           : 0;
 
-      const steamDiscount = (item.gfn?.variants ?? []).reduce((best, v) => {
+      const gfn = (item.gfn?.variants ?? []).reduce((best, v) => {
         const steamPrice = v.steamAppId ? steamPriceMap[v.steamAppId] : null;
         return isSteamSaleForDisplay(steamPrice)
           ? Math.max(best, steamPrice!.discountPercent)
@@ -898,27 +911,25 @@ export function useLibraryScreen() {
       // A wishlisted title outside every loaded catalog is priced from the
       // snapshot saved with it (refreshed below); the store ref it was saved
       // with says which service that price is from.
-      const snapshotDiscount = item.store?.snapshot?.discountPercent || 0;
       const refs = item.store?.refs;
-      const snapshotProvider: SaleProvider | null = refs?.ps
-        ? 'ps'
-        : refs?.steam
-        ? 'gfn'
-        : refs?.xbox
-        ? 'xbox'
-        : null;
-
-      const candidates: {percent: number; provider: SaleProvider | null}[] = [
-        {percent: xcloudDiscount, provider: 'xbox'},
-        {percent: steamDiscount, provider: 'gfn'},
-        {percent: psDiscount, provider: 'ps'},
-        {percent: snapshotDiscount, provider: snapshotProvider},
-      ];
-      return candidates.reduce((best, c) =>
-        c.percent > best.percent ? c : best,
+      return bestSale(
+        {
+          xbox,
+          gfn,
+          ps: psDiscount,
+          snapshot: item.store?.snapshot?.discountPercent || 0,
+          snapshotProvider: refs?.ps
+            ? 'ps'
+            : refs?.steam
+            ? 'gfn'
+            : refs?.xbox
+            ? 'xbox'
+            : null,
+        },
+        providerScope,
       );
     },
-    [priceMap, steamPriceMap, psSaleMap],
+    [priceMap, steamPriceMap, psSaleMap, providerScope],
   );
   const saleDiscount = React.useCallback(
     (item: CatalogTitle): number => saleInfo(item).percent,
@@ -1050,10 +1061,9 @@ export function useLibraryScreen() {
   const wishlistSaleCount = React.useMemo(
     () =>
       wishlist.filter(entry => {
-        const item = catalogByKey.get(entry.key);
-        return (
-          (item ? saleDiscount(item) : entry.snapshot?.discountPercent || 0) > 0
-        );
+        const item =
+          catalogByKey.get(entry.key) ?? buildWishlistCatalogTitle(entry);
+        return saleDiscount(item) > 0;
       }).length,
     [wishlist, catalogByKey, saleDiscount],
   );
@@ -1079,6 +1089,7 @@ export function useLibraryScreen() {
 
   const providerOwnedFiltered = React.useMemo(() => {
     const ownedMode = mode === 'owned';
+    const catalogApplies = filterCatalog && catalogAvailable;
     // Wishlisted titles outside every loaded catalog are not owned by
     // definition, so they only join the Store side's wishlist view.
     const wishlistOn = !ownedMode && filterWishlist;
@@ -1117,9 +1128,9 @@ export function useLibraryScreen() {
             (!!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog))
         : isCatalogTitleOwned(item);
     list = list.filter(item => isOwned(item) === ownedMode);
-    if (!ownedMode && filterCatalog) {
-      list = list.filter(
-        item => isInGamePass(item, gamePassMap) || isInPsCatalog(item),
+    if (!ownedMode && catalogApplies) {
+      list = list.filter(item =>
+        inScopedCatalog(item, providerScope, gamePassMap),
       );
     }
     return list;
@@ -1135,6 +1146,8 @@ export function useLibraryScreen() {
     wishlistKeys,
     wishlistStubs,
     filterCatalog,
+    catalogAvailable,
+    providerScope,
     gamePassMap,
   ]);
 
@@ -1167,15 +1180,20 @@ export function useLibraryScreen() {
     [gfnNewestRank],
   );
   const sortTables = React.useMemo(
-    () => ({
-      xcloudPopular: xcloudPopularTable,
-      xcloudNewest: xcloudNewestTable,
-      gfnPopular: gfnPopularTable,
-      gfnNewest: gfnNewestTable,
-      psPopular: psPopularTable,
-      psNewest: psNewestTable,
-    }),
+    () =>
+      scopeSortTables(
+        {
+          xcloudPopular: xcloudPopularTable,
+          xcloudNewest: xcloudNewestTable,
+          gfnPopular: gfnPopularTable,
+          gfnNewest: gfnNewestTable,
+          psPopular: psPopularTable,
+          psNewest: psNewestTable,
+        },
+        providerScope,
+      ),
     [
+      providerScope,
       xcloudPopularTable,
       xcloudNewestTable,
       gfnPopularTable,
@@ -1324,6 +1342,8 @@ export function useLibraryScreen() {
     mode,
     filterCatalog,
     toggleCatalog,
+    catalogAvailable,
+    providerScope,
     gamePassMap,
     focusedKey,
     setFocusedKey,
