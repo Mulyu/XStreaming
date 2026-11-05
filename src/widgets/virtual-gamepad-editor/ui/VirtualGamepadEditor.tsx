@@ -1,5 +1,11 @@
 import React from 'react';
-import {View, StyleSheet, Dimensions, Alert, ScrollView} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  useWindowDimensions,
+} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {
   Portal,
@@ -87,11 +93,6 @@ export interface VirtualGamepadEditorProps {
   onResetToDefault?: () => void;
 }
 
-const buildDefaultButtons = (): ButtonConfig[] => {
-  const {width, height} = Dimensions.get('window');
-  return buildDefaultLayout(width, height);
-};
-
 // One useTVFocus() per rendered row -- these back the macroSteps.map() and
 // VIRTUAL_MACRO_ALLOWED_BUTTONS.map() lists below, extracted into their own
 // components because hooks can't be called from inside a .map() callback.
@@ -170,9 +171,10 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   const {t} = useTranslation();
   const theme = useTheme();
   const [buttons, setButtons] = React.useState<ButtonConfig[]>([]);
-  const [defaultButtons, setDefaultButtons] = React.useState<ButtonConfig[]>(
-    [],
-  );
+  // The play surface's size. The Settings editor locks to landscape only after
+  // it has mounted, so the first size seen is the portrait one; the default
+  // layout is laid out from the size as it is now, never from a stale one.
+  const {width: windowWidth, height: windowHeight} = useWindowDimensions();
   const [showGrid, setShowGrid] = React.useState(true);
   const [showTips, setShowTips] = React.useState(true);
   const [currentButton, setCurrentButton] = React.useState('');
@@ -245,19 +247,17 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     if (!visible) {
       return;
     }
-    const defaults = buildDefaultButtons();
-    setDefaultButtons(defaults);
+    const defaults = buildDefaultLayout(windowWidth, windowHeight);
     const layouts = getGamepadLayouts();
     const layout = layouts[profileName];
-    const dims = Dimensions.get('window');
     if (layout && Array.isArray(layout)) {
       const withMacro = ensureMacroLayoutButtons(
         layout,
-        createDefaultMacroLayoutButtons(dims.width, dims.height),
+        createDefaultMacroLayoutButtons(windowWidth, windowHeight),
       );
       const withPad = ensureSwipePad(
         withMacro,
-        createDefaultSwipePad(dims.width, dims.height),
+        createDefaultSwipePad(windowWidth, windowHeight),
       );
       setButtons(withPad.map(button => ({...button})));
     } else {
@@ -287,6 +287,8 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     swipeAcceleration,
     joystickMode,
     sensorConfig,
+    windowWidth,
+    windowHeight,
   ]);
 
   if (!visible) {
@@ -360,7 +362,8 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
 
   const handleKeyPicked = (picked: PickableKey) => {
     if (keyPickerTarget === 'new') {
-      const {width, height} = Dimensions.get('window');
+      const width = windowWidth;
+      const height = windowHeight;
       const name = `KeyBtn_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
       setButtons([
         ...buttons,
@@ -499,7 +502,8 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
       ]);
       return;
     }
-    setButtons(defaultButtons.map(button => ({...button})));
+    // Laid out again for the surface's size right now.
+    setButtons(buildDefaultLayout(windowWidth, windowHeight));
     setReloadKey(Date.now());
   };
 
