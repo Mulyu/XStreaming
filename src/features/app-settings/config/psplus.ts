@@ -38,6 +38,15 @@ const psplus = [
       {value: 'custom', text: t('Custom')},
     ],
   },
+  {
+    name: 'psplus_datacenter',
+    type: 'radio',
+    title: t('PsPlusDatacenterTitle'),
+    description: t('PsPlusDatacenterDesc'),
+    // Filled at runtime from the datacenters the last connection attempts
+    // measured (see features/ps-plus-session/api/datacenters.ts).
+    data: [],
+  },
 ];
 
 export default psplus;

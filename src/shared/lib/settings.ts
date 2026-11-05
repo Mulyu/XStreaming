@@ -71,6 +71,8 @@ export type Settings = {
    * later attempt didn't measure it again.
    */
   psplus_datacenter_pings: string;
+  /** The datacenter PS Plus connects to; '' = pick the fastest automatically. */
+  psplus_datacenter: string;
 };
 
 const defaultSettings: Settings = {
@@ -113,6 +115,7 @@ const defaultSettings: Settings = {
   psplus_bitrate_mode: 'auto',
   psplus_bitrate_kbps: 15000,
   psplus_datacenter_pings: '',
+  psplus_datacenter: '',
 };
 
 export const saveSettings = (settings: Settings) => {

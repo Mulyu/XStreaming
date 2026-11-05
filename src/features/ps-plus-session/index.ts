@@ -20,6 +20,8 @@ export {
   clearCatalogGames,
 } from './api/catalogCache';
 export {PsPlusSession, gpStateToPsPlusInput} from './api/streamAdapter';
+export {parseDatacenters, buildDatacenterOptions} from './api/datacenters';
+export type {PsDatacenter} from './api/datacenters';
 export {createTouchpadClickTracker} from './lib/touchpadClick';
 export type {TouchpadTouch} from './lib/touchpadClick';
 export {default as PsPlusStreamView} from './ui/PsPlusStreamView';

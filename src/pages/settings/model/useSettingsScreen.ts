@@ -33,6 +33,7 @@ import {
   clearNpsso,
   clearCatalogGames,
   loadPsPlusOnlineId,
+  buildDatacenterOptions,
 } from '../../../features/ps-plus-session';
 import {
   getGfnDisplayName,
@@ -574,6 +575,14 @@ export function useSettingsScreen(navigation: any, route: any) {
     return gfnQueueLoading ? t('GfnQueueLoading') : t('GfnQueueUnavailable');
   };
 
+  // PS Plus: the datacenters seen on earlier connection attempts, with the
+  // response time measured for each.
+  const psDatacenterOptions = buildDatacenterOptions(
+    settings.psplus_datacenter_pings,
+    settings.psplus_datacenter,
+    t('Auto'),
+  );
+
   const gfnRegionOptions = [
     {value: '', text: t('Auto')},
     ...gfnRegions.map(r => ({value: r.url, text: r.name})),
@@ -621,6 +630,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     signalingCloudOptions,
     signalingCloudValue,
     gfnRegionOptions,
+    psDatacenterOptions,
     xboxAccount,
     xboxPlaytimeDescription: xboxPlaytimeDescription(),
     gfnAccount,
