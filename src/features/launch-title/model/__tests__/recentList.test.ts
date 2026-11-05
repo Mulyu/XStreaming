@@ -64,11 +64,16 @@ describe('pushRecent', () => {
 
   it('keeps at most the limit', () => {
     let list: RecentLaunch[] = [];
-    for (const name of ['A', 'B', 'C', 'D', 'E', 'F']) {
+    const names = Array.from(
+      {length: RECENT_LAUNCH_LIMIT + 2},
+      (_, i) => `Game ${i}`,
+    );
+    for (const name of names) {
       list = pushRecent(list, game(name));
     }
     expect(list).toHaveLength(RECENT_LAUNCH_LIMIT);
-    expect(list.map(g => g.titleName)).toEqual(['F', 'E', 'D', 'C']);
+    // Newest first; the two oldest fell off.
+    expect(list.map(g => g.titleName)).toEqual(names.slice(2).reverse());
   });
 
   it('ignores an entry with no usable name', () => {
