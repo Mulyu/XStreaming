@@ -92,7 +92,7 @@ import {
 } from './storeLogic';
 import {usePsBriefs} from './model/usePsBriefs';
 import {GenreChips} from './ui/StoreRowMeta';
-import {alpha, palette} from '../../shared/config/palette';
+import {alpha, palette, saleBadgeColor} from '../../shared/config/palette';
 
 // Both Xbox's and Steam's charts are live search scans, not curated top-N
 // lists -- deeper pages exist for as long as the caller wants to scroll. Cap
@@ -1229,7 +1229,19 @@ function ChartScreen() {
           {!!item.price && (
             <View style={styles.priceRow}>
               {!!item.discountPercent && (
-                <View style={styles.discountPill}>
+                <View
+                  style={[
+                    styles.discountPill,
+                    {
+                      backgroundColor: saleBadgeColor(
+                        provider === 'xcloud'
+                          ? 'xbox'
+                          : provider === 'gfn'
+                          ? 'gfn'
+                          : 'ps',
+                      ),
+                    },
+                  ]}>
                   <Text style={styles.discountPillText}>
                     -{item.discountPercent}%
                   </Text>

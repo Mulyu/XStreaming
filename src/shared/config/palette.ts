@@ -87,3 +87,12 @@ export const alpha = (hex: string, opacity: number): string => {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${opacity})`;
 };
+
+/**
+ * Background for a discount badge: the colour of the service the sale is on
+ * (Xbox, GeForce NOW / Steam, PlayStation), or the generic sale colour when
+ * the service isn't known.
+ */
+export const saleBadgeColor = (
+  provider?: 'xbox' | 'gfn' | 'ps' | null,
+): string => (provider ? palette.provider[provider] : palette.sale);
