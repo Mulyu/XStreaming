@@ -31,14 +31,14 @@ describe('upsertEntry / removeEntry', () => {
       list,
       entry('a', {
         addedAt: 99,
-        refs: {ps: 'P1'},
+        refs: {steam: 'S1'},
         snapshot: {price: '¥100', discountPercent: 10},
       }),
     );
     expect(next).toHaveLength(1);
     expect(next[0].addedAt).toBe(5);
     expect(next[0].imageUrl).toBe('old.png');
-    expect(next[0].refs).toEqual({xbox: 'X1', ps: 'P1'});
+    expect(next[0].refs).toEqual({xbox: 'X1', steam: 'S1'});
     expect(next[0].snapshot?.price).toBe('¥100');
   });
 

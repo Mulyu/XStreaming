@@ -699,9 +699,9 @@ export const getPrice = (
 
 // Same lookup as getPrice, for the rating map fetchPricesWithRetry returns
 // alongside prices. Store ratings only ever come from this one Microsoft
-// Store-backed source, so GFN/PS Plus titles (and any xCloud title the
-// fetch hasn't covered yet) simply have none -- callers treat a null return
-// as "no rating to show", never a placeholder.
+// Store-backed source, so GFN titles (and any xCloud title the fetch hasn't
+// covered yet) simply have none -- callers treat a null return as "no
+// rating to show", never a placeholder.
 export const getRating = (
   map: Record<string, RatingInfo> | null | undefined,
   storeId: string | null | undefined,

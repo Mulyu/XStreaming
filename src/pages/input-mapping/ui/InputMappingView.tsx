@@ -194,14 +194,6 @@ const InputMappingView: React.FC<Props> = ({
               )}
               onPress={() => onToggleReverseY('xbox')}
             />
-            <ActionButton
-              label={t(
-                lookUp.ps
-                  ? 'InputMappingMouseLookPsUp'
-                  : 'InputMappingMouseLookPsDown',
-              )}
-              onPress={() => onToggleReverseY('ps')}
-            />
             <ActionButton label={t('InputMappingReset')} onPress={onReset} />
           </View>
         </>

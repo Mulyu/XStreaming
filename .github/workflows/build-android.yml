@@ -76,17 +76,6 @@ jobs:
             "ndk;23.1.7779620" \
             "cmake;3.30.5"
 
-      # android/chiaki/ (the vendored chiaki-ng/Pylux engine for PS Plus cloud
-      # streaming) needs protoc (or Python's grpc_tools.protoc) on PATH to
-      # compile takion.proto, plus Python's protobuf package regardless of
-      # which of the two produces the intermediate file -- see
-      # android/chiaki/README.md's "Build prerequisites".
-      - name: Install protobuf compiler (for PS Plus native build)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          pip install protobuf
-
       - name: Install JS dependencies
         run: yarn install --immutable
 

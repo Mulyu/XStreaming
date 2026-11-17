@@ -5,8 +5,6 @@ import {
   isSaleForDisplay,
 } from './storePrice';
 import {fetchSteamPrices, isSteamSaleForDisplay} from './steamPrice';
-import {lookupPsSale} from './psStoreGrid';
-import type {PsSaleMap} from './psStoreGrid';
 import type {WishlistEntry, WishlistSnapshot} from '../model/wishlistLogic';
 
 // Re-prices wishlisted titles that the loaded streaming catalogs don't
@@ -39,7 +37,6 @@ export const refreshWishlistSnapshots = async (
     market: string;
     language: string;
     steamCc: string;
-    psSaleMap: PsSaleMap;
   },
 ): Promise<Record<string, WishlistSnapshot>> => {
   const xboxIds = entries
@@ -86,25 +83,6 @@ export const refreshWishlistSnapshots = async (
           : undefined,
         discountPercent: sale ? steamInfo.discountPercent : 0,
       });
-    }
-
-    if (entry.refs?.ps) {
-      // The PS sale list only carries percents. The price strings stay as
-      // they were saved; they are dropped when the sale is over.
-      const percent = lookupPsSale(options.psSaleMap, {
-        productId: entry.refs.ps,
-        name: entry.title,
-      });
-      const prev = entry.snapshot;
-      candidates.push(
-        percent > 0
-          ? {
-              price: prev?.price,
-              originalPrice: prev?.originalPrice,
-              discountPercent: percent,
-            }
-          : {price: prev?.price, discountPercent: 0},
-      );
     }
 
     const picked = pickSnapshot(candidates);

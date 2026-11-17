@@ -1,6 +1,6 @@
-// A store's user rating, in the shape each store gives it: Xbox and PlayStation
-// publish an average out of five stars, Steam a verdict ("Very Positive",
-// "賛否両論") with the share of positive reviews behind it.
+// A store's user rating, in the shape each store gives it: Xbox publishes an
+// average out of five stars, Steam a verdict ("Very Positive", "賛否両論")
+// with the share of positive reviews behind it.
 export type StoreRating =
   | {kind: 'stars'; average: number; count?: number}
   | {
@@ -41,7 +41,3 @@ export const xboxGenreLabel = (
   const key = XBOX_GENRE_KEYS[category];
   return key ? t(key) : category;
 };
-
-// "CERO_UNDER_REVIEW" / "ESRB_M" -> "CERO UNDER REVIEW" / "ESRB M".
-export const formatPsContentRating = (name: string): string =>
-  name.replace(/_/g, ' ').trim();

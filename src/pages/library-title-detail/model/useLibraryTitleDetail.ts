@@ -32,8 +32,6 @@ import {
   getPrice,
   fetchSteamPrices,
   SteamPriceInfo,
-  fetchPsStorePrice,
-  PsStorePriceInfo,
 } from '../../../entities/catalog-title';
 import {
   launchWithProvider,
@@ -42,7 +40,6 @@ import {
 } from '../../../features/launch-title';
 import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
-import {usePsStoreDetails} from './usePsStoreDetails';
 import {useSteamRating} from './useSteamRating';
 
 const {ShortcutManager} = NativeModules;
@@ -82,8 +79,6 @@ export function useLibraryTitleDetail() {
   const [steamPrices, setSteamPrices] = React.useState<
     Record<string, SteamPriceInfo>
   >({});
-  const [psStorePrice, setPsStorePrice] =
-    React.useState<PsStorePriceInfo | null>(null);
 
   const gameLanguage = getSettings().preferred_game_language;
   const deviceRegion = getSystemRegion();
@@ -224,28 +219,6 @@ export function useLibraryTitleDetail() {
     };
   }, [catalogTitle?.gfn, catalogTitle?.store?.refs.steam, deviceRegion]);
 
-  // PS Store's purchase price for this title, confirmed live against
-  // store.playstation.com's own web GraphQL API -- no auth needed (see
-  // psStorePrice.ts). Only makes sense when the title isn't already owned or
-  // in the current PS Plus catalog, same as Steam/xCloud's price rows.
-  React.useEffect(() => {
-    const conceptId = catalogTitle?.psplus?.raw?.conceptId;
-    setPsStorePrice(null);
-    if (!conceptId) {
-      return;
-    }
-    let cancelled = false;
-    fetchPsStorePrice(conceptId).then(result => {
-      if (!cancelled) {
-        setPsStorePrice(result);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [catalogTitle?.psplus?.raw]);
-
-  const psDetails = usePsStoreDetails(catalogTitle);
   const steamRating = useSteamRating(
     catalogTitle,
     deriveMarketLanguage(gameLanguage, deviceRegion).market,
@@ -253,10 +226,6 @@ export function useLibraryTitleDetail() {
 
   const playXcloud = () => {
     launchWithProvider(navigation, catalogTitle, {provider: 'xcloud'});
-  };
-
-  const playPsPlus = () => {
-    launchWithProvider(navigation, catalogTitle, {provider: 'psplus'});
   };
 
   const playGfnVariant = (variant: {id: string; store: string}) => {
@@ -315,13 +284,6 @@ export function useLibraryTitleDetail() {
     });
   };
 
-  const addPsPlusShortcut = () => {
-    if (!catalogTitle.psplus?.raw) {
-      return;
-    }
-    addShortcut({provider: 'psplus', game: catalogTitle.psplus.raw});
-  };
-
   const openStore = (url: string) =>
     Linking.openURL(url).catch(() => {
       Alert.alert(t('Warning'), t('StoreLinkOpenFailed'));
@@ -346,8 +308,6 @@ export function useLibraryTitleDetail() {
     inGamePass,
     gfnDetails,
     steamPrices,
-    psStorePrice,
-    psDetails,
     steamRating,
     preference,
     owned,
@@ -356,12 +316,10 @@ export function useLibraryTitleDetail() {
     isWishlisted,
     toggleWishlist,
     playXcloud,
-    playPsPlus,
     playGfnVariant,
     canAddShortcut,
     addXcloudShortcut,
     addGfnShortcut,
-    addPsPlusShortcut,
     openStore,
   };
 }

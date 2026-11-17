@@ -138,13 +138,11 @@ export default {
       'すべてのゲームのもとになるデフォルトの配置・大きさ・マクロを編集します。ゲームごとのコントローラーは、初めて起動したときにデフォルトからコピーされ、ゲーム内のカスタマイズで変更できます。',
     InputMappingOpenVirtual: 'デフォルトの仮想コントローラーを編集',
     InputMappingKbmNote:
-      'キーボードとマウスをつないだときの、Xbox と PlayStation でのコントローラーへの変換です。GeForce NOW はそのままゲームへ送るので対象外です。行をタップして変更します。',
+      'キーボードとマウスをつないだときの、Xbox でのコントローラーへの変換です。GeForce NOW はそのままゲームへ送るので対象外です。行をタップして変更します。',
     InputMappingUnbound: '未割り当て',
     InputMappingMouseLook: 'マウスの視点（マウスを上に動かしたとき）',
     InputMappingMouseLookXboxUp: 'Xbox：上を向く',
     InputMappingMouseLookXboxDown: 'Xbox：下を向く',
-    InputMappingMouseLookPsUp: 'PlayStation：上を向く',
-    InputMappingMouseLookPsDown: 'PlayStation：下を向く',
     InputMappingReset: '初期値に戻す',
     InputMappingResetConfirm:
       'キーボードとマウスの割り当てをすべて初期値に戻しますか？',
@@ -188,8 +186,6 @@ export default {
     XboxGamePassActive: 'Game Pass　加入中',
     XboxPlanUnknownDesc:
       'プランの種類（Ultimate など）と更新日は、アプリでは取得できません。Microsoft のページで確認できます。',
-    PsPlanUnknownDesc:
-      'プランの種類と更新日は、アプリでは取得できません。PlayStation のページで確認できます。',
     GfnPlanRenews: '次回の更新日　{{date}}',
     SectionVideo: '映像',
     SectionRegionSignaling: 'リージョン・シグナリング',
@@ -325,51 +321,17 @@ export default {
     LoadingPhaseStarting: 'ストリームを開始中',
     LoadingPhaseStartingSub: 'デコーダーを準備中',
     LoadingPhaseLive: '配信中',
-    PsPlusLaunchHandshake: 'PlayStation Networkで認証中',
-    PsPlusLockRejected:
-      'PlayStation側がこのアカウントのストリーミング開始を拒否しました。他の機器でクラウドストリーミング中でないか確認し、PS Plusの契約が反映されるまで少し待ってから、もう一度お試しください。',
-    PsPlusConsoleTokenRequired:
-      'PlayStation側が、この接続元に機器の認証（コンソールトークン）を求めましたが、このアプリはまだ対応していません。公式のアプリでは接続できるアカウントでも、このアプリでは接続できない状態です。',
-    PsPlusLaunchNegotiating: '最適なデータセンターを選択中',
-    PsPlusLaunchStarting: 'ストリーミングを準備中',
     GfnOwned: '所有',
     GfnAccountTitle: 'GeForce NOW アカウント',
     GfnAccountSignedOutDesc: '未サインイン — タップしてサインイン',
     GfnSignOutConfirm: 'この端末でGeForce NOWからサインアウトしますか？',
     SectionDebug: 'デバッグ',
-    PsPlusSettings: 'PS Plus',
-    PsPlusLogin: 'PlayStationにサインイン',
-    PsPlusLoginPrompt:
-      '上でサインインしてから、下のボタンをタップしてください。',
-    PsPlusSignedInButton: 'サインインしました',
-    PsPlusLoginFailedDesc:
-      'サインインを確認できませんでした — 上で完全にサインインしてから、もう一度お試しください。',
-    PsPlusAccountTitle: 'PS Plus アカウント',
-    PsPlusSignedIn: 'サインイン済み',
-    PsPlusAccountSignedOutDesc: '未サインイン — タップしてサインイン',
-    PsPlusSignOutConfirm:
-      'この端末でPlayStation Networkからサインアウトしますか？',
     NoResults: '検索・フィルタ条件に一致するゲームがありません',
     SignOut: 'サインアウト',
     'Failed to connect': '接続に失敗しました',
     'Stream ended': 'ストリーミングが終了しました',
-    'Enter your PSN login PIN': 'PSNログインPINを入力してください',
-    'Incorrect PIN, try again': 'PINが正しくありません。もう一度お試しください',
-    PsPlusErrorNoGameForEntitlement:
-      'このアカウントでは、このゲームは現在クラウドストリーミングに対応していません。',
-    PsPlusErrorSubscriptionRequired:
-      'クラウドストリーミングにはPS Plusプレミアムへの加入が必要です。',
-    PsPlusErrorAuthExpired:
-      'PlayStationのサインインが期限切れです。もう一度サインインしてください。',
-    PsPlusErrorPingTimeout:
-      'ストリーミング枠の確保がタイムアウトしました。もう一度お試しください。',
-    PsPlusErrorPingUnreachable:
-      'PS Plusクラウドストリーミングのサーバーに接続できませんでした。ネットワーク接続を確認してもう一度お試しください。',
-    PsPlusErrorPingTooHigh:
-      '現在の通信速度ではクラウドストリーミングをご利用いただけません(測定値{{rtt}}ms、必要な応答速度は80ms以下です)。より高速で安定したネットワークでお試しください。',
     PlayOn: 'プレイ先',
     IncludedWithGamePass: 'Game Passに含まれています',
-    PsPlusIncludedDesc: 'PS Plusに含まれています',
     LibraryViewDetails: '詳細を見る',
     LibraryStoreCount: '{{n}}件のストアが連携済み・選択してください',
     RememberedChoice: '記憶済み・タップして変更',
@@ -385,18 +347,6 @@ export default {
     GfnRegionTitle: 'サーバーリージョン',
     GfnRegionDesc:
       'CloudMatch による自動選択の代わりに、特定のGeForce NOWリージョンを固定します。起動に失敗する場合は自動に戻してみてください。',
-    PsPlusResolutionTitle: '解像度',
-    PsPlusResolutionDesc:
-      'PS Plusクラウドストリーミングでリクエストする解像度を設定します。1440p・4Kはデータセンターやゲームが対応している場合のみ配信され、対応していない場合は低い解像度にフォールバックします。',
-    PsPlusFpsTitle: 'フレームレート',
-    PsPlusFpsDesc:
-      'PS Plusクラウドストリーミングでリクエストするフレームレートを設定します。',
-    PsPlusBitrateTitle: 'ビットレート',
-    PsPlusBitrateDesc:
-      'PS Plusクラウドストリーミングのビットレートを設定します(注:回線が弱い場合、ビットレートを下げると改善することがあります)。',
-    PsPlusDatacenterTitle: '接続先サーバー',
-    PsPlusDatacenterDesc:
-      'PS Plusクラウドの接続先データセンターを固定します。「自動」では、応答が最も速いサーバーを選びます。一覧は、接続を試すたびに測った応答時間つきで更新されます（一度も試していないと、「自動」だけが表示されます）。指定したサーバーで起動できない場合は「自動」に戻してください。',
     GameTimeWarning: 'クラウドゲームの残り時間は、あと約{{minutes}}分です',
     XboxPlaytimeAdFree: '広告なし 残り{{hours}}時間{{minutes}}分',
     XboxPlaytimeAdFreeUnlimited: '広告なし 無制限',
@@ -422,7 +372,7 @@ export default {
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle max duration (minutes)': 'アンチアイドル',
     AntiIdleMaxDesc:
-      'バックグラウンド中、最長この分数までセッションを維持し、超過すると切断を許可します。Xbox Cloud/GeForce NOWではカメラを微小に動かして放置切断を防ぐ方式です（注意: カメラが動くためゲームに影響することがあります）。PS Plusには防ぐべき放置切断がないため、時間経過後にそのまま切断します。0でこの制限を無効化（バックグラウンド中も無期限に接続が維持される場合があります）。',
+      'バックグラウンド中、最長この分数までセッションを維持し、超過すると切断を許可します。カメラを微小に動かして放置切断を防ぐ方式です（注意: カメラが動くためゲームに影響することがあります）。0でこの制限を無効化（バックグラウンド中も無期限に接続が維持される場合があります）。',
     'Ultra low latency decoding': '超低遅延デコード',
     UltraLowLatencyDecoderDesc:
       '超低遅延デコードを有効にします。この機能はすべてのAndroid端末で動作するわけではありません。黒画面などの問題が発生した場合はこのオプションを無効にしてください。',
@@ -483,7 +433,6 @@ export default {
     SortRecent: '最近プレイした順',
     LibraryFilterXcloud: 'Xbox Cloud',
     LibraryFilterGfn: 'GeForce NOW',
-    LibraryFilterPsPlus: 'PS Plus',
     LibraryFilterFavorite: 'お気に入り',
     LibraryFilterWishlist: 'ウィッシュ',
     FavoriteAdd: 'お気に入りに追加',
@@ -497,7 +446,7 @@ export default {
       'ストリーミングでは遊べません。次のストアで購入できます。',
     LibraryFilterOwned: '所有済み',
     LibraryFilterOnSale: 'セール中',
-    LibraryFilterCatalog: 'カタログ内（Game Pass・PS）',
+    LibraryFilterCatalog: 'カタログ内（Game Pass）',
     LibraryGamePassIncluded: 'Game Passに含まれています',
     LibraryTvHintOk: '決定',
     LibraryTvHintLaunch: '起動',
@@ -505,18 +454,10 @@ export default {
     LibraryTvHintDetail: '詳細を開く',
     LibraryRowNotOwned: '未所有',
     LibraryRowDiscount: '{{percent}}%OFF',
-    Touchpad: 'タッチパッド',
-    TouchpadHint: 'パッド上でスワイプ。じっと押すとクリック',
-    PsStoreOnSale: 'セール中',
-    LibraryPsIncluded: 'PS Plusカタログに含まれています',
-    PsStoreIncludedInCatalog: 'カタログに含まれます',
-    PsStoreOpenStore: 'PS Storeで開く',
     Trailer: 'トレーラー',
     Expand: '開く',
     Collapse: '閉じる',
     GamePassIncludedInCatalog: 'Game Passに含まれます',
-    PsStoreSaleUntil: 'セール {{date}} まで',
-    PsStoreMemberPrice: 'PS Plus会員価格',
     Store: 'ストア',
     Chart: 'チャート',
     SortDiscount: '割引率順',
@@ -525,7 +466,6 @@ export default {
       'ウィッシュリストにタイトルがありません。「ウィッシュ」を外すとストア全体を表示します',
     StoreTabXbox: 'Xbox',
     StoreTabSteam: 'Steam',
-    StoreTabPlayStation: 'PlayStation',
     StoreBestSellers: '売り上げ順',
     StoreNewReleases: '新着順',
     StoreFilterAvailableOnly: '利用可能',
@@ -534,8 +474,6 @@ export default {
     View: '表示',
     Developer: '開発',
     Publisher: '発行',
-    AgeRating: '年齢区分',
-    Edition: 'エディション',
     Media: 'メディア',
     Description: '説明',
     Features: '対応機能',

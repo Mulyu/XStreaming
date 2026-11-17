@@ -56,23 +56,6 @@ export type Settings = {
   /** Multiplier applied to MouseTrackpadZone's per-move finger delta before
    * it's sent -- see entities/gfn-input's MouseTrackpadZone.tsx. */
   gfn_mouse_trackpad_sensitivity: number;
-  /** PS Plus cloud streaming resolution (VideoResolutionPreset value: 1=360p, 2=540p, 3=720p, 4=1080p, 5=1440p, 6=2160p/4K). */
-  psplus_resolution: number;
-  /** PS Plus cloud streaming frame rate (30 or 60). */
-  psplus_fps: number;
-  psplus_bitrate_mode: string;
-  /** Custom PS Plus bitrate in kbps, used when psplus_bitrate_mode is 'custom'. */
-  psplus_bitrate_kbps: number;
-  /**
-   * Every datacenter this device has measured a ping for across prior PS
-   * Plus connection attempts (Gaikai's own ping-results JSON, merged run to
-   * run) -- fed back as cc_gaikai_allocate's priorDatacentersJson so a
-   * datacenter doesn't drop out of the auto-select pool just because a
-   * later attempt didn't measure it again.
-   */
-  psplus_datacenter_pings: string;
-  /** The datacenter PS Plus connects to; '' = pick the fastest automatically. */
-  psplus_datacenter: string;
 };
 
 const defaultSettings: Settings = {
@@ -110,12 +93,6 @@ const defaultSettings: Settings = {
   gfn_bitrate: 20,
   gfn_region: '',
   gfn_mouse_trackpad_sensitivity: 1.4,
-  psplus_resolution: 4,
-  psplus_fps: 60,
-  psplus_bitrate_mode: 'auto',
-  psplus_bitrate_kbps: 15000,
-  psplus_datacenter_pings: '',
-  psplus_datacenter: '',
 };
 
 export const saveSettings = (settings: Settings) => {

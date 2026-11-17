@@ -22,10 +22,10 @@ public class AppDebugLogModule extends ReactContextBaseJavaModule {
         AppDebugLog.log(getReactApplicationContext(), tag, message);
     }
 
-    // Same shape/cap as PsPlusModule.kt's getDebugLog() -- capped well under
-    // Android's binder transaction limit (~1MB) so a long-accumulated log
-    // can't fail to cross the RN bridge; most recent lines matter most for a
-    // live repro, so trimming is from the front, not the back.
+    // Capped well under Android's binder transaction limit (~1MB) so a
+    // long-accumulated log can't fail to cross the RN bridge; most recent
+    // lines matter most for a live repro, so trimming is from the front, not
+    // the back.
     @ReactMethod
     public void getDebugLog(Promise promise) {
         try {

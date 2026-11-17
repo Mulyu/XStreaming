@@ -168,9 +168,8 @@ const CardAction: React.FC<{
 };
 
 // Icon-only mark shown right after a provider badge: a gift (the same icon as
-// the free-to-play filter) for "included in that service's catalog" (PS Plus
-// catalog / Game Pass). `size`
-// matches the badge row it sits in.
+// the free-to-play filter) for "included in that service's catalog" (Game
+// Pass). `size` matches the badge row it sits in.
 const CatalogMark: React.FC<{
   show: boolean;
   color: string;
@@ -208,14 +207,13 @@ const CardArt: React.FC<{
 }> = ({item, discount, saleColor, scope, inGamePass, big, actionSpace, t}) => {
   // Cover art itself grays out when the title isn't playable via any of
   // its listed services today (no Game Pass entitlement, no owned GFN
-  // store variant, no owned PS Plus game).
+  // store variant).
   const isPlayable = isCatalogTitleOwned(item);
   // Each badge answers "owned on this service" individually -- a title
-  // supported by all three but owned on only one (e.g. Xbox/xCloud) must
-  // only light up that one, not every service it merely appears under.
+  // supported by both but owned on only one (e.g. Xbox/xCloud) must only
+  // light up that one, not every service it merely appears under.
   const xcloudOwned = !!item.xcloud?.hasEntitlement;
   const gfnOwned = !!item.gfn?.variants.some(v => v.owned);
-  const psplusOwned = !!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog;
   const dotStyle = big
     ? [styles.availDot, styles.availDotBig]
     : styles.availDot;
@@ -276,27 +274,6 @@ const CardArt: React.FC<{
             </Text>
           </View>
         )}
-        {item.psplus && scope.psplus && (
-          <View
-            style={[
-              dotStyle,
-              {
-                backgroundColor: psplusOwned
-                  ? palette.provider.ps
-                  : DIM_BADGE_BG,
-              },
-            ]}>
-            <Text style={[dotText, !psplusOwned && {color: DIM_BADGE_TEXT}]}>
-              PS
-            </Text>
-          </View>
-        )}
-        <CatalogMark
-          show={scope.psplus && !!item.psplus?.inPlusCatalog}
-          color={palette.provider.ps}
-          label={t('LibraryPsIncluded')}
-          size={markSize}
-        />
       </View>
 
       {discount > 0 && (
@@ -450,8 +427,6 @@ const LibraryView: React.FC<Props> = ({
   setFilterXcloud,
   filterGfn,
   setFilterGfn,
-  filterPsPlus,
-  setFilterPsPlus,
   filterFavorite,
   setFilterFavorite,
   filterWishlist,
@@ -804,11 +779,6 @@ const LibraryView: React.FC<Props> = ({
               label={t('LibraryFilterGfn')}
               active={filterGfn}
               onPress={() => setFilterGfn(v => !v)}
-            />
-            <FilterChip
-              label={t('LibraryFilterPsPlus')}
-              active={filterPsPlus}
-              onPress={() => setFilterPsPlus(v => !v)}
             />
             <View style={styles.chipDivider} />
             {mode === 'owned' ? (
@@ -1252,8 +1222,7 @@ const styles = StyleSheet.create({
   },
   tvHintText: {fontSize: 13, color: palette.textSoft},
   tvHintKey: {fontWeight: '800', color: palette.text},
-  // In a service's catalog (PS Plus / Game Pass): solid service colour (set
-  // inline).
+  // In a service's catalog (Game Pass): solid service colour (set inline).
   catalogMark: {
     borderRadius: 4,
     alignItems: 'center',

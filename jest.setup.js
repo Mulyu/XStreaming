@@ -99,7 +99,6 @@ const nativeStub = () => {
   'GamepadManager',
   'HomeWidget',
   'PhysicalInput',
-  'PsPlusChiaki',
   'ShortcutManager',
   'StreamKeepAliveManager',
   'UpdateManager',

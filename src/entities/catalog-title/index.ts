@@ -7,22 +7,15 @@ export {
   isCatalogTitleOwned,
   buildXcloudCatalogTitle,
   buildGfnCatalogTitle,
-  buildPsPlusCatalogTitle,
   buildWishlistCatalogTitle,
   buildWishlistEntry,
 } from './model/unifiedCatalog';
 
-export {isInGamePass, isInPsCatalog} from './model/gamePass';
+export {isInGamePass} from './model/gamePass';
 
 export type {StoreRating} from './model/storeRating';
 export {StoreRatingLine} from './ui/StoreRatingLine';
-export {xboxGenreLabel, formatPsContentRating} from './model/storeRating';
-export type {PsId, PsStoreBrief, PsStarRating} from './api/psStoreDetails';
-export {
-  fetchPsStoreBrief,
-  fetchPsStarRating,
-  fetchPsScreenshots,
-} from './api/psStoreDetails';
+export {xboxGenreLabel} from './model/storeRating';
 
 export {
   getFavoriteKeys,
@@ -165,21 +158,3 @@ export {
 } from './api/gfnCatalog';
 
 export {getGfnLocaleSlug, getGfnGraphqlLocale} from './api/gfnLocale';
-
-export type {PsStorePriceInfo, PsStorePurchasePrice} from './api/psStorePrice';
-export {
-  fetchPsStorePrice,
-  isPsStoreSaleForDisplay,
-  getPsStoreUrl,
-} from './api/psStorePrice';
-export {getPsStoreLocale, getPsStoreUrlSlug} from './api/psStoreLocale';
-export type {PsSaleMap} from './api/psStoreGrid';
-export {
-  PS_GRAPHQL_URL,
-  PS_OP_CATEGORY_GRID,
-  PS_HASH_CATEGORY_GRID,
-  PS5_GAMES_CATEGORY_ID,
-  fetchPsStoreSales,
-  lookupPsSale,
-} from './api/psStoreGrid';
-export {getFreshPsSales, savePsSales} from './model/psStoreSaleCache';

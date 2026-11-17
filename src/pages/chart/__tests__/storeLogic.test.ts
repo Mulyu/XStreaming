@@ -1,7 +1,6 @@
 import {
   buildGfnStoreRows,
   buildXboxStoreRows,
-  buildPsStoreRows,
   dedupeByKey,
   hasMorePages,
   mergeXcloudLookup,
@@ -14,10 +13,7 @@ import {
   GfnGame,
   PriceInfo,
 } from '../../../entities/catalog-title';
-import {
-  SteamChartEntry,
-  PsStoreChartEntry,
-} from '../../../features/store-charts';
+import {SteamChartEntry} from '../../../features/store-charts';
 
 describe('hasMorePages', () => {
   it('returns false once a page comes back empty', () => {
@@ -241,67 +237,6 @@ describe('buildGfnStoreRows', () => {
   });
 });
 
-describe('buildPsStoreRows', () => {
-  const cloudGame = (storeProductId: string, name: string) => ({
-    productId: storeProductId,
-    name,
-    storeProductId,
-    isOwned: false,
-    plusCatalog: true,
-  });
-
-  const entry = (productId: string, title: string): PsStoreChartEntry => ({
-    productId,
-    title,
-  });
-
-  it('keeps every chart entry, including ones with no PS Plus match', () => {
-    const rows = buildPsStoreRows(
-      [entry('UP1', 'Game A'), entry('UP2', 'Game B'), entry('UP3', 'Game C')],
-      [cloudGame('UP1', 'Game A'), cloudGame('UP3', 'Game C')],
-    );
-    expect(rows.map(r => r.id)).toEqual(['UP1', 'UP2', 'UP3']);
-    expect(rows.map(r => r.rank)).toEqual([1, 2, 3]);
-    expect(rows.map(r => !!r.catalogTitle)).toEqual([true, false, true]);
-  });
-
-  it('still shows an entry with no storeProductId match at all, with a null catalogTitle', () => {
-    const rows = buildPsStoreRows(
-      [entry('UP999', 'Unmatched')],
-      [cloudGame('UP1', 'Game A')],
-    );
-    expect(rows).toHaveLength(1);
-    expect(rows[0].title).toBe('Unmatched');
-    expect(rows[0].catalogTitle).toBeNull();
-  });
-
-  it('marks the matched row as in the PS Plus catalog', () => {
-    const rows = buildPsStoreRows(
-      [entry('UP1', 'Game A')],
-      [cloudGame('UP1', 'Game A')],
-    );
-    expect(rows[0].catalogTitle?.psplus?.inPlusCatalog).toBe(true);
-  });
-
-  // Regression: libchiaki's own JSON contract (cloudcatalog.h) documents
-  // storeProductId as populated only for "owned"/"purchaseable" rows -- a
-  // "streamable" row (in the account's current PS Plus catalog, not owned)
-  // carries none, only productId. Matching on storeProductId alone silently
-  // dropped every genuine Plus-catalog title from this filter.
-  it('matches a streamable PS Plus catalog title that has no storeProductId', () => {
-    const streamableGame = {
-      productId: 'UP1',
-      name: 'Game A',
-      storeProductId: '',
-      isOwned: false,
-      plusCatalog: true,
-    };
-    const rows = buildPsStoreRows([entry('UP1', 'Game A')], [streamableGame]);
-    expect(rows[0].catalogTitle).not.toBeNull();
-    expect(rows[0].catalogTitle?.psplus?.inPlusCatalog).toBe(true);
-  });
-});
-
 describe('resolveRowTitle', () => {
   const row = (extra: Partial<StoreRow> = {}): StoreRow => ({
     id: 'P1',
@@ -324,7 +259,7 @@ describe('resolveRowTitle', () => {
 
   it('uses the all-services title when the catalogs know the name', () => {
     const index = new Map([[merged.key, merged]]);
-    expect(resolveRowTitle(row(), 'psstore', index)).toBe(merged);
+    expect(resolveRowTitle(row(), 'gfn', index)).toBe(merged);
   });
 
   it("falls back to the row's own single-service title", () => {
@@ -348,7 +283,7 @@ describe('resolveRowTitle', () => {
 
   it('names the row id by the tab it came from', () => {
     expect(rowWishlistExtra(row(), 'xcloud').refs).toEqual({xbox: 'P1'});
-    expect(rowWishlistExtra(row(), 'psstore').refs).toEqual({ps: 'P1'});
+    expect(rowWishlistExtra(row(), 'gfn').refs).toEqual({steam: 'P1'});
   });
 });
 
@@ -426,21 +361,5 @@ describe('store row ratings and genres', () => {
     };
     const rows = buildGfnStoreRows([{appId: '1', title: 'Game A', rating}], []);
     expect(rows[0].rating).toEqual(rating);
-  });
-
-  it('attaches a PS row its brief once fetched, and nothing before', () => {
-    const entries: PsStoreChartEntry[] = [
-      {productId: 'UP1', title: 'Game A'},
-      {productId: 'UP2', title: 'Game B'},
-    ];
-    const rows = buildPsStoreRows(entries, [], {
-      UP1: {genres: ['アクション', 'RPG'], averageRating: 4.6},
-      UP2: {genres: []},
-    });
-    expect(rows[0].rating).toEqual({kind: 'stars', average: 4.6});
-    expect(rows[0].genres).toEqual(['アクション', 'RPG']);
-    expect(rows[1].rating).toBeUndefined();
-    expect(rows[1].genres).toBeUndefined();
-    expect(buildPsStoreRows(entries, [])[0].genres).toBeUndefined();
   });
 });

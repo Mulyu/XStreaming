@@ -70,12 +70,6 @@ import {
   fetchPricesWithRetry,
   hasGamePassIds,
   hasGenres,
-  fetchPsStoreSales,
-  lookupPsSale,
-  getFreshPsSales,
-  savePsSales,
-  getPsStoreLocale,
-  PsSaleMap,
   getPrice,
   getRating,
   isSaleForDisplay,
@@ -88,18 +82,6 @@ import {
   launchWithProvider,
   isPreferenceAvailable,
 } from '../../../features/launch-title';
-import {
-  isPsPlusSignedIn,
-  getNpsso,
-  fetchUnifiedCatalog,
-  CloudGame,
-  getCachedCatalogGames,
-  getFreshCatalogGames,
-  saveCatalogGames,
-  loadPsPlusMembership,
-  isPsPlusMembershipActive,
-} from '../../../features/ps-plus-session';
-import {fetchPsStoreRanking} from '../../../features/store-charts';
 import {getSettings} from '../../../shared/lib/settings';
 import {getSystemRegion} from '../../../shared/lib/locale';
 
@@ -111,14 +93,7 @@ import {
   scopeSortTables,
 } from './providerScope';
 import type {SaleProvider} from './providerScope';
-import {
-  buildPsRankTable,
-  EMPTY_RANK_TABLE,
-  makeRankTable,
-  newestScore,
-  popularityScore,
-  RankTable,
-} from './rankSort';
+import {makeRankTable, newestScore, popularityScore} from './rankSort';
 
 // The two halves of the old Library, now separate bottom-tab entries that
 // share this one screen instance (HubTabBar navigates to 'Library' with
@@ -177,18 +152,6 @@ export function useLibraryScreen() {
   const [gfnOwnedGames, setGfnOwnedGames] = React.useState<GfnGame[]>(
     () => getFreshOwnedGames() || [],
   );
-  // PS Plus's cloud-streaming (pscloud) catalog -- the same scope
-  // pages/ps-plus-library shows, and for the same reason (that's Sony's own
-  // "PS5 Game Cloud Streaming" catalog, not the separate/less-reliable PS
-  // Now side -- see that screen's own model comment). The native fetch
-  // disk-caches this for 24h too, but that's still a JNI round trip the JS
-  // side has to await on every single mount -- unlike xCloud/GFN above,
-  // which read a synchronous JS-side cache first. This instant-paints from
-  // that same kind of cache (features/ps-plus-session's own
-  // getCachedCatalogGames) instead of starting empty every time.
-  const [psPlusGames, setPsPlusGames] = React.useState<CloudGame[]>(
-    () => getCachedCatalogGames() || [],
-  );
   const [keyword, setKeyword] = React.useState('');
   const mode: LibraryMode =
     route.params?.mode === 'notOwned' ? 'notOwned' : 'owned';
@@ -238,9 +201,6 @@ export function useLibraryScreen() {
   const [steamPriceMap, setSteamPriceMap] = React.useState<
     Record<string, SteamPriceInfo>
   >({});
-  // PS Store sale percent per PS title (ids + normalized name), from one
-  // daily crawl of the PS5 category -- the PS catalog itself has no prices.
-  const [psSaleMap, setPsSaleMap] = React.useState<PsSaleMap>({});
   const [popularRank, setPopularRank] =
     React.useState<Record<string, number>>(EMPTY_RANK);
   const [releaseDates, setReleaseDates] = React.useState<
@@ -256,15 +216,6 @@ export function useLibraryScreen() {
   const [gfnNewestRank, setGfnNewestRank] =
     React.useState<Record<string, number>>(EMPTY_RANK);
 
-  // The PS Store's own top-sellers / newest-release orders (a prefix of its
-  // "All PS5 games" category) -- Sony has no per-title popularity or release
-  // date on the Plus catalog itself, so PS titles are ranked by where they
-  // sit in these.
-  const [psPopularTable, setPsPopularTable] =
-    React.useState<RankTable>(EMPTY_RANK_TABLE);
-  const [psNewestTable, setPsNewestTable] =
-    React.useState<RankTable>(EMPTY_RANK_TABLE);
-
   // Filter chips: provider (OR between active ones; neither active = all),
   // shared by both modes, plus the mode's own chips -- Favorite on the
   // Library side; Wishlist / On Sale / Catalog on the Store side -- each an
@@ -272,7 +223,6 @@ export function useLibraryScreen() {
   // other mode never applies (see providerOwnedFiltered).
   const [filterXcloud, setFilterXcloud] = React.useState(false);
   const [filterGfn, setFilterGfn] = React.useState(false);
-  const [filterPsPlus, setFilterPsPlus] = React.useState(false);
   const [filterFavorite, setFilterFavorite] = React.useState(false);
   // On by default: the Store side opens on the user's own wishlist (it has no
   // effect on the Library side).
@@ -303,10 +253,10 @@ export function useLibraryScreen() {
   );
   // Local play-history timestamps for "Recently played" (see
   // entities/catalog-title/model/playHistory.ts) -- recorded on-device at
-  // launch time instead of read from a provider API, since PS Plus has no
-  // such API at all and xCloud/GFN's each only expose an ordinal position,
-  // not an actual timestamp. Reloaded on focus for the same reason as
-  // favorites: launching a title happens on a separate screen instance.
+  // launch time instead of read from a provider API, since xCloud/GFN's each
+  // only expose an ordinal position, not an actual timestamp. Reloaded on
+  // focus for the same reason as favorites: launching a title happens on a
+  // separate screen instance.
   const [playHistory, setPlayHistory] = React.useState<Record<string, number>>(
     () => getPlayHistory(),
   );
@@ -521,39 +471,6 @@ export function useLibraryScreen() {
     loadGfnFullCatalog();
   }, [loadGfnFullCatalog]);
 
-  // PS Plus's pscloud catalog. Needs a signed-in PSN account (npsso), same
-  // "stays empty while signed out" precondition as GFN's full catalog above.
-  const loadPsPlusGames = React.useCallback((force = false) => {
-    if (!isPsPlusSignedIn()) {
-      setPsPlusGames([]);
-      return;
-    }
-    const npsso = getNpsso();
-    if (!npsso) {
-      return;
-    }
-    if (!force) {
-      const fresh = getFreshCatalogGames();
-      if (fresh && fresh.length > 0) {
-        setPsPlusGames(fresh);
-        return;
-      }
-    }
-    fetchUnifiedCatalog(npsso, undefined, force)
-      .then(result => {
-        const games = result.games.filter(
-          g => g.streamServiceType === 'pscloud',
-        );
-        setPsPlusGames(games);
-        saveCatalogGames(games);
-      })
-      .catch(() => {});
-  }, []);
-
-  React.useEffect(() => {
-    loadPsPlusGames();
-  }, [loadPsPlusGames]);
-
   // GFN's catalog-wide Most Popular / Newest order, cached (24h). Requires a
   // signed-in token -- GFN's catalog-browse endpoint doesn't serve this
   // anonymously (same precondition as the owned-library query above) -- so
@@ -653,9 +570,6 @@ export function useLibraryScreen() {
         loadGfnFullCatalog(true);
       }
 
-      // Same reasoning as the GFN full catalog above -- not in `tasks`.
-      loadPsPlusGames(true);
-
       setFavoriteKeys(new Set(getFavoriteKeys()));
       setWishlist(getWishlist());
       setPlayHistory(getPlayHistory());
@@ -664,12 +578,7 @@ export function useLibraryScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [
-    streamingTokens?.xCloudToken,
-    loadGfnFullCatalog,
-    loadPsPlusGames,
-    persistXcloudTitles,
-  ]);
+  }, [streamingTokens?.xCloudToken, loadGfnFullCatalog, persistXcloudTitles]);
 
   const gfnGames = React.useMemo(
     () => mergeOwnedGames(gfnFullCatalog, gfnOwnedGames),
@@ -722,74 +631,6 @@ export function useLibraryScreen() {
     });
   }, [gfnGames, deviceRegion]);
 
-  // PS Store sales: read the cached crawl, or crawl the category once (a
-  // few dozen pages, in the background) and cache it for a day. State is set
-  // in a few steps only, so the list re-sorts a handful of times, not per
-  // page.
-  const psSalesRequestedRef = React.useRef(false);
-  React.useEffect(() => {
-    if (psPlusGames.length === 0 || psSalesRequestedRef.current) {
-      return;
-    }
-    psSalesRequestedRef.current = true;
-    const locale = getPsStoreLocale();
-    const cached = getFreshPsSales(locale);
-    if (cached) {
-      setPsSaleMap(cached);
-      return;
-    }
-    fetchPsStoreSales(partial => setPsSaleMap(partial)).then(
-      ({sales, complete}) => {
-        if (Object.keys(sales).length > 0) {
-          setPsSaleMap(sales);
-        }
-        if (complete && Object.keys(sales).length > 0) {
-          savePsSales(locale, sales);
-        } else {
-          // Allow a retry on the next catalog update.
-          psSalesRequestedRef.current = false;
-        }
-      },
-    );
-  }, [psPlusGames]);
-
-  // PS Store popularity / release-date orders, fetched once the PS catalog is
-  // known (cached 12h by the fetch itself).
-  const psPopularLoadedRef = React.useRef(false);
-  const psNewestLoadedRef = React.useRef(false);
-  React.useEffect(() => {
-    if (psPlusGames.length === 0) {
-      return;
-    }
-    // No cancel-on-cleanup here: the effect re-runs when the sort changes,
-    // and that must not throw away a fetch another run already started.
-    if (popularNeeded && !psPopularLoadedRef.current) {
-      psPopularLoadedRef.current = true;
-      // Top sellers is a 30-day window, so older catalog titles sit deep in
-      // it: take a longer prefix than for new releases.
-      fetchPsStoreRanking('topsellers', 1000).then(popular => {
-        if (popular.entries.length === 0) {
-          // Failed: allow a retry on the next catalog update.
-          psPopularLoadedRef.current = false;
-          return;
-        }
-        setPsPopularTable(
-          buildPsRankTable(popular.entries, popular.totalCount),
-        );
-      });
-    }
-    if (newestNeeded && !psNewestLoadedRef.current) {
-      psNewestLoadedRef.current = true;
-      fetchPsStoreRanking('new', 400).then(newest => {
-        if (newest.entries.length === 0) {
-          psNewestLoadedRef.current = false;
-          return;
-        }
-        setPsNewestTable(buildPsRankTable(newest.entries, newest.totalCount));
-      });
-    }
-  }, [psPlusGames, popularNeeded, newestNeeded]);
-
   // xCloud release dates, turned into an ordinal rank (0 = newest known
   // date) so they combine fairly with GFN's ordinal "last added" rank --
   // comparing a real timestamp against a catalog position wouldn't mean
@@ -840,31 +681,9 @@ export function useLibraryScreen() {
     }, []),
   );
 
-  // Same for the PS Plus membership (read from the purchase history).
-  const [psPlusActive, setPsPlusActive] = React.useState(
-    isPsPlusMembershipActive,
-  );
-  useFocusEffect(
-    React.useCallback(() => {
-      let cancelled = false;
-      loadPsPlusMembership().then(status => {
-        if (!cancelled) {
-          setPsPlusActive(status !== 'lapsed');
-        }
-      });
-      return () => {
-        cancelled = true;
-      };
-    }, []),
-  );
-
   const catalog = React.useMemo(
-    () =>
-      buildUnifiedCatalog(xcloudTitles, gfnGames, psPlusGames, {
-        xboxActive,
-        psPlusActive,
-      }),
-    [xcloudTitles, gfnGames, psPlusGames, xboxActive, psPlusActive],
+    () => buildUnifiedCatalog(xcloudTitles, gfnGames, {xboxActive}),
+    [xcloudTitles, gfnGames, xboxActive],
   );
 
   // Discount percent for the sale badge/filter: the best of xCloud's own
@@ -873,8 +692,8 @@ export function useLibraryScreen() {
   // not on sale on either.
   // Which providers everything below looks at (see providerScope.ts).
   const providerScope = React.useMemo(
-    () => getProviderScope(filterXcloud, filterGfn, filterPsPlus),
-    [filterXcloud, filterGfn, filterPsPlus],
+    () => getProviderScope(filterXcloud, filterGfn),
+    [filterXcloud, filterGfn],
   );
   const catalogAvailable = scopeHasCatalog(providerScope);
 
@@ -897,17 +716,6 @@ export function useLibraryScreen() {
           : best;
       }, 0);
 
-      // An owned PS title is already bought; its store sale is moot.
-      const ps = item.psplus;
-      const psDiscount =
-        ps && !ps.isOwned && ps.raw
-          ? lookupPsSale(psSaleMap, {
-              productId: ps.raw.productId,
-              storeProductId: ps.raw.storeProductId,
-              name: ps.raw.name || item.title,
-            })
-          : 0;
-
       // A wishlisted title outside every loaded catalog is priced from the
       // snapshot saved with it (refreshed below); the store ref it was saved
       // with says which service that price is from.
@@ -916,20 +724,13 @@ export function useLibraryScreen() {
         {
           xbox,
           gfn,
-          ps: psDiscount,
           snapshot: item.store?.snapshot?.discountPercent || 0,
-          snapshotProvider: refs?.ps
-            ? 'ps'
-            : refs?.steam
-            ? 'gfn'
-            : refs?.xbox
-            ? 'xbox'
-            : null,
+          snapshotProvider: refs?.steam ? 'gfn' : refs?.xbox ? 'xbox' : null,
         },
         providerScope,
       );
     },
-    [priceMap, steamPriceMap, psSaleMap, providerScope],
+    [priceMap, steamPriceMap, providerScope],
   );
   const saleDiscount = React.useCallback(
     (item: CatalogTitle): number => saleInfo(item).percent,
@@ -937,9 +738,9 @@ export function useLibraryScreen() {
   );
 
   // Store rating for the TV list row -- same xCloud-only source as
-  // saleDiscount's own price lookup, so most GFN/PS Plus titles (and any
-  // xCloud title the fetch hasn't reached yet) simply return null rather
-  // than a faked value.
+  // saleDiscount's own price lookup, so most GFN titles (and any xCloud
+  // title the fetch hasn't reached yet) simply return null rather than a
+  // faked value.
   const titleRating = React.useCallback(
     (item: CatalogTitle): RatingInfo | null => {
       const productId = item.xcloud?.raw?.productId;
@@ -1021,8 +822,8 @@ export function useLibraryScreen() {
   }, [catalog, catalogByKey, t]);
 
   // Keep the prices of the out-of-catalog wishlisted titles current: Xbox and
-  // Steam by their own ids, PS from the daily sale crawl. Re-runs when the set
-  // of such titles (or the PS sale list) changes, not on every snapshot write.
+  // Steam by their own ids. Re-runs when the set of such titles changes, not
+  // on every snapshot write.
   const outsideSig = wishlistOutsideCatalog
     .map(entry => `${entry.key}:${JSON.stringify(entry.refs || {})}`)
     .join('|');
@@ -1036,7 +837,6 @@ export function useLibraryScreen() {
       market,
       language,
       steamCc: deviceRegion || 'US',
-      psSaleMap,
     }).then(snapshots => {
       if (cancelled || Object.keys(snapshots).length === 0) {
         return;
@@ -1054,7 +854,7 @@ export function useLibraryScreen() {
     };
     // wishlistOutsideCatalog is represented by outsideSig on purpose.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [outsideSig, psSaleMap, gameLanguage, deviceRegion]);
+  }, [outsideSig, gameLanguage, deviceRegion]);
 
   // The balloon next to the wishlist chip: how many wishlisted titles are on
   // sale right now.
@@ -1094,13 +894,10 @@ export function useLibraryScreen() {
     // definition, so they only join the Store side's wishlist view.
     const wishlistOn = !ownedMode && filterWishlist;
     let list = wishlistOn ? [...catalog, ...wishlistStubs] : catalog;
-    const providerFilterActive = filterXcloud || filterGfn || filterPsPlus;
+    const providerFilterActive = filterXcloud || filterGfn;
     if (providerFilterActive) {
       list = list.filter(
-        item =>
-          (filterXcloud && item.xcloud) ||
-          (filterGfn && item.gfn) ||
-          (filterPsPlus && item.psplus),
+        item => (filterXcloud && item.xcloud) || (filterGfn && item.gfn),
       );
     }
     if (wishlistOn) {
@@ -1115,17 +912,14 @@ export function useLibraryScreen() {
     // Plain Library/Store (no provider chip) splits on playable via any
     // service -- isCatalogTitleOwned's OR-across-providers. With a provider
     // chip it means "owned on that service", not "present under that service
-    // and owned on some other one" -- the OR check let a PS Plus title merely
-    // present in the catalog (not actually owned) pass as long as it
-    // happened to be owned via xCloud/GFN. Mirrors ps-plus-library's own
-    // filter, which checks only that service's isOwned. The Store side is
-    // the exact complement of the same test.
+    // and owned on some other one" -- the OR check let a title merely present
+    // in the catalog (not actually owned) pass as long as it happened to be
+    // owned via the other service. The Store side is the exact complement of
+    // the same test.
     const isOwned = (item: CatalogTitle) =>
       providerFilterActive
         ? (filterXcloud && !!item.xcloud?.hasEntitlement) ||
-          (filterGfn && !!item.gfn?.variants.some(v => v.owned)) ||
-          (filterPsPlus &&
-            (!!item.psplus?.isOwned || !!item.psplus?.inPlusCatalog))
+          (filterGfn && !!item.gfn?.variants.some(v => v.owned))
         : isCatalogTitleOwned(item);
     list = list.filter(item => isOwned(item) === ownedMode);
     if (!ownedMode && catalogApplies) {
@@ -1138,7 +932,6 @@ export function useLibraryScreen() {
     mode,
     catalog,
     filterXcloud,
-    filterPsPlus,
     filterGfn,
     filterFavorite,
     favoriteKeys,
@@ -1187,8 +980,6 @@ export function useLibraryScreen() {
           xcloudNewest: xcloudNewestTable,
           gfnPopular: gfnPopularTable,
           gfnNewest: gfnNewestTable,
-          psPopular: psPopularTable,
-          psNewest: psNewestTable,
         },
         providerScope,
       ),
@@ -1198,8 +989,6 @@ export function useLibraryScreen() {
       xcloudNewestTable,
       gfnPopularTable,
       gfnNewestTable,
-      psPopularTable,
-      psNewestTable,
     ],
   );
 
@@ -1237,9 +1026,9 @@ export function useLibraryScreen() {
     }
     // 'recent': local play history, not a provider API -- see
     // entities/catalog-title/model/playHistory.ts. Keyed directly by the
-    // unified catalog key, so it ranks xCloud/GFN/PS Plus titles alike
-    // (unlike the provider-derived ranks for Newest/Popular). A title never
-    // launched from this device sorts last.
+    // unified catalog key, so it ranks xCloud/GFN titles alike (unlike the
+    // provider-derived ranks for Newest/Popular). A title never launched
+    // from this device sorts last.
     return byScore(item => playHistory[item.key] ?? 0, true);
   }, [filtered, sortMode, sortTables, playHistory, saleDiscount]);
 
@@ -1328,8 +1117,6 @@ export function useLibraryScreen() {
     setFilterXcloud,
     filterGfn,
     setFilterGfn,
-    filterPsPlus,
-    setFilterPsPlus,
     filterFavorite,
     setFilterFavorite,
     filterWishlist,

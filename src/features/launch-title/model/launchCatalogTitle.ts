@@ -43,30 +43,6 @@ export const launchWithProvider = (
     return;
   }
 
-  if (preference.provider === 'psplus') {
-    const game = catalogTitle.psplus?.raw;
-    if (!game) {
-      return;
-    }
-    // PS Plus renders through its own native SurfaceView (see
-    // features/ps-plus-session), not NativeStream's WebRTC/xCloud-shaped
-    // stream screen, so it gets its own route -- same params
-    // ps-plus-library's own onSelectGame already builds for this screen.
-    recordTitlePlayed(catalogTitle.key);
-    recordRecentLaunch({provider: 'psplus', game});
-    navigation.navigate('PsPlusStream', {
-      productId: game.productId,
-      name: game.name,
-      serviceType: game.streamServiceType === 'psnow' ? 'psnow' : 'pscloud',
-      streamIdentifier: game.streamIdentifier,
-      platform: game.platform,
-      isOwned: game.isOwned,
-      entitlementId: game.entitlementId,
-      posterUrl: catalogTitle.imageUrl ?? '',
-    });
-    return;
-  }
-
   recordTitlePlayed(catalogTitle.key);
   recordRecentLaunch({
     provider: 'gfn',
@@ -82,7 +58,7 @@ export const launchWithProvider = (
     // Unlike xCloud's own raw.Image_Poster above, GFN's launch params never
     // carried an image at all -- the merged catalog entry already has one
     // (Steam-backed titles get it from gfnPublicGames.ts; other stores have
-    // none, same as xCloud/PS Plus titles with no art fall back to
+    // none, same as xCloud titles with no art fall back to
     // StreamHandshakeOverlay's plain glow backdrop).
     postUrl: catalogTitle.imageUrl ?? '',
   });
@@ -97,9 +73,6 @@ export const isPreferenceAvailable = (
 ): boolean => {
   if (preference.provider === 'xcloud') {
     return !!catalogTitle.xcloud;
-  }
-  if (preference.provider === 'psplus') {
-    return !!catalogTitle.psplus;
   }
   return !!catalogTitle.gfn?.variants.some(
     variant =>

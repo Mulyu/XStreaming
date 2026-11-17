@@ -10,8 +10,3 @@ export const isInGamePass = (
   const id = item.xcloud?.raw?.productId;
   return !!id && gamePassMap[String(id).toUpperCase()] === true;
 };
-
-// The PS Plus counterpart, for the "free to play" filter: in the signed-in
-// account's PS Plus catalog.
-export const isInPsCatalog = (item: CatalogTitle): boolean =>
-  !!item.psplus?.inPlusCatalog;

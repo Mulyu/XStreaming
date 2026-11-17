@@ -10,13 +10,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-// General-purpose, provider-agnostic sibling to PsPlusModule.kt's own
-// debugLogFile()/getDebugLog() -- that one only ever captures what happens
-// during an active PS Plus session (it's chiaki's own native log). This logs
-// app-level foreground/background transitions (App.tsx's AppState listener)
-// to one shared file, for the same reason PS Plus's log exists: most users
-// have no adb access to pull a logcat capture, so this is the only way they
-// can hand over a trace of what actually happened right before a bug.
+// Logs app-level foreground/background transitions (App.tsx's AppState
+// listener) to one shared file: most users have no adb access to pull a
+// logcat capture, so this is the only way they can hand over a trace of
+// what actually happened right before a bug.
 public final class AppDebugLog {
     private static final String TAG = "AppDebugLog";
     private static final String LOG_FILE_NAME = "app_debug.log";
@@ -25,23 +22,20 @@ public final class AppDebugLog {
 
     private AppDebugLog() {}
 
-    // Unlike PS Plus's per-session file (overwritten fresh every
-    // startSession()), this one accumulates across however many
-    // background/foreground cycles it takes to reproduce an intermittent
-    // bug -- so it needs its own cap to avoid growing forever over a long
-    // install lifetime. Trimmed from the front (oldest lines) the same way
-    // PsPlusModule.kt's getDebugLog() trims its *read*, just applied to the
-    // file itself since this one is never rewritten wholesale on its own.
+    // This accumulates across however many background/foreground cycles it
+    // takes to reproduce an intermittent bug, so it needs its own cap to
+    // avoid growing forever over a long install lifetime. Trimmed from the
+    // front (oldest lines) and applied to the file itself since this one is
+    // never rewritten wholesale on its own.
     private static final long MAX_FILE_BYTES = 1_000_000;
 
     private static File logFile(Context context) {
         return new File(context.getFilesDir(), LOG_FILE_NAME);
     }
 
-    // Flushed on every call (a new FileWriter/close per line, same
-    // reliability reason as chiaki's own log_cb_android_file: a capture is
+    // Flushed on every call (a new FileWriter/close per line): a capture is
     // only useful if the lines up to the moment of a freeze/crash actually
-    // made it to disk).
+    // made it to disk.
     public static synchronized void log(Context context, String tag, String message) {
         File file = logFile(context);
         if (file.length() > MAX_FILE_BYTES) {

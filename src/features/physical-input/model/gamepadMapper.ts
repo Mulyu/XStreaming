@@ -1,5 +1,5 @@
 // Keyboard/mouse -> gamepad translation for providers whose wire protocol has
-// no keyboard or mouse channel (xCloud, PS Plus). Pure: the screen supplies a
+// no keyboard or mouse channel (xCloud). Pure: the screen supplies a
 // sink that drives its own press/stick/aim handlers, so the mapped input goes
 // through the exact same path (turbo, hold-toggle, swipe-aim gating) as the
 // on-screen gamepad.
@@ -77,8 +77,8 @@ export const createGamepadMapper = (
       x -= 1;
     }
     // gpState's left stick Y is screen-down positive (what the on-screen
-    // stick reports; xCloud/GFN negate it on the wire, PS Plus sends it as
-    // is), so forward (W) is negative.
+    // stick reports; xCloud/GFN negate it on the wire), so forward (W) is
+    // negative.
     if (dirs.has('StickUp')) {
       y -= 1;
     }

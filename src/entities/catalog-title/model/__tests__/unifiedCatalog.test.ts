@@ -11,13 +11,13 @@ describe('buildUnifiedCatalog xboxActive', () => {
     );
     expect(
       isCatalogTitleOwned(
-        buildUnifiedCatalog(xcloud(true), [], [], {xboxActive: true})[0],
+        buildUnifiedCatalog(xcloud(true), [], {xboxActive: true})[0],
       ),
     ).toBe(true);
   });
 
   it('reads the Xbox side as not owned when the membership has lapsed', () => {
-    const [item] = buildUnifiedCatalog(xcloud(true), [], [], {
+    const [item] = buildUnifiedCatalog(xcloud(true), [], {
       xboxActive: false,
     });
     expect(item.xcloud?.hasEntitlement).toBe(false);
@@ -31,7 +31,7 @@ describe('buildUnifiedCatalog xboxActive', () => {
         details: {hasEntitlement: true, userPrograms: ['FERDINAND']},
       },
     ];
-    const [item] = buildUnifiedCatalog(bought, [], [], {xboxActive: false});
+    const [item] = buildUnifiedCatalog(bought, [], {xboxActive: false});
     expect(item.xcloud?.hasEntitlement).toBe(true);
     expect(isCatalogTitleOwned(item)).toBe(true);
   });
@@ -43,7 +43,7 @@ describe('buildUnifiedCatalog xboxActive', () => {
         details: {hasEntitlement: true, userPrograms: ['GPULTIMATE']},
       },
     ];
-    const [item] = buildUnifiedCatalog(gamePass, [], [], {xboxActive: false});
+    const [item] = buildUnifiedCatalog(gamePass, [], {xboxActive: false});
     expect(item.xcloud?.hasEntitlement).toBe(false);
   });
 
@@ -57,7 +57,7 @@ describe('buildUnifiedCatalog xboxActive', () => {
         },
       },
     ];
-    const [item] = buildUnifiedCatalog(both, [], [], {xboxActive: false});
+    const [item] = buildUnifiedCatalog(both, [], {xboxActive: false});
     expect(item.xcloud?.hasEntitlement).toBe(true);
   });
 
@@ -68,37 +68,8 @@ describe('buildUnifiedCatalog xboxActive', () => {
         details: {hasEntitlement: false, userPrograms: ['FERDINAND']},
       },
     ];
-    const [item] = buildUnifiedCatalog(none, [], [], {xboxActive: false});
+    const [item] = buildUnifiedCatalog(none, [], {xboxActive: false});
     expect(item.xcloud?.hasEntitlement).toBe(false);
-  });
-
-  it('leaves the other services alone', () => {
-    const [item] = buildUnifiedCatalog(
-      xcloud(true),
-      [],
-      [{name: 'Halo', isOwned: true, plusCatalog: false}],
-      {xboxActive: false},
-    );
-    expect(item.xcloud?.hasEntitlement).toBe(false);
-    expect(isCatalogTitleOwned(item)).toBe(true);
-  });
-});
-
-describe('buildUnifiedCatalog psPlusActive', () => {
-  const ps = [{name: 'Halo', isOwned: true, plusCatalog: true}];
-
-  it('keeps the PS side while Plus runs (or is not stated)', () => {
-    const [a] = buildUnifiedCatalog([], [], ps);
-    const [b] = buildUnifiedCatalog([], [], ps, {psPlusActive: true});
-    expect(isCatalogTitleOwned(a)).toBe(true);
-    expect(isCatalogTitleOwned(b)).toBe(true);
-  });
-
-  it('reads the PS side as not owned once Plus has lapsed, owned games too', () => {
-    const [item] = buildUnifiedCatalog([], [], ps, {psPlusActive: false});
-    expect(item.psplus?.isOwned).toBe(false);
-    expect(item.psplus?.inPlusCatalog).toBe(false);
-    expect(isCatalogTitleOwned(item)).toBe(false);
   });
 });
 
@@ -117,16 +88,16 @@ describe('buildUnifiedCatalog GFN listings through Game Pass', () => {
 
   it('keeps them owned while the membership runs (or is not stated)', () => {
     const [a] = buildUnifiedCatalog([], gfn);
-    const [b] = buildUnifiedCatalog([], gfn, [], {xboxActive: true});
+    const [b] = buildUnifiedCatalog([], gfn, {xboxActive: true});
     expect(a.gfn?.variants.map(v => v.owned)).toEqual([true, true]);
     expect(b.gfn?.variants.map(v => v.owned)).toEqual([true, true]);
   });
 
   it('stops counting them as owned once Game Pass has lapsed, bought ones stay', () => {
-    const [item] = buildUnifiedCatalog([], gfn, [], {xboxActive: false});
+    const [item] = buildUnifiedCatalog([], gfn, {xboxActive: false});
     expect(item.gfn?.variants.map(v => v.owned)).toEqual([false, true]);
     expect(isCatalogTitleOwned(item)).toBe(true);
-    const [only] = buildUnifiedCatalog([], [gfn[0]], [], {xboxActive: false});
+    const [only] = buildUnifiedCatalog([], [gfn[0]], {xboxActive: false});
     expect(isCatalogTitleOwned(only)).toBe(false);
   });
 
@@ -136,19 +107,14 @@ describe('buildUnifiedCatalog GFN listings through Game Pass', () => {
       details: {hasEntitlement: true, userPrograms: programs},
     });
     // Bought outright: xCloud lists the ad-supported program for the account.
-    const [kept] = buildUnifiedCatalog([bought(['FERDINAND'])], [gfn[0]], [], {
+    const [kept] = buildUnifiedCatalog([bought(['FERDINAND'])], [gfn[0]], {
       xboxActive: false,
     });
     expect(kept.gfn?.variants.map(v => v.owned)).toEqual([true]);
     // Entitled through some other program (Game Pass itself): still lapses.
-    const [lapsed] = buildUnifiedCatalog(
-      [bought(['GPULTIMATE'])],
-      [gfn[0]],
-      [],
-      {
-        xboxActive: false,
-      },
-    );
+    const [lapsed] = buildUnifiedCatalog([bought(['GPULTIMATE'])], [gfn[0]], {
+      xboxActive: false,
+    });
     expect(lapsed.gfn?.variants.map(v => v.owned)).toEqual([false]);
   });
 });

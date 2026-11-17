@@ -40,7 +40,6 @@ export function useInputMappingScreen(navigation: any) {
   );
   const [reverseY, setReverseY] = React.useState({
     xbox: getMouseLookReverseY('xbox'),
-    ps: getMouseLookReverseY('ps'),
   });
   const toggleReverseY = (provider: MouseLookProvider) => {
     const next = !reverseY[provider];
@@ -109,10 +108,7 @@ export function useInputMappingScreen(navigation: any) {
         onPress: () => {
           setBindings(resetInputBindings());
           resetMouseLook();
-          setReverseY({
-            xbox: getMouseLookReverseY('xbox'),
-            ps: getMouseLookReverseY('ps'),
-          });
+          setReverseY({xbox: getMouseLookReverseY('xbox')});
         },
       },
     ]);
@@ -166,9 +162,9 @@ export function useInputMappingScreen(navigation: any) {
           : assignMouse(bindings, button, editing),
       );
     },
-    // What the switches mean for the player: the Xbox path looked down before
-    // the switch existed (so "flipped" = up), the PS Plus path looked up.
-    lookUp: {xbox: reverseY.xbox, ps: !reverseY.ps},
+    // What the switch means for the player: the Xbox path looked down before
+    // the switch existed, so "flipped" = up.
+    lookUp: {xbox: reverseY.xbox},
     onToggleReverseY: toggleReverseY,
     onReset: handleReset,
     onOpenGamepadMap: () => navigation.navigate('NativeGameMap'),

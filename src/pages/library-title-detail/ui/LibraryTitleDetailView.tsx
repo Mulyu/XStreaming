@@ -17,9 +17,6 @@ import {
   isSaleForDisplay,
   getStoreUrl,
   isSteamSaleForDisplay,
-  getPsStoreUrl,
-  isPsStoreSaleForDisplay,
-  formatPsContentRating,
   StoreRatingLine,
 } from '../../../entities/catalog-title';
 import {
@@ -34,15 +31,7 @@ import {alpha, palette} from '../../../shared/config/palette';
 
 const DIM_ICON_BG = alpha(palette.text, 0.16);
 const DIM_TEXT = palette.textSoft;
-const PS_MARK_COLOR = palette.provider.psBright;
 
-const formatSaleEnd = (ms: number): string =>
-  new Date(ms).toLocaleString(undefined, {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 // TV: the left-hand column's fixed art + identity width -- everything else
 // (PlayOn/Features/Media/Description) scrolls beside it. See `tvSplit`'s
 // own comment for why this screen needs a second layout at all.
@@ -67,8 +56,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   details,
   gfnDetails,
   steamPrices,
-  psStorePrice,
-  psDetails,
   steamRating,
   preference,
   owned,
@@ -77,12 +64,10 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   isWishlisted,
   toggleWishlist,
   playXcloud,
-  playPsPlus,
   playGfnVariant,
   canAddShortcut,
   addXcloudShortcut,
   addGfnShortcut,
-  addPsPlusShortcut,
   openStore,
 }) => {
   // One useTVFocus() per always-rendered-at-most-once Pressable below (the
@@ -96,12 +81,8 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const gfnRowFocus = useTVFocus();
   const gfnStoreLinkFocus = useTVFocus();
   const gfnShortcutFocus = useTVFocus();
-  const psplusRowFocus = useTVFocus();
-  const psplusStoreLinkFocus = useTVFocus();
-  const psplusShortcutFocus = useTVFocus();
-  // TV-only buttons: the PS price row, the description toggle, the favorite
-  // button, and the media thumbnails (focused-key pattern, they repeat).
-  const psPriceFocus = useTVFocus();
+  // TV-only buttons: the description toggle, the favorite button, and the
+  // media thumbnails (focused-key pattern, they repeat).
   const viewerFocus = useTVFocus();
   const descriptionFocus = useTVFocus();
   const [descriptionExpanded, setDescriptionExpanded] = React.useState(false);
@@ -140,15 +121,14 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     preference.gfnId === id &&
     preference.store === store;
 
-  const psBrief = psDetails?.brief;
   const genres =
     catalogTitle.genres.length > 0
       ? catalogTitle.genres
       : gfnDetails?.genres?.length
       ? gfnDetails.genres
-      : psBrief?.genres ?? [];
-  // Xbox's rating when it has one; PlayStation's otherwise.
-  const shownRating = rating ?? psDetails?.rating ?? null;
+      : [];
+  // Xbox's rating when it has one.
+  const shownRating = rating ?? null;
   const description =
     details?.description ||
     gfnDetails?.longDescription ||
@@ -160,16 +140,8 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     ? details.screenshots
     : gfnDetails?.screenshots?.length
     ? gfnDetails.screenshots
-    : psDetails?.screenshots ?? [];
-  const screenshotSource = details?.screenshots?.length
-    ? 'MSFT STORE'
-    : gfnDetails?.screenshots?.length
-    ? 'GFN'
-    : 'PS STORE';
-  const ageRating = psBrief?.contentRating
-    ? formatPsContentRating(psBrief.contentRating)
-    : undefined;
-  const edition = psBrief?.edition;
+    : [];
+  const screenshotSource = details?.screenshots?.length ? 'MSFT STORE' : 'GFN';
   const trailer = details?.trailers?.[0];
   const hasMedia = !!trailer || screenshots.length > 0;
 
@@ -177,18 +149,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   const xcloudDiscount =
     price && isSaleForDisplay(price) ? discountPercent(price) : 0;
   const xcloudProductId = getTitleProductId(catalogTitle.xcloud?.raw);
-
-  const psPlusGame = catalogTitle.psplus?.raw;
-  const psStoreUrl = catalogTitle.psplus
-    ? getPsStoreUrl(psPlusGame?.conceptId, psPlusGame?.storeProductId)
-    : null;
-  // The purchase price/sale is shown also for titles in the Plus catalog
-  // (it is still a discount on owning the game).
-  const psPurchase =
-    catalogTitle.psplus && !catalogTitle.psplus.isOwned
-      ? psStorePrice?.purchase ?? null
-      : null;
-  const psStoreShowSale = !!psPurchase && isPsStoreSaleForDisplay(psStorePrice);
 
   // One save button per title: the heart (favorite) when it's owned, the
   // bookmark (wishlist) when it isn't.
@@ -227,8 +187,8 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     </Pressable>
   );
 
-  // The Xbox / PlayStation star rating, and under it Steam's review verdict
-  // for a title that is on Steam.
+  // Xbox's star rating, and under it Steam's review verdict for a title
+  // that is on Steam.
   const ratingSection =
     shownRating || steamRating ? (
       <View style={styles.ratingStack}>
@@ -252,7 +212,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     ) : null;
 
   const metaSection =
-    developer || publisher || ageRating || edition ? (
+    developer || publisher ? (
       <View style={styles.metaRow}>
         {developer ? (
           <View style={styles.metaCol}>
@@ -264,18 +224,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           <View style={styles.metaCol}>
             <Text style={styles.metaKey}>{t('Publisher')}</Text>
             <Text style={styles.metaVal}>{publisher}</Text>
-          </View>
-        ) : null}
-        {ageRating ? (
-          <View style={styles.metaCol}>
-            <Text style={styles.metaKey}>{t('AgeRating')}</Text>
-            <Text style={styles.metaVal}>{ageRating}</Text>
-          </View>
-        ) : null}
-        {edition ? (
-          <View style={styles.metaCol}>
-            <Text style={styles.metaKey}>{t('Edition')}</Text>
-            <Text style={styles.metaVal}>{edition}</Text>
           </View>
         ) : null}
       </View>
@@ -290,10 +238,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
   // stores it can be bought from, each priced live where the service answers
   // and from the price saved with it otherwise.
   const isStoreOnly =
-    !!catalogTitle.store &&
-    !catalogTitle.xcloud &&
-    !catalogTitle.gfn &&
-    !catalogTitle.psplus;
+    !!catalogTitle.store && !catalogTitle.xcloud && !catalogTitle.gfn;
   const storeRefs = catalogTitle.store?.refs ?? {};
   const storeSnapshot = catalogTitle.store?.snapshot;
   const onlyOneStore = Object.values(storeRefs).filter(Boolean).length === 1;
@@ -309,7 +254,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
     url: string | null;
   };
   const savedPrice = (live: boolean): Partial<StoreOnlyRow> =>
-    !live && (onlyOneStore || storeRefs.ps) && storeSnapshot
+    !live && onlyOneStore && storeSnapshot
       ? {
           price: storeSnapshot.price,
           was: storeSnapshot.originalPrice,
@@ -354,18 +299,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           : undefined,
       url: `https://store.steampowered.com/app/${storeRefs.steam}`,
       ...(steam ? {} : savedPrice(false)),
-    });
-  }
-  if (storeRefs.ps) {
-    storeOnlyRows.push({
-      key: 'ps',
-      letter: 'PS',
-      iconStyle: styles.psplusIconBg,
-      color: palette.provider.ps,
-      name: 'PlayStation Store',
-      sale: false,
-      url: getPsStoreUrl(undefined, storeRefs.ps),
-      ...savedPrice(false),
     });
   }
 
@@ -462,8 +395,8 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                         xcloudDiscount > 0 &&
                           !inGamePass &&
                           styles.priceNowSale,
-                        // Same as the PS catalog: a Game Pass title's price is
-                        // struck through, with the inclusion said beside it.
+                        // A Game Pass title's price is struck through, with
+                        // the inclusion said beside it.
                         inGamePass && styles.priceStruck,
                       ]}>
                       {formatPrice(price.listPrice, price.currencyCode)}
@@ -472,7 +405,7 @@ const LibraryTitleDetailView: React.FC<Props> = ({
                   {inGamePass && (
                     <Text
                       style={[
-                        styles.psIncludedText,
+                        styles.includedText,
                         {color: palette.provider.xbox},
                       ]}>
                       {t('GamePassIncludedInCatalog')}
@@ -534,9 +467,8 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           style={[
             styles.providerCard,
             // The Xbox card carries its own spacing; without it this card
-            // sits under the section label, and a PS card below needs room.
+            // sits under the section label.
             !catalogTitle.xcloud && styles.providerCardTop,
-            !!catalogTitle.psplus && styles.providerCardBottom,
           ]}>
           <Pressable
             style={[
@@ -777,183 +709,6 @@ const LibraryTitleDetailView: React.FC<Props> = ({
           )}
         </View>
       )}
-
-      {catalogTitle.psplus &&
-        (() => {
-          // "Owned" (a real purchase/entitlement) and "in the Plus
-          // catalog" (streamable at no extra cost purely from the active
-          // subscription tier, independent of ever having bought it) are
-          // both "playable right now" for this card's purposes -- only
-          // neither means the title still needs the user to act
-          // (subscribe/buy) before it can stream.
-          const psplusAvailable =
-            catalogTitle.psplus.isOwned || catalogTitle.psplus.inPlusCatalog;
-          const baseSubtitle = catalogTitle.psplus.isOwned
-            ? t('LibraryFilterOwned')
-            : catalogTitle.psplus.inPlusCatalog
-            ? t('PsPlusIncludedDesc')
-            : t('LibraryViewDetails');
-          const subtitle = psStoreShowSale
-            ? `${baseSubtitle} · ${t('PsStoreOnSale')}`
-            : baseSubtitle;
-          // In the Plus catalog but not bought: playable at no extra cost, so
-          // the price below is shown struck through with that said next to it.
-          const includedInCatalog =
-            catalogTitle.psplus.inPlusCatalog && !catalogTitle.psplus.isOwned;
-          const showPsSale = psStoreShowSale && !includedInCatalog;
-          const psPriceRow = (
-            <View style={styles.psInfoRow}>
-              <View style={styles.storeMark}>
-                <Icon source="cart-outline" size={14} color={palette.warning} />
-              </View>
-              <View style={styles.storeText}>
-                <View style={styles.priceRow}>
-                  {psPurchase && (
-                    <Text
-                      style={[
-                        styles.priceNow,
-                        showPsSale && styles.priceNowSale,
-                        includedInCatalog && styles.priceStruck,
-                      ]}>
-                      {psPurchase.discountedPrice}
-                    </Text>
-                  )}
-                  {includedInCatalog && (
-                    <Text style={styles.psIncludedText}>
-                      {t('PsStoreIncludedInCatalog')}
-                    </Text>
-                  )}
-                  {psPurchase && showPsSale && (
-                    <Text style={styles.priceWas}>{psPurchase.basePrice}</Text>
-                  )}
-                  {psPurchase && showPsSale && (
-                    <View style={styles.salePill}>
-                      <Text style={styles.salePillText}>
-                        -{psPurchase.discountPercent}%
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                {psPurchase && showPsSale && psPurchase.memberPrice && (
-                  <Text style={styles.saleUntil}>
-                    {t('PsStoreMemberPrice')}
-                  </Text>
-                )}
-                {psPurchase && showPsSale && !!psPurchase.saleEndsAt && (
-                  <Text style={styles.saleUntil}>
-                    {t('PsStoreSaleUntil', {
-                      date: formatSaleEnd(psPurchase.saleEndsAt),
-                    })}
-                  </Text>
-                )}
-              </View>
-            </View>
-          );
-          return (
-            <View
-              style={[
-                styles.providerCard,
-                !catalogTitle.xcloud &&
-                  !catalogTitle.gfn &&
-                  styles.providerCardTop,
-              ]}>
-              <Pressable
-                style={[
-                  styles.providerRow,
-                  !psplusAvailable && styles.dimRow,
-                  psplusRowFocus.focused && tvFocusRow,
-                ]}
-                onPress={playPsPlus}
-                onFocus={psplusRowFocus.onFocus}
-                onBlur={psplusRowFocus.onBlur}>
-                <View
-                  style={[
-                    styles.providerIcon,
-                    psplusAvailable ? styles.psplusIconBg : styles.dimIconBg,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.providerIconText,
-                      {color: psplusAvailable ? palette.provider.ps : DIM_TEXT},
-                    ]}>
-                    PS
-                  </Text>
-                </View>
-                <View style={styles.providerText}>
-                  <Text style={styles.providerName}>PS Plus</Text>
-                  <Text style={styles.providerSub}>{subtitle}</Text>
-                </View>
-                {preference?.provider === 'psplus' && (
-                  <Icon
-                    source="check-circle"
-                    size={18}
-                    color={palette.provider.ps}
-                  />
-                )}
-                {psStoreUrl && (
-                  <Pressable
-                    style={[
-                      styles.storeLinkBtn,
-                      psplusStoreLinkFocus.focused && tvFocusBold,
-                    ]}
-                    hitSlop={8}
-                    onPress={() => openStore(psStoreUrl)}
-                    onFocus={psplusStoreLinkFocus.onFocus}
-                    onBlur={psplusStoreLinkFocus.onBlur}>
-                    <Icon
-                      source="open-in-new"
-                      size={16}
-                      color={palette.textSoft}
-                    />
-                  </Pressable>
-                )}
-                {canAddShortcut && (
-                  <Pressable
-                    style={[
-                      styles.storeLinkBtn,
-                      psplusShortcutFocus.focused && tvFocusBold,
-                    ]}
-                    hitSlop={8}
-                    accessibilityLabel={t('Add to desktop')}
-                    onPress={addPsPlusShortcut}
-                    onFocus={psplusShortcutFocus.onFocus}
-                    onBlur={psplusShortcutFocus.onBlur}>
-                    <Icon
-                      source="plus-box-outline"
-                      size={16}
-                      color={palette.textSoft}
-                    />
-                  </Pressable>
-                )}
-                <Icon
-                  source="chevron-right"
-                  size={18}
-                  color={palette.textSoft}
-                />
-              </Pressable>
-              {(includedInCatalog || psPurchase) && (
-                <View style={styles.stores}>
-                  {Platform.isTV && psStoreUrl ? (
-                    <Pressable
-                      style={[
-                        styles.tvInfoButton,
-                        psPriceFocus.focused && tvFocusBold,
-                      ]}
-                      onPress={() => openStore(psStoreUrl)}
-                      onFocus={psPriceFocus.onFocus}
-                      onBlur={psPriceFocus.onBlur}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('PsStoreOpenStore')}>
-                      {psPriceRow}
-                    </Pressable>
-                  ) : (
-                    psPriceRow
-                  )}
-                </View>
-              )}
-            </View>
-          );
-        })()}
 
       {preference && (
         <Text style={styles.rememberedNote}>{t('RememberedChoice')}</Text>
@@ -1318,7 +1073,6 @@ const styles = StyleSheet.create({
   },
   providerCardSpaced: {marginTop: 8, marginBottom: 8},
   providerCardTop: {marginTop: 8},
-  providerCardBottom: {marginBottom: 8},
   providerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1335,7 +1089,6 @@ const styles = StyleSheet.create({
   },
   xcloudIconBg: {backgroundColor: alpha(palette.provider.xbox, 0.18)},
   gfnIconBg: {backgroundColor: alpha(palette.provider.gfn, 0.18)},
-  psplusIconBg: {backgroundColor: alpha(palette.provider.ps, 0.18)},
   dimIconBg: {backgroundColor: DIM_ICON_BG},
   providerIconText: {fontWeight: '800', fontSize: 13},
   providerText: {flex: 1, gap: 1},
@@ -1356,7 +1109,7 @@ const styles = StyleSheet.create({
     color: palette.textSoft,
     textDecorationLine: 'line-through',
   },
-  psIncludedText: {fontSize: 11.5, fontWeight: '700', color: PS_MARK_COLOR},
+  includedText: {fontSize: 11.5, fontWeight: '700', color: palette.textSoft},
   priceWas: {
     fontSize: 11,
     color: palette.textSoft,
@@ -1385,25 +1138,6 @@ const styles = StyleSheet.create({
   storeMarkText: {fontSize: 9, fontWeight: '800', color: palette.textSoft},
   storeText: {flex: 1, gap: 1},
   storeName: {fontSize: 13, fontWeight: '600'},
-  // Informational PS rows under the PS card (included / trial / purchase) --
-  // same indent as the GFN store rows, but not pressable.
-  psInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    paddingLeft: 22,
-  },
-  psInfoNote: {fontSize: 11, color: DIM_TEXT},
-  salePill: {
-    paddingVertical: 1,
-    paddingHorizontal: 6,
-    borderRadius: 5,
-    backgroundColor: palette.warning,
-  },
-  salePillText: {fontSize: 10, fontWeight: '800', color: palette.onAccent},
-  saleUntil: {fontSize: 10.5, color: palette.warning},
   storeRowEnd: {flexDirection: 'row', alignItems: 'center', gap: 6},
   ownedText: {fontSize: 11, fontWeight: '700', color: palette.provider.gfn},
   // TV: a real button-sized target (the remote lands on it), not a bare icon.
@@ -1416,11 +1150,6 @@ const styles = StyleSheet.create({
         backgroundColor: alpha(palette.white, 0.07),
       }
     : {padding: 2},
-  tvInfoButton: {
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
   tvFavoriteBtn: {
     height: 52,
     borderRadius: 12,

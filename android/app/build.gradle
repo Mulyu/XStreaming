@@ -1,6 +1,5 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
-apply plugin: "org.jetbrains.kotlin.plugin.parcelize"
 apply plugin: "com.facebook.react"
 
 /**
@@ -81,23 +80,6 @@ android {
     compileSdkVersion rootProject.ext.compileSdkVersion
 
     namespace "com.xstreaming"
-    // Builds android/chiaki/ (chiaki-lib + its Android JNI bridge, vendored
-    // from Pylux/chiaki-ng for PS Plus cloud streaming -- see android/chiaki/
-    // CMakeLists.txt's own header comment). A separate CMake version from
-    // react-native-mmkv's own externalNativeBuild block below is expected
-    // and fine -- each Gradle module resolves its own cmake.version
-    // independently.
-    externalNativeBuild {
-        cmake {
-            path "../chiaki/CMakeLists.txt"
-            version "3.30.5"
-        }
-    }
-    sourceSets {
-        main {
-            jniLibs.srcDirs += ["$buildDir/generated/sdlJniLibs"]
-        }
-    }
     defaultConfig {
         versionCode 1
         minSdkVersion rootProject.ext.minSdkVersion
@@ -107,16 +89,6 @@ android {
         versionName "2.9.1"
         ndk {
             abiFilters(*xstreamingTargetAbis)
-        }
-        externalNativeBuild {
-            cmake {
-                // chiaki-lib's own FetchContent-based deps (mbedTLS, opus,
-                // json-c, miniupnpc) need Android_ABI/Android_platform wired
-                // up the normal AGP way; nothing beyond the ABI filter is
-                // required here since android/chiaki/CMakeLists.txt hardcodes
-                // its own feature toggles instead of taking them as -D args.
-                abiFilters(*xstreamingTargetAbis)
-            }
         }
     }
     flavorDimensions "environment"
@@ -167,26 +139,6 @@ android {
         jvmTarget = "1.8"
     }
 }
-
-tasks.register("syncSdl2JniLibs") {
-    def outputDir = file("$buildDir/generated/sdlJniLibs")
-    inputs.files(xstreamingTargetAbis.collect { abi -> file("../../third-party/sdl/${abi}/lib/libSDL2.so") })
-    outputs.dir(outputDir)
-    doLast {
-        delete(outputDir)
-        xstreamingTargetAbis.each { abi ->
-            def source = file("../../third-party/sdl/${abi}/lib/libSDL2.so")
-            if (source.exists()) {
-                copy {
-                    from source
-                    into file("$outputDir/${abi}")
-                }
-            }
-        }
-    }
-}
-
-preBuild.dependsOn("syncSdl2JniLibs")
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin

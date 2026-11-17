@@ -16,16 +16,15 @@ import {AppButton} from './Buttons';
 import {alpha, palette} from '../config/palette';
 
 // Per-provider chip look. streamType values come from NativeStream's own
-// route params ('cloud'/'gfn'/'home') and PsPlusStream's ('psplus'); any
-// other/missing value (xCloud's own 'cloud', mainly) falls through to the
-// Xbox Cloud Gaming default below rather than needing its own entry.
+// route params ('cloud'/'gfn'/'home'); any other/missing value (xCloud's own
+// 'cloud', mainly) falls through to the Xbox Cloud Gaming default below
+// rather than needing its own entry.
 const PROVIDER_META: Record<
   string,
   {accent: string; badge: string; label: string}
 > = {
   gfn: {accent: palette.provider.gfn, badge: 'N', label: 'GeForce Now'},
   home: {accent: palette.provider.xbox, badge: 'X', label: 'Xbox Console'},
-  psplus: {accent: palette.provider.ps, badge: 'P', label: 'PlayStation Plus'},
 };
 const DEFAULT_PROVIDER_META = {
   accent: palette.accent,
@@ -40,11 +39,7 @@ export interface StreamHandshakeOverlayProps {
   phase: LoadingPhase;
   queuePosition?: number;
   // A short, one-line status for the telemetry row. xCloud/GFN pass their
-  // own already-condensed connection-step text (e.g. "Ready to send
-  // ICE..."); PS Plus passes a localized summary of its own much more
-  // granular native provisioning stages (see PsPlusSession.connect's
-  // mapProvisionStageToPhase) rather than that raw text, which would be
-  // untranslated, overly technical and far too frequent for this one line.
+  // own already-condensed connection-step text (e.g. "Ready to send ICE...").
   detailText: string;
   onCancel: () => void;
 }

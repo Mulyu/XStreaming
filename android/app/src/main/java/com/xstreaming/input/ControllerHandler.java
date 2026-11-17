@@ -153,7 +153,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     // Recomputes hasGameController from scratch (same criteria as the constructor's
     // initial scan) and, if it actually changed, emits onGamepadConnectionChanged so
     // JS can auto-switch away from (or back to) its on-screen virtual gamepad -- see
-    // native-stream/ps-plus-stream's own NativeEventEmitter listeners for this event.
+    // native-stream's own NativeEventEmitter listeners for this event.
     private void refreshHasGameControllerAndNotify() {
         boolean nowHasGameController = false;
         for (int id : InputDevice.getDeviceIds()) {
