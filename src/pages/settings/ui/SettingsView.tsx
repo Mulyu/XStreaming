@@ -71,7 +71,6 @@ const SettingsView: React.FC<Props> = ({
   lane,
   settings,
   gfnSignedIn,
-  psPlusSignedIn,
   gfnLoginVisible,
   gfnChallenge,
   gfnLoginStatus,
@@ -81,11 +80,9 @@ const SettingsView: React.FC<Props> = ({
   signalingCloudOptions,
   signalingCloudValue,
   gfnRegionOptions,
-  psDatacenterOptions,
   xboxAccount,
   xboxPlaytimeDescription,
   gfnAccount,
-  psAccount,
   gfnPlaytimeDescription,
   gfnQueueDescription,
   onChangeLane,
@@ -99,8 +96,6 @@ const SettingsView: React.FC<Props> = ({
   onCopyXboxToken,
   onCopyContentAccessAuth,
   onCopyGfnToken,
-  onCopyPsPlusToken,
-  onPsPlusAccountPress,
   onXcloudAccountPress,
   onNavigateInputMapping,
 }) => {
@@ -127,12 +122,6 @@ const SettingsView: React.FC<Props> = ({
       label: t('GfnSettings'),
       color: palette.provider.gfn,
       flex: 1.45,
-    },
-    {
-      value: 'psplus',
-      label: t('PsPlusSettings'),
-      color: palette.provider.ps,
-      flex: 1.25,
     },
   ];
   // One line per provider: who is signed in (and the plan where the provider
@@ -355,69 +344,6 @@ const SettingsView: React.FC<Props> = ({
             value={settings.gfn_region}
             onChange={v => updateSetting('gfn_region', v)}
             accent={palette.provider.gfn}
-            emptyLabel={t('Auto')}
-          />
-        </ScrollView>
-      )}
-
-      {lane === 'psplus' && (
-        <ScrollView style={styles.settingsScroll}>
-          <SectionLabel title={t('SectionAccount')} />
-          <SettingItem
-            title={t('PsPlusAccountTitle')}
-            description={
-              psPlusSignedIn
-                ? signedInText(psAccount.userName) ?? t('PsPlusSignedIn')
-                : t('PsPlusAccountSignedOutDesc')
-            }
-            onPress={onPsPlusAccountPress}
-            onLongPress={onCopyPsPlusToken}
-          />
-
-          <SectionLabel title={t('SectionVideo')} />
-          <ChoiceRow
-            title={M('psplus_resolution').title}
-            desc={M('psplus_resolution').description}
-            options={M('psplus_resolution').data}
-            value={settings.psplus_resolution}
-            onChange={v => updateSetting('psplus_resolution', v)}
-            accent={palette.provider.ps}
-          />
-          <ChoiceRow
-            title={M('psplus_fps').title}
-            desc={M('psplus_fps').description}
-            options={M('psplus_fps').data}
-            value={settings.psplus_fps}
-            onChange={v => updateSetting('psplus_fps', v)}
-            accent={palette.provider.ps}
-          />
-          <ChoiceRow
-            title={M('psplus_bitrate_mode').title}
-            desc={M('psplus_bitrate_mode').description}
-            options={M('psplus_bitrate_mode').data}
-            value={settings.psplus_bitrate_mode}
-            onChange={v => updateSetting('psplus_bitrate_mode', v)}
-            accent={palette.provider.ps}
-          />
-          {settings.psplus_bitrate_mode === 'custom' && (
-            <SliderRow
-              title={t('Custom')}
-              min={5000}
-              max={25000}
-              step={500}
-              value={settings.psplus_bitrate_kbps}
-              onChange={v => updateSetting('psplus_bitrate_kbps', v)}
-              formatValue={v => `${(v / 1000).toFixed(1)} Mbps`}
-              accent={palette.provider.ps}
-            />
-          )}
-          <ChoiceRow
-            title={M('psplus_datacenter').title}
-            desc={M('psplus_datacenter').description}
-            options={psDatacenterOptions}
-            value={settings.psplus_datacenter}
-            onChange={v => updateSetting('psplus_datacenter', v)}
-            accent={palette.provider.ps}
             emptyLabel={t('Auto')}
           />
         </ScrollView>

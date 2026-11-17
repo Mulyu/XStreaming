@@ -588,7 +588,7 @@ public class MainActivity extends ReactActivity implements UsbDriverService.UsbD
       // instead of exactly -1.0 for one specific direction, which the
       // previous exact-equality check would simply never match (reported
       // symptom: a Bluetooth controller's D-pad Left silently not
-      // responding in a PS Plus stream while the other directions worked).
+      // responding while the other directions worked).
       // A signed threshold is strictly more tolerant than exact equality
       // and still can't trigger two directions on the same axis at once.
       if (xaxis <= -0.5f) {

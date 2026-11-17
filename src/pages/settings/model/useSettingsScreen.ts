@@ -28,14 +28,6 @@ import {
 import type {StreamingTimeResult} from '../../../features/xbox-auth';
 import type {TimeLeft} from '../../../entities/xbox-token';
 import {
-  isPsPlusSignedIn,
-  getNpsso,
-  clearNpsso,
-  clearCatalogGames,
-  loadPsPlusOnlineId,
-  buildDatacenterOptions,
-} from '../../../features/ps-plus-session';
-import {
   getGfnDisplayName,
   getValidGfnJwt,
   getValidGfnUserId,
@@ -57,7 +49,6 @@ import {
   gamepadSettings as gamepad,
   xcloudSettings as xcloud,
   gfnSettings as gfn,
-  psPlusSettings as psplus,
 } from '../../../features/app-settings';
 
 const log = debugFactory('SettingsScreen');
@@ -65,18 +56,11 @@ const log = debugFactory('SettingsScreen');
 // Every setting, regardless of which file defines it -- looked up by name so
 // a row only needs to say which setting it is, not repeat its title/
 // description/options inline.
-const allMetas = [
-  ...bases,
-  ...display,
-  ...gamepad,
-  ...xcloud,
-  ...gfn,
-  ...psplus,
-];
+const allMetas = [...bases, ...display, ...gamepad, ...xcloud, ...gfn];
 
 export const M = (name: string): any => allMetas.find(m => m.name === name);
 
-export type Lane = 'common' | 'xbox' | 'gfn' | 'psplus';
+export type Lane = 'common' | 'xbox' | 'gfn';
 
 export function useSettingsScreen(navigation: any, route: any) {
   const {t} = useTranslation();
@@ -93,35 +77,6 @@ export function useSettingsScreen(navigation: any, route: any) {
 
   const [loading, setLoading] = React.useState(false);
   const [lane, setLane] = React.useState<Lane>('common');
-  // Unlike GFN's own device-code flow, PS Plus sign-in/out never happens
-  // while this screen stays mounted (it's a WebView screen navigated away
-  // to), so this only needs to resync when this screen regains focus.
-  const [psPlusSignedIn, setPsPlusSignedIn] = React.useState(
-    isPsPlusSignedIn(),
-  );
-  React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      setPsPlusSignedIn(isPsPlusSignedIn());
-    });
-    return unsubscribe;
-  }, [navigation]);
-  // The PSN online ID for the account card; read once per sign-in.
-  const [psOnlineId, setPsOnlineId] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    if (!psPlusSignedIn) {
-      setPsOnlineId(null);
-      return undefined;
-    }
-    let cancelled = false;
-    loadPsPlusOnlineId().then(id => {
-      if (!cancelled) {
-        setPsOnlineId(id);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [psPlusSignedIn]);
   const [settings, setSettings] = React.useState(() => getSettings());
 
   const {
@@ -340,28 +295,6 @@ export function useSettingsScreen(navigation: any, route: any) {
     startGfnLogin();
   };
 
-  // Mirrors handleGfnAccountPress: signed in -> confirm-then-sign-out
-  // (npsso is just cleared locally, no server-side call needed); signed
-  // out -> the WebView login screen.
-  const handlePsPlusAccountPress = () => {
-    if (psPlusSignedIn) {
-      Alert.alert(t('Warning'), t('PsPlusSignOutConfirm'), [
-        {text: t('Cancel'), style: 'cancel'},
-        {
-          text: t('Confirm'),
-          style: 'default',
-          onPress: () => {
-            clearNpsso();
-            clearCatalogGames();
-            setPsPlusSignedIn(false);
-          },
-        },
-      ]);
-      return;
-    }
-    navigation.navigate('PsPlusLogin');
-  };
-
   // Mirrors the GFN account row above: signed in -> confirm-then-logout
   // (the existing 'logout' handler, unchanged); signed out -> the interactive
   // sign-in, which now lives here rather than on a separate Home screen
@@ -415,11 +348,6 @@ export function useSettingsScreen(navigation: any, route: any) {
         copyToken(token ? JSON.stringify({gfnJwt: token, userId}) : undefined);
       })
       .catch(() => copyToken(undefined));
-  };
-
-  // PlayStation: the npsso cookie.
-  const handleCopyPsPlusToken = () => {
-    copyToken(getNpsso());
   };
 
   // Fetches the MES (subscription/quota) API for the signed-in GFN account --
@@ -575,14 +503,6 @@ export function useSettingsScreen(navigation: any, route: any) {
     return gfnQueueLoading ? t('GfnQueueLoading') : t('GfnQueueUnavailable');
   };
 
-  // PS Plus: the datacenters seen on earlier connection attempts, with the
-  // response time measured for each.
-  const psDatacenterOptions = buildDatacenterOptions(
-    settings.psplus_datacenter_pings,
-    settings.psplus_datacenter,
-    t('Auto'),
-  );
-
   const gfnRegionOptions = [
     {value: '', text: t('Auto')},
     ...gfnRegions.map(r => ({value: r.url, text: r.name})),
@@ -590,7 +510,7 @@ export function useSettingsScreen(navigation: any, route: any) {
 
   // What each provider's account row shows. Only what the provider lets us
   // read: GeForce NOW gives the plan tier; Xbox only whether a membership is
-  // active; PlayStation nothing beyond the signed-in name.
+  // active.
   const xboxAccount = {
     userName: xboxProfile?.gamertag || user,
     planTitle:
@@ -605,10 +525,6 @@ export function useSettingsScreen(navigation: any, route: any) {
       : undefined,
   };
 
-  const psAccount = {
-    userName: psOnlineId ?? undefined,
-  };
-
   return {
     t,
     loading,
@@ -619,7 +535,6 @@ export function useSettingsScreen(navigation: any, route: any) {
     lane,
     settings,
     gfnSignedIn,
-    psPlusSignedIn,
     gfnLoginVisible,
     gfnChallenge,
     gfnLoginStatus,
@@ -630,11 +545,9 @@ export function useSettingsScreen(navigation: any, route: any) {
     signalingCloudOptions,
     signalingCloudValue,
     gfnRegionOptions,
-    psDatacenterOptions,
     xboxAccount,
     xboxPlaytimeDescription: xboxPlaytimeDescription(),
     gfnAccount,
-    psAccount,
     gfnPlaytimeDescription: gfnPlaytimeDescription(),
     gfnQueueDescription: gfnQueueDescription(),
     onChangeLane: setLane,
@@ -648,8 +561,6 @@ export function useSettingsScreen(navigation: any, route: any) {
     onCopyXboxToken: handleCopyXboxToken,
     onCopyContentAccessAuth: handleCopyContentAccessAuth,
     onCopyGfnToken: handleCopyGfnToken,
-    onCopyPsPlusToken: handleCopyPsPlusToken,
-    onPsPlusAccountPress: handlePsPlusAccountPress,
     onXcloudAccountPress: handleXcloudAccountPress,
     onNavigateInputMapping: () => navigation.navigate('InputMapping'),
   };

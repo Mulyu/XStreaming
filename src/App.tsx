@@ -37,7 +37,6 @@ import {Provider} from 'react-redux';
 import store from './shared/lib/reduxStore';
 import {
   findTitleByProductId,
-  findPsPlusGameByProductId,
   getTitleStreamingId,
   recordRecentLaunch,
 } from './features/launch-title';
@@ -57,8 +56,6 @@ import NativeGameMapScreen from './pages/native-game-map';
 import GameMapDetailScreen from './pages/game-map-detail';
 import InputMappingScreen from './pages/input-mapping';
 import CustomGamepadScreen from './pages/custom-gamepad';
-import PsPlusLoginScreen from './pages/ps-plus-login';
-import PsPlusStreamScreen from './pages/ps-plus-stream';
 import updater from './shared/lib/updater';
 
 import {useTranslation} from 'react-i18next';
@@ -159,7 +156,6 @@ const LibraryTitleDetailBackgroundScreen = withPageBackground(
 const NativeGameMapBackgroundScreen = withPageBackground(NativeGameMapScreen);
 const GameMapDetailBackgroundScreen = withPageBackground(GameMapDetailScreen);
 const InputMappingBackgroundScreen = withPageBackground(InputMappingScreen);
-const PsPlusLoginBackgroundScreen = withPageBackground(PsPlusLoginScreen);
 
 // The two hub screens live in a bottom-tab navigator so the tab bar persists
 // and only the content swaps between them (Library / Settings). Detail,
@@ -219,7 +215,6 @@ function App() {
   const openTitleShortcut = React.useCallback(
     (shortcut: any) => {
       const isGfn = shortcut?.provider === 'gfn';
-      const isPsPlus = shortcut?.provider === 'psplus';
       if (!isGfn && !shortcut?.productId) {
         return;
       }
@@ -249,33 +244,6 @@ function App() {
           streamType: 'gfn',
           appId: shortcut.gfnAppId,
           title: shortcut.titleName,
-        });
-        return;
-      }
-
-      if (isPsPlus) {
-        const game = findPsPlusGameByProductId(shortcut.productId);
-        if (!game) {
-          Alert.alert(t('Warning'), t('TitleShortcutExpired'));
-          return;
-        }
-        if (game.name) {
-          recordTitlePlayed(normalizeTitle(game.name));
-          recordRecentLaunch({provider: 'psplus', game});
-        }
-        // Same params ps-plus-library's own onSelectGame and
-        // launchWithProvider's normal (non-shortcut) PS Plus launch path
-        // already use for this screen -- see features/launch-title/model/
-        // launchCatalogTitle.ts.
-        navigationRef.navigate('PsPlusStream', {
-          productId: game.productId,
-          name: game.name,
-          serviceType: game.streamServiceType === 'psnow' ? 'psnow' : 'pscloud',
-          streamIdentifier: game.streamIdentifier,
-          platform: game.platform,
-          isOwned: game.isOwned,
-          entitlementId: game.entitlementId,
-          posterUrl: game.imageUrl || '',
         });
         return;
       }
@@ -499,23 +467,6 @@ function App() {
                   name="NativeGameMap"
                   component={NativeGameMapBackgroundScreen}
                   options={{title: t('GameMap')}}
-                />
-                <RootStack.Screen
-                  name="PsPlusLogin"
-                  component={PsPlusLoginBackgroundScreen}
-                  options={{title: t('PsPlusLogin')}}
-                />
-                <RootStack.Screen
-                  name="PsPlusStream"
-                  component={PsPlusStreamScreen}
-                  // No push/pop transition animation for this screen: the
-                  // stack navigator (react-native-screens, on by default with
-                  // @react-navigation/native) snapshots/hardware-layers the
-                  // screen during that animation, which is a well-known way
-                  // for a SurfaceView's transparent hole-punch to silently
-                  // stop compositing -- worth ruling out before spending any
-                  // more native-side effort on the black-video bug.
-                  options={{headerShown: false, animationEnabled: false}}
                 />
               </RootStack.Group>
 

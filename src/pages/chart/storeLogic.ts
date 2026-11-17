@@ -5,7 +5,6 @@ import {
   GfnGame,
   buildGfnCatalogTitle,
   buildXcloudCatalogTitle,
-  buildPsPlusCatalogTitle,
   CatalogTitle,
   discountPercent,
   formatPrice,
@@ -13,14 +12,13 @@ import {
   isSaleForDisplay,
   PriceInfo,
   ProductBasics,
-  PsStoreBrief,
   RatingInfo,
   StoreRating,
   WishlistRefs,
   WishlistSnapshot,
   normalizeTitle,
 } from '../../entities/catalog-title';
-import {SteamChartEntry, PsStoreChartEntry} from '../../features/store-charts';
+import {SteamChartEntry} from '../../features/store-charts';
 
 // One row's worth of display data. `catalogTitle` is null when the row isn't
 // launchable -- today that's only possible on the GFN/Steam side, where the
@@ -46,11 +44,11 @@ export type StoreRow = {
   originalPrice?: string;
   // Whole-number percent off when on sale (e.g. 30 for -30%).
   discountPercent?: number;
-  // The store's own user rating (stars on Xbox/PlayStation, a verdict on
-  // Steam), when it publishes one for the title.
+  // The store's own user rating (stars on Xbox, a verdict on Steam), when
+  // it publishes one for the title.
   rating?: StoreRating;
   // The store's genres as it names them (Xbox's are English tokens still to
-  // be translated -- see xboxGenreLabel; PlayStation's arrive localized).
+  // be translated -- see xboxGenreLabel).
   genres?: string[];
   catalogTitle: CatalogTitle | null;
 };
@@ -196,70 +194,11 @@ export const buildGfnStoreRows = (
   });
 };
 
-// Every PS Store chart entry becomes a row -- same "show the real chart,
-// gray out what isn't cloud-playable" behavior as buildGfnStoreRows, not
-// buildXboxStoreRows's "drop unmatched entries" one, since PS Store's own
-// category API already carries full display data per entry (name/image/
-// price), independent of whether the title is also in the signed-in
-// account's PS Plus cloud-streaming catalog.
-//
-// Matched against BOTH `productId` and `storeProductId`, not storeProductId
-// alone: libchiaki's own JSON contract (cloudcatalog.h) documents
-// storeProductId as populated only for "owned"/"purchaseable" rows -- a
-// "streamable" row (in the account's current PS Plus Extra/Premium catalog,
-// not owned) carries none, so matching on it alone silently dropped every
-// genuine Plus-catalog title from the filter while still matching ordinary
-// purchaseable listings that aren't actually free to stream. libchiaki's own
-// native cross-referencing (cloudcatalog_merge.c's streamability_is_streamable)
-// tries productId first for exactly this reason -- productId is the one
-// field every row's schema guarantees ("canonical catalog id; unique in this
-// array"), with storeProductId only as a supplementary commerce-specific id.
-export const buildPsStoreRows = (
-  entries: PsStoreChartEntry[],
-  psPlusGames: any[],
-  // Genres and rating per product id, fetched lazily as rows come into the
-  // list (the category listing itself carries neither).
-  briefs: Record<string, PsStoreBrief> = {},
-): StoreRow[] => {
-  const byProductId = new Map<string, any>();
-  psPlusGames.forEach(game => {
-    if (game?.productId) {
-      byProductId.set(game.productId, game);
-    }
-    if (game?.storeProductId) {
-      byProductId.set(game.storeProductId, game);
-    }
-  });
-  return entries.map((entry, index) => {
-    const game = byProductId.get(entry.productId);
-    const catalogTitle = game ? buildPsPlusCatalogTitle(game) : null;
-    const brief = briefs[entry.productId];
-    return {
-      id: entry.productId,
-      rank: index + 1,
-      title: entry.title,
-      imageUrl: entry.imageUrl,
-      price: entry.price,
-      originalPrice: entry.originalPrice,
-      discountPercent: entry.discountPercent || undefined,
-      rating: brief?.averageRating
-        ? {kind: 'stars', average: brief.averageRating}
-        : undefined,
-      genres: brief?.genres.length ? brief.genres : undefined,
-      catalogTitle,
-    };
-  });
-};
-
-export type StoreProvider = 'xcloud' | 'gfn' | 'psstore';
+export type StoreProvider = 'xcloud' | 'gfn';
 
 // Which id a row's `id` is, per tab.
 const refsForRow = (provider: StoreProvider, id: string): WishlistRefs =>
-  provider === 'xcloud'
-    ? {xbox: id}
-    : provider === 'gfn'
-    ? {steam: id}
-    : {ps: id};
+  provider === 'xcloud' ? {xbox: id} : {steam: id};
 
 // What the row was showing, saved with a wishlisted title as its last-seen
 // price.

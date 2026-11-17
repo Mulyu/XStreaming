@@ -8,7 +8,6 @@
 export type WishlistRefs = {
   xbox?: string;
   steam?: string;
-  ps?: string;
 };
 
 // Display price last seen for the title; refreshed while the Library is open.
@@ -38,7 +37,7 @@ export const upsertEntry = (
     return [...list, entry];
   }
   // Keep the original add time; take fresher display data and merge ids so a
-  // title added from the Xbox Store keeps its id when later added from PS.
+  // title added from the Xbox Store keeps its id when later added from GFN.
   const prev = list[index];
   const merged: WishlistEntry = {
     ...prev,

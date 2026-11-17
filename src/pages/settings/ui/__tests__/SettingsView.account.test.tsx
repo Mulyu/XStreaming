@@ -35,16 +35,13 @@ const makeProps = (overrides: Record<string, unknown>) => {
     lane: 'xbox',
     settings: getSettings(),
     gfnSignedIn: false,
-    psPlusSignedIn: false,
     gfnLoginVisible: false,
     isAuthed: false,
     signalingCloudOptions: [],
     signalingCloudValue: '',
     gfnRegionOptions: [],
-    psDatacenterOptions: [],
     xboxAccount: {userName: undefined, planTitle: undefined},
     gfnAccount: {userName: undefined, planTitle: undefined},
-    psAccount: {userName: undefined},
     gfnPlaytimeDescription: '',
     gfnQueueDescription: '',
     xboxPlaytimeDescription: '',
@@ -157,19 +154,6 @@ describe('provider account rows', () => {
     const tree = render({lane: 'gfn', gfnSignedIn: true});
     expect(texts(tree)).toContain('GfnSignedIn');
   });
-
-  it('PlayStation: the online ID on the row', () => {
-    const onPsPlusAccountPress = jest.fn();
-    const tree = render({
-      lane: 'psplus',
-      psPlusSignedIn: true,
-      psAccount: {userName: 'psfan'},
-      onPsPlusAccountPress,
-    });
-    expect(texts(tree)).toContain('Current user: psfan');
-    press(tree, 'PsPlusAccountTitle');
-    expect(onPsPlusAccountPress).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe('copying a provider token', () => {
@@ -187,20 +171,11 @@ describe('copying a provider token', () => {
       'GfnAccountTitle',
     );
     expect(onCopyGfnToken).toHaveBeenCalledTimes(1);
-
-    const onCopyPsPlusToken = jest.fn();
-    longPress(
-      render({lane: 'psplus', psPlusSignedIn: true, onCopyPsPlusToken}),
-      'PsPlusAccountTitle',
-    );
-    expect(onCopyPsPlusToken).toHaveBeenCalledTimes(1);
   });
 
   it('the provider debug rows are gone', () => {
-    for (const lane of ['gfn', 'psplus']) {
-      const out = texts(
-        render({lane, gfnSignedIn: true, psPlusSignedIn: true}),
-      );
+    for (const lane of ['gfn']) {
+      const out = texts(render({lane, gfnSignedIn: true}));
       expect(out).not.toContain('SectionDebug');
       expect(out.join('|')).not.toMatch(/DebugInfo|AccountInfo/);
     }

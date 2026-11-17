@@ -1,5 +1,5 @@
 import {extractInGamePass} from '../storePrice';
-import {isInGamePass, isInPsCatalog} from '../../model/gamePass';
+import {isInGamePass} from '../../model/gamePass';
 import type {CatalogTitle} from '../../model/unifiedCatalog';
 
 // Shapes taken from live DisplayCatalog (fieldsTemplate=details) responses.
@@ -50,7 +50,7 @@ describe('extractInGamePass', () => {
 const title = (over: Partial<CatalogTitle>): CatalogTitle =>
   ({key: 'k', title: 'T', genres: [], ...over} as CatalogTitle);
 
-describe('isInGamePass / isInPsCatalog', () => {
+describe('isInGamePass', () => {
   it('matches the xCloud product id case-insensitively', () => {
     const map = {'9NPDN9R45JX4': true as const};
     expect(
@@ -68,14 +68,5 @@ describe('isInGamePass / isInPsCatalog', () => {
       ),
     ).toBe(false);
     expect(isInGamePass(title({}), map)).toBe(false);
-  });
-
-  it('reads the PS catalog flag', () => {
-    expect(
-      isInPsCatalog(
-        title({psplus: {raw: {}, isOwned: false, inPlusCatalog: true}}),
-      ),
-    ).toBe(true);
-    expect(isInPsCatalog(title({}))).toBe(false);
   });
 });
