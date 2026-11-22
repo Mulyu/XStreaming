@@ -265,6 +265,18 @@ export function useLibraryScreen() {
       setFavoriteKeys(new Set(getFavoriteKeys()));
       setWishlist(getWishlist());
       setPlayHistory(getPlayHistory());
+      // Picks up a GFN library/catalog resync triggered from Settings (or a
+      // background refresh from an earlier visit here) without needing a
+      // manual pull-to-refresh on this screen too -- a cheap synchronous
+      // cache read, no network.
+      const freshOwned = getFreshOwnedGames();
+      if (freshOwned) {
+        setGfnOwnedGames(freshOwned);
+      }
+      const freshFullCatalog = getFreshFullCatalog();
+      if (freshFullCatalog) {
+        setGfnFullCatalog(freshFullCatalog);
+      }
     }, []),
   );
 

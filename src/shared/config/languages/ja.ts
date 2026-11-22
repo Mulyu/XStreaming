@@ -368,6 +368,12 @@ export default {
     GfnQueueValue: '約{{waiting}}人待ち · 想定待機 約{{minutes}}分（非公式）',
     GfnQueueLoading: '待機状況を確認中…',
     GfnQueueUnavailable: '待機状況を取得できません',
+    GfnResyncLibraryTitle: 'ライブラリを更新',
+    GfnResyncLibraryDesc:
+      '次の自動更新を待たずに、Steamなどでの新しい購入をGeForce NOW側にすぐ確認しに行きます。',
+    GfnResyncLibraryLoading: '更新中…',
+    GfnResyncLibrarySignedOutDesc: 'GeForce NOWにサインインすると使えます',
+    GfnResyncLibraryFailed: '更新に失敗しました — もう一度お試しください',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle max duration (minutes)': 'アンチアイドル',

@@ -85,6 +85,7 @@ const SettingsView: React.FC<Props> = ({
   gfnAccount,
   gfnPlaytimeDescription,
   gfnQueueDescription,
+  gfnResyncDescription,
   onChangeLane,
   updateSetting,
   onLocaleChange,
@@ -96,6 +97,7 @@ const SettingsView: React.FC<Props> = ({
   onCopyXboxToken,
   onCopyContentAccessAuth,
   onCopyGfnToken,
+  onGfnResync,
   onXcloudAccountPress,
   onNavigateInputMapping,
 }) => {
@@ -298,6 +300,11 @@ const SettingsView: React.FC<Props> = ({
             title={t('GfnQueueTitle')}
             value={gfnQueueDescription}
             accent={palette.provider.gfn}
+          />
+          <SettingItem
+            title={t('GfnResyncLibraryTitle')}
+            description={gfnResyncDescription}
+            onPress={onGfnResync}
           />
 
           <SectionLabel title={t('SectionVideo')} />
