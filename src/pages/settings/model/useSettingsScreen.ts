@@ -351,14 +351,17 @@ export function useSettingsScreen(navigation: any, route: any) {
         setGfnResyncResult(t('GfnResyncLibraryFailed'));
         return;
       }
-      const sync = await syncGfnStoreConnection('steam', tokens.accessToken);
+      // ALS's Bearer token is the id_token (same value GFNJWT-scheme calls
+      // use), not the OAuth access_token -- see accountLinking.ts's own
+      // comment on how that was confirmed.
+      const jwt = tokens.idToken ?? tokens.accessToken;
+      const sync = await syncGfnStoreConnection('steam', jwt);
       log.info(`GFN Steam connection resync: HTTP ${sync.status}`);
       if (sync.ok) {
         await new Promise(resolve =>
           setTimeout(resolve, GFN_STORE_SYNC_WAIT_MS),
         );
       }
-      const jwt = tokens.idToken ?? tokens.accessToken;
       await Promise.all([fetchGfnOwnedGames(jwt), fetchGfnFullCatalog(jwt)]);
       // A plain success clears back to the normal description; an
       // unconfirmed sync keeps its HTTP status visible as this row's
