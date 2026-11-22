@@ -17,19 +17,20 @@
 // still the OpenID id_token, not the OAuth access_token: ALSService gets it
 // via idmService.getAuthToken() -> starfleetService.getAuthToken(), which
 // resolves to the session's `data.idToken` (same underlying value
-// getValidGfnJwt() prefers). An earlier version of this file guessed it
-// needed the access_token instead, which the real service answered with 401
-// -- confirmed by decoding a captured idToken.payload offline and tracing
-// this call chain through the bundle a second time; use getValidGfnJwt()'s
-// value (or getValidTokens().idToken) here, not .accessToken.
+// getValidGfnJwt() prefers). Use getValidGfnJwt()'s value (or
+// getValidTokens().idToken) here, not .accessToken.
 //
-// The exact `platform` path segment GFN expects for Steam (tried here as
-// "steam", the lowercase REST convention) is still unconfirmed against a
-// real response. The HTTP status syncGfnStoreConnection returns is the
-// signal to go by if that needs correcting next.
+// Both confirmed live against a real account: the id_token fix alone turned
+// a 401 into a 400 with body {"error":"service_error","description":"...
+// Platform steam not supported"} -- the lowercase platform segment this file
+// originally guessed (the usual REST convention) isn't what GFN expects.
+// Its own catalog API already answered this elsewhere in the app
+// (entities/catalog-title's gfnCatalog.ts compares store names as
+// `store.toUpperCase() === 'STEAM'`): the platform segment GFN's own
+// "digital store" list literally uses, uppercase, which answered 202.
 const ALS_BASE_URL = 'https://als.geforcenow.com/v1';
 
-export type GfnStorePlatform = 'steam';
+export type GfnStorePlatform = 'STEAM';
 
 // The official client waits this long (its own
 // accountLinking.defaultSyncWaitInterval) after a successful sync request

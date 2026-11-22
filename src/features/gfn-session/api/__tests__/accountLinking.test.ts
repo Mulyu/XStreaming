@@ -15,9 +15,9 @@ describe('syncGfnStoreConnection', () => {
       return Promise.resolve({status: 202} as Response);
     }) as any;
 
-    const result = await syncGfnStoreConnection('steam', 'tok-123');
+    const result = await syncGfnStoreConnection('STEAM', 'tok-123');
 
-    expect(seenUrl).toBe('https://als.geforcenow.com/v1/sync/steam');
+    expect(seenUrl).toBe('https://als.geforcenow.com/v1/sync/STEAM');
     expect(seenInit.method).toBe('POST');
     expect(seenInit.headers.Authorization).toBe('Bearer tok-123');
     expect(result).toEqual({ok: true, status: 202});
@@ -28,7 +28,7 @@ describe('syncGfnStoreConnection', () => {
       Promise.resolve({status: 404} as Response),
     ) as any;
 
-    expect(await syncGfnStoreConnection('steam', 'tok-123')).toEqual({
+    expect(await syncGfnStoreConnection('STEAM', 'tok-123')).toEqual({
       ok: false,
       status: 404,
     });
@@ -37,7 +37,7 @@ describe('syncGfnStoreConnection', () => {
   it('reports a network failure as not ok, status 0', async () => {
     global.fetch = jest.fn(() => Promise.reject(new Error('offline'))) as any;
 
-    expect(await syncGfnStoreConnection('steam', 'tok-123')).toEqual({
+    expect(await syncGfnStoreConnection('STEAM', 'tok-123')).toEqual({
       ok: false,
       status: 0,
     });
