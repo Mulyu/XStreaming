@@ -374,6 +374,8 @@ export default {
     GfnResyncLibraryLoading: '更新中…',
     GfnResyncLibrarySignedOutDesc: 'GeForce NOWにサインインすると使えます',
     GfnResyncLibraryFailed: '更新に失敗しました — もう一度お試しください',
+    GfnResyncLibraryUnconfirmed:
+      'ライブラリは更新しましたが、Steam再接続の確認はできませんでした (HTTP {{status}})',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle max duration (minutes)': 'アンチアイドル',

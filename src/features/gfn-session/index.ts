@@ -27,4 +27,10 @@ export type {
 export {fetchGfnQueueStatus} from './api/queueStatus';
 export type {GfnQueueStatus} from './api/queueStatus';
 
+export {
+  syncGfnStoreConnection,
+  GFN_STORE_SYNC_WAIT_MS,
+} from './api/accountLinking';
+export type {GfnStorePlatform, GfnStoreSyncResult} from './api/accountLinking';
+
 export {GfnStreamAdapter, gpStateToGfnInput} from './api/streamAdapter';

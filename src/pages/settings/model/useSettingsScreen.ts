@@ -33,12 +33,15 @@ import {
   getGfnDisplayName,
   getValidGfnJwt,
   getValidGfnUserId,
+  getValidTokens,
 } from '../../../entities/gfn-account';
 import {
   fetchGfnSubscription,
   fetchGfnVpcId,
   fetchGfnQueueStatus,
   fetchGfnRegions,
+  syncGfnStoreConnection,
+  GFN_STORE_SYNC_WAIT_MS,
   GfnSubscriptionInfo,
   GfnQueueStatus,
   GfnRegionOption,
@@ -310,31 +313,50 @@ export function useSettingsScreen(navigation: any, route: any) {
     startXcloudLogin();
   };
 
-  // Force-refetches the signed-in account's GFN owned-games list and full
-  // browse catalog, bypassing their normal caches (6h / 24h -- see
-  // entities/catalog-title's gfnCatalog.ts) -- the same two calls the
-  // Library screen's own pull-to-refresh makes for GFN. A fresh purchase
-  // (on Steam, say) can otherwise sit behind that cache for hours; this
-  // lets it show up without waiting. Both calls write their own cache on
-  // success, which the Library screen's useFocusEffect re-reads the next
-  // time that tab is focused, so no direct coupling between the two pages
-  // is needed.
+  // Asks NVIDIA to actually re-check the Steam connection, then refetches the
+  // signed-in account's GFN owned-games list and full browse catalog
+  // bypassing their normal caches (6h / 24h -- see entities/catalog-title's
+  // gfnCatalog.ts). The plain refetch alone (this row's first version) only
+  // ever re-read GFN's *own* idea of what's owned -- unchanged until GFN
+  // itself re-syncs with Steam, which otherwise happens on its own schedule,
+  // not on demand. syncGfnStoreConnection (features/gfn-session) is that
+  // on-demand trigger -- the same POST the "Refresh" button on
+  // play.geforcenow.com/mall/#/layout/settings/connections makes, reverse-
+  // engineered from that web client's own bundled source (see
+  // accountLinking.ts's own comment on what is/isn't confirmed about it).
+  // It returns 202 (queued, not synchronous), so this waits NVIDIA's own
+  // quoted sync interval before re-reading the catalog -- otherwise the
+  // refetch races the sync and just sees the old state again.
+  //
+  // Both GFN calls write their own cache on success, which the Library
+  // screen's useFocusEffect re-reads the next time that tab is focused, so
+  // no direct coupling between the two pages is needed.
   const handleGfnResync = async () => {
     if (!gfnSignedIn || gfnResyncing) {
       return;
     }
     setGfnResyncing(true);
     try {
-      const token = await getValidGfnJwt();
-      if (!token) {
+      const tokens = await getValidTokens();
+      if (!tokens) {
         ToastAndroid.show(t('GfnResyncLibraryFailed'), ToastAndroid.SHORT);
         return;
       }
-      await Promise.all([
-        fetchGfnOwnedGames(token),
-        fetchGfnFullCatalog(token),
-      ]);
-      ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
+      const sync = await syncGfnStoreConnection('steam', tokens.accessToken);
+      log.info(`GFN Steam connection resync: HTTP ${sync.status}`);
+      if (sync.ok) {
+        await new Promise(resolve =>
+          setTimeout(resolve, GFN_STORE_SYNC_WAIT_MS),
+        );
+      }
+      const jwt = tokens.idToken ?? tokens.accessToken;
+      await Promise.all([fetchGfnOwnedGames(jwt), fetchGfnFullCatalog(jwt)]);
+      ToastAndroid.show(
+        sync.ok
+          ? t('Success')
+          : t('GfnResyncLibraryUnconfirmed', {status: sync.status}),
+        ToastAndroid.LONG,
+      );
     } catch {
       ToastAndroid.show(t('GfnResyncLibraryFailed'), ToastAndroid.SHORT);
     } finally {
