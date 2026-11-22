@@ -374,6 +374,7 @@ export default {
     GfnResyncLibraryLoading: '更新中…',
     GfnResyncLibrarySignedOutDesc: 'GeForce NOWにサインインすると使えます',
     GfnResyncLibraryFailed: '更新に失敗しました — もう一度お試しください',
+    GfnResyncLibraryFailedDetail: '更新に失敗しました: {{detail}}',
     GfnResyncLibraryUnconfirmed:
       'ライブラリは更新しましたが、Steam再接続の確認はできませんでした (HTTP {{status}})',
     BatteryOptimizationPrompt:
