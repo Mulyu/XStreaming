@@ -104,6 +104,14 @@ export function useSettingsScreen(navigation: any, route: any) {
   const [gfnQueueLoading, setGfnQueueLoading] = React.useState(false);
   const [gfnRegions, setGfnRegions] = React.useState<GfnRegionOption[]>([]);
   const [gfnResyncing, setGfnResyncing] = React.useState(false);
+  // The outcome of the last resync attempt, shown as this row's description
+  // instead of (only) a toast -- a toast can get cut off before the longer
+  // "unconfirmed, HTTP ___" or raw-error text finishes displaying. Persists
+  // until the next attempt clears it; null falls back to the normal
+  // description.
+  const [gfnResyncResult, setGfnResyncResult] = React.useState<string | null>(
+    null,
+  );
 
   const sisuToken = authentication._tokenStore.getSisuToken();
   const userToken = authentication._tokenStore.getUserToken();
@@ -336,10 +344,11 @@ export function useSettingsScreen(navigation: any, route: any) {
       return;
     }
     setGfnResyncing(true);
+    setGfnResyncResult(null);
     try {
       const tokens = await getValidTokens();
       if (!tokens) {
-        ToastAndroid.show(t('GfnResyncLibraryFailed'), ToastAndroid.SHORT);
+        setGfnResyncResult(t('GfnResyncLibraryFailed'));
         return;
       }
       const sync = await syncGfnStoreConnection('steam', tokens.accessToken);
@@ -351,14 +360,18 @@ export function useSettingsScreen(navigation: any, route: any) {
       }
       const jwt = tokens.idToken ?? tokens.accessToken;
       await Promise.all([fetchGfnOwnedGames(jwt), fetchGfnFullCatalog(jwt)]);
-      ToastAndroid.show(
+      // A plain success clears back to the normal description; an
+      // unconfirmed sync keeps its HTTP status visible as this row's
+      // description until the next attempt.
+      setGfnResyncResult(
         sync.ok
-          ? t('Success')
+          ? null
           : t('GfnResyncLibraryUnconfirmed', {status: sync.status}),
-        ToastAndroid.LONG,
       );
-    } catch {
-      ToastAndroid.show(t('GfnResyncLibraryFailed'), ToastAndroid.SHORT);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      log.info(`GFN Steam connection resync threw: ${detail}`);
+      setGfnResyncResult(t('GfnResyncLibraryFailedDetail', {detail}));
     } finally {
       setGfnResyncing(false);
     }
@@ -564,9 +577,10 @@ export function useSettingsScreen(navigation: any, route: any) {
     if (!gfnSignedIn) {
       return t('GfnResyncLibrarySignedOutDesc');
     }
-    return gfnResyncing
-      ? t('GfnResyncLibraryLoading')
-      : t('GfnResyncLibraryDesc');
+    if (gfnResyncing) {
+      return t('GfnResyncLibraryLoading');
+    }
+    return gfnResyncResult ?? t('GfnResyncLibraryDesc');
   };
 
   const gfnRegionOptions = [

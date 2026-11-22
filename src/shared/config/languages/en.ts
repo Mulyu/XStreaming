@@ -378,6 +378,11 @@ export default {
     GfnResyncLibraryLoading: 'Refreshing…',
     GfnResyncLibrarySignedOutDesc: 'Sign in to GeForce NOW to use this.',
     GfnResyncLibraryFailed: 'Refresh failed — try again',
+    // Shown in place of the generic failure message above when the refresh
+    // threw before it could even ask NVIDIA (e.g. no network) -- carries the
+    // raw error text as this row's description so it survives long enough
+    // to read, unlike a toast.
+    GfnResyncLibraryFailedDetail: 'Refresh failed: {{detail}}',
     // The request that asks NVIDIA to re-check the Steam connection answered
     // with something other than "accepted" (shows the raw HTTP status for
     // reporting back) -- the library list itself was still refreshed from
