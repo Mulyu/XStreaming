@@ -12,18 +12,21 @@
 // is what actually picks up a purchase made directly on Steam (etc.) rather
 // than through GFN.
 //
-// Unlike CloudMatch/GraphQL, which take the OpenID id_token as `GFNJWT
-// <token>`, this service's own createHeader() sends a plain OAuth `Bearer
-// <token>` -- so this needs the access_token specifically (see
-// entities/gfn-account's getValidTokens()), not getValidGfnJwt()'s
-// id_token-preferring value.
+// createHeader() sends this as a plain `Bearer <token>` rather than the
+// `GFNJWT <token>` scheme CloudMatch/GraphQL use -- but the value itself is
+// still the OpenID id_token, not the OAuth access_token: ALSService gets it
+// via idmService.getAuthToken() -> starfleetService.getAuthToken(), which
+// resolves to the session's `data.idToken` (same underlying value
+// getValidGfnJwt() prefers). An earlier version of this file guessed it
+// needed the access_token instead, which the real service answered with 401
+// -- confirmed by decoding a captured idToken.payload offline and tracing
+// this call chain through the bundle a second time; use getValidGfnJwt()'s
+// value (or getValidTokens().idToken) here, not .accessToken.
 //
-// NOT verified against a live account at the time this was written: the
-// endpoint, method and auth scheme are read directly out of the official
-// client's own source, but the exact `platform` path segment GFN expects for
-// Steam (tried here as "steam", the lowercase REST convention) was not
-// confirmed against a real response. The HTTP status syncGfnStoreConnection
-// returns is the signal to go by if it needs correcting.
+// The exact `platform` path segment GFN expects for Steam (tried here as
+// "steam", the lowercase REST convention) is still unconfirmed against a
+// real response. The HTTP status syncGfnStoreConnection returns is the
+// signal to go by if that needs correcting next.
 const ALS_BASE_URL = 'https://als.geforcenow.com/v1';
 
 export type GfnStorePlatform = 'steam';
@@ -42,13 +45,13 @@ export type GfnStoreSyncResult = {
 
 export const syncGfnStoreConnection = async (
   platform: GfnStorePlatform,
-  accessToken: string,
+  idToken: string,
 ): Promise<GfnStoreSyncResult> => {
   try {
     const response = await fetch(`${ALS_BASE_URL}/sync/${platform}`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${idToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({}),
