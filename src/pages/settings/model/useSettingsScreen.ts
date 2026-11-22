@@ -18,6 +18,8 @@ import {
 import {
   clearXcloudData,
   deriveMarketLanguage,
+  fetchGfnOwnedGames,
+  fetchGfnFullCatalog,
 } from '../../../entities/catalog-title';
 import {useGfnSignIn} from '../../../features/gfn-auth';
 import {
@@ -98,6 +100,7 @@ export function useSettingsScreen(navigation: any, route: any) {
   const [gfnQueue, setGfnQueue] = React.useState<GfnQueueStatus | null>(null);
   const [gfnQueueLoading, setGfnQueueLoading] = React.useState(false);
   const [gfnRegions, setGfnRegions] = React.useState<GfnRegionOption[]>([]);
+  const [gfnResyncing, setGfnResyncing] = React.useState(false);
 
   const sisuToken = authentication._tokenStore.getSisuToken();
   const userToken = authentication._tokenStore.getUserToken();
@@ -307,6 +310,38 @@ export function useSettingsScreen(navigation: any, route: any) {
     startXcloudLogin();
   };
 
+  // Force-refetches the signed-in account's GFN owned-games list and full
+  // browse catalog, bypassing their normal caches (6h / 24h -- see
+  // entities/catalog-title's gfnCatalog.ts) -- the same two calls the
+  // Library screen's own pull-to-refresh makes for GFN. A fresh purchase
+  // (on Steam, say) can otherwise sit behind that cache for hours; this
+  // lets it show up without waiting. Both calls write their own cache on
+  // success, which the Library screen's useFocusEffect re-reads the next
+  // time that tab is focused, so no direct coupling between the two pages
+  // is needed.
+  const handleGfnResync = async () => {
+    if (!gfnSignedIn || gfnResyncing) {
+      return;
+    }
+    setGfnResyncing(true);
+    try {
+      const token = await getValidGfnJwt();
+      if (!token) {
+        ToastAndroid.show(t('GfnResyncLibraryFailed'), ToastAndroid.SHORT);
+        return;
+      }
+      await Promise.all([
+        fetchGfnOwnedGames(token),
+        fetchGfnFullCatalog(token),
+      ]);
+      ToastAndroid.show(t('Success'), ToastAndroid.SHORT);
+    } catch {
+      ToastAndroid.show(t('GfnResyncLibraryFailed'), ToastAndroid.SHORT);
+    } finally {
+      setGfnResyncing(false);
+    }
+  };
+
   // Long-pressing a provider's account row copies the token that provider's
   // requests are signed with, for inspecting its API off-device. It only goes
   // to the clipboard, never anywhere else.
@@ -503,6 +538,15 @@ export function useSettingsScreen(navigation: any, route: any) {
     return gfnQueueLoading ? t('GfnQueueLoading') : t('GfnQueueUnavailable');
   };
 
+  const gfnResyncDescription = (): string => {
+    if (!gfnSignedIn) {
+      return t('GfnResyncLibrarySignedOutDesc');
+    }
+    return gfnResyncing
+      ? t('GfnResyncLibraryLoading')
+      : t('GfnResyncLibraryDesc');
+  };
+
   const gfnRegionOptions = [
     {value: '', text: t('Auto')},
     ...gfnRegions.map(r => ({value: r.url, text: r.name})),
@@ -550,6 +594,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     gfnAccount,
     gfnPlaytimeDescription: gfnPlaytimeDescription(),
     gfnQueueDescription: gfnQueueDescription(),
+    gfnResyncDescription: gfnResyncDescription(),
     onChangeLane: setLane,
     updateSetting,
     onLocaleChange: handleLocaleChange,
@@ -561,6 +606,7 @@ export function useSettingsScreen(navigation: any, route: any) {
     onCopyXboxToken: handleCopyXboxToken,
     onCopyContentAccessAuth: handleCopyContentAccessAuth,
     onCopyGfnToken: handleCopyGfnToken,
+    onGfnResync: handleGfnResync,
     onXcloudAccountPress: handleXcloudAccountPress,
     onNavigateInputMapping: () => navigation.navigate('InputMapping'),
   };

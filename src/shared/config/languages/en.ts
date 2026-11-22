@@ -372,6 +372,12 @@ export default {
       'About {{waiting}} waiting · est. wait about {{minutes}} min (unofficial)',
     GfnQueueLoading: 'Checking the queue…',
     GfnQueueUnavailable: 'Queue status unavailable',
+    GfnResyncLibraryTitle: 'Refresh library',
+    GfnResyncLibraryDesc:
+      'Re-check GeForce NOW for new purchases (on Steam, say) right now, instead of waiting for the next automatic refresh.',
+    GfnResyncLibraryLoading: 'Refreshing…',
+    GfnResyncLibrarySignedOutDesc: 'Sign in to GeForce NOW to use this.',
+    GfnResyncLibraryFailed: 'Refresh failed — try again',
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle max duration (minutes)': 'Anti-idle',

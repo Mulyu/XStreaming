@@ -44,6 +44,7 @@ const makeProps = (overrides: Record<string, unknown>) => {
     gfnAccount: {userName: undefined, planTitle: undefined},
     gfnPlaytimeDescription: '',
     gfnQueueDescription: '',
+    gfnResyncDescription: '',
     xboxPlaytimeDescription: '',
     ...overrides,
   };
@@ -153,6 +154,20 @@ describe('provider account rows', () => {
   it('GeForce NOW signed in without a known name: just says signed in', () => {
     const tree = render({lane: 'gfn', gfnSignedIn: true});
     expect(texts(tree)).toContain('GfnSignedIn');
+  });
+
+  it('GeForce NOW: the resync row shows the view model description and presses through', () => {
+    const onGfnResync = jest.fn();
+    const tree = render({
+      lane: 'gfn',
+      gfnSignedIn: true,
+      gfnResyncDescription: 'GfnResyncLibraryDesc',
+      onGfnResync,
+    });
+    expect(texts(tree)).toContain('GfnResyncLibraryTitle');
+    expect(texts(tree)).toContain('GfnResyncLibraryDesc');
+    press(tree, 'GfnResyncLibraryTitle');
+    expect(onGfnResync).toHaveBeenCalledTimes(1);
   });
 });
 
