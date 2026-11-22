@@ -378,6 +378,12 @@ export default {
     GfnResyncLibraryLoading: 'Refreshing…',
     GfnResyncLibrarySignedOutDesc: 'Sign in to GeForce NOW to use this.',
     GfnResyncLibraryFailed: 'Refresh failed — try again',
+    // The request that asks NVIDIA to re-check the Steam connection answered
+    // with something other than "accepted" (shows the raw HTTP status for
+    // reporting back) -- the library list itself was still refreshed from
+    // GFN's own current records.
+    GfnResyncLibraryUnconfirmed:
+      "Library refreshed, but couldn't confirm the Steam re-check (HTTP {{status}})",
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle max duration (minutes)': 'Anti-idle',
