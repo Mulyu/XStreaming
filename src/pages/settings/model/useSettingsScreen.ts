@@ -355,7 +355,7 @@ export function useSettingsScreen(navigation: any, route: any) {
       // use), not the OAuth access_token -- see accountLinking.ts's own
       // comment on how that was confirmed.
       const jwt = tokens.idToken ?? tokens.accessToken;
-      const sync = await syncGfnStoreConnection('steam', jwt);
+      const sync = await syncGfnStoreConnection('STEAM', jwt);
       log.info(`GFN Steam connection resync: HTTP ${sync.status}`);
       if (sync.ok) {
         await new Promise(resolve =>
