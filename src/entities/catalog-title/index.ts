@@ -139,6 +139,7 @@ export type {
   GfnFullCatalogResult,
   GfnFullCatalogStatus,
   GfnAppDetails,
+  GfnLinkedStore,
 } from './api/gfnCatalog';
 export {
   fetchGfnOwnedGames,
@@ -155,6 +156,7 @@ export {
   fetchGfnAppDetails,
   normalizeTitle,
   mergeOwnedGames,
+  fetchGfnLinkedStores,
 } from './api/gfnCatalog';
 
 export {getGfnLocaleSlug, getGfnGraphqlLocale} from './api/gfnLocale';

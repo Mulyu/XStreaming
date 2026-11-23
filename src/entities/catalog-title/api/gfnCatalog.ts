@@ -1039,3 +1039,73 @@ export const mergeOwnedGames = (
 
   return [...merged, ...extras];
 };
+
+export type GfnLinkedStore = {
+  // GFN's own store id, e.g. "STEAM", "XBOX", "EPIC" -- the same uppercase
+  // value already seen on owned-game variants (toOwnedGames' `store`) and
+  // the exact string the account-linking sync API (features/gfn-session's
+  // syncGfnStoreConnection) expects as its platform argument -- both read
+  // this same field off the same account, so there's nothing to translate
+  // between the two.
+  store: string;
+  syncedGameCount?: number;
+};
+
+// Ported from the official web client's own GetUserAccountLinkingData query
+// (captured from its bundled source) -- the same query its Connections page
+// (play.geforcenow.com/mall/#/layout/settings/connections) runs to list
+// which third-party stores this account has linked. A storesData entry only
+// carries accountLinkingData when that store is actually linked -- a store
+// GFN merely offers linking for, but this account hasn't connected, doesn't
+// appear here at all.
+const LINKED_STORES_QUERY = `query GetUserAccountLinkingData{
+  userAccount {
+    storesData {
+      store
+      accountLinkingData {
+        accountSyncingData {
+          totalNumberOfSyncedGfnGames
+        }
+      }
+    }
+  }
+}`;
+
+// The signed-in account's linked stores (Steam, Xbox, Epic, ...), for
+// triggering a GFN-side resync of each -- see syncGfnStoreConnection.
+// Returns [] on any failure, same as this file's other list-shaped fetches.
+export const fetchGfnLinkedStores = async (
+  token: string,
+): Promise<GfnLinkedStore[]> => {
+  let res: Response;
+  try {
+    res = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: graphqlHeaders(token),
+      body: JSON.stringify({query: LINKED_STORES_QUERY}),
+    });
+  } catch {
+    return [];
+  }
+  if (!res.ok) {
+    return [];
+  }
+  let payload: any;
+  try {
+    payload = await res.json();
+  } catch {
+    return [];
+  }
+  const storesData = payload?.data?.userAccount?.storesData;
+  if (!Array.isArray(storesData)) {
+    return [];
+  }
+  return storesData
+    .filter((entry: any) => entry?.store && entry?.accountLinkingData)
+    .map((entry: any) => ({
+      store: entry.store as string,
+      syncedGameCount:
+        entry.accountLinkingData?.accountSyncingData
+          ?.totalNumberOfSyncedGfnGames ?? undefined,
+    }));
+};

@@ -383,12 +383,12 @@ export default {
     // raw error text as this row's description so it survives long enough
     // to read, unlike a toast.
     GfnResyncLibraryFailedDetail: 'Refresh failed: {{detail}}',
-    // The request that asks NVIDIA to re-check the Steam connection answered
-    // with something other than "accepted" (shows the raw HTTP status for
-    // reporting back) -- the library list itself was still refreshed from
-    // GFN's own current records.
+    // At least one linked store's resync request answered with something
+    // other than "accepted" (shows which store(s) and their raw HTTP status
+    // for reporting back) -- the library list itself was still refreshed
+    // from GFN's own current records.
     GfnResyncLibraryUnconfirmed:
-      "Library refreshed, but couldn't confirm the Steam re-check (HTTP {{status}})",
+      "Library refreshed, but couldn't confirm: {{detail}}",
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle max duration (minutes)': 'Anti-idle',

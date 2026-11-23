@@ -376,7 +376,7 @@ export default {
     GfnResyncLibraryFailed: '更新に失敗しました — もう一度お試しください',
     GfnResyncLibraryFailedDetail: '更新に失敗しました: {{detail}}',
     GfnResyncLibraryUnconfirmed:
-      'ライブラリは更新しましたが、Steam再接続の確認はできませんでした (HTTP {{status}})',
+      'ライブラリは更新しましたが、一部ストアの再接続確認はできませんでした: {{detail}}',
     BatteryOptimizationPrompt:
       'バックグラウンドで数分後に切断されないように、このアプリを電池最適化の対象外にしますか？',
     'Anti-idle max duration (minutes)': 'アンチアイドル',
