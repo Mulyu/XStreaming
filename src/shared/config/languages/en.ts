@@ -91,16 +91,10 @@ export default {
     'Current user': 'Current user',
     'Signal server': 'Signal server',
     'Virtual gamepad': 'Virtual gamepad',
-    'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
-      'Custom virtual button positions may differ from actual rendering. Use the actual result as reference.',
     'Customize virtual buttons': 'Customize virtual buttons',
     CustomizeButtonsWithMacroHint:
       'Customize your virtual gamepad layout, including the 3 macro buttons -- tap one in the editor to set its own action sequence.',
     'Edit Virtual Gamepad': 'Edit Virtual Gamepad',
-    'Click on an element to set its size and display':
-      'Tap an element to set its size and visibility',
-    'Drag elements to adjust their position':
-      'Drag elements to adjust their position',
     noAllow:
       'You do not have permission to start cloud gaming. Check whether login has expired and log in again. For cloud games, make sure you have XGPU. For non-XGPU games, make sure you own the game.',
     homeNoAllow:
@@ -284,8 +278,6 @@ export default {
     'Invert gyro aim X': 'Invert gyro aim X',
     'Invert gyro aim Y': 'Invert gyro aim Y',
     'Swap X/Y': 'Swap X/Y',
-    'Hidden controls appear dimmed here; tap one to show it again':
-      'Hidden controls appear dimmed here; tap one to show it again',
     Session: 'Session',
     'Enable cover controls': 'Enable on cover screen',
     'Turbo (auto-fire)': 'Turbo (auto-fire)',
@@ -383,12 +375,12 @@ export default {
     // raw error text as this row's description so it survives long enough
     // to read, unlike a toast.
     GfnResyncLibraryFailedDetail: 'Refresh failed: {{detail}}',
-    // The request that asks NVIDIA to re-check the Steam connection answered
-    // with something other than "accepted" (shows the raw HTTP status for
-    // reporting back) -- the library list itself was still refreshed from
-    // GFN's own current records.
+    // At least one linked store's resync request answered with something
+    // other than "accepted" (shows which store(s) and their raw HTTP status
+    // for reporting back) -- the library list itself was still refreshed
+    // from GFN's own current records.
     GfnResyncLibraryUnconfirmed:
-      "Library refreshed, but couldn't confirm the Steam re-check (HTTP {{status}})",
+      "Library refreshed, but couldn't confirm: {{detail}}",
     BatteryOptimizationPrompt:
       'To keep streaming in the background without being cut off after a few minutes, allow this app to ignore battery optimization?',
     'Anti-idle max duration (minutes)': 'Anti-idle',

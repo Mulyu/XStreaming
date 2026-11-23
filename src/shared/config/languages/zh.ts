@@ -65,13 +65,8 @@ export default {
     'Current user': '当前用户',
     'Signal server': '信令服务器',
     'Virtual gamepad': '虚拟手柄',
-    'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
-      '📢自定义虚拟按键位置可能跟实际渲染存在误差，请以实际效果为准',
     'Customize virtual buttons': '自定义虚拟按键',
     'Edit Virtual Gamepad': '编辑虚拟手柄',
-    'Click on an element to set its size and display':
-      '👆点击元素设置元素大小及显示',
-    'Drag elements to adjust their position': '✋拖动元素调整位置',
     noAllow:
       '你没有权限开始云游戏，请检查登录是否过期并尝试重新登录，如果你正在尝试游玩云游戏，请确保你是XGPU，如果你正在尝试游玩非XGPU游戏，请确保你已经购买此游戏',
     homeNoAllow: '串流权限检查失败，请检查登录是否过期并尝试重新登录',

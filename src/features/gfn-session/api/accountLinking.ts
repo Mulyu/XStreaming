@@ -30,7 +30,16 @@
 // "digital store" list literally uses, uppercase, which answered 202.
 const ALS_BASE_URL = 'https://als.geforcenow.com/v1';
 
-export type GfnStorePlatform = 'STEAM';
+// Whatever store id GFN's own account-linking data returns (entities/
+// catalog-title's fetchGfnLinkedStores) IS this platform argument -- the
+// web client's own accountProviders map is keyed by that same field
+// (`jt.store`) and feeds it straight into this same sync call, uppercase
+// and all, with no per-store translation step anywhere in between. Steam's
+// case ("STEAM") is the only one confirmed live; this isn't typed to a
+// literal union of known-good values because the whole point of that
+// mechanism is that it's generic across whichever stores a given account
+// actually has linked.
+export type GfnStorePlatform = string;
 
 // The official client waits this long (its own
 // accountLinking.defaultSyncWaitInterval) after a successful sync request

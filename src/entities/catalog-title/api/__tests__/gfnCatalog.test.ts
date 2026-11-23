@@ -5,6 +5,7 @@ import {
   toBrowseGames,
   toOwnedGames,
   fetchGfnOwnedGames,
+  fetchGfnLinkedStores,
 } from '../gfnCatalog';
 import {GfnGame} from '../gfnPublicGames';
 
@@ -344,5 +345,53 @@ describe('fetchGfnOwnedGames paging', () => {
     expect(
       (await fetchGfnOwnedGames('token-paging-4')).map(g => g.title),
     ).toEqual(['Game 1']);
+  });
+});
+
+describe('fetchGfnLinkedStores', () => {
+  const json = (body: unknown, ok = true) =>
+    Promise.resolve({ok, json: () => Promise.resolve(body)} as Response);
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('keeps only stores with accountLinkingData, as their own store id', async () => {
+    global.fetch = jest.fn(() =>
+      json({
+        data: {
+          userAccount: {
+            storesData: [
+              {
+                store: 'STEAM',
+                accountLinkingData: {
+                  accountSyncingData: {totalNumberOfSyncedGfnGames: 42},
+                },
+              },
+              {store: 'EPIC', accountLinkingData: null},
+              {
+                store: 'XBOX',
+                accountLinkingData: {accountSyncingData: null},
+              },
+            ],
+          },
+        },
+      }),
+    ) as any;
+
+    expect(await fetchGfnLinkedStores('token-linked-1')).toEqual([
+      {store: 'STEAM', syncedGameCount: 42},
+      {store: 'XBOX', syncedGameCount: undefined},
+    ]);
+  });
+
+  it('returns [] when the request fails, without throwing', async () => {
+    global.fetch = jest.fn(() => json({}, false)) as any;
+    expect(await fetchGfnLinkedStores('token-linked-2')).toEqual([]);
+  });
+
+  it('returns [] on a network failure', async () => {
+    global.fetch = jest.fn(() => Promise.reject(new Error('offline'))) as any;
+    expect(await fetchGfnLinkedStores('token-linked-3')).toEqual([]);
   });
 });
