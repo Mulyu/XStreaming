@@ -1,4 +1,4 @@
-import {parseQueueStatus} from '../queueStatus';
+import {parseQueueStatus, estimateQueueEtaMinutes} from '../queueStatus';
 
 const NOW = 1_800_000_000;
 const payload = (entry: any) => ({data: {'NP-TYO-01': entry}});
@@ -47,5 +47,16 @@ describe('parseQueueStatus', () => {
         NOW,
       ),
     ).toBeNull();
+  });
+});
+
+describe('estimateQueueEtaMinutes', () => {
+  it('matches the tracker fallback formula (6s/person + 2min base)', () => {
+    expect(estimateQueueEtaMinutes(10)).toBe(3);
+    expect(estimateQueueEtaMinutes(78)).toBe(10);
+  });
+
+  it('never reads as less than a minute', () => {
+    expect(estimateQueueEtaMinutes(0)).toBe(2);
   });
 });

@@ -28,6 +28,17 @@ type QueueEntry = {
   eta?: number;
 };
 
+// The tracker's own fallback formula, also usable directly against GFN's
+// own real-time queue position (session.ts's queuePosition) -- e.g. the
+// in-progress queue notification, which has that exact number already and
+// has no reason to also hit this module's own network call just to turn it
+// into a minutes figure.
+export const estimateQueueEtaMinutes = (waiting: number): number =>
+  Math.max(
+    1,
+    Math.ceil((waiting * SECONDS_PER_PERSON + BASE_WAIT_SECONDS) / 60),
+  );
+
 // Pure part, for tests: pick the zone's entry out of the tracker's response
 // and turn it into a figure, or null when it is missing, malformed or old.
 export const parseQueueStatus = (
@@ -47,11 +58,11 @@ export const parseQueueStatus = (
   ) {
     return null;
   }
-  const etaSeconds =
+  const etaMinutes =
     typeof entry?.eta === 'number' && entry.eta > 0
-      ? entry.eta / 1000
-      : waiting * SECONDS_PER_PERSON + BASE_WAIT_SECONDS;
-  return {waiting, etaMinutes: Math.max(1, Math.ceil(etaSeconds / 60))};
+      ? Math.max(1, Math.ceil(entry.eta / 1000 / 60))
+      : estimateQueueEtaMinutes(waiting);
+  return {waiting, etaMinutes};
 };
 
 export const fetchGfnQueueStatus = async (
