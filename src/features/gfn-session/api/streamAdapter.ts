@@ -7,6 +7,7 @@ import {
   GfnStreamSettings,
   DEFAULT_GFN_SETTINGS,
 } from './session';
+import {estimateQueueEtaMinutes} from './queueStatus';
 import {GfnWebRtcClient, GfnConnectionState} from '../lib/webrtcClient';
 import {getValidGfnJwt} from '../../../entities/gfn-account';
 import {getSettings} from '../../../shared/lib/settings';
@@ -225,8 +226,16 @@ export class GfnStreamAdapter {
     }
   }
 
+  // Stops the queue/setup keep-alive notification. Deliberately does NOT
+  // also cancel the separate "seat ready" notification (notifyReady) --
+  // that one is meant to survive until the user actually comes back to the
+  // app (the AppState listener above cancels it then) or taps it
+  // (setAutoCancel, native side). This used to cancel it here too, which
+  // fired the instant the connection succeeded in the background -- often
+  // within a couple of seconds of notifyReady, before the user had any
+  // real chance to see it, let alone act on it. Call cancelReady()
+  // explicitly at call sites where the session is actually ending instead.
   private stopKeepAlive(): void {
-    StreamKeepAliveManager?.cancelReady?.();
     this.keepAliveText = '';
     if (this.keepAlive) {
       this.keepAlive = false;
@@ -277,7 +286,10 @@ export class GfnStreamAdapter {
             const queued = n > 1;
             this.showKeepAlive(
               queued
-                ? t('GfnQueueNotifyPosition', {n})
+                ? t('GfnQueueNotifyPosition', {
+                    n,
+                    minutes: estimateQueueEtaMinutes(n),
+                  })
                 : t('GfnQueueKeepAlive'),
             );
             this.options.onProgress?.(
@@ -334,9 +346,11 @@ export class GfnStreamAdapter {
             this.connectedHandler?.(CONNECTED);
           } else if (s === 'failed') {
             this.stopKeepAlive();
+            StreamKeepAliveManager?.cancelReady?.();
             this.connectedHandler?.(FAILED, detail || s);
           } else if (s === 'disconnected') {
             this.stopKeepAlive();
+            StreamKeepAliveManager?.cancelReady?.();
             this.connectedHandler?.(CLOSED, detail || s);
           } else {
             const region = regionLabelFromBase(this.session?.streamingBaseUrl);
@@ -355,6 +369,7 @@ export class GfnStreamAdapter {
       client.connect();
     } catch (e: any) {
       this.stopKeepAlive();
+      StreamKeepAliveManager?.cancelReady?.();
       if (!this.disposed && e?.message !== 'cancelled') {
         this.connectedHandler?.(
           FAILED,
@@ -388,6 +403,7 @@ export class GfnStreamAdapter {
     this.cancelled = true;
     this.stopInputLoop();
     this.stopKeepAlive();
+    StreamKeepAliveManager?.cancelReady?.();
     this.touchGesture.dispose();
     if (this.appStateSub) {
       this.appStateSub.remove?.();
