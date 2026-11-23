@@ -176,7 +176,6 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   // layout is laid out from the size as it is now, never from a stale one.
   const {width: windowWidth, height: windowHeight} = useWindowDimensions();
   const [showGrid, setShowGrid] = React.useState(true);
-  const [showTips, setShowTips] = React.useState(true);
   const [currentButton, setCurrentButton] = React.useState('');
   const [currentScale, setCurrentScale] = React.useState(1);
   const [currentShow, setCurrentShow] = React.useState(true);
@@ -276,7 +275,6 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     setGyroInvertY(sensorConfig.invertY);
     setGyroSwapXY(sensorConfig.swapXY);
     setShowGrid(true);
-    setShowTips(true);
     setReloadKey(Date.now());
   }, [
     visible,
@@ -1213,36 +1211,6 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
     </Portal>
   );
 
-  const renderTipsModal = () => (
-    <Portal>
-      <Modal
-        visible={showTips}
-        onDismiss={() => setShowTips(false)}
-        contentContainerStyle={styles.modal}>
-        <Card>
-          <Card.Content>
-            <Text>
-              TIPS1:{' '}
-              {t(
-                'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy',
-              )}
-            </Text>
-            <Text>
-              TIPS2: {t('Click on an element to set its size and display')}
-            </Text>
-            <Text>TIPS3: {t('Drag elements to adjust their position')}</Text>
-            <Text>
-              TIPS4:{' '}
-              {t(
-                'Hidden controls appear dimmed here; tap one to show it again',
-              )}
-            </Text>
-          </Card.Content>
-        </Card>
-      </Modal>
-    </Portal>
-  );
-
   // In the editor, hidden controls are still drawn — dimmed — and stay
   // draggable/tappable, so a control set to "Hide" can be selected again and
   // turned back on. (The in-game overlay respects `show` and omits them.)
@@ -1373,7 +1341,6 @@ const VirtualGamepadEditor: React.FC<VirtualGamepadEditorProps> = ({
   return (
     <Portal>
       <View style={styles.overlay}>
-        {renderTipsModal()}
         {renderButtonOptions()}
         {renderMacroStepModal()}
         {renderSwipeModal()}

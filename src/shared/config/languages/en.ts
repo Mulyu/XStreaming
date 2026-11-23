@@ -91,16 +91,10 @@ export default {
     'Current user': 'Current user',
     'Signal server': 'Signal server',
     'Virtual gamepad': 'Virtual gamepad',
-    'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
-      'Custom virtual button positions may differ from actual rendering. Use the actual result as reference.',
     'Customize virtual buttons': 'Customize virtual buttons',
     CustomizeButtonsWithMacroHint:
       'Customize your virtual gamepad layout, including the 3 macro buttons -- tap one in the editor to set its own action sequence.',
     'Edit Virtual Gamepad': 'Edit Virtual Gamepad',
-    'Click on an element to set its size and display':
-      'Tap an element to set its size and visibility',
-    'Drag elements to adjust their position':
-      'Drag elements to adjust their position',
     noAllow:
       'You do not have permission to start cloud gaming. Check whether login has expired and log in again. For cloud games, make sure you have XGPU. For non-XGPU games, make sure you own the game.',
     homeNoAllow:
@@ -284,8 +278,6 @@ export default {
     'Invert gyro aim X': 'Invert gyro aim X',
     'Invert gyro aim Y': 'Invert gyro aim Y',
     'Swap X/Y': 'Swap X/Y',
-    'Hidden controls appear dimmed here; tap one to show it again':
-      'Hidden controls appear dimmed here; tap one to show it again',
     Session: 'Session',
     'Enable cover controls': 'Enable on cover screen',
     'Turbo (auto-fire)': 'Turbo (auto-fire)',

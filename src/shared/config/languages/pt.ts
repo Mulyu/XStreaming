@@ -62,14 +62,8 @@ export default {
     'Current user': 'Usuário atual',
     'Signal server': 'Servidor de sinalização',
     'Virtual gamepad': 'Controle virtual',
-    'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
-      'As posições dos botões virtuais personalizados podem diferir da renderização real. Use o resultado real como referência.',
     'Customize virtual buttons': 'Personalizar botões virtuais',
     'Edit Virtual Gamepad': 'Editar controle virtual',
-    'Click on an element to set its size and display':
-      'Toque em um elemento para definir seu tamanho e visibilidade',
-    'Drag elements to adjust their position':
-      'Arraste elementos para ajustar sua posição',
     noAllow:
       'Você não tem permissão para iniciar jogos na nuvem. Verifique se o login expirou e entre novamente. Para jogos na nuvem, certifique-se de ter o XGPU. Para jogos fora do XGPU, certifique-se de possuir o jogo.',
     homeNoAllow:

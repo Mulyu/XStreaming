@@ -92,15 +92,10 @@ export default {
     'Current user': '現在のユーザー',
     'Signal server': 'シグナルサーバー',
     'Virtual gamepad': '仮想パッド',
-    'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
-      'ボタン位置が実際と異なる場合があります।',
     'Customize virtual buttons': 'ボタンのカスタマイズ',
     CustomizeButtonsWithMacroHint:
       '仮想パッドのレイアウトを編集(マクロボタン3個を含む)。編集画面でマクロボタンをタップすると、そのボタン専用のアクション列を設定できます。',
     'Edit Virtual Gamepad': '仮想パッドを編集',
-    'Click on an element to set its size and display':
-      'クリックしてサイズと表示を設定।',
-    'Drag elements to adjust their position': 'ドラッグして位置調整।',
     noAllow: '権限がありません。ログインとサブスクを確認してください।',
     homeNoAllow: '確認に失敗しました।再ログインしてください।',
     'Auto check update': '自動更新',
@@ -279,8 +274,6 @@ export default {
     'Invert gyro aim X': 'ジャイロエイムの左右反転',
     'Invert gyro aim Y': 'ジャイロエイムの上下反転',
     'Swap X/Y': '左右上下を入れ替え',
-    'Hidden controls appear dimmed here; tap one to show it again':
-      '非表示のコントロールはここでは半透明で表示されます。タップすると再表示できます。',
     Session: 'セッション',
     'Enable cover controls': 'カバー画面で有効にする',
     'Turbo (auto-fire)': '連射（オートファイア）',

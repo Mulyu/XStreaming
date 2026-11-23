@@ -62,14 +62,8 @@ export default {
     'Current user': 'Usuario actual',
     'Signal server': 'Servidor de señalización',
     'Virtual gamepad': 'Mando virtual',
-    'The position of custom virtual buttons may have discrepancies with actual rendering. Please refer to the actual effect for accuracy':
-      'La posición de los botones puede variar ligeramente.',
     'Customize virtual buttons': 'Personalizar botones virtuales',
     'Edit Virtual Gamepad': 'Editar mando virtual',
-    'Click on an element to set its size and display':
-      'Pulsa un elemento para ajustar tamaño y visibilidad.',
-    'Drag elements to adjust their position':
-      'Arrastra para ajustar la posición.',
     noAllow: 'Sin permiso para iniciar. Revisa el login y la suscripción.',
     homeNoAllow: 'Fallo en la comprobación de permisos. Reicia sesión.',
     'Auto check update': 'Actualización automática',
