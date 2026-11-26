@@ -63,6 +63,7 @@ public class RTCFsrVideoView extends ViewGroup {
     private String screenPosition = "center";
     private boolean eglLayoutAspectReflectionFailed;
     private String streamURL;
+    private String nativeTrackId;
     private VideoTrack videoTrack;
 
     private boolean fsrEnabled = true;
@@ -483,6 +484,22 @@ public class RTCFsrVideoView extends ViewGroup {
             }
 
             this.streamURL = streamURL;
+            setVideoTrack(candidateTrack);
+        }
+    }
+
+    // Alternative to setStreamURL for a track that isn't registered in
+    // react-native-webrtc's own WebRTCModule at all -- one of this app's own
+    // native WebRTC clients (GfnWebRtcClient, XcloudWebRtcClient) built it on
+    // a separate PeerConnectionFactory and published it to
+    // NativeVideoTrackHolder by this same id. Mutually exclusive with
+    // setStreamURL; whichever was called last wins.
+    void setNativeTrackId(String nativeTrackId) {
+        if (!Objects.equals(nativeTrackId, this.nativeTrackId)) {
+            this.nativeTrackId = nativeTrackId;
+            VideoTrack candidateTrack = nativeTrackId != null
+                    ? com.xstreaming.webrtc.NativeVideoTrackHolder.INSTANCE.getTrack(nativeTrackId)
+                    : null;
             setVideoTrack(candidateTrack);
         }
     }

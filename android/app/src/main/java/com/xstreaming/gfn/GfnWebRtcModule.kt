@@ -31,6 +31,8 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
 
     private val gson = Gson()
     private var client: GfnWebRtcClient? = null
+    private var remoteAudioTrack: AudioTrack? = null
+    private var currentVideoTrackId: String? = null
 
     override fun getName(): String = "GfnWebRtcModule"
 
@@ -67,15 +69,26 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
             val session = gson.fromJson(sessionJson, GfnSessionInfo::class.java)
                 ?: throw IllegalArgumentException("empty session")
             client?.dispose()
+            currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }
+            currentVideoTrackId = null
+            remoteAudioTrack = null
             val factory = GfnWebRtcFactory.get(reactApplicationContext)
             val newClient = GfnWebRtcClient(
                 session = session,
                 factory = factory,
                 onTrack = { video: VideoTrack?, audio: AudioTrack? ->
-                    video?.let { emitTrack("video", it.id()) }
-                    audio?.let { emitTrack("audio", it.id()) }
+                    video?.let {
+                        com.xstreaming.webrtc.NativeVideoTrackHolder.setTrack(it.id(), it)
+                        currentVideoTrackId = it.id()
+                        emitTrack("video", it.id())
+                    }
+                    audio?.let {
+                        remoteAudioTrack = it
+                        emitTrack("audio", it.id())
+                    }
                 },
                 onState = { state, detail -> emitState(state, detail) },
+                onMicAvailable = { emit("GfnWebRtcMicAvailable", Arguments.createMap()) },
             )
             client = newClient
             newClient.connect()
@@ -91,6 +104,21 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
     fun dispose() {
         client?.dispose()
         client = null
+        currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }
+        currentVideoTrackId = null
+        remoteAudioTrack = null
+    }
+
+    // Mirrors the TS client's remote-audio-track._setVolume(gain) -- used for
+    // the background-mute/foreground-restore gain NativeStream already
+    // applies. org.webrtc's AudioTrack.setVolume takes 0.0-1.0 (and beyond,
+    // though callers here only ever pass [0,1]).
+    @ReactMethod
+    fun setRemoteAudioVolume(volume: Double) {
+        try {
+            remoteAudioTrack?.setVolume(volume)
+        } catch (ignored: Exception) {
+        }
     }
 
     @ReactMethod

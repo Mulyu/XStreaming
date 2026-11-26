@@ -358,6 +358,14 @@ export function NativeStreamScreenBase({
   const [webrtcClient, setWebrtcClient] = React.useState<any>(undefined);
   const [remote, setRemote] = React.useState<any>(null);
   const remoteStream = React.useRef<any>(null);
+  // Set instead of `remote`/remoteStream when the active client is one of
+  // this app's native WebRTC clients (currently GFN) -- its video track
+  // lives in NativeVideoTrackHolder, not react-native-webrtc's MediaStream
+  // registry, so RTCFsrView renders it via nativeTrackId instead of
+  // streamURL. See GfnStreamAdapter's trackHandler wiring.
+  const [nativeVideoTrackId, setNativeVideoTrackId] = React.useState<
+    string | null
+  >(null);
   const audioGainRef = React.useRef(
     (() => {
       const g = Number(getSettings().audio_gain);
@@ -728,16 +736,23 @@ export function NativeStreamScreenBase({
     return true;
   }, []);
 
-  const applyRemoteAudioGain = React.useCallback((gain?: number) => {
-    const nextGain =
-      typeof gain === 'number' && Number.isFinite(gain)
-        ? Math.max(0, Math.min(1, gain))
-        : audioGainRef.current;
-    const audioTracks = remoteStream.current?.getAudioTracks?.() ?? [];
-    audioTracks.forEach((track: any) => {
-      track?._setVolume?.(nextGain);
-    });
-  }, []);
+  const applyRemoteAudioGain = React.useCallback(
+    (gain?: number) => {
+      const nextGain =
+        typeof gain === 'number' && Number.isFinite(gain)
+          ? Math.max(0, Math.min(1, gain))
+          : audioGainRef.current;
+      const audioTracks = remoteStream.current?.getAudioTracks?.() ?? [];
+      audioTracks.forEach((track: any) => {
+        track?._setVolume?.(nextGain);
+      });
+      // GFN's native WebRTC client has no react-native-webrtc MediaStream/track
+      // to read -- its remote audio plays through its own
+      // JavaAudioDeviceModule, with volume set via this bridge call instead.
+      webrtcClient?.setRemoteAudioVolume?.(nextGain);
+    },
+    [webrtcClient],
+  );
 
   const handleAudioGainChange = React.useCallback(
     (value: number) => {
@@ -1511,6 +1526,18 @@ export function NativeStreamScreenBase({
       }
 
       webrtcClient.setTrackHandler(event => {
+        if (event?.trackId) {
+          // GFN's native client: the track lives in NativeVideoTrackHolder,
+          // not a react-native-webrtc MediaStream -- render it via
+          // RTCFsrView's nativeTrackId prop instead of streamURL. Audio
+          // needs no track object here; apply the current mute/gain state
+          // through the native bridge directly.
+          setNativeVideoTrackId(event.trackId);
+          webrtcClient.setRemoteAudioVolume?.(
+            backgroundMutedRef.current ? 0 : audioGainRef.current,
+          );
+          return;
+        }
         const track = event.track;
         if (!remoteStream.current) {
           remoteStream.current = new MediaStream();
@@ -3479,11 +3506,40 @@ export function NativeStreamScreenBase({
     typeof route.params?.postUrl === 'string' ? route.params.postUrl : '';
 
   const renderStreamPlayer = (containerStyle: any, playerStyle: any) => {
-    if (loading || !remoteStream.current?.toURL()) {
+    if (loading || (!nativeVideoTrackId && !remoteStream.current?.toURL())) {
       return null;
     }
 
     const objectFit = video_format === 'Zoom' ? 'cover' : 'contain';
+
+    if (nativeVideoTrackId) {
+      // One of this app's native WebRTC clients (currently GFN) -- the
+      // track isn't in react-native-webrtc's own registry, so it can only
+      // render through RTCFsrView's nativeTrackId prop. RTCFsrView still
+      // uses the shared SurfaceViewRenderer/EGL pipeline with fsrEnabled
+      // toggled off when the FSR upscaling setting itself is off, so there's
+      // no separate plain-RTCView path needed here.
+      return (
+        <View style={containerStyle}>
+          <RTCFsrView
+            style={playerStyle}
+            zOrder={9}
+            objectFit={objectFit}
+            nativeTrackId={nativeVideoTrackId}
+            videoFormat={video_format || ''}
+            screenPosition={screen_position}
+            fsrEnabled={useFsrRenderer}
+            fsrSharpness={fsrSharpness}
+          />
+          <NativeTouchOverlay
+            enabled={showNativeTouch && !isInPictureInPicture}
+            videoFormat={video_format || ''}
+            screenPosition={screen_position}
+            onPointerInput={handleNativePointerInput}
+          />
+        </View>
+      );
+    }
 
     if (useFsrRenderer) {
       return (

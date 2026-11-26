@@ -10,26 +10,24 @@ type Options = {
   onState?: (state: GfnConnectionState, detail?: string) => void;
 };
 
-// Experimental Kotlin-native alternative to GfnWebRtcClient (webrtcClient.ts
-// in this same directory) -- same call shape, so it can become a drop-in
-// swap for GfnStreamAdapter once video-track rendering is wired up. Talks to
+// Kotlin-native replacement for GfnWebRtcClient (webrtcClient.ts in this
+// same directory), used by GfnStreamAdapter in production. Talks to
 // GfnWebRtcModule (android/.../java/com/xstreaming/gfn/GfnWebRtcModule.kt),
 // which does the actual signaling/SDP/data-channel work in Kotlin via
 // org.webrtc directly, with no react-native-webrtc or JS<->native bridge in
-// that hot path at all. This class is just the bridge call wrapper; nothing
-// in the app constructs it yet -- see the "Kotlin移植性調査" doc for why
-// this is the first slice and what still isn't ported (the CloudMatch
-// session-creation HTTP polling in session.ts stays in JS; so does actually
-// attaching the remote video track to a view).
-//
-// Not build-verified: this and the Kotlin it talks to were written without
-// access to an Android SDK/Gradle toolchain in the environment that wrote
-// them. Build it in Android Studio and fix whatever doesn't compile before
-// relying on it.
+// that hot path at all. This class is just the bridge call wrapper. Video
+// rendering goes through RTCFsrView's nativeTrackId prop (backed by
+// NativeVideoTrackHolder), not react-native-webrtc's MediaStream/RTCView --
+// see GfnStreamAdapter's trackHandler wiring. The CloudMatch
+// session-creation HTTP polling in session.ts stays in JS; so does the
+// streaming/queue-setup flow in streamAdapter.ts.
 export class GfnNativeWebRtcClient {
   private readonly emitter = new NativeEventEmitter();
   private stateSub: {remove(): void} | null = null;
   private trackSub: {remove(): void} | null = null;
+  private micAvailableSub: {remove(): void} | null = null;
+  private micAvailableCache = false;
+  private micSendingCache = false;
 
   constructor(
     private readonly session: GfnSession,
@@ -57,6 +55,12 @@ export class GfnNativeWebRtcClient {
       'GfnWebRtcTrackReady',
       (e: {kind: 'video' | 'audio'; trackId: string}) => {
         this.options.onTrack?.(e.kind, e.trackId);
+      },
+    );
+    this.micAvailableSub = this.emitter.addListener(
+      'GfnWebRtcMicAvailable',
+      () => {
+        this.micAvailableCache = true;
       },
     );
 
@@ -135,11 +139,31 @@ export class GfnNativeWebRtcClient {
     if (!GfnWebRtcModule) {
       return false;
     }
-    return (await GfnWebRtcModule.startMic()) ?? false;
+    const started = (await GfnWebRtcModule.startMic()) ?? false;
+    this.micSendingCache = started;
+    return started;
   }
 
   stopMic(): void {
     GfnWebRtcModule?.stopMic();
+    this.micSendingCache = false;
+  }
+
+  // True once the server's offer carried a microphone line this session
+  // (cached from the one-shot GfnWebRtcMicAvailable event -- see
+  // GfnWebRtcClient.kt's prepareMicTransceiver).
+  get micAvailable(): boolean {
+    return this.micAvailableCache;
+  }
+
+  get micSending(): boolean {
+    return this.micSendingCache;
+  }
+
+  // Mirrors the TS client's remote-audio-track._setVolume(gain), used for
+  // the background-mute/foreground-restore gain NativeStream applies.
+  setRemoteAudioVolume(volume: number): void {
+    GfnWebRtcModule?.setRemoteAudioVolume(volume);
   }
 
   // Resolves to a plain diagnostic string (the native RTCStatsReport's own
@@ -153,8 +177,12 @@ export class GfnNativeWebRtcClient {
   dispose(): void {
     this.stateSub?.remove();
     this.trackSub?.remove();
+    this.micAvailableSub?.remove();
     this.stateSub = null;
     this.trackSub = null;
+    this.micAvailableSub = null;
+    this.micAvailableCache = false;
+    this.micSendingCache = false;
     GfnWebRtcModule?.dispose();
   }
 }

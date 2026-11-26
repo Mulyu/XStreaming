@@ -93,6 +93,7 @@ class GfnWebRtcClient(
     private val factory: PeerConnectionFactory,
     private val onTrack: (VideoTrack?, AudioTrack?) -> Unit = { _, _ -> },
     private val onState: (GfnConnectionState, String?) -> Unit = { _, _ -> },
+    private val onMicAvailable: () -> Unit = {},
 ) {
     private var pc: PeerConnection? = null
     private val signaling = GfnSignalingClient(session.signalingUrl, session.sessionId)
@@ -335,6 +336,7 @@ class GfnWebRtcClient(
                 RtpTransceiver.RtpTransceiverDirection.SEND_RECV
             }
             micTransceiver = transceiver
+            onMicAvailable()
         } catch (e: Exception) {
             // Matches the TS version's own best-effort catch.
         }
