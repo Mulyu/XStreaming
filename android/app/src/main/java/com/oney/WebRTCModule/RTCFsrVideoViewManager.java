@@ -32,6 +32,11 @@ public class RTCFsrVideoViewManager extends SimpleViewManager<RTCFsrVideoView> {
         view.setStreamURL(streamURL);
     }
 
+    @ReactProp(name = "nativeTrackId")
+    public void setNativeTrackId(RTCFsrVideoView view, String nativeTrackId) {
+        view.setNativeTrackId(nativeTrackId);
+    }
+
     @ReactProp(name = "zOrder")
     public void setZOrder(RTCFsrVideoView view, int zOrder) {
         view.setZOrder(zOrder);

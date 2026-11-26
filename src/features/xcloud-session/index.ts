@@ -6,12 +6,17 @@
 // not from api/xcloudSessionClient or lib/webrtc directly.
 export {default as XcloudSessionClient} from './api/xcloudSessionClient';
 
-// The WebRTC data-channel transport (input/control/chat/message channels,
-// gamepad driver, packet encoding) that carries an already-negotiated
+// The WebRTC data-channel transport that carries an already-negotiated
 // xCloud/xHome session -- GFN has its own separate client
-// (features/gfn-session's lib/webrtcClient.ts), so this is xcloud-session's
-// own concern, not a shared transport.
-export {default as webRTCClient} from './lib/webrtc';
+// (features/gfn-session's lib/webrtcClient.ts/nativeWebRtcClient.ts), so
+// this is xcloud-session's own concern, not a shared transport.
+//
+// webRTCClient now resolves to the Kotlin-native client (lib/webrtc-native)
+// -- same public shape as the original JS client (lib/webrtc), which stays
+// in the tree unused-but-present (its Channel/Control.ts and Channel/
+// Message.ts are still imported and reused unchanged by the native client)
+// rather than deleted, same precedent as GFN's own webrtcClient.ts.
+export {default as webRTCClient} from './lib/webrtc-native';
 export type {PointerWireData} from './lib/webrtc/Channel/Input';
 
 export {

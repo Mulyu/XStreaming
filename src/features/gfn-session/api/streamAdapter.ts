@@ -8,7 +8,8 @@ import {
   DEFAULT_GFN_SETTINGS,
 } from './session';
 import {estimateQueueEtaMinutes} from './queueStatus';
-import {GfnWebRtcClient, GfnConnectionState} from '../lib/webrtcClient';
+import type {GfnConnectionState} from '../lib/webrtcClient';
+import {GfnNativeWebRtcClient} from '../lib/nativeWebRtcClient';
 import {getValidGfnJwt} from '../../../entities/gfn-account';
 import {getSettings} from '../../../shared/lib/settings';
 import i18next from '../../../i18n';
@@ -157,7 +158,11 @@ type AdapterOptions = {
 };
 
 export class GfnStreamAdapter {
-  private gfnClient: GfnWebRtcClient | null = null;
+  private gfnClient: GfnNativeWebRtcClient | null = null;
+  // Id of the current remote video track in NativeVideoTrackHolder, once
+  // GfnWebRtcTrackReady reports one -- fed to RTCFsrView's nativeTrackId
+  // prop via trackHandler (see setTrackHandler below).
+  private _videoTrackId: string | null = null;
   private session: GfnSession | null = null;
   private token: string | null = null;
   private disposed = false;
@@ -325,14 +330,17 @@ export class GfnStreamAdapter {
         );
       }
 
-      const client = new GfnWebRtcClient(session, {
-        onStream: stream => {
+      const client = new GfnNativeWebRtcClient(session, {
+        onTrack: (kind, trackId) => {
           if (this.disposed) {
             return;
           }
-          // Feed each track into NativeStream's remoteStream.
-          const tracks = stream.getTracks?.() ?? [];
-          tracks.forEach((track: any) => this.trackHandler?.({track}));
+          if (kind === 'video') {
+            // Audio needs no view -- it plays automatically through the
+            // native PeerConnectionFactory's JavaAudioDeviceModule.
+            this._videoTrackId = trackId;
+            this.trackHandler?.({trackId});
+          }
         },
         onState: (s: GfnConnectionState, detail?: string) => {
           if (this.disposed) {
@@ -508,6 +516,18 @@ export class GfnStreamAdapter {
   // shows the mic button only then).
   get micAvailable(): boolean {
     return this.gfnClient?.micAvailable ?? false;
+  }
+
+  // Id of the current remote video track in NativeVideoTrackHolder, for
+  // NativeStream's RTCFsrView nativeTrackId prop.
+  get videoTrackId(): string | null {
+    return this._videoTrackId;
+  }
+
+  // Background-mute/foreground-restore gain -- mirrors the xCloud path's
+  // track._setVolume(gain) on react-native-webrtc's remote audio track.
+  setRemoteAudioVolume(volume: number): void {
+    this.gfnClient?.setRemoteAudioVolume(volume);
   }
 
   // ---- handler setters NativeStream calls ----
