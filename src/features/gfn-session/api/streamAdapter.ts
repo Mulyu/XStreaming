@@ -141,6 +141,10 @@ const CONNECTED = 'connected';
 const CLOSED = 'closed';
 const FAILED = 'failed';
 
+// Grace period before a WebRTC 'disconnected' report is treated as a real
+// close -- see the 'disconnected' branch in launch()'s onState for why.
+const DISCONNECT_GRACE_MS = 8000;
+
 const {StreamKeepAliveManager} = NativeModules;
 const {t} = i18next;
 
@@ -177,6 +181,11 @@ export class GfnStreamAdapter {
   private gpState: any = null;
   // Previous inbound-video stat sample, for bitrate/jitter/decode deltas.
   private lastStat: any = null;
+  // Pending "treat the transient 'disconnected' report as a real close"
+  // timer, and the most recent reason text reported while it's pending --
+  // see onState's 'disconnected' branch.
+  private disconnectGraceTimer: any = null;
+  private disconnectGraceDetail: string | undefined;
 
   // Handlers NativeStream registers.
   private trackHandler: ((event: any) => void) | null = null;
@@ -260,6 +269,14 @@ export class GfnStreamAdapter {
     );
   }
 
+  private clearDisconnectGrace(): void {
+    if (this.disconnectGraceTimer) {
+      BackgroundTimer.clearTimeout(this.disconnectGraceTimer);
+      this.disconnectGraceTimer = null;
+    }
+    this.disconnectGraceDetail = undefined;
+  }
+
   // ---- lifecycle NativeStream calls ----
 
   init(): void {
@@ -340,20 +357,56 @@ export class GfnStreamAdapter {
           return;
         }
         if (s === 'connected') {
+          // A real recovery (or the first connect) -- drop any pending
+          // disconnect-grace timer from a transient blip that healed on its
+          // own, then proceed as normal.
+          this.clearDisconnectGrace();
           // Streaming has begun; the queue keep-alive is no longer needed —
           // NativeStream owns the in-stream keep-alive from here.
           this.stopKeepAlive();
           this.startInputLoop();
           this.connectedHandler?.(CONNECTED);
         } else if (s === 'failed') {
+          // 'failed' is already a terminal ICE/peer-connection state (unlike
+          // 'disconnected' below) -- no point waiting out the grace period.
+          this.clearDisconnectGrace();
           this.stopKeepAlive();
           StreamKeepAliveManager?.cancelReady?.();
           this.connectedHandler?.(FAILED, detail || s);
         } else if (s === 'disconnected') {
-          this.stopKeepAlive();
-          StreamKeepAliveManager?.cancelReady?.();
-          this.connectedHandler?.(CLOSED, detail || s);
+          // WebRTC's 'disconnected' peer/ICE state is explicitly transient
+          // by spec -- a brief network path change, or a background radio
+          // going idle for a moment, commonly trips it, and the connection
+          // often recovers back to 'connected' on its own within a few
+          // seconds. Treating it as an immediate hard close (as this used
+          // to) was most likely to fire exactly when a user backgrounded
+          // the app right as GFN's queue finished (see notifyReady above) --
+          // precisely when a brief connectivity hiccup is common -- closing
+          // the stream screen before they ever got back to tap the "seat
+          // ready" notification, landing them back on the Library screen
+          // with no way to resume. Give it a grace period to self-heal
+          // before treating it as a real disconnect; 'connected' (above)
+          // cancels this if it recovers in time.
+          //
+          // Keep refreshing the reason text on every repeated 'disconnected'
+          // report while the timer is already pending, without restarting
+          // the timer itself -- so a stale reason from the *first* blip
+          // doesn't outlive a more specific one reported moments later,
+          // while the grace window stays a fixed, bounded wait either way.
+          this.disconnectGraceDetail = detail || s;
+          if (!this.disconnectGraceTimer) {
+            this.disconnectGraceTimer = BackgroundTimer.setTimeout(() => {
+              this.disconnectGraceTimer = null;
+              if (this.disposed) {
+                return;
+              }
+              this.stopKeepAlive();
+              StreamKeepAliveManager?.cancelReady?.();
+              this.connectedHandler?.(CLOSED, this.disconnectGraceDetail);
+            }, DISCONNECT_GRACE_MS);
+          }
         } else {
+          this.clearDisconnectGrace();
           const region = regionLabelFromBase(this.session?.streamingBaseUrl);
           const phase: LoadingPhase =
             s === 'negotiating' || s === 'signaling'
@@ -440,6 +493,7 @@ export class GfnStreamAdapter {
   close(): void {
     this.disposed = true;
     this.cancelled = true;
+    this.clearDisconnectGrace();
     this.stopInputLoop();
     this.stopKeepAlive();
     StreamKeepAliveManager?.cancelReady?.();
