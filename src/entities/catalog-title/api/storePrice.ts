@@ -1,14 +1,20 @@
-import axios from 'axios';
+import {NativeModules} from 'react-native';
 import {debugFactory} from '../../../shared/lib/debug';
 import {parseRegion} from '../../../shared/lib/locale';
 import {runPool} from '../../../shared/lib/pool';
 
 const log = debugFactory('storePrice');
 
+const {CatalogDisplayModule} = NativeModules;
+
 // Microsoft Store DisplayCatalog. Public, no auth required. Prices are not
 // included in the Game Pass catalog response, so we fetch them here keyed by
-// the Store "big id" (which, for xCloud titles, equals the productId).
-const CATALOG_URL = 'https://displaycatalog.mp.microsoft.com/v7.0/products';
+// the Store "big id" (which, for xCloud titles, equals the productId). The
+// actual fetch (see CATALOG_URL, same request shape/timeout) now runs
+// natively -- see android/.../java/com/xstreaming/catalog/
+// DisplayCatalogClient.kt -- everything below it (extraction, formatting,
+// chunking, retry) stays in JS: it's pure, already covered by its own unit
+// tests, and gains nothing from running natively.
 
 // The API accepts many ids per request (verified with 400+ in one call); we
 // still chunk conservatively so a single oversized URL can't fail the batch.
@@ -446,24 +452,24 @@ const fetchCatalogProducts = async (
   let ok = true;
   await runPool(chunks, PRICE_CHUNK_CONCURRENCY, async chunk => {
     try {
-      const res = await axios.get(CATALOG_URL, {
-        params: {
-          bigIds: chunk.join(','),
-          market,
-          languages: language,
-          fieldsTemplate: 'details',
-        },
-        headers: {'MS-CV': '0'},
-        timeout: 15000,
-      });
-      const products = res?.data?.Products;
-      if (Array.isArray(products)) {
-        products.forEach((product: any) => {
-          if (product?.ProductId) {
-            handle(product);
-          }
-        });
+      const products = await CatalogDisplayModule?.fetchProducts(
+        chunk.join(','),
+        market,
+        language,
+      );
+      if (!Array.isArray(products)) {
+        // DisplayCatalogClient.fetchProducts always resolves an array (an
+        // empty one for a 2xx response with no Products field) and rejects
+        // on any real fetch failure, so the only way to land here is the
+        // module itself being unavailable -- treat that the same as a
+        // thrown fetch error, not as "legitimately zero products".
+        throw new Error('CatalogDisplayModule.fetchProducts: no products');
       }
+      products.forEach((product: any) => {
+        if (product?.ProductId) {
+          handle(product);
+        }
+      });
     } catch (e) {
       ok = false;
       log.info('catalog batch failed:', e);
@@ -654,17 +660,15 @@ export const fetchTitleDetails = async (
       break;
     }
     try {
-      const res = await axios.get(CATALOG_URL, {
-        params: {
-          bigIds: storeId,
-          market,
-          languages: language,
-          fieldsTemplate: 'details',
-        },
-        headers: {'MS-CV': '0'},
-        timeout: 15000,
-      });
-      const product = res?.data?.Products?.[0];
+      const products = await CatalogDisplayModule?.fetchProducts(
+        storeId,
+        market,
+        language,
+      );
+      if (!Array.isArray(products)) {
+        throw new Error('CatalogDisplayModule.fetchProducts: no products');
+      }
+      const product = products[0];
       if (!product) {
         // A valid "no such product" response — nothing to retry.
         return {...empty, ok: true};
