@@ -377,9 +377,14 @@ export class GfnStreamAdapter {
             }
             if (kind === 'video') {
               // Audio needs no view -- it plays automatically through the
-              // native PeerConnectionFactory's JavaAudioDeviceModule.
+              // native PeerConnectionFactory's JavaAudioDeviceModule. kind
+              // must be included here even though this branch already only
+              // ever fires for 'video' -- NativeStream's setTrackHandler
+              // callback (native-stream/index.tsx) checks event.kind itself
+              // now (to tell GFN's and xCloud's video/audio events apart),
+              // and an event with trackId but no kind fails that check.
               this._videoTrackId = trackId;
-              this.trackHandler?.({trackId});
+              this.trackHandler?.({trackId, kind});
             }
           },
           onState,
