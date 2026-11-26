@@ -21,6 +21,7 @@ import com.xstreaming.xcloud.XcloudWebRtcPackage;
 import com.xstreaming.catalog.CatalogSteamPricePackage;
 import com.xstreaming.catalog.CatalogGfnPublicGamesPackage;
 import com.xstreaming.catalog.CatalogPopularOrderPackage;
+import com.xstreaming.catalog.CatalogXcloudPackage;
 
 import android.media.AudioAttributes;
 import org.webrtc.EglBase;
@@ -68,6 +69,7 @@ public class MainApplication extends Application implements ReactApplication {
             packages.add(new CatalogSteamPricePackage());
             packages.add(new CatalogGfnPublicGamesPackage());
             packages.add(new CatalogPopularOrderPackage());
+            packages.add(new CatalogXcloudPackage());
           return packages;
         }
 

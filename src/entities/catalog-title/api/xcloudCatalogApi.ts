@@ -1,19 +1,33 @@
-import axios from 'axios';
+import {NativeModules} from 'react-native';
 import {getSettings} from '../../../shared/lib/settings';
 import {debugFactory} from '../../../shared/lib/debug';
-import {runPool} from '../../../shared/lib/pool';
 
 const log = debugFactory('catalog-title/xcloudCatalogApi.js');
 
-// Release-date chunks in flight at once -- the whole catalog is a few dozen
-// chunks, which used to all go out together.
-const RELEASE_DATE_CONCURRENCY = 3;
+const {CatalogXcloudModule} = NativeModules;
+
+// Localize the catalog titles with the user's preferred game language so
+// titles match the (already localized) descriptions. The catalog uses
+// zh-TW for Chinese; every other language is passed through as-is (falling
+// back to en-US). Market stays US so the available title set is unchanged.
+// Settings/MMKV access stays in JS (see android's catalog Kotlin package
+// doc comments), so this is resolved here and passed into the native calls
+// that need it rather than read from Kotlin.
+const resolveCatalogLang = (): string => {
+  const preferred = getSettings().preferred_game_language || 'en-US';
+  return preferred.indexOf('zh') > -1 ? 'zh-TW' : preferred;
+};
 
 // xCloud's catalog/title-browsing endpoints, split out of the old
 // xCloud/index.ts god-class -- these never shared XcloudSessionClient's
 // session state (sessionId, isStoped, auth-retry) and produce exactly the
 // title data entities/catalog-title's other caches (xcloudCache, priceCache,
-// ...) already key on, so they live here instead.
+// ...) already key on, so they live here instead. The actual HTTP calls now
+// live in android/app/src/main/java/com/xstreaming/catalog/
+// XcloudCatalogClient.kt; this class forwards to CatalogXcloudModule,
+// keeping its own class name/constructor/method signatures unchanged so
+// every caller (loadXcloudCatalog.ts, useLibraryScreen.ts, pages/chart)
+// needs zero changes.
 export default class XcloudCatalogApi {
   private readonly host: string;
   private readonly gsToken: string;
@@ -23,166 +37,68 @@ export default class XcloudCatalogApi {
     this.gsToken = gsToken;
   }
 
-  getOfficialTitles(): Promise<any[]> {
-    return new Promise(resolve => {
-      let officialTitles: any[] = [];
-      axios
-        .get('https://cdn.jsdelivr.net/gh/Geocld/XStreaming@main/titles.json', {
-          timeout: 30 * 1000,
-        })
-        .then(res => {
-          if (res.status === 200) {
-            officialTitles = res.data.Products;
-            // console.log('officialTitles:', officialTitles);
-          }
-          resolve(officialTitles);
-        })
-        .catch(() => {
-          resolve([]);
-        });
-    });
+  async getOfficialTitles(): Promise<any[]> {
+    try {
+      return (await CatalogXcloudModule?.getOfficialTitles()) ?? [];
+    } catch (e) {
+      log.info('getOfficialTitles error:', e);
+      return [];
+    }
   }
 
-  getGamePassProducts(titles: any[]): Promise<any[]> {
-    return new Promise(resolve => {
-      const productIdQueue: string[] = [];
-      const v2TitleMap: Record<string, any> = {};
-      if (!Array.isArray(titles)) {
-        log.info('[getGamePassProducts] error titles is not a array:', titles);
-        resolve([]);
-      }
-      titles.forEach(title => {
-        if (title.details && title.details.productId) {
-          productIdQueue.push(title.details.productId);
-          v2TitleMap[title.details.productId] = title;
-        }
-      });
-
-      // Get officialTitles
-      this.getOfficialTitles().then(officialTitles => {
-        // Fix: v2/titles API can not get full games
-        this.getCatalogGames(productIdQueue, v2TitleMap).then(titles1 => {
-          this.getCatalogGames(officialTitles, v2TitleMap).then(titles2 => {
-            let mergedTitles = [...titles1, ...titles2];
-            mergedTitles.sort((a, b) =>
-              a.ProductTitle.localeCompare(b.ProductTitle),
-            );
-            mergedTitles = mergedTitles.reduce((acc, current) => {
-              const exists = acc.find(
-                (item: any) => item.ProductTitle === current.ProductTitle,
-              );
-              if (!exists) {
-                acc.push(current);
-              }
-              return acc;
-            }, []);
-            resolve(mergedTitles);
-          });
-        });
-      });
-    });
+  async getGamePassProducts(titles: any[]): Promise<any[]> {
+    if (!Array.isArray(titles)) {
+      log.info('[getGamePassProducts] error titles is not a array:', titles);
+      return [];
+    }
+    try {
+      return (
+        (await CatalogXcloudModule?.getGamePassProducts(
+          titles,
+          resolveCatalogLang(),
+        )) ?? []
+      );
+    } catch (e) {
+      log.info('getGamePassProducts error:', e);
+      return [];
+    }
   }
 
-  getCatalogGames(
+  async getCatalogGames(
     prods: string[] = [],
     v2TitleMap: Record<string, any> = {},
   ): Promise<any[]> {
-    const _settings = getSettings();
-    // Localize the catalog titles with the user's preferred game language so
-    // titles match the (already localized) descriptions. The catalog uses
-    // zh-TW for Chinese; every other language is passed through as-is (falling
-    // back to en-US). Market stays US so the available title set is unchanged.
-    const preferred = _settings.preferred_game_language || 'en-US';
-    const lang = preferred.indexOf('zh') > -1 ? 'zh-TW' : preferred;
-    return new Promise(resolve => {
-      axios
-        .post(
-          `https://catalog.gamepass.com/v3/products?market=US&language=${lang}&hydration=RemoteLowJade0`,
-          {
-            Products: [...prods],
-          },
-          {
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-              'ms-cv': 0,
-              'calling-app-name': 'Xbox Cloud Gaming Web',
-              'calling-app-version': '24.17.63',
-            },
-          },
-        )
-        .then(res => {
-          console.log('POST catalog.gamepass.com/v3/products success');
-          if (res.data && res.data.Products) {
-            const products = res.data.Products;
-            let mergedTitles: any[] = [];
-            for (const key in products) {
-              if (v2TitleMap[key]) {
-                mergedTitles.push({
-                  productId: key,
-                  ...products[key],
-                  ...v2TitleMap[key],
-                });
-              } else {
-                mergedTitles.push({
-                  productId: key,
-                  ...products[key],
-                });
-              }
-            }
-            mergedTitles.sort((a, b) =>
-              a.ProductTitle.localeCompare(b.ProductTitle),
-            );
-            mergedTitles = mergedTitles.filter(item => {
-              return item.titleId || item.XCloudTitleId;
-            });
-            resolve(mergedTitles);
-          } else {
-            resolve([]);
-          }
-        })
-        .catch(e => {
-          console.log('getGamePassProducts error:', e);
-          // reject(e);
-          resolve([]);
-        });
-    });
+    try {
+      return (
+        (await CatalogXcloudModule?.getCatalogGames(
+          prods,
+          v2TitleMap,
+          resolveCatalogLang(),
+        )) ?? []
+      );
+    } catch (e) {
+      log.info('getCatalogGames error:', e);
+      return [];
+    }
   }
 
   // Get all games of XGPU
-  getTitles(): Promise<any[]> {
-    return new Promise<any[]>(resolve => {
-      axios
-        .get(`${this.host}/v2/titles`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + this.gsToken,
-          },
-        })
-        .then(res => {
-          resolve(res.data);
-        })
-        .catch(e => {
-          log.info('getTitles error: ', e);
-          resolve([]);
-        });
-    });
+  async getTitles(): Promise<any> {
+    try {
+      return await CatalogXcloudModule?.getTitles(this.host, this.gsToken);
+    } catch (e) {
+      log.info('getTitles error: ', e);
+      return [];
+    }
   }
 
   // Get recently add games of XGPU
-  getNewTitles(): Promise<any[]> {
-    return new Promise<any[]>(resolve => {
-      axios
-        .get(
-          'https://catalog.gamepass.com/sigls/v2?id=f13cf6b4-57e6-4459-89df-6aec18cf0538&market=US&language=en-US',
-        )
-        .then(res => {
-          resolve(res.data);
-        })
-        .catch(() => {
-          resolve([]);
-        });
-    });
+  async getNewTitles(): Promise<any[]> {
+    try {
+      return (await CatalogXcloudModule?.getNewTitles()) ?? [];
+    } catch (e) {
+      return [];
+    }
   }
 
   // Fetch original release dates from the Microsoft display catalog. Returns a
@@ -190,155 +106,50 @@ export default class XcloudCatalogApi {
   // (RemoteLowJade0) carries no dates, so we enrich from displaycatalog, which
   // exposes MarketProperties[].OriginalReleaseDate. Batched (bigIds is capped),
   // best-effort: unknown/failed products are simply omitted.
-  getReleaseDates(productIds: string[]): Promise<Record<string, string>> {
-    const unique = Array.from(new Set(productIds.filter(Boolean)));
-    const chunks: string[][] = [];
-    for (let i = 0; i < unique.length; i += 40) {
-      chunks.push(unique.slice(i, i + 40));
+  async getReleaseDates(productIds: string[]): Promise<Record<string, string>> {
+    try {
+      return (await CatalogXcloudModule?.getReleaseDates(productIds)) ?? {};
+    } catch (e) {
+      log.info('getReleaseDates error:', e);
+      return {};
     }
-    const result: Record<string, string> = {};
-    return runPool(chunks, RELEASE_DATE_CONCURRENCY, async chunk => {
-      try {
-        const res = await axios.get(
-          'https://displaycatalog.mp.microsoft.com/v7.0/products',
-          {
-            params: {
-              bigIds: chunk.join(','),
-              market: 'US',
-              languages: 'en-US',
-              fieldsTemplate: 'details',
-            },
-            headers: {'MS-CV': '0'},
-            timeout: 30 * 1000,
-          },
-        );
-        const products = res.data?.Products || [];
-        products.forEach((p: any) => {
-          const id = p.ProductId;
-          const date = p.MarketProperties?.[0]?.OriginalReleaseDate;
-          if (id && date) {
-            result[id] = date;
-          }
-        });
-      } catch {}
-    }).then(() => result);
   }
 
   // Get recently play games of user
-  getRecentTitles(): Promise<any[]> {
-    return new Promise<any[]>(resolve => {
-      axios
-        .get(`${this.host}/v2/titles/mru?mr=25`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + this.gsToken,
-          },
-        })
-        .then(res => {
-          // log.info('getRecentTitles res:', res.data);
-          resolve(res.data);
-        })
-        .catch(() => {
-          resolve([]);
-        });
-    });
+  async getRecentTitles(): Promise<any[]> {
+    try {
+      return (
+        (await CatalogXcloudModule?.getRecentTitles(this.host, this.gsToken)) ??
+        []
+      );
+    } catch (e) {
+      return [];
+    }
   }
 
   // Get alternate ids
-  getAlternateIds(id: string): Promise<any[]> {
-    return new Promise(resolve => {
-      axios
-        .post(
-          `${this.host}/v2/titles`,
-          {
-            alternateIdType: 'productId',
-            alternateIds: [id],
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: 'Bearer ' + this.gsToken,
-            },
-          },
-        )
-        .then(res => {
-          console.log('res.data:', res.data);
-          resolve(res.data || []);
-        })
-        .catch(() => {
-          resolve([]);
-        });
-    });
+  async getAlternateIds(id: string): Promise<any[]> {
+    try {
+      return (
+        (await CatalogXcloudModule?.getAlternateIds(
+          this.host,
+          this.gsToken,
+          id,
+        )) ?? []
+      );
+    } catch (e) {
+      return [];
+    }
   }
 
-  getConsoles(): Promise<any[]> {
-    return new Promise(resolve => {
-      const deviceInfo = JSON.stringify({
-        appInfo: {
-          env: {
-            // clientAppId: 'Microsoft.GamingApp',
-            // clientAppType: 'native',
-            // clientAppVersion: '2203.1001.4.0',
-            // clientSdkVersion: '8.5.2',
-            // httpEnvironment: 'prod',
-            // sdkInstallId: '',
-            clientAppId: 'www.xbox.com',
-            clientAppType: 'browser',
-            clientAppVersion: '26.1.97',
-            clientSdkVersion: '10.3.7',
-            httpEnvironment: 'prod',
-            sdkInstallId: '',
-          },
-        },
-        dev: {
-          hw: {
-            make: 'Microsoft',
-            // 'model': 'Surface Pro',
-            model: 'unknown',
-            // 'sdktype': 'native',
-            sdktype: 'web',
-          },
-          os: {
-            name: 'windows',
-            ver: '22631.2715',
-            platform: 'desktop',
-          },
-          displayInfo: {
-            dimensions: {
-              widthInPixels: 1920,
-              heightInPixels: 1080,
-            },
-            pixelDensity: {
-              dpiX: 1,
-              dpiY: 1,
-            },
-          },
-          browser: {
-            browserName: 'chrome',
-            browserVersion: '130.0',
-          },
-        },
-      });
-      axios
-        .get(`${this.host}/v6/servers/home?mr=50`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-MS-Device-Info': deviceInfo,
-            Authorization: 'Bearer ' + this.gsToken,
-          },
-        })
-        .then(res => {
-          log.info('getConsoles res:', res.data);
-          if (res.data && res.data.results) {
-            resolve(res.data.results);
-          } else {
-            resolve([]);
-          }
-        })
-        .catch(e => {
-          console.log('xcloudapi getConsoles err:', e);
-          resolve([]);
-        });
-    });
+  async getConsoles(): Promise<any[]> {
+    try {
+      return (
+        (await CatalogXcloudModule?.getConsoles(this.host, this.gsToken)) ?? []
+      );
+    } catch (e) {
+      log.info('xcloudapi getConsoles err:', e);
+      return [];
+    }
   }
 }
