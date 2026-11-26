@@ -22,6 +22,7 @@ import {useSelector} from 'react-redux';
 import {
   XcloudSessionClient,
   webRTCClient,
+  legacyWebRTCClient,
   PointerWireData,
   SYSTEM_UI_TARGET_GAME_TIME,
   SYSTEM_UI_TYPE_GAME_TIME,
@@ -1501,7 +1502,14 @@ export function NativeStreamScreenBase({
           }) as any,
         );
       } else {
-        setWebrtcClient(new webRTCClient());
+        // Escape hatch back to the original JS WebRTC client if the
+        // Kotlin-native one misbehaves on a given device (see the
+        // 'xcloud_native_webrtc' setting's own description).
+        setWebrtcClient(
+          getSettings().xcloud_native_webrtc !== false
+            ? new webRTCClient()
+            : new legacyWebRTCClient(),
+        );
       }
     }
 

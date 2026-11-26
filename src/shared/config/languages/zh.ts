@@ -144,6 +144,12 @@ export default {
     'Ultra low latency decoding': '超低延迟解码',
     UltraLowLatencyDecoderDesc:
       '开启超低延迟解码，注意该功能不使用所有安卓设备，如出现黑屏等异常请关闭此选项',
+    GfnNativeWebRtcTitle: '原生WebRTC (GFN)',
+    GfnNativeWebRtcDesc:
+      '为GeForce NOW串流使用Kotlin原生WebRTC实现。如出现连接失败、黑屏等问题，请关闭此选项以回退到之前的JS实现。',
+    XcloudNativeWebRtcTitle: '原生WebRTC (Xbox/xCloud)',
+    XcloudNativeWebRtcDesc:
+      '为Xbox/xCloud串流使用Kotlin原生WebRTC实现。如出现连接失败、黑屏等问题，请关闭此选项以回退到之前的JS实现。',
     'Exit stream?': '是否退出串流？',
     Volume: '音量',
     'Polling rate': '手柄回报率',

@@ -8,6 +8,7 @@ import {
   DEFAULT_GFN_SETTINGS,
 } from './session';
 import {estimateQueueEtaMinutes} from './queueStatus';
+import {GfnWebRtcClient} from '../lib/webrtcClient';
 import type {GfnConnectionState} from '../lib/webrtcClient';
 import {GfnNativeWebRtcClient} from '../lib/nativeWebRtcClient';
 import {getValidGfnJwt} from '../../../entities/gfn-account';
@@ -158,7 +159,11 @@ type AdapterOptions = {
 };
 
 export class GfnStreamAdapter {
-  private gfnClient: GfnNativeWebRtcClient | null = null;
+  // The Kotlin-native client is the default; gfn_native_webrtc=false falls
+  // back to the original JS one as an escape hatch (see that setting's own
+  // description). Both share the same call shape by design -- except
+  // setRemoteAudioVolume, native-only, guarded with optional chaining below.
+  private gfnClient: GfnNativeWebRtcClient | GfnWebRtcClient | null = null;
   // Id of the current remote video track in NativeVideoTrackHolder, once
   // GfnWebRtcTrackReady reports one -- fed to RTCFsrView's nativeTrackId
   // prop via trackHandler (see setTrackHandler below).
@@ -330,51 +335,72 @@ export class GfnStreamAdapter {
         );
       }
 
-      const client = new GfnNativeWebRtcClient(session, {
-        onTrack: (kind, trackId) => {
-          if (this.disposed) {
-            return;
-          }
-          if (kind === 'video') {
-            // Audio needs no view -- it plays automatically through the
-            // native PeerConnectionFactory's JavaAudioDeviceModule.
-            this._videoTrackId = trackId;
-            this.trackHandler?.({trackId});
-          }
-        },
-        onState: (s: GfnConnectionState, detail?: string) => {
-          if (this.disposed) {
-            return;
-          }
-          if (s === 'connected') {
-            // Streaming has begun; the queue keep-alive is no longer needed —
-            // NativeStream owns the in-stream keep-alive from here.
-            this.stopKeepAlive();
-            this.startInputLoop();
-            this.connectedHandler?.(CONNECTED);
-          } else if (s === 'failed') {
-            this.stopKeepAlive();
-            StreamKeepAliveManager?.cancelReady?.();
-            this.connectedHandler?.(FAILED, detail || s);
-          } else if (s === 'disconnected') {
-            this.stopKeepAlive();
-            StreamKeepAliveManager?.cancelReady?.();
-            this.connectedHandler?.(CLOSED, detail || s);
-          } else {
-            const region = regionLabelFromBase(this.session?.streamingBaseUrl);
-            const phase: LoadingPhase =
-              s === 'negotiating' || s === 'signaling'
-                ? 'negotiating'
-                : 'starting';
-            this.options.onProgress?.(
-              region ? `${detail || s} (${region})` : detail || s,
-              phase,
-            );
-          }
-        },
-      });
-      this.gfnClient = client;
-      client.connect();
+      const onState = (s: GfnConnectionState, detail?: string) => {
+        if (this.disposed) {
+          return;
+        }
+        if (s === 'connected') {
+          // Streaming has begun; the queue keep-alive is no longer needed —
+          // NativeStream owns the in-stream keep-alive from here.
+          this.stopKeepAlive();
+          this.startInputLoop();
+          this.connectedHandler?.(CONNECTED);
+        } else if (s === 'failed') {
+          this.stopKeepAlive();
+          StreamKeepAliveManager?.cancelReady?.();
+          this.connectedHandler?.(FAILED, detail || s);
+        } else if (s === 'disconnected') {
+          this.stopKeepAlive();
+          StreamKeepAliveManager?.cancelReady?.();
+          this.connectedHandler?.(CLOSED, detail || s);
+        } else {
+          const region = regionLabelFromBase(this.session?.streamingBaseUrl);
+          const phase: LoadingPhase =
+            s === 'negotiating' || s === 'signaling'
+              ? 'negotiating'
+              : 'starting';
+          this.options.onProgress?.(
+            region ? `${detail || s} (${region})` : detail || s,
+            phase,
+          );
+        }
+      };
+
+      // Escape hatch back to the original JS WebRTC client if the
+      // Kotlin-native one misbehaves on a given device (see the
+      // 'gfn_native_webrtc' setting's own description).
+      if (getSettings().gfn_native_webrtc !== false) {
+        const client = new GfnNativeWebRtcClient(session, {
+          onTrack: (kind, trackId) => {
+            if (this.disposed) {
+              return;
+            }
+            if (kind === 'video') {
+              // Audio needs no view -- it plays automatically through the
+              // native PeerConnectionFactory's JavaAudioDeviceModule.
+              this._videoTrackId = trackId;
+              this.trackHandler?.({trackId});
+            }
+          },
+          onState,
+        });
+        this.gfnClient = client;
+        client.connect();
+      } else {
+        const client = new GfnWebRtcClient(session, {
+          onStream: stream => {
+            if (this.disposed) {
+              return;
+            }
+            // Feed each track into NativeStream's remoteStream.
+            const tracks = stream.getTracks?.() ?? [];
+            tracks.forEach((track: any) => this.trackHandler?.({track}));
+          },
+          onState,
+        });
+        this.gfnClient = client;
+        client.connect();
+      }
     } catch (e: any) {
       this.stopKeepAlive();
       StreamKeepAliveManager?.cancelReady?.();
@@ -526,8 +552,13 @@ export class GfnStreamAdapter {
 
   // Background-mute/foreground-restore gain -- mirrors the xCloud path's
   // track._setVolume(gain) on react-native-webrtc's remote audio track.
+  // Native-only (the JS client's remote audio track, when active, is
+  // volume-controlled directly via trackHandler's {track} path instead --
+  // see NativeStream's own applyRemoteAudioGain).
   setRemoteAudioVolume(volume: number): void {
-    this.gfnClient?.setRemoteAudioVolume(volume);
+    (this.gfnClient as GfnNativeWebRtcClient | null)?.setRemoteAudioVolume?.(
+      volume,
+    );
   }
 
   // ---- handler setters NativeStream calls ----

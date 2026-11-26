@@ -60,6 +60,16 @@ const xcloud = [
     data: [],
   },
   {
+    name: 'xcloud_native_webrtc',
+    type: 'radio',
+    title: t('XcloudNativeWebRtcTitle'),
+    description: t('XcloudNativeWebRtcDesc'),
+    data: [
+      {value: false, text: t('Disable')},
+      {value: true, text: t('Enable')},
+    ],
+  },
+  {
     name: 'anti_idle_max_minutes',
     type: 'slider',
     min: 0,

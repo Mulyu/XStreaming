@@ -16,7 +16,13 @@ export {default as XcloudSessionClient} from './api/xcloudSessionClient';
 // in the tree unused-but-present (its Channel/Control.ts and Channel/
 // Message.ts are still imported and reused unchanged by the native client)
 // rather than deleted, same precedent as GFN's own webrtcClient.ts.
+//
+// legacyWebRTCClient is the original JS implementation, still exported so
+// NativeStream can fall back to it when the 'xcloud_native_webrtc' setting
+// is off -- an escape hatch in case the native client misbehaves on a given
+// device (see the black-screen bug this setting was added to work around).
 export {default as webRTCClient} from './lib/webrtc-native';
+export {default as legacyWebRTCClient} from './lib/webrtc';
 export type {PointerWireData} from './lib/webrtc/Channel/Input';
 
 export {
