@@ -221,7 +221,7 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
             return
         }
         current.getStats { report ->
-            promise.resolve(report?.toString())
+            promise.resolve(com.xstreaming.webrtc.StatsReportConverter.toWritableArray(report))
         }
     }
 

@@ -166,11 +166,12 @@ export class GfnNativeWebRtcClient {
     GfnWebRtcModule?.setRemoteAudioVolume(volume);
   }
 
-  // Resolves to a plain diagnostic string (the native RTCStatsReport's own
-  // toString()), not the structured, forEach-able report the TS client's
-  // getStats() returns -- the performance overlay's own stats parsing isn't
-  // ported to read this shape yet.
-  getStats(): Promise<string | null> {
+  // Resolves an array of plain stat objects -- GfnWebRtcModule converts the
+  // native RTCStatsReport via StatsReportConverter.kt into the same
+  // forEach-able, W3C-webrtc-stats-shaped report react-native-webrtc's own
+  // getStats() returns, which is what GfnStreamAdapter.getStreamState()'s
+  // parsing already expects.
+  getStats(): Promise<any[] | null> {
     return GfnWebRtcModule?.getStats() ?? Promise.resolve(null);
   }
 
