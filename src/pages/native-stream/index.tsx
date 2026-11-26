@@ -1870,6 +1870,7 @@ export function NativeStreamScreenBase({
       const exit = async () => {
         setLoading(false);
         webrtcClient && webrtcClient.close();
+        setNativeVideoTrackId(null);
         await waitStopStream(streamApi);
         finishStreamExit();
       };
@@ -2265,6 +2266,7 @@ export function NativeStreamScreenBase({
     }
     setIsExiting(true);
     webrtcClient && webrtcClient.close();
+    setNativeVideoTrackId(null);
     await waitStopStream(streamApi);
     finishStreamExit();
   }, [finishStreamExit, isExiting, streamApi, t, waitStopStream, webrtcClient]);

@@ -85,6 +85,19 @@ class XcloudWebRtcModule(reactContext: ReactApplicationContext) :
     private var client: XcloudWebRtcClient? = null
     private var remoteAudioTrack: AudioTrack? = null
     private var currentVideoTrackId: String? = null
+    // Bumped on every init() (and dispose()) so a stale client's callbacks
+    // -- its PeerConnection's dispose() doesn't guarantee its Observer stops
+    // posting onAddTrack/onConnectionChange/data-channel events
+    // synchronously -- can tell they no longer belong to the current
+    // connection and no-op instead of overwriting state for a newer one.
+    // Same race GfnWebRtcModule guards against; see its own comment.
+    // @Volatile: those callbacks run on WebRTC's own threads, not this RN
+    // module's; without it a callback thread could read a cached, stale
+    // value and pass the check it exists to fail. Bumped before dispose()
+    // is called, not after, so a callback racing the dispose() call itself
+    // already sees the new generation.
+    @Volatile
+    private var connectGeneration = 0
 
     override fun getName(): String = "XcloudWebRtcModule"
 
@@ -113,66 +126,81 @@ class XcloudWebRtcModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun init() {
+        val myGeneration = ++connectGeneration
+        val current = { myGeneration == connectGeneration }
         client?.dispose()
         currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }
         currentVideoTrackId = null
         remoteAudioTrack = null
-
         val factory = GfnWebRtcFactory.get(reactApplicationContext)
         val newClient = XcloudWebRtcClient(
             factory = factory,
             onTrack = { video: VideoTrack?, audio: AudioTrack? ->
-                video?.let {
-                    val id = "xcloud-${it.id()}"
-                    com.xstreaming.webrtc.NativeVideoTrackHolder.setTrack(id, it)
-                    currentVideoTrackId = id
-                    emitTrack("video", id)
-                }
-                audio?.let {
-                    remoteAudioTrack = it
-                    emitTrack("audio", it.id())
+                if (current()) {
+                    video?.let {
+                        val id = "xcloud-${it.id()}"
+                        com.xstreaming.webrtc.NativeVideoTrackHolder.setTrack(id, it)
+                        currentVideoTrackId = id
+                        emitTrack("video", id)
+                    }
+                    audio?.let {
+                        remoteAudioTrack = it
+                        emitTrack("audio", it.id())
+                    }
                 }
             },
-            onState = { state, detail -> emitState(state, detail) },
+            onState = { state, detail -> if (current()) emitState(state, detail) },
             onChannelOpen = { name ->
-                val payload = Arguments.createMap()
-                payload.putString("channel", name)
-                emit("XcloudChannelOpen", payload)
+                if (current()) {
+                    val payload = Arguments.createMap()
+                    payload.putString("channel", name)
+                    emit("XcloudChannelOpen", payload)
+                }
             },
             onChannelMessage = { name, data ->
-                val payload = Arguments.createMap()
-                payload.putString("channel", name)
-                payload.putString("data", data)
-                emit("XcloudChannelMessage", payload)
+                if (current()) {
+                    val payload = Arguments.createMap()
+                    payload.putString("channel", name)
+                    payload.putString("data", data)
+                    emit("XcloudChannelMessage", payload)
+                }
             },
             onChannelClose = { name ->
-                val payload = Arguments.createMap()
-                payload.putString("channel", name)
-                emit("XcloudChannelClose", payload)
+                if (current()) {
+                    val payload = Arguments.createMap()
+                    payload.putString("channel", name)
+                    emit("XcloudChannelClose", payload)
+                }
             },
             onLocalIceCandidate = { c ->
-                val payload = Arguments.createMap()
-                payload.putString("candidate", c.sdp)
-                if (c.sdpMid != null) payload.putString("sdpMid", c.sdpMid) else payload.putNull("sdpMid")
-                payload.putDouble("sdpMLineIndex", c.sdpMLineIndex.toDouble())
-                emit("XcloudLocalIceCandidate", payload)
+                if (current()) {
+                    val payload = Arguments.createMap()
+                    payload.putString("candidate", c.sdp)
+                    if (c.sdpMid != null) payload.putString("sdpMid", c.sdpMid) else payload.putNull("sdpMid")
+                    payload.putDouble("sdpMLineIndex", c.sdpMLineIndex.toDouble())
+                    emit("XcloudLocalIceCandidate", payload)
+                }
             },
             onRenegotiationOffer = { sdp ->
-                val payload = Arguments.createMap()
-                payload.putString("sdp", sdp)
-                emit("XcloudRenegotiationOffer", payload)
+                if (current()) {
+                    val payload = Arguments.createMap()
+                    payload.putString("sdp", sdp)
+                    emit("XcloudRenegotiationOffer", payload)
+                }
             },
             onRumble = { rumble ->
-                val payload = Arguments.createMap()
-                payload.putInt("startDelay", rumble.startDelay)
-                payload.putInt("duration", rumble.duration)
-                payload.putDouble("weakMagnitude", rumble.weakMagnitude)
-                payload.putDouble("strongMagnitude", rumble.strongMagnitude)
-                payload.putDouble("leftTrigger", rumble.leftTrigger)
-                payload.putDouble("rightTrigger", rumble.rightTrigger)
-                payload.putInt("delayMs", rumble.delayMs)
-                payload.putInt("repeat", rumble.repeat)
-                emit("XcloudRumble", payload)
+                if (current()) {
+                    val payload = Arguments.createMap()
+                    payload.putInt("startDelay", rumble.startDelay)
+                    payload.putInt("duration", rumble.duration)
+                    payload.putDouble("weakMagnitude", rumble.weakMagnitude)
+                    payload.putDouble("strongMagnitude", rumble.strongMagnitude)
+                    payload.putDouble("leftTrigger", rumble.leftTrigger)
+                    payload.putDouble("rightTrigger", rumble.rightTrigger)
+                    payload.putInt("delayMs", rumble.delayMs)
+                    payload.putInt("repeat", rumble.repeat)
+                    emit("XcloudRumble", payload)
+                }
             },
         )
         client = newClient
@@ -216,6 +244,7 @@ class XcloudWebRtcModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun close() {
+        connectGeneration++
         client?.dispose()
         client = null
         currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }

@@ -20,11 +20,11 @@ import org.webrtc.VideoTrack
  * already-resolved session (signalingUrl, sessionId, iceServers, stream
  * settings) once a seat is ready.
  *
- * Not wired up yet: attaching the remote VideoTrack to a renderer. onTrack
- * below only announces that a track arrived (kind + id) via
- * GfnWebRtcTrackReady -- actually rendering it needs either a new prop on
- * RTCFsrVideoView or a dedicated view, which is a separate decision from
- * porting the WebRTC/signaling layer itself.
+ * onTrack announces each arriving track (kind + id) via GfnWebRtcTrackReady
+ * and registers the video one in NativeVideoTrackHolder, so RTCFsrView can
+ * render it by id (nativeTrackId prop) without going through
+ * react-native-webrtc's own MediaStream/streamURL registry, which this
+ * client's separately-built PeerConnectionFactory never appears in.
  */
 class GfnWebRtcModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
@@ -33,6 +33,18 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
     private var client: GfnWebRtcClient? = null
     private var remoteAudioTrack: AudioTrack? = null
     private var currentVideoTrackId: String? = null
+    // Bumped on every connect() so a stale client's callbacks -- its
+    // PeerConnection's dispose() doesn't guarantee its Observer stops
+    // posting onAddTrack/onConnectionChange synchronously -- can tell they
+    // no longer belong to the current connection and no-op instead of
+    // overwriting currentVideoTrackId/remoteAudioTrack for a newer one.
+    // @Volatile: those callbacks run on WebRTC's own threads, not this RN
+    // module's; without it a callback thread could read a cached, stale
+    // value and pass the check it exists to fail. Bumped before dispose()
+    // is called, not after, so a callback racing the dispose() call itself
+    // already sees the new generation.
+    @Volatile
+    private var connectGeneration = 0
 
     override fun getName(): String = "GfnWebRtcModule"
 
@@ -68,6 +80,7 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
         try {
             val session = gson.fromJson(sessionJson, GfnSessionInfo::class.java)
                 ?: throw IllegalArgumentException("empty session")
+            val myGeneration = ++connectGeneration
             client?.dispose()
             currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }
             currentVideoTrackId = null
@@ -77,18 +90,26 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
                 session = session,
                 factory = factory,
                 onTrack = { video: VideoTrack?, audio: AudioTrack? ->
-                    video?.let {
-                        com.xstreaming.webrtc.NativeVideoTrackHolder.setTrack(it.id(), it)
-                        currentVideoTrackId = it.id()
-                        emitTrack("video", it.id())
-                    }
-                    audio?.let {
-                        remoteAudioTrack = it
-                        emitTrack("audio", it.id())
+                    if (myGeneration == connectGeneration) {
+                        video?.let {
+                            com.xstreaming.webrtc.NativeVideoTrackHolder.setTrack(it.id(), it)
+                            currentVideoTrackId = it.id()
+                            emitTrack("video", it.id())
+                        }
+                        audio?.let {
+                            remoteAudioTrack = it
+                            emitTrack("audio", it.id())
+                        }
                     }
                 },
-                onState = { state, detail -> emitState(state, detail) },
-                onMicAvailable = { emit("GfnWebRtcMicAvailable", Arguments.createMap()) },
+                onState = { state, detail ->
+                    if (myGeneration == connectGeneration) emitState(state, detail)
+                },
+                onMicAvailable = {
+                    if (myGeneration == connectGeneration) {
+                        emit("GfnWebRtcMicAvailable", Arguments.createMap())
+                    }
+                },
             )
             client = newClient
             newClient.connect()
@@ -102,6 +123,7 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun dispose() {
+        connectGeneration++
         client?.dispose()
         client = null
         currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }

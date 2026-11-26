@@ -500,6 +500,15 @@ public class RTCFsrVideoView extends ViewGroup {
             VideoTrack candidateTrack = nativeTrackId != null
                     ? com.xstreaming.webrtc.NativeVideoTrackHolder.INSTANCE.getTrack(nativeTrackId)
                     : null;
+            // Same as setStreamURL above: clear through null first so a
+            // switch between two different non-null tracks (e.g. a
+            // reconnect that swaps in a new session's track without this
+            // view ever going through a null id) also goes through
+            // cleanSurfaceViewRenderer() instead of showing the old track's
+            // last frame until the new one's first frame arrives.
+            if (this.videoTrack != candidateTrack) {
+                setVideoTrack(null);
+            }
             setVideoTrack(candidateTrack);
         }
     }
