@@ -56,6 +56,15 @@ export type Settings = {
   /** Multiplier applied to MouseTrackpadZone's per-move finger delta before
    * it's sent -- see entities/gfn-input's MouseTrackpadZone.tsx. */
   gfn_mouse_trackpad_sensitivity: number;
+  /** Use the Kotlin-native WebRTC client (GfnNativeWebRtcClient) for GFN
+   * streaming instead of the original JS one (GfnWebRtcClient) -- an escape
+   * hatch back to the previously-shipped implementation if the native one
+   * misbehaves on a given device. */
+  gfn_native_webrtc: boolean;
+  /** Use the Kotlin-native WebRTC client (lib/webrtc-native) for xCloud/xHome
+   * streaming instead of the original JS one (lib/webrtc) -- same escape
+   * hatch as gfn_native_webrtc, for the xCloud path. */
+  xcloud_native_webrtc: boolean;
 };
 
 const defaultSettings: Settings = {
@@ -93,6 +102,8 @@ const defaultSettings: Settings = {
   gfn_bitrate: 20,
   gfn_region: '',
   gfn_mouse_trackpad_sensitivity: 1.4,
+  gfn_native_webrtc: true,
+  xcloud_native_webrtc: true,
 };
 
 export const saveSettings = (settings: Settings) => {

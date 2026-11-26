@@ -378,6 +378,12 @@ export default {
     'Ultra low latency decoding': '超低遅延デコード',
     UltraLowLatencyDecoderDesc:
       '超低遅延デコードを有効にします。この機能はすべてのAndroid端末で動作するわけではありません。黒画面などの問題が発生した場合はこのオプションを無効にしてください。',
+    GfnNativeWebRtcTitle: 'ネイティブWebRTC (GFN)',
+    GfnNativeWebRtcDesc:
+      'GeForce NOWの配信にKotlinネイティブのWebRTC実装を使用します。接続できない・黒画面などの問題が発生した場合は、このオプションを無効にして以前のJS実装に戻してください。',
+    XcloudNativeWebRtcTitle: 'ネイティブWebRTC (Xbox/xCloud)',
+    XcloudNativeWebRtcDesc:
+      'Xbox/xCloudの配信にKotlinネイティブのWebRTC実装を使用します。接続できない・黒画面などの問題が発生した場合は、このオプションを無効にして以前のJS実装に戻してください。',
     'Exit stream?': '終了しますか？',
     Volume: '音量',
     'Polling rate': 'ポーリングレート',

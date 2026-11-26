@@ -22,6 +22,7 @@ import {useSelector} from 'react-redux';
 import {
   XcloudSessionClient,
   webRTCClient,
+  legacyWebRTCClient,
   PointerWireData,
   SYSTEM_UI_TARGET_GAME_TIME,
   SYSTEM_UI_TYPE_GAME_TIME,
@@ -1501,7 +1502,14 @@ export function NativeStreamScreenBase({
           }) as any,
         );
       } else {
-        setWebrtcClient(new webRTCClient());
+        // Escape hatch back to the original JS WebRTC client if the
+        // Kotlin-native one misbehaves on a given device (see the
+        // 'xcloud_native_webrtc' setting's own description).
+        setWebrtcClient(
+          getSettings().xcloud_native_webrtc !== false
+            ? new webRTCClient()
+            : new legacyWebRTCClient(),
+        );
       }
     }
 
@@ -1527,12 +1535,20 @@ export function NativeStreamScreenBase({
 
       webrtcClient.setTrackHandler(event => {
         if (event?.trackId) {
-          // GFN's native client: the track lives in NativeVideoTrackHolder,
-          // not a react-native-webrtc MediaStream -- render it via
-          // RTCFsrView's nativeTrackId prop instead of streamURL. Audio
-          // needs no track object here; apply the current mute/gain state
-          // through the native bridge directly.
-          setNativeVideoTrackId(event.trackId);
+          // One of this app's native WebRTC clients (GFN, xCloud): the
+          // track lives in NativeVideoTrackHolder, not a
+          // react-native-webrtc MediaStream. Only a video track renders via
+          // RTCFsrView's nativeTrackId prop -- an audio-track event also
+          // carries a (different) trackId here, which must NOT overwrite
+          // the video one, or the view ends up pointed at an id
+          // NativeVideoTrackHolder never registered (black screen: a
+          // SurfaceViewRenderer with no attached track paints its
+          // background color). Audio needs no view either way; it plays
+          // automatically, so just (re-)apply the current mute/gain state
+          // through the native bridge whenever either track arrives.
+          if (event.kind === 'video') {
+            setNativeVideoTrackId(event.trackId);
+          }
           webrtcClient.setRemoteAudioVolume?.(
             backgroundMutedRef.current ? 0 : audioGainRef.current,
           );

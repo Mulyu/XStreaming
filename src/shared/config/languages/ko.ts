@@ -137,6 +137,12 @@ export default {
     'Ultra low latency decoding': '초저지연 디코딩',
     UltraLowLatencyDecoderDesc:
       '초저지연 디코딩을 활성화합니다. 이 기능은 모든 Android 기기에서 작동하지 않습니다. 검은 화면 등 문제가 발생하면 이 옵션을 끄세요.',
+    GfnNativeWebRtcTitle: '네이티브 WebRTC (GFN)',
+    GfnNativeWebRtcDesc:
+      'GeForce NOW 스트리밍에 Kotlin 네이티브 WebRTC 클라이언트를 사용합니다. 연결 실패, 검은 화면 등의 문제가 발생하면 이 옵션을 꺼서 이전 JS 구현으로 되돌리세요.',
+    XcloudNativeWebRtcTitle: '네이티브 WebRTC (Xbox/xCloud)',
+    XcloudNativeWebRtcDesc:
+      'Xbox/xCloud 스트리밍에 Kotlin 네이티브 WebRTC 클라이언트를 사용합니다. 연결 실패, 검은 화면 등의 문제가 발생하면 이 옵션을 꺼서 이전 JS 구현으로 되돌리세요.',
     'Exit stream?': '스트리밍을 종료하시겠습니까?',
     Volume: '볼륨',
     'Polling rate': '폴링 레이트',

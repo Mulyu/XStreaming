@@ -35,6 +35,16 @@ const gfn = [
     ],
   },
   {
+    name: 'gfn_native_webrtc',
+    type: 'radio',
+    title: t('GfnNativeWebRtcTitle'),
+    description: t('GfnNativeWebRtcDesc'),
+    data: [
+      {value: false, text: t('Disable')},
+      {value: true, text: t('Enable')},
+    ],
+  },
+  {
     name: 'gfn_region',
     type: 'radio',
     title: t('GfnRegionTitle'),

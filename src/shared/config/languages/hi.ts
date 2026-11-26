@@ -141,6 +141,12 @@ export default {
     'Ultra low latency decoding': 'अल्ट्रा लो लेटेंसी डिकोडिंग',
     UltraLowLatencyDecoderDesc:
       'अल्ट्रा लो लेटेंसी डिकोडिंग चालू करें। यह सुविधा सभी Android डिवाइस पर काम नहीं करती है। काली स्क्रीन या अन्य समस्या होने पर इस विकल्प को बंद करें।',
+    GfnNativeWebRtcTitle: 'नेटिव WebRTC (GFN)',
+    GfnNativeWebRtcDesc:
+      'GeForce NOW स्ट्रीमिंग के लिए Kotlin नेटिव WebRTC क्लाइंट का उपयोग करें। कनेक्शन विफलता, काली स्क्रीन या अन्य समस्या होने पर इस विकल्प को बंद करें ताकि पिछले JS कार्यान्वयन पर वापस जाया जा सके।',
+    XcloudNativeWebRtcTitle: 'नेटिव WebRTC (Xbox/xCloud)',
+    XcloudNativeWebRtcDesc:
+      'Xbox/xCloud स्ट्रीमिंग के लिए Kotlin नेटिव WebRTC क्लाइंट का उपयोग करें। कनेक्शन विफलता, काली स्क्रीन या अन्य समस्या होने पर इस विकल्प को बंद करें ताकि पिछले JS कार्यान्वयन पर वापस जाया जा सके।',
     'Exit stream?': 'स्ट्रीमिंग बंद करें?',
     Volume: 'वॉल्यूम',
     'Polling rate': 'पोलिंग रेट',

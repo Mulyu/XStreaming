@@ -265,6 +265,12 @@ const SettingsView: React.FC<Props> = ({
             onChange={onSignalingCloudChange}
             emptyLabel={t('Default')}
           />
+          <SwitchRow
+            title={M('xcloud_native_webrtc').title}
+            desc={M('xcloud_native_webrtc').description}
+            value={settings.xcloud_native_webrtc}
+            onChange={v => updateSetting('xcloud_native_webrtc', v)}
+          />
 
           <SectionLabel title={t('SectionSignInLanguage')} />
           <ChoiceRow
@@ -352,6 +358,13 @@ const SettingsView: React.FC<Props> = ({
             onChange={v => updateSetting('gfn_region', v)}
             accent={palette.provider.gfn}
             emptyLabel={t('Auto')}
+          />
+          <SwitchRow
+            title={M('gfn_native_webrtc').title}
+            desc={M('gfn_native_webrtc').description}
+            value={settings.gfn_native_webrtc}
+            onChange={v => updateSetting('gfn_native_webrtc', v)}
+            accent={palette.provider.gfn}
           />
         </ScrollView>
       )}

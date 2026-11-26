@@ -139,6 +139,12 @@ export default {
     'Ultra low latency decoding': 'Decodificación de latencia ultrabaja',
     UltraLowLatencyDecoderDesc:
       'Activa la decodificación de latencia ultrabaja. Esta función no funciona en todos los dispositivos Android. Desactiva esta opción si aparece una pantalla negra u otros problemas.',
+    GfnNativeWebRtcTitle: 'WebRTC nativo (GFN)',
+    GfnNativeWebRtcDesc:
+      'Usa el cliente WebRTC nativo de Kotlin para la transmisión de GeForce NOW. Desactiva esta opción para volver a la implementación JS anterior si tienes fallos de conexión, pantalla negra u otros problemas.',
+    XcloudNativeWebRtcTitle: 'WebRTC nativo (Xbox/xCloud)',
+    XcloudNativeWebRtcDesc:
+      'Usa el cliente WebRTC nativo de Kotlin para la transmisión de Xbox/xCloud. Desactiva esta opción para volver a la implementación JS anterior si tienes fallos de conexión, pantalla negra u otros problemas.',
     'Exit stream?': '¿Cerrar streaming?',
     Volume: 'Volumen',
     'Polling rate': 'Tasa de sondeo',
