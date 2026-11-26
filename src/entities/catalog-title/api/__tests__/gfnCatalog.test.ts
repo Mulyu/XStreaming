@@ -1,13 +1,42 @@
+jest.mock('react-native', () => {
+  // Mutate the real module's NativeModules in place rather than spreading
+  // react-native's own top-level exports: that spread would read (and so
+  // eagerly evaluate) every lazy export, including iOS-only native-module
+  // getters (e.g. Settings) that fail outside this project's own
+  // Android-only jest.setup.js mocking.
+  const RN = jest.requireActual('react-native');
+  RN.NativeModules.CatalogGfnModule = {
+    getOwnedGames: jest.fn(),
+    getFullCatalog: jest.fn(),
+    getCatalogOrder: jest.fn(),
+    getAppDetails: jest.fn(),
+    getLinkedStores: jest.fn(),
+  };
+  return RN;
+});
+
+import {NativeModules} from 'react-native';
 import {
   normalizeTitle,
   mergeOwnedGames,
-  isConfirmedPlayable,
-  toBrowseGames,
-  toOwnedGames,
   fetchGfnOwnedGames,
+  getFreshOwnedGames,
+  clearOwnedGames,
+  fetchGfnFullCatalog,
+  getCachedFullCatalog,
+  getGfnFullCatalogStatus,
+  clearGfnFullCatalog,
   fetchGfnLinkedStores,
 } from '../gfnCatalog';
 import {GfnGame} from '../gfnPublicGames';
+
+const mockModule = NativeModules.CatalogGfnModule as {
+  getOwnedGames: jest.Mock;
+  getFullCatalog: jest.Mock;
+  getCatalogOrder: jest.Mock;
+  getAppDetails: jest.Mock;
+  getLinkedStores: jest.Mock;
+};
 
 describe('normalizeTitle', () => {
   it('lowercases and strips punctuation/symbols for ASCII titles', () => {
@@ -49,79 +78,6 @@ describe('normalizeTitle', () => {
 
   it('still trims and collapses internal whitespace/punctuation runs', () => {
     expect(normalizeTitle('  Foo!!  Bar  ')).toBe('foo bar');
-  });
-});
-
-// Regression: Apex Legends (and other free-to-play titles) stream fine on
-// GFN with no linked store purchase, but every variant's own
-// gfn.library.status still reports NOT_OWNED -- there's nothing to own.
-// isConfirmedPlayable is the app-level override that catches this via GFN's
-// own playType field, independent of any variant's ownership.
-describe('isConfirmedPlayable', () => {
-  it('is false for an app with no playType set', () => {
-    expect(isConfirmedPlayable({})).toBe(false);
-  });
-
-  it('is true when playType marks the app free-to-play', () => {
-    expect(isConfirmedPlayable({gfn: {playType: 'FREE_TO_PLAY'}})).toBe(true);
-  });
-
-  it('is case-insensitive on playType', () => {
-    expect(isConfirmedPlayable({gfn: {playType: 'free_to_play'}})).toBe(true);
-  });
-
-  it('is false for a normal paid app', () => {
-    expect(isConfirmedPlayable({gfn: {playType: 'STANDARD'}})).toBe(false);
-  });
-
-  // Regression: playabilityState ("PLAYABLE"/"AVAILABLE") used to also count
-  // as confirmed-playable, mirroring OpenNOW -- but confirmed live, GFN sets
-  // it for essentially every regularly-purchasable, non-owned title too (it
-  // answers "is this app live on GFN at all", not "free to play"), which
-  // made almost the entire browse catalog show as owned. It must no longer
-  // affect the result at all.
-  it('ignores playabilityState entirely, even for a normal paid app', () => {
-    expect(isConfirmedPlayable({gfn: {playabilityState: 'PLAYABLE'}})).toBe(
-      false,
-    );
-    expect(isConfirmedPlayable({gfn: {playabilityState: 'AVAILABLE'}})).toBe(
-      false,
-    );
-    expect(
-      isConfirmedPlayable({
-        gfn: {playabilityState: 'AVAILABLE', playType: 'STANDARD'},
-      }),
-    ).toBe(false);
-  });
-});
-
-describe('toBrowseGames', () => {
-  const appWithStatus = (status: string) => ({
-    title: 'Some Game',
-    variants: [{id: '123', appStore: 'STEAM', gfn: {library: {status}}}],
-  });
-
-  it('is owned when library.status is one of the known owned values', () => {
-    for (const status of ['MANUAL', 'PLATFORM_SYNC', 'IN_LIBRARY']) {
-      expect(toBrowseGames(appWithStatus(status))[0].owned).toBe(true);
-    }
-  });
-
-  it('is not owned when library.status is NOT_OWNED', () => {
-    expect(toBrowseGames(appWithStatus('NOT_OWNED'))[0].owned).toBe(false);
-  });
-
-  // Regression: the ownership check used to be a denylist (`!== 'NOT_OWNED'`
-  // means owned), so any library.status value GFN's API returns other than
-  // the exact string "NOT_OWNED" -- not just the three real owned states --
-  // was wrongly treated as owned. Confirmed against OpenNOW's own
-  // app_to_game(), which checks library.status against an allowlist
-  // (MANUAL/PLATFORM_SYNC/IN_LIBRARY) instead; anything else, including an
-  // unrecognized status this test stands in for, must read as not owned.
-  it('is not owned for an unrecognized library.status value', () => {
-    expect(toBrowseGames(appWithStatus('SOME_OTHER_STATUS'))[0].owned).toBe(
-      false,
-    );
   });
 });
 
@@ -204,75 +160,23 @@ describe('mergeOwnedGames', () => {
     expect(steamEntry?.owned).toBe(true);
     expect(epicEntry?.owned).toBeFalsy();
   });
-});
 
-describe('toOwnedGames', () => {
-  const app = (statuses: Record<string, string | undefined>) => ({
-    id: 'app-uuid',
-    title: 'Halo',
-    variants: Object.entries(statuses).map(([store, status], i) => ({
-      id: String(100 + i),
-      appStore: store,
-      gfn: status ? {library: {status}} : undefined,
-    })),
-  });
-
-  it('keeps only the store variants that are owned', () => {
-    const games = toOwnedGames(
-      app({STEAM: 'MANUAL', XBOX: 'NOT_OWNED', EPIC: 'NOT_OWNED'}),
-    );
-    expect(games.map(g => g.store)).toEqual(['STEAM']);
-    expect(games[0].owned).toBe(true);
-  });
-
-  it('keeps every owned variant', () => {
-    const games = toOwnedGames(
-      app({STEAM: 'PLATFORM_SYNC', XBOX: 'IN_LIBRARY', EPIC: 'NOT_OWNED'}),
-    );
-    expect(games.map(g => g.store)).toEqual(['STEAM', 'XBOX']);
-  });
-
-  it('falls back to every variant when none carries a known owned status', () => {
-    const games = toOwnedGames(app({STEAM: 'SOMETHING_NEW', XBOX: undefined}));
-    expect(games.map(g => g.store)).toEqual(['STEAM', 'XBOX']);
-    expect(games.every(g => g.owned)).toBe(true);
-  });
-});
-
-describe('library subscription', () => {
-  const app = {
-    id: 'app-uuid',
-    title: 'Halo',
-    variants: [
+  // The "library subscription" coverage below used to build its owned-game
+  // fixture via toOwnedGames (now native -- see GfnCatalogClient.kt); the
+  // same already-mapped shape is written out by hand here instead, since
+  // mergeOwnedGames' own contract (carry subscription through from the
+  // owned entry) is what this is actually testing.
+  it('carries a subscription through from the owned entry', () => {
+    const owned: GfnGame[] = [
       {
         id: '101',
-        appStore: 'XBOX',
-        gfn: {
-          library: {status: 'PLATFORM_SYNC', subscription: 'XBOX_GAME_PASS'},
-        },
+        title: 'Halo',
+        store: 'XBOX',
+        genres: [],
+        owned: true,
+        subscription: 'XBOX_GAME_PASS',
       },
-      {
-        id: '102',
-        appStore: 'STEAM',
-        gfn: {library: {status: 'PLATFORM_SYNC', subscription: 'NONE'}},
-      },
-    ],
-  };
-
-  it('carries the subscription of a variant, but not "NONE"', () => {
-    const owned = toOwnedGames(app);
-    expect(owned.find(g => g.store === 'XBOX')?.subscription).toBe(
-      'XBOX_GAME_PASS',
-    );
-    expect(owned.find(g => g.store === 'STEAM')?.subscription).toBeUndefined();
-    const browse = toBrowseGames(app);
-    expect(browse.find(g => g.store === 'XBOX')?.subscription).toBe(
-      'XBOX_GAME_PASS',
-    );
-  });
-
-  it('is kept when an owned game is merged into the public catalog', () => {
-    const owned = toOwnedGames(app);
+    ];
     const merged = mergeOwnedGames(
       [{id: '101', title: 'Halo', store: 'XBOX', genres: []}],
       owned,
@@ -282,116 +186,104 @@ describe('library subscription', () => {
   });
 });
 
-describe('fetchGfnOwnedGames paging', () => {
-  const app = (n: number) => ({
-    id: `app-${n}`,
-    title: `Game ${n}`,
-    variants: [
-      {
-        id: String(1000 + n),
-        appStore: 'STEAM',
-        gfn: {library: {status: 'PLATFORM_SYNC', subscription: 'NONE'}},
-      },
-    ],
-  });
-  const json = (body: unknown, ok = true) =>
-    Promise.resolve({ok, json: () => Promise.resolve(body)} as Response);
-  const originalFetch = global.fetch;
-  afterEach(() => {
-    global.fetch = originalFetch;
+describe('fetchGfnOwnedGames', () => {
+  beforeEach(() => {
+    mockModule.getOwnedGames.mockReset();
+    clearOwnedGames();
   });
 
-  const mockFetch = (pages: any[]) => {
-    const libraryCalls: any[] = [];
-    let i = 0;
-    global.fetch = jest.fn((url: any, init?: any) => {
-      if (String(url).includes('serverInfo')) {
-        return json({requestStatus: {serverId: 'vpc-paging'}});
-      }
-      libraryCalls.push(JSON.parse(init.body).variables.cursor);
-      const page = pages[Math.min(i++, pages.length - 1)];
-      return page === 'fail' ? json({}, false) : json({data: {apps: page}});
-    }) as any;
-    return libraryCalls;
-  };
+  it('resolves the games the native module returns', async () => {
+    mockModule.getOwnedGames.mockResolvedValue({
+      games: [{id: '1', title: 'Game 1', store: 'STEAM', genres: []}],
+      complete: true,
+    });
+    const games = await fetchGfnOwnedGames('token-1');
+    expect(games.map(g => g.title)).toEqual(['Game 1']);
+    expect(mockModule.getOwnedGames).toHaveBeenCalledWith(
+      'token-1',
+      expect.any(String),
+    );
+  });
 
-  it('reads every page until there is no next one', async () => {
-    const cursors = mockFetch([
-      {items: [app(1), app(2)], pageInfo: {hasNextPage: true, endCursor: 'c1'}},
-      {items: [app(3)], pageInfo: {hasNextPage: false, endCursor: 'c2'}},
+  it('caches to MMKV only when the native result reports complete: true', async () => {
+    mockModule.getOwnedGames.mockResolvedValue({
+      games: [{id: '1', title: 'Game 1', store: 'STEAM', genres: []}],
+      complete: true,
+    });
+    await fetchGfnOwnedGames('token-2');
+    expect(getFreshOwnedGames()).toEqual([
+      {id: '1', title: 'Game 1', store: 'STEAM', genres: []},
     ]);
-    const games = await fetchGfnOwnedGames('token-paging-1');
-    expect(games.map(g => g.title)).toEqual(['Game 1', 'Game 2', 'Game 3']);
-    expect(cursors).toEqual(['', 'c1']);
   });
 
-  it('stops when the cursor does not advance', async () => {
-    const cursors = mockFetch([
-      {items: [app(1)], pageInfo: {hasNextPage: true, endCursor: 'same'}},
-      {items: [app(2)], pageInfo: {hasNextPage: true, endCursor: 'same'}},
-    ]);
-    const games = await fetchGfnOwnedGames('token-paging-2');
-    expect(games).toHaveLength(2);
-    expect(cursors).toEqual(['', 'same']);
+  it('does not cache a partial result (complete: false)', async () => {
+    mockModule.getOwnedGames.mockResolvedValue({
+      games: [{id: '1', title: 'Game 1', store: 'STEAM', genres: []}],
+      complete: false,
+    });
+    await fetchGfnOwnedGames('token-3');
+    expect(getFreshOwnedGames()).toBeNull();
   });
 
-  it('returns nothing when the first page fails, and what it has when a later one does', async () => {
-    mockFetch(['fail']);
-    expect(await fetchGfnOwnedGames('token-paging-3')).toEqual([]);
-    mockFetch([
-      {items: [app(1)], pageInfo: {hasNextPage: true, endCursor: 'c1'}},
-      'fail',
+  it('returns [] and does not throw when the native call rejects', async () => {
+    mockModule.getOwnedGames.mockRejectedValue(new Error('native failure'));
+    expect(await fetchGfnOwnedGames('token-4')).toEqual([]);
+  });
+});
+
+describe('fetchGfnFullCatalog', () => {
+  beforeEach(() => {
+    mockModule.getFullCatalog.mockReset();
+    clearGfnFullCatalog();
+  });
+
+  it('caches a non-empty result even when the crawl was only partial', async () => {
+    mockModule.getFullCatalog.mockResolvedValue({
+      games: [{id: '1', title: 'Game 1', store: 'STEAM', genres: []}],
+      complete: false,
+      totalCount: 5000,
+    });
+    const result = await fetchGfnFullCatalog('token-1');
+    expect(result.complete).toBe(false);
+    expect(result.totalCount).toBe(5000);
+    expect(getCachedFullCatalog()).toEqual([
+      {id: '1', title: 'Game 1', store: 'STEAM', genres: []},
     ]);
-    expect(
-      (await fetchGfnOwnedGames('token-paging-4')).map(g => g.title),
-    ).toEqual(['Game 1']);
+    const status = getGfnFullCatalogStatus();
+    expect(status?.complete).toBe(false);
+    expect(status?.count).toBe(1);
+  });
+
+  it('does not cache an empty result, and still records the failed status', async () => {
+    mockModule.getFullCatalog.mockRejectedValue(new Error('native failure'));
+    const result = await fetchGfnFullCatalog('token-2');
+    expect(result.games).toEqual([]);
+    expect(result.complete).toBe(false);
+    expect(getCachedFullCatalog()).toBeNull();
+    const status = getGfnFullCatalogStatus();
+    expect(status?.complete).toBe(false);
+    expect(status?.count).toBe(0);
   });
 });
 
 describe('fetchGfnLinkedStores', () => {
-  const json = (body: unknown, ok = true) =>
-    Promise.resolve({ok, json: () => Promise.resolve(body)} as Response);
-  const originalFetch = global.fetch;
-  afterEach(() => {
-    global.fetch = originalFetch;
+  beforeEach(() => {
+    mockModule.getLinkedStores.mockReset();
   });
 
-  it('keeps only stores with accountLinkingData, as their own store id', async () => {
-    global.fetch = jest.fn(() =>
-      json({
-        data: {
-          userAccount: {
-            storesData: [
-              {
-                store: 'STEAM',
-                accountLinkingData: {
-                  accountSyncingData: {totalNumberOfSyncedGfnGames: 42},
-                },
-              },
-              {store: 'EPIC', accountLinkingData: null},
-              {
-                store: 'XBOX',
-                accountLinkingData: {accountSyncingData: null},
-              },
-            ],
-          },
-        },
-      }),
-    ) as any;
-
+  it('resolves whatever the native module returns', async () => {
+    mockModule.getLinkedStores.mockResolvedValue([
+      {store: 'STEAM', syncedGameCount: 42},
+      {store: 'XBOX'},
+    ]);
     expect(await fetchGfnLinkedStores('token-linked-1')).toEqual([
       {store: 'STEAM', syncedGameCount: 42},
-      {store: 'XBOX', syncedGameCount: undefined},
+      {store: 'XBOX'},
     ]);
   });
 
-  it('returns [] when the request fails, without throwing', async () => {
-    global.fetch = jest.fn(() => json({}, false)) as any;
+  it('returns [] when the native call rejects', async () => {
+    mockModule.getLinkedStores.mockRejectedValue(new Error('offline'));
     expect(await fetchGfnLinkedStores('token-linked-2')).toEqual([]);
-  });
-
-  it('returns [] on a network failure', async () => {
-    global.fetch = jest.fn(() => Promise.reject(new Error('offline'))) as any;
-    expect(await fetchGfnLinkedStores('token-linked-3')).toEqual([]);
   });
 });
