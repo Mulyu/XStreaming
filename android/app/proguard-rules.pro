@@ -27,3 +27,10 @@
 -keep class com.xstreaming.gfn.GfnSessionInfo { *; }
 -keep class com.xstreaming.gfn.GfnIceServerInfo { *; }
 -keep class com.xstreaming.gfn.GfnStreamSettingsInfo { *; }
+
+# XcloudWebRtcModule's bridge methods (setGamepadState/queuePointerInput/
+# setIceCandidates) deserialize JSON Gson-reflectively into these DTOs, same
+# reason as the GFN ones above.
+-keep class com.xstreaming.xcloud.GamepadFrameDto { *; }
+-keep class com.xstreaming.xcloud.PointerEventDto { *; }
+-keep class com.xstreaming.xcloud.IceCandidateDto { *; }

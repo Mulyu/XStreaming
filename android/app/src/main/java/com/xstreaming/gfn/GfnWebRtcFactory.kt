@@ -16,8 +16,12 @@ import org.webrtc.VideoEncoderFactory
 import org.webrtc.audio.JavaAudioDeviceModule
 
 /**
- * One process-wide [PeerConnectionFactory] for GFN sessions, built the same
- * way react-native-webrtc's own WebRTCModule builds its (separate) factory:
+ * One process-wide [PeerConnectionFactory], shared by both GFN
+ * (GfnWebRtcClient) and xCloud (com.xstreaming.xcloud.XcloudWebRtcClient) --
+ * one factory per process is correct WebRTC practice, and the comment below
+ * about only one of the two ever streaming at a time already assumed this.
+ * Built the same way react-native-webrtc's own WebRTCModule builds its
+ * (separate) factory:
  * same shared EGL context ([EglUtils.getRootEglBaseContext], so video frames
  * decoded here stay renderable by [com.xstreaming.fsr.FsrVideoProcessor]'s
  * own GL context) and the SAME video encoder/decoder factory objects this
