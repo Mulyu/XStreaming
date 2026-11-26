@@ -84,6 +84,20 @@ class XcloudNativeWebRtcClient {
   private messageHandler: ((payload: any) => boolean | void) | null = null;
   private supportedSystemUis: number[] | undefined;
 
+  // Previous inbound-video stat sample, for getStreamState()'s bitrate/
+  // jitter/decode-time deltas -- an instance field rather than the
+  // original JS client's globalThis._lastStat (same cleanup
+  // GfnStreamAdapter's own getStreamState() already made).
+  private lastStat: any = null;
+  // getAudioVolume()/sampleAudioLevel() state, ported from the original
+  // JS client's _updateAudioLevelFromStat/_clampAudioLevel.
+  private audioEnergySnapshot: {
+    totalAudioEnergy: number;
+    totalSamplesReceived: number;
+  } | null = null;
+  private audioLevel = 0;
+  private hasAudioLevelSample = false;
+
   constructor() {
     // Matches Channel/Input.ts's own queueGamepadState/queuePointerInput/
     // addProcessedFrame shape, but delegates straight to the native bridge
@@ -134,6 +148,15 @@ class XcloudNativeWebRtcClient {
     this.hasVideoTrack = false;
     this.hasAudioTrack = false;
     this.hasSentInitialVideoKeyframeRequest = false;
+    // Otherwise a reused instance's first getStreamState()/getAudioLevel()
+    // after a reconnect would diff against the previous session's last
+    // sample -- the new PeerConnection's counters (bytesReceived, etc.)
+    // start back near zero, so that diff reads as garbage/negative values
+    // until the new counters overtake the old ones.
+    this.lastStat = null;
+    this.audioEnergySnapshot = null;
+    this.audioLevel = 0;
+    this.hasAudioLevelSample = false;
 
     this.channelProcessors.control = new ControlChannel('control', this);
     this.channelProcessors.chat = new NativeChatChannel('chat', this);
@@ -243,6 +266,10 @@ class XcloudNativeWebRtcClient {
       return;
     }
     this.isResetting = true;
+    this.lastStat = null;
+    this.audioEnergySnapshot = null;
+    this.audioLevel = 0;
+    this.hasAudioLevelSample = false;
     XcloudWebRtcModule?.close();
     for (const name of Object.keys(this.channelProcessors)) {
       this.channelProcessors[name]?.destroy?.();
@@ -359,23 +386,105 @@ class XcloudNativeWebRtcClient {
 
   // ---- stats for the performance overlay ----
   //
-  // Not fully wired: XcloudWebRtcModule.getStats() resolves the native
-  // RTCStatsReport's own toString() (a plain diagnostic string), not the
-  // structured, forEach-able report this parsing expects -- same known gap
-  // GFN's native client has (see nativeWebRtcClient.ts's own getStats()
-  // comment). The defensive check below means this currently always
-  // returns the stub defaults rather than throwing.
+  // XcloudWebRtcModule.getStats() resolves an array of plain stat objects
+  // (StatsReportConverter.kt converts the native RTCStatsReport into the
+  // same W3C-webrtc-stats shape react-native-webrtc's own getStats()
+  // returned, which this parsing -- ported from the original JS client's
+  // getStreamState()/getAudioVolume()/_updateAudioLevelFromStat -- expects).
+
+  private clampAudioLevel(value: number): number {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    if (value < 0) {
+      return 0;
+    }
+    if (value > 1) {
+      return 1;
+    }
+    return value;
+  }
+
+  private updateAudioLevelFromStat(stat: any): number | undefined {
+    let newLevel: number | undefined;
+    if (typeof stat.audioLevel === 'number') {
+      newLevel = this.clampAudioLevel(stat.audioLevel);
+    } else if (
+      typeof stat.totalAudioEnergy === 'number' &&
+      typeof stat.totalSamplesReceived === 'number'
+    ) {
+      const previousSample = this.audioEnergySnapshot;
+      const nextSample = {
+        totalAudioEnergy: stat.totalAudioEnergy,
+        totalSamplesReceived: stat.totalSamplesReceived,
+      };
+      if (
+        previousSample &&
+        nextSample.totalSamplesReceived > previousSample.totalSamplesReceived
+      ) {
+        const energyDiff =
+          nextSample.totalAudioEnergy - previousSample.totalAudioEnergy;
+        const samplesDiff =
+          nextSample.totalSamplesReceived - previousSample.totalSamplesReceived;
+        if (samplesDiff > 0 && energyDiff >= 0) {
+          const energyPerSample = energyDiff / samplesDiff;
+          newLevel = this.clampAudioLevel(Math.sqrt(energyPerSample));
+        }
+      }
+      this.audioEnergySnapshot = nextSample;
+    }
+
+    if (typeof newLevel === 'number') {
+      this.audioLevel = newLevel;
+      this.hasAudioLevelSample = true;
+    }
+    return newLevel;
+  }
 
   getAudioVolume(): Promise<number> {
-    return Promise.resolve(0);
+    let volume = 0;
+    return XcloudWebRtcModule.getStats()
+      .then((stats: any) => {
+        if (!stats || typeof stats.forEach !== 'function') {
+          return volume;
+        }
+        stats.forEach((stat: any) => {
+          if (
+            stat.type === 'inbound-rtp' &&
+            (stat.kind === 'audio' || stat.mediaType === 'audio')
+          ) {
+            const updatedLevel = this.updateAudioLevelFromStat(stat);
+            if (typeof updatedLevel === 'number') {
+              volume = Math.round(updatedLevel * 100);
+            } else if (this.hasAudioLevelSample) {
+              volume = Math.round(this.audioLevel * 100);
+            }
+          }
+        });
+        return volume;
+      })
+      .catch(() => volume);
   }
 
   async sampleAudioLevel(): Promise<number> {
-    return 0;
+    try {
+      const stats = await XcloudWebRtcModule.getStats();
+      if (stats && typeof stats.forEach === 'function') {
+        stats.forEach((stat: any) => {
+          if (
+            stat.type === 'inbound-rtp' &&
+            (stat.kind === 'audio' || stat.mediaType === 'audio')
+          ) {
+            this.updateAudioLevelFromStat(stat);
+          }
+        });
+      }
+    } catch {}
+    return this.audioLevel;
   }
 
   getAudioLevel(): number {
-    return 0;
+    return this.audioLevel;
   }
 
   getStreamState(): Promise<any> {
@@ -395,6 +504,103 @@ class XcloudNativeWebRtcClient {
         if (!stats || typeof stats.forEach !== 'function') {
           return performances;
         }
+        stats.forEach((stat: any) => {
+          if (
+            stat.type === 'inbound-rtp' &&
+            (stat.kind === 'video' || stat.mediaType === 'video')
+          ) {
+            if (stat.frameWidth && stat.frameHeight) {
+              performances.resolution = `${stat.frameWidth} X ${stat.frameHeight}`;
+            }
+            performances.fps = stat.framesPerSecond || 0;
+            if (stat.decoderImplementation) {
+              performances.decoder = stat.decoderImplementation;
+            }
+
+            const framesDropped = stat.framesDropped;
+            if (framesDropped !== undefined) {
+              const framesReceived = stat.framesReceived;
+              const framesDroppedPercentage = (
+                (framesDropped * 100) /
+                (framesDropped + framesReceived || 1)
+              ).toFixed(2);
+              performances.fl = `${framesDropped} (${framesDroppedPercentage}%)`;
+            } else {
+              performances.fl = '-1 (-1%)';
+            }
+
+            const packetsLost = stat.packetsLost;
+            if (packetsLost !== undefined) {
+              const packetsReceived = stat.packetsReceived;
+              const packetsLostPercentage = (
+                (packetsLost * 100) /
+                (packetsLost + packetsReceived || 1)
+              ).toFixed(2);
+              performances.pl = `${packetsLost} (${packetsLostPercentage}%)`;
+            } else {
+              performances.pl = '-1 (-1%)';
+            }
+
+            if (this.lastStat) {
+              try {
+                const lastStat = this.lastStat;
+                const timeDiff = stat.timestamp - lastStat.timestamp;
+                if (timeDiff !== 0) {
+                  const bitrate =
+                    (8 * (stat.bytesReceived - lastStat.bytesReceived)) /
+                    timeDiff /
+                    1000;
+                  performances.br = `${bitrate.toFixed(1)} Mbps`;
+                } else {
+                  performances.br = '--';
+                }
+
+                const bufferDelayDiff =
+                  stat.jitterBufferDelay - lastStat.jitterBufferDelay;
+                const emittedCountDiff =
+                  stat.jitterBufferEmittedCount -
+                  lastStat.jitterBufferEmittedCount;
+                if (emittedCountDiff > 0) {
+                  performances.jit = `${Math.round(
+                    (bufferDelayDiff / emittedCountDiff) * 1000,
+                  )}ms`;
+                } else {
+                  performances.jit = '--';
+                }
+
+                const totalDecodeTimeDiff =
+                  stat.totalDecodeTime - lastStat.totalDecodeTime;
+                const framesDecodedDiff =
+                  stat.framesDecoded - lastStat.framesDecoded;
+                if (framesDecodedDiff !== 0) {
+                  let currentDecodeTime =
+                    (totalDecodeTimeDiff / framesDecodedDiff) * 1000;
+                  // Decode time reads high on Android Chromium; match the
+                  // original JS client's own correction.
+                  if (currentDecodeTime > 20) {
+                    currentDecodeTime -= 20;
+                  }
+                  if (currentDecodeTime > 17) {
+                    currentDecodeTime -= 15;
+                  }
+                  performances.decode = `${currentDecodeTime.toFixed(2)}ms`;
+                } else {
+                  performances.decode = '--';
+                }
+              } catch {}
+            }
+            this.lastStat = stat;
+          } else if (
+            stat.type === 'candidate-pair' &&
+            stat.state === 'succeeded'
+          ) {
+            const roundTripTime =
+              typeof stat.currentRoundTripTime !== 'undefined'
+                ? stat.currentRoundTripTime * 1000
+                : '???';
+            performances.rtt = `${roundTripTime}ms`;
+          }
+        });
         return performances;
       })
       .catch(() => performances);

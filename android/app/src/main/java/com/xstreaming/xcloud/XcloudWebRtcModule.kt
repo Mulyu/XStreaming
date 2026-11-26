@@ -333,7 +333,9 @@ class XcloudWebRtcModule(reactContext: ReactApplicationContext) :
             promise.resolve(null)
             return
         }
-        current.getStats { report -> promise.resolve(report?.toString()) }
+        current.getStats { report ->
+            promise.resolve(com.xstreaming.webrtc.StatsReportConverter.toWritableArray(report))
+        }
     }
 
     @ReactMethod
