@@ -1,6 +1,7 @@
 package com.xstreaming.catalog
 
 import com.google.gson.Gson
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -40,6 +41,21 @@ private const val RELEASE_DATE_CONCURRENCY = 3
  * connectGeneration-style stale-callback guard).
  */
 object XcloudCatalogClient {
+    // The TS version's filters/guards here are plain JS truthiness checks
+    // (`item.titleId || item.XCloudTitleId`, `title.details.productId`),
+    // not null checks -- an empty string or 0 is falsy in JS and must be
+    // treated the same way here, or an entry the original code dropped
+    // would now be kept.
+    private fun isTruthy(value: Any?): Boolean = when (value) {
+        null -> false
+        is String -> value.isNotEmpty()
+        is Boolean -> value
+        is Double -> value != 0.0 && !value.isNaN()
+        is Float -> value != 0f && !value.isNaN()
+        is Number -> value.toDouble() != 0.0
+        else -> true
+    }
+
     private fun httpClient(callTimeoutSeconds: Long? = null): OkHttpClient {
         val base = CatalogHttpClient.instance
         return if (callTimeoutSeconds == null) {
@@ -131,7 +147,7 @@ object XcloudCatalogClient {
                 val collator = Collator.getInstance()
                 merged
                     .sortedWith(compareBy(collator) { it["ProductTitle"] as? String ?: "" })
-                    .filter { it["titleId"] != null || it["XCloudTitleId"] != null }
+                    .filter { isTruthy(it["titleId"]) || isTruthy(it["XCloudTitleId"]) }
             }
         } catch (e: Exception) {
             emptyList()
@@ -144,7 +160,7 @@ object XcloudCatalogClient {
     // concatenates both results, sorts by ProductTitle, and dedups by
     // ProductTitle keeping the first occurrence -- same steps and order as
     // the TS version.
-    fun getGamePassProducts(titles: List<Any?>, lang: String): List<Map<String, Any?>> {
+    suspend fun getGamePassProducts(titles: List<Any?>, lang: String): List<Map<String, Any?>> {
         val productIdQueue = mutableListOf<String>()
         val v2TitleMap = LinkedHashMap<String, Any?>()
         titles.forEach { title ->
@@ -155,14 +171,25 @@ object XcloudCatalogClient {
             // The TS version used productId as an object key (coercing any
             // truthy value to a string), so a numeric id was still kept --
             // match that instead of requiring it to already be a String.
-            val productIdRaw = details["productId"] ?: return@forEach
+            // Falsy (empty string, 0) is dropped, same as `title.details &&
+            // title.details.productId` in the TS version.
+            val productIdRaw = details["productId"]
+            if (!isTruthy(productIdRaw)) return@forEach
             val productId = productIdRaw as? String ?: productIdRaw.toString()
             productIdQueue.add(productId)
             v2TitleMap[productId] = titleMap
         }
 
-        val officialTitles = getOfficialTitles()
-        val titles1 = getCatalogGames(productIdQueue, v2TitleMap, lang)
+        // getOfficialTitles() and the productIdQueue hydration are
+        // independent network calls (titles2 below is the only one that
+        // depends on officialTitles) -- run them concurrently instead of
+        // back-to-back, same coroutineScope+async shape already used by
+        // fetchPrices/getReleaseDates in this package.
+        val (officialTitles, titles1) = coroutineScope {
+            val officialTitlesDeferred = async { getOfficialTitles() }
+            val titles1Deferred = async { getCatalogGames(productIdQueue, v2TitleMap, lang) }
+            officialTitlesDeferred.await() to titles1Deferred.await()
+        }
         val titles2 = getCatalogGames(officialTitles, v2TitleMap, lang)
 
         val collator = Collator.getInstance()
