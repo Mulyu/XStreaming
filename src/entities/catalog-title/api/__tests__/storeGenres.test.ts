@@ -1,8 +1,20 @@
-import axios from 'axios';
+jest.mock('react-native', () => {
+  // Mutate the real module's NativeModules in place rather than spreading
+  // react-native's own top-level exports: that spread would read (and so
+  // eagerly evaluate) every lazy export, including iOS-only native-module
+  // getters (e.g. Settings) that fail outside this project's own
+  // Android-only jest.setup.js mocking.
+  const RN = jest.requireActual('react-native');
+  RN.NativeModules.CatalogDisplayModule = {fetchProducts: jest.fn()};
+  return RN;
+});
+
+import {NativeModules} from 'react-native';
 import {extractCategory, fetchPrices, fetchProductBasics} from '../storePrice';
 import {xboxGenreLabel, XBOX_GENRE_KEYS} from '../../model/storeRating';
 
-jest.mock('axios');
+const mockFetchProducts = NativeModules.CatalogDisplayModule
+  .fetchProducts as jest.Mock;
 
 const product = (id: string, category?: string, rating?: number) => ({
   ProductId: id,
@@ -40,11 +52,10 @@ describe('extractCategory', () => {
 
 describe('genres and ratings from the same catalog response', () => {
   beforeEach(() => {
-    (axios.get as jest.Mock).mockResolvedValue({
-      data: {
-        Products: [product('9abc', 'Shooter', 4.2), product('9def', undefined)],
-      },
-    });
+    mockFetchProducts.mockResolvedValue([
+      product('9abc', 'Shooter', 4.2),
+      product('9def', undefined),
+    ]);
   });
 
   it('fetchPrices returns them keyed by upper-case id', async () => {
