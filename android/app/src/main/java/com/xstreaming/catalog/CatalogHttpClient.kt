@@ -14,6 +14,13 @@ object CatalogHttpClient {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
+            // connectTimeout/readTimeout alone don't bound the call's total
+            // duration -- a response trickling in just fast enough to keep
+            // resetting the read timeout could hang indefinitely, unlike
+            // the axios calls this replaces, which had a single 15s overall
+            // timeout. callTimeout covers the whole call (connect + write +
+            // every read) end to end.
+            .callTimeout(15, TimeUnit.SECONDS)
             .build()
     }
 }
