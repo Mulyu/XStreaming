@@ -420,9 +420,12 @@ class GfnWebRtcClient(
         reliableInput = reliable
 
         // Partially reliable input channel -- lower latency for gamepad.
+        // org.webrtc's DataChannel.Init names this field maxRetransmitTimeMs,
+        // not maxPacketLifeTime (the WebRTC spec's own name for it, and what
+        // the JS/react-native-webrtc binding this was ported from calls it).
         val pr = connection.createDataChannel(
             "input_channel_partially_reliable",
-            DataChannel.Init().apply { ordered = false; maxPacketLifeTime = partialReliableThresholdMs },
+            DataChannel.Init().apply { ordered = false; maxRetransmitTimeMs = partialReliableThresholdMs },
         )
         partiallyReliableInput = pr
     }
