@@ -91,6 +91,12 @@ class XcloudWebRtcModule(reactContext: ReactApplicationContext) :
     // synchronously -- can tell they no longer belong to the current
     // connection and no-op instead of overwriting state for a newer one.
     // Same race GfnWebRtcModule guards against; see its own comment.
+    // @Volatile: those callbacks run on WebRTC's own threads, not this RN
+    // module's; without it a callback thread could read a cached, stale
+    // value and pass the check it exists to fail. Bumped before dispose()
+    // is called, not after, so a callback racing the dispose() call itself
+    // already sees the new generation.
+    @Volatile
     private var connectGeneration = 0
 
     override fun getName(): String = "XcloudWebRtcModule"
@@ -120,13 +126,12 @@ class XcloudWebRtcModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun init() {
+        val myGeneration = ++connectGeneration
+        val current = { myGeneration == connectGeneration }
         client?.dispose()
         currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }
         currentVideoTrackId = null
         remoteAudioTrack = null
-
-        val myGeneration = ++connectGeneration
-        val current = { myGeneration == connectGeneration }
         val factory = GfnWebRtcFactory.get(reactApplicationContext)
         val newClient = XcloudWebRtcClient(
             factory = factory,
@@ -239,9 +244,9 @@ class XcloudWebRtcModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun close() {
+        connectGeneration++
         client?.dispose()
         client = null
-        connectGeneration++
         currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }
         currentVideoTrackId = null
         remoteAudioTrack = null

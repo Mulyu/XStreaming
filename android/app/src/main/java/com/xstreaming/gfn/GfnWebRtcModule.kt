@@ -38,6 +38,12 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
     // posting onAddTrack/onConnectionChange synchronously -- can tell they
     // no longer belong to the current connection and no-op instead of
     // overwriting currentVideoTrackId/remoteAudioTrack for a newer one.
+    // @Volatile: those callbacks run on WebRTC's own threads, not this RN
+    // module's; without it a callback thread could read a cached, stale
+    // value and pass the check it exists to fail. Bumped before dispose()
+    // is called, not after, so a callback racing the dispose() call itself
+    // already sees the new generation.
+    @Volatile
     private var connectGeneration = 0
 
     override fun getName(): String = "GfnWebRtcModule"
@@ -74,12 +80,12 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
         try {
             val session = gson.fromJson(sessionJson, GfnSessionInfo::class.java)
                 ?: throw IllegalArgumentException("empty session")
+            val myGeneration = ++connectGeneration
             client?.dispose()
             currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }
             currentVideoTrackId = null
             remoteAudioTrack = null
             val factory = GfnWebRtcFactory.get(reactApplicationContext)
-            val myGeneration = ++connectGeneration
             val newClient = GfnWebRtcClient(
                 session = session,
                 factory = factory,
@@ -117,9 +123,9 @@ class GfnWebRtcModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun dispose() {
+        connectGeneration++
         client?.dispose()
         client = null
-        connectGeneration++
         currentVideoTrackId?.let { com.xstreaming.webrtc.NativeVideoTrackHolder.clearTrack(it) }
         currentVideoTrackId = null
         remoteAudioTrack = null
