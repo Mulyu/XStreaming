@@ -16,6 +16,7 @@ import com.xstreaming.touchcontrols.AnalogStickPackage;
 import com.xstreaming.touchcontrols.ButtonViewPackage;
 import com.xstreaming.touchcontrols.SwipeAimViewPackage;
 import com.xstreaming.webrtc.LowLatencyVideoDecoderFactory;
+import com.xstreaming.gfn.GfnWebRtcPackage;
 
 import android.media.AudioAttributes;
 import org.webrtc.EglBase;
@@ -58,6 +59,7 @@ public class MainApplication extends Application implements ReactApplication {
             packages.add(new CoverDisplayPackage());
             packages.add(new AppDebugLogPackage());
             packages.add(new PhysicalInputPackage());
+            packages.add(new GfnWebRtcPackage());
           return packages;
         }
 
