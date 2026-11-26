@@ -1,13 +1,19 @@
+import {NativeModules} from 'react-native';
 import {storage} from '../../../shared/lib/mmkv';
 import {getGfnLocaleSlug} from './gfnLocale';
+import {debugFactory} from '../../../shared/lib/debug';
+
+const log = debugFactory('gfnPublicGames');
+
+const {CatalogGfnPublicGamesModule} = NativeModules;
 
 // GeForce NOW's supported-games list is served as a public, no-auth JSON, so we
 // can show a browsable catalog before any NVIDIA login is wired up. Steam-backed
 // titles get cover art from Steam's CDN; other stores (Epic, etc.) have none.
 // One such JSON exists per locale (confirmed live -- see entities/catalog-title/api/gfnLocale.ts), with
 // actually-translated titles, not just an English list under a different URL.
-const publicGamesUrl = (slug: string): string =>
-  `https://static.nvidiagrid.net/supported-public-game-list/locales/gfnpc-${slug}.json`;
+// The fetch+parse+row-mapping itself now runs natively -- see
+// android/.../java/com/xstreaming/catalog/GfnPublicGamesClient.kt.
 
 // Locale-scoped so switching the app's language (which restarts the app --
 // see Settings.tsx) doesn't serve a stale English-cached list under a
@@ -44,16 +50,6 @@ export type GfnGame = {
   appId?: string;
 };
 
-type RawPublicGame = {
-  id?: string | number;
-  title?: string;
-  steamUrl?: string;
-  store?: string;
-  publisher?: string;
-  genres?: string[];
-  status?: string;
-};
-
 // Extracts the numeric app id straight after "/app/" in a Steam store URL.
 // Deliberately matches only a *leading* digit run rather than requiring the
 // whole remainder to be numeric -- confirmed live that GFN's authenticated
@@ -78,35 +74,6 @@ export const steamAppIdFromUrl = (steamUrl?: string): string | undefined => {
   const match = /^(\d+)/.exec(after);
   return match ? match[1] : undefined;
 };
-
-const toGfnGame = (item: RawPublicGame): GfnGame => {
-  const steamAppId = steamAppIdFromUrl(item.steamUrl);
-  return {
-    id: String(item.id ?? item.title ?? 'unknown'),
-    title: item.title ?? '',
-    store: item.store ?? 'Unknown',
-    publisher: item.publisher,
-    genres: Array.isArray(item.genres) ? item.genres : [],
-    steamAppId,
-    imageUrl: steamAppId
-      ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${steamAppId}/header.jpg`
-      : undefined,
-    heroUrl: steamAppId
-      ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${steamAppId}/library_hero.jpg`
-      : undefined,
-  };
-};
-
-// Not re-sorted here: every caller (Library.tsx, via mergeOwnedGames ->
-// buildUnifiedCatalog) already sorts its own final output by title, so
-// sorting ~1500+ entries with a locale-aware comparator here would just be
-// redundant CPU work discarded by the next sort downstream -- felt mainly
-// on weaker hardware (e.g. Google TV boxes) where it's slow enough to
-// notice.
-const mapPayload = (payload: RawPublicGame[]): GfnGame[] =>
-  (Array.isArray(payload) ? payload : [])
-    .filter(item => item.status === 'AVAILABLE' && !!item.title)
-    .map(toGfnGame);
 
 // Cached list if still fresh, else null.
 export const getFreshGfnGames = (): GfnGame[] | null => {
@@ -144,12 +111,14 @@ export const getCachedGfnGames = (): GfnGame[] | null => {
 
 export const fetchGfnGames = async (): Promise<GfnGame[]> => {
   const slug = getGfnLocaleSlug();
-  const res = await fetch(publicGamesUrl(slug));
-  if (!res.ok) {
-    throw new Error(`GFN public games fetch failed (${res.status})`);
+  let games: GfnGame[] = [];
+  try {
+    games = ((await CatalogGfnPublicGamesModule?.fetchGames(slug)) ??
+      []) as GfnGame[];
+  } catch (e) {
+    log.info('fetchGfnGames failed:', e);
+    return [];
   }
-  const payload = (await res.json()) as RawPublicGame[];
-  const games = mapPayload(payload);
   try {
     storage.set(cacheKey(slug), JSON.stringify({ts: Date.now(), games}));
   } catch {}
