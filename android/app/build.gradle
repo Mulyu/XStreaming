@@ -186,6 +186,15 @@ dependencies {
     implementation "androidx.compose.material:material-icons-core"
     implementation "androidx.activity:activity-compose:1.7.2"
     debugImplementation "androidx.compose.ui:ui-tooling"
+
+    // react-native-restart's own RNRestart.restart() (the JS Settings
+    // screen's equivalent "apply the low-latency-decoder setting" path)
+    // already pulls this in as an `implementation` dependency of its own
+    // module, which Gradle does not expose to :app by default -- declared
+    // explicitly here, same version, so DisplaySettingsScreen's restart can
+    // call the identical ProcessPhoenix.triggerRebirth() without going
+    // through the RN bridge.
+    implementation "com.jakewharton:process-phoenix:2.1.2"
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)

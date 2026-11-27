@@ -1,5 +1,8 @@
 package com.xstreaming.settings.ui
 
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -20,10 +23,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import com.jakewharton.processphoenix.ProcessPhoenix
 import com.xstreaming.R
 import com.xstreaming.settings.Settings
 import com.xstreaming.settings.getSettings
 import com.xstreaming.settings.saveSettings
+
+// Mirrors src/pages/settings/model/useSettingsScreen.ts's
+// handleLowLatencyDecoderChange exactly: MainApplication.onCreate() reads
+// this setting only once, at process start, to pick WebRTCModuleOptions'
+// videoDecoderFactory -- saving the new value alone (what saveSettings()
+// already does) is not enough for an in-progress process to pick it up.
+// The JS side restarts via RNRestart.restart(), which is itself just
+// ProcessPhoenix.triggerRebirth() under the hood (see
+// node_modules/react-native-restart's RestartModule.java) -- called here
+// directly, with no RN bridge involved. Same ~1s delay as the JS version's
+// two chained 500ms setTimeouts, so the switch visibly flips before the
+// process restarts.
+private const val DECODER_RESTART_DELAY_MS = 1000L
+
+private fun restartForDecoderChange(context: Context) {
+    Handler(Looper.getMainLooper()).postDelayed({
+        ProcessPhoenix.triggerRebirth(context)
+    }, DECODER_RESTART_DELAY_MS)
+}
 
 /**
  * Kotlin/Compose port of the "Resolution"/"Codec"/"Ultra low latency
@@ -76,7 +99,10 @@ fun DisplaySettingsScreen(onBack: () -> Unit) {
                 title = stringResource(R.string.ultra_low_latency_decoding),
                 description = stringResource(R.string.UltraLowLatencyDecoderDesc),
                 value = settings.nativeLowLatencyDecoder,
-                onChange = { v -> update { it.copy(nativeLowLatencyDecoder = v) } },
+                onChange = { v ->
+                    update { it.copy(nativeLowLatencyDecoder = v) }
+                    restartForDecoderChange(context)
+                },
             )
             ChoiceRow(
                 title = stringResource(R.string.Codec),
