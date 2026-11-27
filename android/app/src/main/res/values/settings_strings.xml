@@ -17,6 +17,7 @@
     <string name="Brazil2">Brazil 2</string>
     <string name="Cancel">Cancel</string>
     <string name="central_india">Central India</string>
+    <string name="changing_the_region_allows_you_to_use_xgpu_services_without_a_proxy">Changing the region allows you to use XGPU services without a proxy</string>
     <string name="Codec">Codec</string>
     <string name="CommonSettings">Common</string>
     <string name="config_joystick_dead_zone">If the controller drifts, configure the joystick center dead zone to reduce drift.</string>
@@ -62,6 +63,7 @@
     <string name="GfnSettings">GeForce NOW</string>
     <string name="GfnSignOutConfirm">Sign out of GeForce NOW on this device?</string>
     <string name="GfnSignedIn">Signed in</string>
+    <string name="if_your_device_supports_newer_codecs_it_can_reduce_the_video_bandwidth_requirements">If your device supports newer codecs, it can reduce the video bandwidth requirements</string>
     <string name="InputMapping">Input mapping</string>
     <string name="Japan1">Japan 1</string>
     <string name="Japan2">Japan 2</string>
@@ -89,6 +91,7 @@
     <string name="signal_server">Signal server</string>
     <string name="south_india">South India</string>
     <string name="Success">Success</string>
+    <string name="the_signaling_server_is_a_server_for_stream_negotiation_if_the_host_cannot_connect_please_try_modifying_this_option">The signaling server is used during stream negotiation. If the console or cloud game cannot connect, try changing this option.</string>
     <string name="TokenCopyFailed">Could not copy the token.</string>
     <string name="ultra_low_latency_decoding">Ultra low latency decoding</string>
     <string name="UltraLowLatencyDecoderDesc">Enable ultra low latency decoding. Note that this feature does not work on all Android devices. Disable this option if black screen or other issues occur.</string>
@@ -98,6 +101,9 @@
     <string name="XboxAccountTitle">Xbox account</string>
     <string name="XboxGamePassActive">Game Pass: active</string>
     <string name="XboxPlaytimeAdFree">Ad-free: %1$sh %2$sm left</string>
+    <string name="XboxPlaytimeAdFreeUnlimited">Ad-free: unlimited</string>
+    <string name="XboxPlaytimeAdSupported">With ads: %1$sh %2$sm left</string>
+    <string name="XboxPlaytimeAdSupportedUnlimited">With ads: unlimited</string>
     <string name="XboxPlaytimeLoading">Checking remaining time…</string>
     <string name="XboxPlaytimeNone">No time limit on this account</string>
     <string name="XboxPlaytimeTitle">Playtime remaining this month</string>

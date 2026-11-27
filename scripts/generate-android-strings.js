@@ -34,12 +34,17 @@ const REPO_ROOT = path.join(__dirname, '..');
 const LANGUAGES_DIR = path.join(REPO_ROOT, 'src/shared/config/languages');
 const RES_DIR = path.join(REPO_ROOT, 'android/app/src/main/res');
 
-// Extracted via (then hand-verified against false positives, e.g. jest's
-// `it('...')` containing a stray "t('"):
-//   grep -rhoE "[^a-zA-Z0-9_]t\('([^']+)'" src/features/app-settings \
-//     src/pages/settings/ui/SettingsView.tsx \
-//     src/pages/settings/model/useSettingsScreen.ts \
-//     src/pages/settings/index.tsx | sed -E "s/^.*t\('//;s/'$//" | sort -u
+// Extracted with a one-off script that walks the TS AST of every file below
+// looking for `t('...')` call expressions (a plain grep missed calls whose
+// string argument spans multiple lines, e.g. a long description wrapped onto
+// its own line) -- then hand-verified against the source for keys that are
+// only referenced indirectly (a variable holding the key name, not a literal
+// t('...') call: useSettingsScreen.ts's xboxPlaytimeDescription() builds its
+// ad-supported/ad-free-unlimited key names this way) and for a currently
+// commented-out settings row (fsr_sharpness) whose keys are harmless to keep
+// generating in case it's re-enabled later:
+//   src/features/app-settings/*.ts, src/pages/settings/ui/SettingsView.tsx,
+//   src/pages/settings/model/useSettingsScreen.ts, src/pages/settings/index.tsx
 const SETTINGS_KEYS = [
   'Anti-idle max duration (minutes)',
   'AntiIdleMaxDesc',
@@ -51,6 +56,7 @@ const SETTINGS_KEYS = [
   'Brazil2',
   'Cancel',
   'Central India',
+  'Changing the region allows you to use XGPU services without a proxy',
   'Codec',
   'CommonSettings',
   'Config joystick dead zone',
@@ -96,6 +102,7 @@ const SETTINGS_KEYS = [
   'GfnSettings',
   'GfnSignOutConfirm',
   'GfnSignedIn',
+  'If your device supports newer codecs, it can reduce the video bandwidth requirements',
   'InputMapping',
   'Japan1',
   'Japan2',
@@ -123,6 +130,7 @@ const SETTINGS_KEYS = [
   'Signal server',
   'South India',
   'Success',
+  'The signaling server is a server for stream negotiation. If the host cannot connect, please try modifying this option',
   'TokenCopyFailed',
   'Ultra low latency decoding',
   'UltraLowLatencyDecoderDesc',
@@ -132,6 +140,9 @@ const SETTINGS_KEYS = [
   'XboxAccountTitle',
   'XboxGamePassActive',
   'XboxPlaytimeAdFree',
+  'XboxPlaytimeAdFreeUnlimited',
+  'XboxPlaytimeAdSupported',
+  'XboxPlaytimeAdSupportedUnlimited',
   'XboxPlaytimeLoading',
   'XboxPlaytimeNone',
   'XboxPlaytimeTitle',
