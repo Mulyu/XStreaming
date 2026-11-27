@@ -13,18 +13,18 @@ export default {
     'Checking login status...': 'ログイン状態を確認中...',
     MsalAuthTip:
       'QRコードをスキャンするかブラウザのリンクを開き、期限が切れる前に認証コードを入力して、完了したら「完了」をタップしてください。',
-    MsalAuthTimeout: '認証コードの期限が切れました。更新してください।',
+    MsalAuthTimeout: '認証コードの期限が切れました。更新してください。',
     Copied: 'コピーしました',
     Warning: '警告',
     StoreLinkOpenFailed: 'ストアページを開けませんでした。',
     WaitingForServerToRegister:
-      'コンソールが接続されていません。電源ボタンを10秒間長押ししてみてください।',
+      'コンソールが接続されていません。電源ボタンを10秒間長押ししてみてください。',
     XboxstreaminghelperErr:
       'ストリーミングサービスに問題があります。コンソールを再起動してください。エラー:',
     AdExperienceErr:
       'Microsoft側で広告の開始に失敗しました。時間をおいてもう一度試すか、広告なしで遊べるタイトルをお試しください。エラー:',
     DisabledStreamingErr:
-      'ストリーミングが無効です।Xboxの設定を確認してください।',
+      'ストリーミングが無効です。Xboxの設定を確認してください。',
     AuthFailDesc: '認証に失敗しました。エラー:',
     XalAuthFailDesc:
       'XAL認証に失敗しました。MSALログインを試してください。エラー:',
@@ -66,28 +66,28 @@ export default {
     'Set resolution, support 720P/1080P/1080P(HQ)':
       '解像度設定 (720P/1080P対応)',
     resolutionTips:
-      '1080P(HQ)には高速な通信環境が必要です。コンソールは最大1080Pまで対応しています।',
+      '1080P(HQ)には高速な通信環境が必要です。コンソールは最大1080Pまで対応しています。',
     Codec: 'コーデック',
     'If your device supports newer codecs, it can reduce the video bandwidth requirements':
-      '新しいコーデックはデータ消費を抑えられます।',
+      '新しいコーデックはデータ消費を抑えられます。',
     Vibration: '振動',
     'Aspect ratio': 'アスペクト比',
     Stretch: '引き伸ばし',
     Zoom: 'ズーム',
     'Joystick dead zone': 'デッドゾーン',
     'Config joystick dead zone':
-      'スティックのドリフトを抑えるために設定してください।',
+      'スティックのドリフトを抑えるために設定してください。',
     'Set region': 'サーバーリージョン',
     'Changing the region allows you to use XGPU services without a proxy':
-      '地域変更でプロキシなしで利用可能।',
+      '地域変更でプロキシなしで利用可能。',
     'The signaling server is a server for stream negotiation. If the host cannot connect, please try modifying this option':
-      '接続に問題がある場合は変更してください।',
+      '接続に問題がある場合は変更してください。',
     'Preferred language of game': 'ゲームの言語',
     'Set language of cloud game': 'クラウドゲームの言語設定',
     'Key mapping': 'キーマッピング',
     'Mapping key of gamepad': 'ボタンマッピング設定',
     'Currently no network connection, please connect and try again':
-      'ネットワーク接続がありません।',
+      'ネットワーク接続がありません。',
     'Do you want to logout?': 'ログアウトしますか？',
     'Current user': '現在のユーザー',
     'Signal server': 'シグナルサーバー',
@@ -96,8 +96,8 @@ export default {
     CustomizeButtonsWithMacroHint:
       '仮想パッドのレイアウトを編集(マクロボタン3個を含む)。編集画面でマクロボタンをタップすると、そのボタン専用のアクション列を設定できます。',
     'Edit Virtual Gamepad': '仮想パッドを編集',
-    noAllow: '権限がありません。ログインとサブスクを確認してください।',
-    homeNoAllow: '確認に失敗しました।再ログインしてください।',
+    noAllow: '権限がありません。ログインとサブスクを確認してください。',
+    homeNoAllow: '確認に失敗しました。再ログインしてください。',
     'Auto check update': '自動更新',
     'Whether check AnyStreaming updates automatically':
       '自動更新を確認するかどうか',
@@ -241,8 +241,8 @@ export default {
     'Preparing installation': '準備中...',
     'Auto install': '自動インストール',
     'Manual download': '手動ダウンロード',
-    InstallPermissionRequired: 'インストール権限が必要です।',
-    AutoInstallFailed: '自動インストール失敗।手動で行ってください।',
+    InstallPermissionRequired: 'インストール権限が必要です。',
+    AutoInstallFailed: '自動インストール失敗。手動で行ってください。',
     'Game screen position': 'ゲーム画面の表示位置',
     Top: '上寄せ',
     Center: '中央',
@@ -396,7 +396,7 @@ export default {
     'Ready to send ICE...': 'ICE送信準備完了',
     'Exchange ICE successfully...': 'ICE交換成功',
     'Streaming is closed': '終了しました',
-    'NAT failed': 'NAT失敗।ルーター設定を確認।',
+    'NAT failed': 'NAT失敗。ルーター設定を確認。',
     'Reconnected failed': '再接続失敗',
     Refresh: '更新',
     History: '履歴',
