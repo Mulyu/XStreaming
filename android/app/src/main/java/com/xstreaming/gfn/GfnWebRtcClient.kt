@@ -119,6 +119,35 @@ class GfnWebRtcClient(
         onState(state, detail)
     }
 
+    // org.webrtc's PeerConnection.Observer/SdpObserver callbacks fire later,
+    // asynchronously, on WebRTC's own native-managed threads -- unlike the
+    // TS version's await chain, where every step after setRemoteDescription/
+    // createAnswer/setLocalDescription runs inside the SAME async function
+    // and is covered by its single call-site `.catch()`, each callback here
+    // is its own separate entry point, reached only through a try/catch
+    // wrapped around the *call that registers* it, not around what it later
+    // does. An exception thrown inside one of these bodies (e.g. a
+    // malformed/unexpected SDP from an edge-case session) would otherwise
+    // escape uncaught across the JNI boundary and crash the whole app --
+    // confirmed as the cause of a real crash right at negotiation/track-
+    // attach time (exactly when a game would start). Every
+    // PeerConnection.Observer/SdpObserver callback in this file routes
+    // through this instead, so any such exception becomes a normal FAILED
+    // state (like the TS version's catch) rather than a fatal crash.
+    private inline fun safeCallback(where: String, action: () -> Unit) {
+        try {
+            action()
+        } catch (e: Exception) {
+            // The fallback itself must not be able to escape either -- a
+            // throwing onState implementation here would otherwise crash
+            // exactly as before this function existed.
+            try {
+                setState(GfnConnectionState.FAILED, "$where crashed: ${e.message}")
+            } catch (ignored: Exception) {
+            }
+        }
+    }
+
     fun connect() {
         setState(GfnConnectionState.SIGNALING)
         signaling.onEvent { event -> handleSignalingEvent(event) }
@@ -192,28 +221,34 @@ class GfnWebRtcClient(
 
         val observer = object : PeerConnection.Observer {
             override fun onIceCandidate(candidate: IceCandidate) {
-                val c = GfnIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex, null)
-                if (!answerSent) {
-                    queuedLocalIce.add(c)
-                } else {
-                    signaling.sendIceCandidate(c)
+                safeCallback("onIceCandidate") {
+                    val c = GfnIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex, null)
+                    if (!answerSent) {
+                        queuedLocalIce.add(c)
+                    } else {
+                        signaling.sendIceCandidate(c)
+                    }
                 }
             }
 
             override fun onAddTrack(receiver: RtpReceiver, mediaStreams: Array<out MediaStream>) {
-                when (val track = receiver.track()) {
-                    is VideoTrack -> onTrack(track, null)
-                    is AudioTrack -> onTrack(null, track)
-                    else -> {}
+                safeCallback("onAddTrack") {
+                    when (val track = receiver.track()) {
+                        is VideoTrack -> onTrack(track, null)
+                        is AudioTrack -> onTrack(null, track)
+                        else -> {}
+                    }
                 }
             }
 
             override fun onConnectionChange(newState: PeerConnection.PeerConnectionState) {
-                when (newState) {
-                    PeerConnection.PeerConnectionState.CONNECTED -> setState(GfnConnectionState.CONNECTED)
-                    PeerConnection.PeerConnectionState.FAILED -> setState(GfnConnectionState.FAILED, "peer connection failed")
-                    PeerConnection.PeerConnectionState.DISCONNECTED -> setState(GfnConnectionState.DISCONNECTED, "peer disconnected")
-                    else -> {}
+                safeCallback("onConnectionChange") {
+                    when (newState) {
+                        PeerConnection.PeerConnectionState.CONNECTED -> setState(GfnConnectionState.CONNECTED)
+                        PeerConnection.PeerConnectionState.FAILED -> setState(GfnConnectionState.FAILED, "peer connection failed")
+                        PeerConnection.PeerConnectionState.DISCONNECTED -> setState(GfnConnectionState.DISCONNECTED, "peer disconnected")
+                        else -> {}
+                    }
                 }
             }
 
@@ -240,12 +275,16 @@ class GfnWebRtcClient(
         connection.setRemoteDescription(
             object : SdpObserver by NoopSdpObserver {
                 override fun onSetSuccess() {
-                    prepareMicTransceiver(connection, offerSdp)
-                    answerOffer(connection)
+                    safeCallback("setRemoteDescription.onSetSuccess") {
+                        prepareMicTransceiver(connection, offerSdp)
+                        answerOffer(connection)
+                    }
                 }
 
                 override fun onSetFailure(error: String?) {
-                    setState(GfnConnectionState.FAILED, "setRemoteDescription failed: $error")
+                    safeCallback("setRemoteDescription.onSetFailure") {
+                        setState(GfnConnectionState.FAILED, "setRemoteDescription failed: $error")
+                    }
                 }
             },
             SessionDescription(SessionDescription.Type.OFFER, offerSdp),
@@ -260,29 +299,37 @@ class GfnWebRtcClient(
         connection.createAnswer(
             object : SdpObserver by NoopSdpObserver {
                 override fun onCreateSuccess(answer: SessionDescription) {
-                    // createAnswer() has no codec preference of its own -- force
-                    // the codec actually asked for so negotiation can't land on
-                    // one that needs a slow software decode path under load.
-                    var sdp = preferVideoCodec(answer.description, session.settings.codec)
-                    // Match the official web client: "b=AS:<kbps>" + "stereo=1".
-                    sdp = mungeAnswerSdp(sdp, maxBitrateKbps)
-                    val finalDescription = SessionDescription(SessionDescription.Type.ANSWER, sdp)
-                    connection.setLocalDescription(
-                        object : SdpObserver by NoopSdpObserver {
-                            override fun onSetSuccess() {
-                                finishAnswer(connection, sdp, maxBitrateKbps)
-                            }
+                    safeCallback("createAnswer.onCreateSuccess") {
+                        // createAnswer() has no codec preference of its own -- force
+                        // the codec actually asked for so negotiation can't land on
+                        // one that needs a slow software decode path under load.
+                        var sdp = preferVideoCodec(answer.description, session.settings.codec)
+                        // Match the official web client: "b=AS:<kbps>" + "stereo=1".
+                        sdp = mungeAnswerSdp(sdp, maxBitrateKbps)
+                        val finalDescription = SessionDescription(SessionDescription.Type.ANSWER, sdp)
+                        connection.setLocalDescription(
+                            object : SdpObserver by NoopSdpObserver {
+                                override fun onSetSuccess() {
+                                    safeCallback("setLocalDescription.onSetSuccess") {
+                                        finishAnswer(connection, sdp, maxBitrateKbps)
+                                    }
+                                }
 
-                            override fun onSetFailure(error: String?) {
-                                setState(GfnConnectionState.FAILED, "setLocalDescription failed: $error")
-                            }
-                        },
-                        finalDescription,
-                    )
+                                override fun onSetFailure(error: String?) {
+                                    safeCallback("setLocalDescription.onSetFailure") {
+                                        setState(GfnConnectionState.FAILED, "setLocalDescription failed: $error")
+                                    }
+                                }
+                            },
+                            finalDescription,
+                        )
+                    }
                 }
 
                 override fun onCreateFailure(error: String?) {
-                    setState(GfnConnectionState.FAILED, "createAnswer failed: $error")
+                    safeCallback("createAnswer.onCreateFailure") {
+                        setState(GfnConnectionState.FAILED, "createAnswer failed: $error")
+                    }
                 }
             },
             MediaConstraints(),
@@ -413,9 +460,11 @@ class GfnWebRtcClient(
                 override fun onBufferedAmountChange(previousAmount: Long) {}
                 override fun onStateChange() {}
                 override fun onMessage(buffer: DataChannel.Buffer) {
-                    val bytes = ByteArray(buffer.data.remaining())
-                    buffer.data.get(bytes)
-                    onInputChannelMessage(bytes)
+                    safeCallback("inputChannel.onMessage") {
+                        val bytes = ByteArray(buffer.data.remaining())
+                        buffer.data.get(bytes)
+                        onInputChannelMessage(bytes)
+                    }
                 }
             },
         )
