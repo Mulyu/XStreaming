@@ -1,0 +1,91 @@
+diff --git a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
+index 976a278..a04ebcb 100644
+--- a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
++++ b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
+@@ -62,6 +62,26 @@ std::string jstringToStdString(JNIEnv* env, jstring jStr) {
+   return ret;
+ }
+ 
++// Inverse of jstringToStdString above, needed because JNI's own
++// NewStringUTF only accepts "modified UTF-8" (no real 4-byte sequences,
++// e.g. emoji) -- going through `new String(byte[], "UTF-8")` the same way
++// jstringToStdString goes through `String.getBytes("UTF-8")` handles real
++// UTF-8 input correctly either direction.
++jstring stdStringToJstring(JNIEnv* env, const std::string& str) {
++  const auto byteArray = env->NewByteArray((jsize)str.size());
++  env->SetByteArrayRegion(byteArray, 0, (jsize)str.size(), (const jbyte*)str.data());
++
++  const auto stringClass = env->FindClass("java/lang/String");
++  const auto ctor = env->GetMethodID(stringClass, "<init>", "([BLjava/lang/String;)V");
++  const auto encoding = env->NewStringUTF("UTF-8");
++  const auto result = (jstring)env->NewObject(stringClass, ctor, byteArray, encoding);
++
++  env->DeleteLocalRef(byteArray);
++  env->DeleteLocalRef(encoding);
++  env->DeleteLocalRef(stringClass);
++  return result;
++}
++
+ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInstall(JNIEnv* env,
+                                                                                     jobject clazz,
+                                                                                     jlong jsiPtr,
+@@ -81,3 +101,59 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
+   // if runtime was nullptr, MMKV will not be installed. This should only happen while Remote
+   // Debugging (Chrome), but will be weird either way.
+ }
++
++// --- XStreaming patch: direct native (non-JSI) access to the default MMKV
++// instance's "user.settings" key, for a Kotlin-only settings UI that doesn't
++// go through the JS bridge at all. MMKV::mmkvWithID(...) returns the SAME
++// process-wide singleton instance JS's `new MMKV()` (id "mmkv.default", no
++// explicit path) already uses -- as long as this call happens after
++// nativeInstall above has run initializeMMKV() at least once (expected
++// here, since shared/lib/mmkv.ts's `new MMKV()` runs at JS module-import
++// time, well before any native UI reachable only from within the already-
++// running app could call this). Calling this from a SEPARATE MMKV
++// dependency/instance would NOT be safe (two independent copies of MMKV's
++// C++ core racing the same mmap'd file); this works only because it's
++// compiled into this exact same reactnativemmkv.so, sharing MMKV's one
++// static instance registry with the calls above.
++//
++// mmkvRootDirReady() enforces that expectation rather than just assuming
++// it: MMKV::getRootDir() is empty until initializeMMKV() has run, so a
++// caller added later that's reachable before RN/JS has started would
++// otherwise risk mmkvWithID() falling back to some other, unintended root
++// directory instead of safely failing.
++bool mmkvRootDirReady() {
++  return !MMKV::getRootDir().empty();
++}
++
++extern "C" JNIEXPORT jstring JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeGetUserSettingsJson(JNIEnv* env,
++                                                                            jobject /* this */) {
++  if (!mmkvRootDirReady()) {
++    return nullptr;
++  }
++  MMKV* mmkv = MMKV::mmkvWithID("mmkv.default", mmkv::DEFAULT_MMAP_SIZE, MMKV_SINGLE_PROCESS, nullptr, nullptr);
++  if (mmkv == nullptr) {
++    return nullptr;
++  }
++  std::string result;
++  bool hasValue = mmkv->getString("user.settings", result);
++  if (!hasValue) {
++    return nullptr;
++  }
++  return stdStringToJstring(env, result);
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeSetUserSettingsJson(JNIEnv* env,
++                                                                            jobject /* this */,
++                                                                            jstring json) {
++  if (json == nullptr || !mmkvRootDirReady()) {
++    return;
++  }
++  MMKV* mmkv = MMKV::mmkvWithID("mmkv.default", mmkv::DEFAULT_MMAP_SIZE, MMKV_SINGLE_PROCESS, nullptr, nullptr);
++  if (mmkv == nullptr) {
++    return;
++  }
++  std::string value = jstringToStdString(env, json);
++  mmkv->set(value, "user.settings");
++}

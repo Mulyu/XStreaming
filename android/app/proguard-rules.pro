@@ -34,3 +34,12 @@
 -keep class com.xstreaming.xcloud.GamepadFrameDto { *; }
 -keep class com.xstreaming.xcloud.PointerEventDto { *; }
 -keep class com.xstreaming.xcloud.IceCandidateDto { *; }
+
+# AppSettings.kt's Settings/DisplayOptions serialize Gson-reflectively to/
+# from the exact JSON shape shared/lib/settings.ts's getSettings/saveSettings
+# read and write (field names, via @SerializedName, must match those JSON
+# keys) -- an unobfuscated field name here isn't optional the way it might
+# be for an app-internal-only DTO, since the JS side reads the same stored
+# blob by the same hardcoded key strings.
+-keep class com.xstreaming.settings.Settings { *; }
+-keep class com.xstreaming.settings.DisplayOptions { *; }
