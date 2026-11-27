@@ -205,11 +205,44 @@ private fun mergeWithDefaults(json: JsonObject): Settings {
     )
 }
 
+// Matches MmkvModule.java's install()'s own default when JS doesn't
+// override it: getFilesDir() + "/mmkv". Must stay byte-for-byte identical --
+// it's the root directory shared/lib/mmkv.ts's `new MMKV()` initializes
+// MMKV with whenever JS does start, so whichever side gets there first,
+// the other's later call is a no-op against the exact same path, not a
+// second, divergent store.
+private fun defaultMmkvRootDirectory(context: Context): String =
+    "${context.filesDir.absolutePath}/mmkv"
+
+// Once true for this process, MMKV is initialized for good (its root
+// directory never changes afterward) -- cached here so every settings
+// read/write after the first doesn't pay a JNI round-trip (into a call
+// that would otherwise immediately no-op) just to find that out again.
+@Volatile
+private var mmkvInitialized = false
+
+// Safe to call before every read/write: past the first call in this
+// process, a cheap no-op (see mmkvInitialized above). The only way this
+// native-only settings UI stays correct when Android recreates this
+// Activity directly after the whole process was killed in the background --
+// SettingsActivity can then become the very first code to run in the new
+// process, with RN/JS never starting at all. Without this, getSettings()
+// would silently fall back to defaultSettings and saveSettings()'s writes
+// would be silently dropped until JS eventually initializes MMKV itself.
+private fun ensureMmkvInitialized(context: Context) {
+    if (mmkvInitialized) {
+        return
+    }
+    NativeSettingsStore.nativeEnsureMmkvInitialized(defaultMmkvRootDirectory(context))
+    mmkvInitialized = true
+}
+
 // Mirrors getSettings() exactly, including its locale_follow_system
 // present-vs-absent asymmetry: absent entirely (first run, no stored
 // settings at all) defaults locale_follow_system to true; present in an
 // existing (older) blob without this key defaults it to false instead.
-fun getSettings(): Settings {
+fun getSettings(context: Context): Settings {
+    ensureMmkvInitialized(context)
     val raw = NativeSettingsStore.nativeGetUserSettingsJson()
     if (raw.isNullOrEmpty()) {
         return defaultSettings.copy(locale = getSystemLocale(), localeFollowSystem = true)
@@ -237,6 +270,7 @@ fun getSettings(): Settings {
 // both already native Kotlin/Java in this app (AudioConfig/
 // LowLatencyDecoderConfig), so this calls them directly, no bridge needed.
 fun saveSettings(context: Context, settings: Settings) {
+    ensureMmkvInitialized(context)
     NativeSettingsStore.nativeSetUserSettingsJson(gson.toJson(settings))
     try {
         // Stereo separation doesn't survive the stream's own latency, so
@@ -252,6 +286,7 @@ fun saveSettings(context: Context, settings: Settings) {
 // Mirrors resetSettings(): writes defaultSettings directly, same as the TS
 // version -- deliberately does NOT go through saveSettings()/its audio
 // side effects, matching storage.set(STORE_KEY, ...) called bare there.
-fun resetSettings() {
+fun resetSettings(context: Context) {
+    ensureMmkvInitialized(context)
     NativeSettingsStore.nativeSetUserSettingsJson(gson.toJson(defaultSettings))
 }

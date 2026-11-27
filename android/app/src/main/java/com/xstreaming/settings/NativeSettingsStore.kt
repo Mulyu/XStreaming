@@ -19,4 +19,9 @@ object NativeSettingsStore {
 
     external fun nativeGetUserSettingsJson(): String?
     external fun nativeSetUserSettingsJson(json: String)
+
+    // No-op if MMKV is already initialized (by this call or by JS's own
+    // `new MMKV()`) -- see AppSettings.kt's ensureMmkvInitialized() for why
+    // a native-only caller can't just assume JS got there first.
+    external fun nativeEnsureMmkvInitialized(rootDirectory: String)
 }

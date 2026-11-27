@@ -59,7 +59,7 @@ private fun restartForDecoderChange(context: Context) {
 @Composable
 fun DisplaySettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var settings by remember { mutableStateOf(getSettings()) }
+    var settings by remember { mutableStateOf(getSettings(context)) }
 
     fun update(patch: (Settings) -> Settings) {
         val next = patch(settings)
