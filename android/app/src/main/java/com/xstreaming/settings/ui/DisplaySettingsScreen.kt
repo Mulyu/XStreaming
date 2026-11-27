@@ -26,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import com.jakewharton.processphoenix.ProcessPhoenix
 import com.xstreaming.R
 import com.xstreaming.settings.Settings
-import com.xstreaming.settings.getSettings
 import com.xstreaming.settings.saveSettings
 
 // Mirrors src/pages/settings/model/useSettingsScreen.ts's
@@ -54,12 +53,17 @@ private fun restartForDecoderChange(context: Context) {
  * values and order kept byte-for-byte identical -- see that file). No JS/RN
  * bridge: reads/writes the same MMKV-backed Settings AppSettings.kt already
  * exposes, so this and the RN Settings screen stay on the same live data.
+ *
+ * [initialSettings] is read once by the caller (SettingsActivity), not
+ * here, since the caller also needs it (for the locale-aware Context it
+ * wraps this screen's Compose content in) and re-reading it here would be
+ * a second, redundant MMKV JNI read + JSON parse for the same data.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DisplaySettingsScreen(onBack: () -> Unit) {
+fun DisplaySettingsScreen(initialSettings: Settings, onBack: () -> Unit) {
     val context = LocalContext.current
-    var settings by remember { mutableStateOf(getSettings(context)) }
+    var settings by remember { mutableStateOf(initialSettings) }
 
     fun update(patch: (Settings) -> Settings) {
         val next = patch(settings)
