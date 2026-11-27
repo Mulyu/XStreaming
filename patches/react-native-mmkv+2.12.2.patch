@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
-index 976a278..0cf92ab 100644
+index 976a278..f613a45 100644
 --- a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 +++ b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 @@ -3,9 +3,22 @@
@@ -25,7 +25,7 @@ index 976a278..0cf92ab 100644
  std::string getPropertyAsStringOrEmptyFromObject(jsi::Object& object,
                                                   const std::string& propertyName,
                                                   jsi::Runtime& runtime) {
-@@ -62,6 +75,26 @@ std::string jstringToStdString(JNIEnv* env, jstring jStr) {
+@@ -62,17 +75,78 @@ std::string jstringToStdString(JNIEnv* env, jstring jStr) {
    return ret;
  }
  
@@ -49,62 +49,78 @@ index 976a278..0cf92ab 100644
 +  return result;
 +}
 +
- extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInstall(JNIEnv* env,
-                                                                                     jobject clazz,
-                                                                                     jlong jsiPtr,
-@@ -72,7 +105,10 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
-   MMKVLogLevel logLevel = MMKVLogError;
- #endif
-   std::string storageDirectory = jstringToStdString(env, path);
--  MMKV::initializeMMKV(storageDirectory, logLevel);
-+  {
-+    std::lock_guard<std::mutex> lock(gMmkvInitMutex);
-+    MMKV::initializeMMKV(storageDirectory, logLevel);
-+  }
- 
-   auto runtime = reinterpret_cast<jsi::Runtime*>(jsiPtr);
-   if (runtime) {
-@@ -81,3 +117,103 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
-   // if runtime was nullptr, MMKV will not be installed. This should only happen while Remote
-   // Debugging (Chrome), but will be weird either way.
- }
-+
 +// --- XStreaming patch: direct native (non-JSI) access to the default MMKV
 +// instance's "user.settings" key, for a Kotlin-only settings UI that doesn't
-+// go through the JS bridge at all. MMKV::mmkvWithID(...) returns the SAME
-+// process-wide singleton instance JS's `new MMKV()` (id "mmkv.default", no
-+// explicit path) already uses. Calling this from a SEPARATE MMKV
-+// dependency/instance would NOT be safe (two independent copies of MMKV's
-+// C++ core racing the same mmap'd file); this works only because it's
-+// compiled into this exact same reactnativemmkv.so, sharing MMKV's one
-+// static instance registry with the calls above.
++// go through the JS bridge at all. MMKV::mmkvWithID(...) (used further
++// below) returns the SAME process-wide singleton instance JS's `new MMKV()`
++// (id "mmkv.default", no explicit path) already uses. Calling this from a
++// SEPARATE MMKV dependency/instance would NOT be safe (two independent
++// copies of MMKV's C++ core racing the same mmap'd file); this works only
++// because it's compiled into this exact same reactnativemmkv.so, sharing
++// MMKV's one static instance registry with nativeInstall below.
 +//
 +// mmkvRootDirReady() checks MMKV::getRootDir() rather than just assuming
-+// nativeInstall above has already run initializeMMKV(): that's normally
-+// true well before any native UI reachable only from within the already-
-+// running app could call this (shared/lib/mmkv.ts's `new MMKV()` runs at JS
-+// module-import time), EXCEPT when Android recreates this Activity directly
-+// after the whole process was killed in the background -- then this native
-+// Settings UI can become the very first code to run in the new process,
-+// with RN/JS never having started at all. nativeEnsureMmkvInitialized
-+// below covers that case explicitly, rather than silently falling back to
-+// defaultSettings and discarding writes until JS eventually starts.
++// nativeInstall has already run initializeMMKV(): that's normally true well
++// before any native UI reachable only from within the already-running app
++// could call this (shared/lib/mmkv.ts's `new MMKV()` runs at JS module-
++// import time), EXCEPT when Android recreates a native-only Activity
++// directly after the whole process was killed in the background -- that
++// Activity can then become the very first code to run in the new process,
++// with RN/JS never having started at all. nativeEnsureMmkvInitialized below
++// covers that case explicitly, with the guarantee that whichever of it and
++// nativeInstall actually runs initializeMMKV() first, the other's call is a
++// no-op against the identical root directory (see both functions' bodies)
++// -- defined up here, before nativeInstall, so nativeInstall's own guard
++// below can call it.
 +bool mmkvRootDirReady() {
 +  return !MMKV::getRootDir().empty();
 +}
 +
-+// Mirrors nativeInstall's own MMKV::initializeMMKV call -- same log levels
-+// -- but reachable from Kotlin with no JSI runtime/JS bridge involved.
-+// Callers pass the exact same default root directory MmkvModule.java's
-+// install() computes when JS doesn't override it (getFilesDir() +
-+// "/mmkv"), so whichever side -- this or JS's own later `new MMKV()` --
-+// happens to initialize MMKV first, the other's later call is a no-op
-+// against the identical path: NOT because MMKV::initializeMMKV() itself is
-+// a no-op on repeat calls (it unconditionally reassigns MMKV's root-dir
-+// state and re-runs mkPath every time it's actually invoked), but because
-+// the mmkvRootDirReady() check-then-act below, under the same mutex
-+// nativeInstall above now also takes, only ever calls it the first time
-+// either path runs in this process.
+ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInstall(JNIEnv* env,
+                                                                                     jobject clazz,
+                                                                                     jlong jsiPtr,
+                                                                                     jstring path) {
++  {
++    std::lock_guard<std::mutex> lock(gMmkvInitMutex);
++    // Guarded (not an unconditional MMKV::initializeMMKV() call the way
++    // this function originally had it) so a second nativeInstall in this
++    // process -- e.g. a JS-side dev reload recreating the bridge without a
++    // full process restart -- can never re-mutate MMKV's root-dir state
++    // while nativeGetUserSettingsJson/nativeSetUserSettingsJson (below) are
++    // using it outside this lock. shared/lib/mmkv.ts never passes a custom
++    // path, so every call in this process computes the identical
++    // storageDirectory anyway -- this only skips redundant, not divergent,
++    // re-initialization.
++    if (!mmkvRootDirReady()) {
+ #if DEBUG
+-  MMKVLogLevel logLevel = MMKVLogDebug;
++      MMKVLogLevel logLevel = MMKVLogDebug;
+ #else
+-  MMKVLogLevel logLevel = MMKVLogError;
++      MMKVLogLevel logLevel = MMKVLogError;
+ #endif
+-  std::string storageDirectory = jstringToStdString(env, path);
+-  MMKV::initializeMMKV(storageDirectory, logLevel);
++      std::string storageDirectory = jstringToStdString(env, path);
++      MMKV::initializeMMKV(storageDirectory, logLevel);
++    }
++  }
+ 
+   auto runtime = reinterpret_cast<jsi::Runtime*>(jsiPtr);
+   if (runtime) {
+@@ -81,3 +155,75 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
+   // if runtime was nullptr, MMKV will not be installed. This should only happen while Remote
+   // Debugging (Chrome), but will be weird either way.
+ }
++
++// Mirrors nativeInstall's own (now guarded) MMKV::initializeMMKV call --
++// same log levels, same gMmkvInitMutex, same "only the first caller in this
++// process actually runs initializeMMKV" guarantee -- but reachable from
++// Kotlin with no JSI runtime/JS bridge involved. Callers pass the exact
++// same default root directory MmkvModule.java's install() computes when JS
++// doesn't override it (getFilesDir() + "/mmkv"), so whichever of this and
++// nativeInstall gets there first, the other's call is a no-op against the
++// identical path, not a second, divergent store.
 +extern "C" JNIEXPORT void JNICALL
 +Java_com_xstreaming_settings_NativeSettingsStore_nativeEnsureMmkvInitialized(
 +    JNIEnv* env, jobject /* this */, jstring rootDirectory) {
