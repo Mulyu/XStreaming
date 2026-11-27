@@ -1,5 +1,11 @@
 import React from 'react';
-import {StyleSheet, ScrollView, View, Pressable} from 'react-native';
+import {
+  NativeModules,
+  StyleSheet,
+  ScrollView,
+  View,
+  Pressable,
+} from 'react-native';
 import {Text, Portal, Modal, Card} from 'react-native-paper';
 import Spinner from '../../../shared/ui/Spinner';
 import {useTVFocus, tvFocusBold} from '../../../shared/ui/tvFocus';
@@ -171,6 +177,18 @@ const SettingsView: React.FC<Props> = ({
             desc={M('native_low_latency_decoder').description}
             value={settings.native_low_latency_decoder}
             onChange={onLowLatencyDecoderChange}
+          />
+          {/* Temporary dev entry point into the in-progress Jetpack Compose
+              rewrite of this screen (no JS/RN bridge for its own settings
+              data -- see android/.../com/xstreaming/settings). Remove once
+              the Compose screen covers everything this JS screen does and
+              replaces it outright. */}
+          <SettingItem
+            title="Native Settings (Beta)"
+            description="Jetpack Compose rewrite in progress -- Display settings only so far"
+            onPress={() =>
+              NativeModules.SettingsLauncherModule?.openNativeSettings?.()
+            }
           />
 
           <SectionLabel title={t('GamepadSettings')} />
