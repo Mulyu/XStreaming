@@ -106,5 +106,15 @@
             <category android:name="android.intent.category.GAME" />
         </intent-filter>
       </activity>
+
+      <!-- No explicit android:theme: inherits the application's own
+           Theme.AppCompat.NoActionBar, which Compose runs over fine. This
+           avoids pulling in react-native-edge-to-edge's AppTheme (styles.xml),
+           whose window-inset behavior is tuned for the RN-hosted MainActivity,
+           not this plain native screen. -->
+      <activity
+        android:name=".settings.SettingsActivity"
+        android:label="@string/app_name"
+        android:exported="false" />
     </application>
 </manifest>

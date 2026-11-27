@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, ToastAndroid} from 'react-native';
+import {Alert, AppState, ToastAndroid} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {useSelector} from 'react-redux';
 import RNRestart from 'react-native-restart';
@@ -209,11 +209,24 @@ export function useSettingsScreen(navigation: any, route: any) {
 
   // Settings can also change from other screens (key mapping, DualSense
   // trigger tuning, ...); reload from storage whenever this tab regains
-  // focus so an inline control never shows a stale value.
+  // focus so an inline control never shows a stale value. Returning from
+  // the native (Compose/Kotlin) Settings screen is a plain Activity finish,
+  // not a React Navigation transition, so it never fires 'focus' -- without
+  // the AppState listener below, this screen's `settings` stays the
+  // pre-launch snapshot, and the next JS-side edit's `{...prev, ...patch}`
+  // merge would silently overwrite whatever was changed natively.
   React.useEffect(() => {
     const reload = () => setSettings(getSettings());
     const unsubscribe = navigation.addListener('focus', reload);
-    return unsubscribe;
+    const appStateSubscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        reload();
+      }
+    });
+    return () => {
+      unsubscribe();
+      appStateSubscription.remove();
+    };
   }, [navigation]);
 
   const restart = () => setTimeout(() => RNRestart.restart(), 500);

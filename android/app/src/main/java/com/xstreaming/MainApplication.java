@@ -24,6 +24,7 @@ import com.xstreaming.catalog.CatalogPopularOrderPackage;
 import com.xstreaming.catalog.CatalogXcloudPackage;
 import com.xstreaming.catalog.CatalogDisplayPackage;
 import com.xstreaming.catalog.CatalogGfnPackage;
+import com.xstreaming.settings.SettingsLauncherPackage;
 
 import android.media.AudioAttributes;
 import org.webrtc.EglBase;
@@ -74,6 +75,7 @@ public class MainApplication extends Application implements ReactApplication {
             packages.add(new CatalogXcloudPackage());
             packages.add(new CatalogDisplayPackage());
             packages.add(new CatalogGfnPackage());
+            packages.add(new SettingsLauncherPackage());
           return packages;
         }
 
