@@ -33,6 +33,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.xstreaming.R
 import com.xstreaming.settings.Settings
+import com.xstreaming.settings.clearStreamToken
+import com.xstreaming.settings.clearWebToken
+import com.xstreaming.settings.clearXcloudData
 import com.xstreaming.settings.saveSettings
 
 // Mirrors SettingsView.tsx's Lane type/laneRow -- which tab is showing.
@@ -99,7 +102,7 @@ fun SettingsScreen(initialSettings: Settings, onBack: () -> Unit) {
             Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 when (lane) {
                     SettingsLane.COMMON -> CommonLane(settings, ::update)
-                    SettingsLane.XBOX -> XboxLane(onBack)
+                    SettingsLane.XBOX -> XboxLane(settings, ::update, onBack)
                     SettingsLane.GFN -> GfnLane()
                 }
             }
@@ -221,13 +224,153 @@ private fun CommonLane(settings: Settings, update: ((Settings) -> Settings) -> U
     )
 }
 
-// Mirrors SettingsView.tsx's 'xbox' lane -- account row only so far; video/
-// region/language rows land in a follow-up.
+// Mirrors SettingsView.tsx's 'xbox' lane: SectionAccount (the Xbox account
+// row -- its own playtime row is a separate, network-backed follow-up),
+// SectionVideo (resolution/codec), SectionRegionSignaling (force_region_ip/
+// xcloud_native_webrtc), SectionSignInLanguage (preferred_game_language).
+//
+// Not here: 'signaling_cloud' -- in the JS screen, its option list comes
+// from the ACTIVE xCloud stream token's own getRegions() (see
+// useSettingsScreen.ts's xgpuRegions), which only exists during a live
+// JS-driven stream session; there is no equivalent data source reachable
+// from this native-only screen, so this row would always render with zero
+// options (effectively inert) rather than actually letting the user pick
+// anything.
 @Composable
-private fun XboxLane(onBack: () -> Unit) {
+private fun XboxLane(settings: Settings, update: ((Settings) -> Settings) -> Unit, onBack: () -> Unit) {
+    val context = LocalContext.current
+
     SectionLabel(stringResource(R.string.SectionAccount))
     XboxAccountRow(onBack = onBack)
+
+    SectionLabel(stringResource(R.string.SectionVideo))
+    ChoiceRow(
+        title = stringResource(R.string.Resolution),
+        description = stringResource(R.string.set_resolution_support_720p_1080p_1080p_hq),
+        options = listOf(
+            SettingOption(720.0, "720P"),
+            SettingOption(1080.0, "1080P"),
+            SettingOption(1081.0, "1080P(HQ)/1440P"),
+        ),
+        value = settings.resolution,
+        onChange = { v -> update { it.copy(resolution = v) } },
+    )
+    ChoiceRow(
+        title = stringResource(R.string.Codec),
+        description = stringResource(
+            R.string.if_your_device_supports_newer_codecs_it_can_reduce_the_video_bandwidth_requirements,
+        ),
+        options = listOf(
+            SettingOption("", "Auto"),
+            SettingOption("video/H264-4d", "H264-High"),
+            SettingOption("video/H264-42e", "H264-Medium"),
+            SettingOption("video/H264-420", "H264-Low"),
+        ),
+        value = settings.codec,
+        onChange = { v -> update { it.copy(codec = v) } },
+    )
+
+    SectionLabel(stringResource(R.string.SectionRegionSignaling))
+    ChoiceRow(
+        title = stringResource(R.string.set_region),
+        description = stringResource(
+            R.string.changing_the_region_allows_you_to_use_xgpu_services_without_a_proxy,
+        ),
+        options = listOf(
+            SettingOption("", stringResource(R.string.Default)),
+            SettingOption("203.41.44.20", stringResource(R.string.Australia)),
+            SettingOption("200.221.11.101", stringResource(R.string.Brazil1)),
+            SettingOption("169.150.198.66", stringResource(R.string.Brazil2)),
+            SettingOption("194.25.0.68", stringResource(R.string.Europe)),
+            SettingOption("104.211.224.146", stringResource(R.string.south_india)),
+            SettingOption("104.211.96.159", stringResource(R.string.central_india)),
+            SettingOption("138.199.21.239", stringResource(R.string.Japan1)),
+            SettingOption("210.131.113.123", stringResource(R.string.Japan2)),
+            SettingOption("168.126.63.1", stringResource(R.string.Korea1)),
+            SettingOption("121.125.60.151", stringResource(R.string.Korea2)),
+            SettingOption("4.2.2.2", stringResource(R.string.united_states1)),
+            SettingOption("143.244.47.65", stringResource(R.string.united_states2)),
+            SettingOption("45.134.212.66", stringResource(R.string.Poland)),
+        ),
+        value = settings.forceRegionIp,
+        onChange = { v ->
+            // Mirrors handleForceRegionChange(): the region change can make
+            // the cached stream/web token and xCloud catalog stale (wrong
+            // region's data), so drop them before restarting.
+            clearStreamToken(context)
+            clearWebToken(context)
+            clearXcloudData(context)
+            update { it.copy(forceRegionIp = v) }
+            restartAppDelayed(context)
+        },
+    )
+    // SettingsView.tsx renders this one as a SwitchRow (not the radio list
+    // its own config metadata's type: 'radio' would suggest) -- matching
+    // that, and the sibling SwitchRow this screen already uses one lane
+    // over for native_low_latency_decoder, rather than a heavier 2-option
+    // radio list for a plain boolean.
+    SwitchRow(
+        title = stringResource(R.string.XcloudNativeWebRtcTitle),
+        description = stringResource(R.string.XcloudNativeWebRtcDesc),
+        value = settings.xcloudNativeWebrtc,
+        onChange = { v -> update { it.copy(xcloudNativeWebrtc = v) } },
+    )
+
+    SectionLabel(stringResource(R.string.SectionSignInLanguage))
+    ChoiceRow(
+        title = stringResource(R.string.preferred_language_of_game),
+        description = stringResource(R.string.set_language_of_cloud_game),
+        options = PREFERRED_GAME_LANGUAGE_OPTIONS,
+        value = settings.preferredGameLanguage,
+        onChange = { v ->
+            // Mirrors handlePreferredLanguageChange(): a different game
+            // language can return a different catalog, so the cached one
+            // needs dropping too -- no restart, same as the JS handler.
+            clearXcloudData(context)
+            update { it.copy(preferredGameLanguage = v) }
+        },
+    )
 }
+
+// bases.ts's preferred_game_language option labels are literal English
+// text, not translation keys (unlike the country names above) -- ported
+// verbatim, same as that file, EXCEPT "fi-FI": bases.ts mislabels it
+// "Swedish" (duplicating "sv-SE"'s own label) -- a pre-existing bug in that
+// file, left alone there (out of scope for this PR), but fixed here since
+// this label is a cosmetic, independent copy with no shared-state
+// compatibility requirement -- unlike this app's stored setting VALUES
+// (the "fi-FI" string itself is unchanged, so this fix affects only how
+// the option reads, not what gets saved).
+private val PREFERRED_GAME_LANGUAGE_OPTIONS = listOf(
+    SettingOption("", "Default"),
+    SettingOption("ar-SA", "Arabic (Saudi Arabia)"),
+    SettingOption("cs-CZ", "Czech"),
+    SettingOption("da-DK", "Danish"),
+    SettingOption("de-DE", "German"),
+    SettingOption("el-GR", "Greek"),
+    SettingOption("en-GB", "English (United Kingdom)"),
+    SettingOption("en-US", "English (United States)"),
+    SettingOption("es-ES", "Spanish (Spain)"),
+    SettingOption("es-MX", "Spanish (Mexico)"),
+    SettingOption("fi-FI", "Finnish"),
+    SettingOption("fr-FR", "French"),
+    SettingOption("he-IL", "Hebrew"),
+    SettingOption("hu-HU", "Hungarian"),
+    SettingOption("it-IT", "Italian"),
+    SettingOption("ja-JP", "日本語"),
+    SettingOption("ko-KR", "Korean"),
+    SettingOption("nb-NO", "Norwegian"),
+    SettingOption("nl-NL", "Dutch"),
+    SettingOption("pl-PL", "Polish"),
+    SettingOption("pt-BR", "Portuguese (Brazil)"),
+    SettingOption("pt-PT", "Portuguese (Portugal)"),
+    SettingOption("ru-RU", "Russian"),
+    SettingOption("sk-SK", "Slovak"),
+    SettingOption("sv-SE", "Swedish"),
+    SettingOption("tr-TR", "Turkish"),
+    SettingOption("zh-CN", "简体中文"),
+    SettingOption("zh-TW", "繁體中文"),
+)
 
 // Mirrors SettingsView.tsx's 'gfn' lane -- account row only so far; video
 // rows land in a follow-up.
