@@ -1,5 +1,6 @@
 package com.xstreaming.settings.ui
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Column
@@ -87,11 +88,28 @@ fun GfnSignInDialog(onDismiss: () -> Unit, onSignedIn: () -> Unit) {
                 is GfnSignInUiState.Waiting -> Column {
                     Text(stringResource(R.string.GfnLoginInstruction))
                     Spacer(modifier = Modifier.height(8.dp))
+                    // Shown as plain text, not just inside the "Open in
+                    // browser" button below: some Android TV/kiosk-style
+                    // devices this app targets (see the manifest's
+                    // LEANBACK_LAUNCHER intent filter) have no app that
+                    // handles ACTION_VIEW for an https:// link at all, so
+                    // this is the only way to actually finish sign-in
+                    // there -- type this URL in on another device.
+                    Text(state.challenge.verificationUri, style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(state.challenge.userCode, style = MaterialTheme.typography.headlineMedium)
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedButton(onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(state.challenge.verificationUriComplete))
-                        context.startActivity(intent)
+                        try {
+                            context.startActivity(intent)
+                        } catch (e: ActivityNotFoundException) {
+                            // No browser to hand off to (see the comment on
+                            // verificationUri above) -- the URL/code shown
+                            // above is this dialog's only other way to
+                            // finish sign-in, so there's nothing more to do
+                            // here than not crash the Settings screen.
+                        }
                     }) {
                         Text(stringResource(R.string.GfnLoginOpen))
                     }
