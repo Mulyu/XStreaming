@@ -34,6 +34,16 @@ object NativeSettingsStore {
     external fun nativeGetXboxTokenStoreJson(): String?
     external fun nativeGetXboxProfileCacheJson(): String?
 
+    // Session caches a settings change (e.g. force_region_ip) invalidates --
+    // see SessionCaches.kt, which composes these the same way the JS
+    // originals call each other.
+    external fun nativeClearStreamToken()
+    external fun nativeClearWebToken()
+    external fun nativeClearXboxProfileCache()
+    external fun nativeClearXboxMembership()
+    external fun nativeGetXcloudDataJson(): String?
+    external fun nativeSetXcloudDataJson(json: String)
+
     // No-op if MMKV is already initialized (by this call or by JS's own
     // `new MMKV()`) -- see AppSettings.kt's ensureMmkvInitialized() for why
     // a native-only caller can't just assume JS got there first.

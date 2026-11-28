@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
-index 976a278..8ec3dab 100644
+index 976a278..c5a7791 100644
 --- a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 +++ b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 @@ -3,9 +3,22 @@
@@ -108,7 +108,7 @@ index 976a278..8ec3dab 100644
  
    auto runtime = reinterpret_cast<jsi::Runtime*>(jsiPtr);
    if (runtime) {
-@@ -81,3 +155,175 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
+@@ -81,3 +155,238 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
    // if runtime was nullptr, MMKV will not be installed. This should only happen while Remote
    // Debugging (Chrome), but will be weird either way.
  }
@@ -246,13 +246,13 @@ index 976a278..8ec3dab 100644
 +  setMmkvDefaultString("gfn.tokens", jstringToStdString(env, json));
 +}
 +
-+extern "C" JNIEXPORT void JNICALL
-+Java_com_xstreaming_settings_NativeSettingsStore_nativeClearGfnTokens(JNIEnv* env,
-+                                                                        jobject /* this */) {
++// Shared by every nativeClear* function below (including this one) --
++// same reasoning as getMmkvDefaultString/setMmkvDefaultString above: the
++// readiness check is scoped to just that check, since
++// MMKV::mmkvWithID/removeValueForKey are already thread-safe on their own
++// and don't need gMmkvInitMutex held around them too.
++void removeMmkvDefaultKey(const std::string& key) {
 +  {
-+    // Scoped to just this check, like every other accessor in this file --
-+    // MMKV::mmkvWithID/removeValueForKey below are already thread-safe on
-+    // their own and don't need gMmkvInitMutex held around them too.
 +    std::lock_guard<std::mutex> lock(gMmkvInitMutex);
 +    if (!mmkvRootDirReady()) {
 +      return;
@@ -262,7 +262,13 @@ index 976a278..8ec3dab 100644
 +  if (mmkv == nullptr) {
 +    return;
 +  }
-+  mmkv->removeValueForKey("gfn.tokens");
++  mmkv->removeValueForKey(key);
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeClearGfnTokens(JNIEnv* env,
++                                                                        jobject /* this */) {
++  removeMmkvDefaultKey("gfn.tokens");
 +}
 +
 +extern "C" JNIEXPORT jstring JNICALL
@@ -283,4 +289,61 @@ index 976a278..8ec3dab 100644
 +    return;
 +  }
 +  setMmkvDefaultString("gfn.deviceId", jstringToStdString(env, deviceId));
++}
++
++// Below: the small session-cache "forget this" keys a settings change (e.g.
++// force_region_ip) invalidates in the JS versions of
++// entities/xbox-token/model/{streamTokenStore,webTokenStore,profileCache,
++// membership}.ts -- SessionCaches.kt composes these the same way those JS
++// modules call each other (clearWebToken() also drops the profile cache;
++// clearXboxProfileCache() also drops the membership flag).
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeClearStreamToken(JNIEnv* env,
++                                                                           jobject /* this */) {
++  // Mirrors clearStreamToken(): storage.set(STORE_KEY, JSON.stringify({})),
++  // not a removal -- getStreamToken() parses whatever is stored and would
++  // otherwise need a null-vs-empty-object distinction this doesn't have.
++  setMmkvDefaultString("user.streamToken", "{}");
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeClearWebToken(JNIEnv* env,
++                                                                        jobject /* this */) {
++  // Mirrors webTokenStore.ts's clearWebToken() own storage.set call only --
++  // its clearXboxProfileCache() call is composed in Kotlin (SessionCaches.kt),
++  // same structure as the JS source.
++  setMmkvDefaultString("user.webToken", "{}");
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeClearXboxProfileCache(JNIEnv* env,
++                                                                                jobject /* this */) {
++  removeMmkvDefaultKey("xbox.profile.cache");
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeClearXboxMembership(JNIEnv* env,
++                                                                              jobject /* this */) {
++  removeMmkvDefaultKey("xbox.membership.active");
++}
++
++extern "C" JNIEXPORT jstring JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeGetXcloudDataJson(JNIEnv* env,
++                                                                            jobject /* this */) {
++  std::string result;
++  if (!getMmkvDefaultString("user.xcloud", result)) {
++    return nullptr;
++  }
++  return stdStringToJstring(env, result);
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeSetXcloudDataJson(JNIEnv* env,
++                                                                            jobject /* this */,
++                                                                            jstring json) {
++  if (json == nullptr) {
++    return;
++  }
++  setMmkvDefaultString("user.xcloud", jstringToStdString(env, json));
 +}
