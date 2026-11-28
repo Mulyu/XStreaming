@@ -7,10 +7,13 @@ package com.xstreaming.settings
  * reactnativemmkv.so, same process-wide MMKV::mmkvWithID singleton registry)
  * and why a second, independently-added MMKV dependency would NOT be.
  *
- * Only the "user.settings" key is exposed -- that's the one JSON blob
+ * The "user.settings" key is read/write -- that's the one JSON blob
  * shared/lib/settings.ts's getSettings/saveSettings read and write as a
  * whole, so a Kotlin-only settings UI needs nothing more granular than get/
- * set on that one key.
+ * set on that one key. "gfn.tokens"/"user.tokenstore"/"xbox.profile.cache"
+ * are read-only: the account-status rows in the Compose Settings UI only
+ * show what's already signed in (see AccountStatus.kt), they don't drive
+ * sign-in/sign-out, so there's no native setter for any of these three.
  */
 object NativeSettingsStore {
     init {
@@ -19,6 +22,10 @@ object NativeSettingsStore {
 
     external fun nativeGetUserSettingsJson(): String?
     external fun nativeSetUserSettingsJson(json: String)
+
+    external fun nativeGetGfnTokensJson(): String?
+    external fun nativeGetXboxTokenStoreJson(): String?
+    external fun nativeGetXboxProfileCacheJson(): String?
 
     // No-op if MMKV is already initialized (by this call or by JS's own
     // `new MMKV()`) -- see AppSettings.kt's ensureMmkvInitialized() for why

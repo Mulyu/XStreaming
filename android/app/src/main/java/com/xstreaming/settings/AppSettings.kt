@@ -229,7 +229,8 @@ private var mmkvInitialized = false
 // process, with RN/JS never starting at all. Without this, getSettings()
 // would silently fall back to defaultSettings and saveSettings()'s writes
 // would be silently dropped until JS eventually initializes MMKV itself.
-private fun ensureMmkvInitialized(context: Context) {
+// internal (not private) so AccountStatus.kt's reads can call it too.
+internal fun ensureMmkvInitialized(context: Context) {
     if (mmkvInitialized) {
         return
     }
