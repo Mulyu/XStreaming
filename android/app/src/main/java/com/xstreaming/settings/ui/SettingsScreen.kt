@@ -22,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,11 +33,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.xstreaming.R
+import com.xstreaming.settings.GfnCloudMatchApi
+import com.xstreaming.settings.GfnRegionOption
+import com.xstreaming.settings.GfnSubscriptionInfo
+import com.xstreaming.settings.GfnTokenRefresh
 import com.xstreaming.settings.Settings
 import com.xstreaming.settings.clearStreamToken
 import com.xstreaming.settings.clearWebToken
 import com.xstreaming.settings.clearXcloudData
+import com.xstreaming.settings.getGfnAccountStatus
+import com.xstreaming.settings.gfnGraphqlLocale
 import com.xstreaming.settings.saveSettings
+import kotlinx.coroutines.CancellationException
 
 // Mirrors SettingsView.tsx's Lane type/laneRow -- which tab is showing.
 private enum class SettingsLane { COMMON, XBOX, GFN }
@@ -373,17 +381,70 @@ private val PREFERRED_GAME_LANGUAGE_OPTIONS = listOf(
 )
 
 // Mirrors SettingsView.tsx's 'gfn' lane: SectionAccount (the GFN account
-// row -- its own playtime/queue/resync rows are a separate, network-backed
-// follow-up), SectionVideo (gfn_resolution/gfn_fps/gfn_bitrate_mode/
-// gfn_bitrate/gfn_native_webrtc).
-//
-// Not here: 'gfn_region' -- its option list comes from fetchGfnRegions(), a
-// network call (see useSettingsScreen.ts's gfnRegions state), landing in
-// the same network-backed follow-up as the account rows above.
+// row + its playtime figure -- the queue-status/resync-library rows are a
+// separate, later follow-up), SectionVideo (gfn_resolution/gfn_fps/
+// gfn_bitrate_mode/gfn_bitrate/gfn_region/gfn_native_webrtc).
 @Composable
 private fun GfnLane(settings: Settings, update: ((Settings) -> Settings) -> Unit) {
+    val context = LocalContext.current
+    var gfnStatus by remember { mutableStateOf(getGfnAccountStatus(context)) }
+    var gfnRegions by remember { mutableStateOf<List<GfnRegionOption>>(emptyList()) }
+    var gfnSubscription by remember { mutableStateOf<GfnSubscriptionInfo?>(null) }
+    var gfnPlaytimeLoading by remember { mutableStateOf(false) }
+    var gfnPlaytimeFailed by remember { mutableStateOf(false) }
+
+    // Mirrors useSettingsScreen.ts's loadGfnPlaytime()/gfnRegions-loading
+    // effects, both keyed on gfnSignedIn: re-runs whenever GfnAccountRow
+    // signs in/out (gfnStatus.signedIn changing), not just once at mount.
+    LaunchedEffect(gfnStatus.signedIn) {
+        if (!gfnStatus.signedIn) {
+            gfnRegions = emptyList()
+            gfnSubscription = null
+            gfnPlaytimeFailed = false
+            return@LaunchedEffect
+        }
+        gfnPlaytimeLoading = true
+        gfnPlaytimeFailed = false
+        try {
+            val jwt = GfnTokenRefresh.getValidGfnJwt(context)
+            val userId = if (jwt != null) GfnTokenRefresh.getValidGfnUserId(context) else null
+            if (jwt == null || userId == null) {
+                gfnPlaytimeFailed = true
+            } else {
+                val serverInfo = GfnCloudMatchApi.fetchGfnServerInfo(context, jwt)
+                gfnRegions = serverInfo.regions
+                val subscription = GfnCloudMatchApi.fetchGfnSubscription(
+                    context,
+                    jwt,
+                    userId,
+                    gfnGraphqlLocale(settings.locale),
+                    serverInfo.vpcId,
+                )
+                if (subscription != null) {
+                    gfnSubscription = subscription
+                } else {
+                    gfnPlaytimeFailed = true
+                }
+            }
+        } catch (e: CancellationException) {
+            // Structured concurrency: switching lanes (or leaving the
+            // screen) cancels this LaunchedEffect -- must keep propagating,
+            // not be treated as an ordinary playtime-load failure. Every
+            // GFN suspend function this effect calls already does the same.
+            throw e
+        } catch (e: Exception) {
+            gfnPlaytimeFailed = true
+        } finally {
+            gfnPlaytimeLoading = false
+        }
+    }
+
     SectionLabel(stringResource(R.string.SectionAccount))
-    GfnAccountRow()
+    GfnAccountRow(status = gfnStatus, onStatusChanged = { gfnStatus = it })
+    InfoRow(
+        title = stringResource(R.string.GfnPlaytimeTitle),
+        value = gfnPlaytimeText(gfnStatus.signedIn, gfnPlaytimeLoading, gfnSubscription, gfnPlaytimeFailed),
+    )
 
     SectionLabel(stringResource(R.string.SectionVideo))
     ChoiceRow(
@@ -429,10 +490,45 @@ private fun GfnLane(settings: Settings, update: ((Settings) -> Settings) -> Unit
             formatValue = { v -> "${v.toInt()} Mbps" },
         )
     }
+    ChoiceRow(
+        title = stringResource(R.string.GfnRegionTitle),
+        description = stringResource(R.string.GfnRegionDesc),
+        options = listOf(SettingOption("", stringResource(R.string.Auto))) +
+            gfnRegions.map { SettingOption(it.url, it.name) },
+        value = settings.gfnRegion,
+        onChange = { v -> update { it.copy(gfnRegion = v) } },
+    )
     SwitchRow(
         title = stringResource(R.string.GfnNativeWebRtcTitle),
         description = stringResource(R.string.GfnNativeWebRtcDesc),
         value = settings.gfnNativeWebrtc,
         onChange = { v -> update { it.copy(gfnNativeWebrtc = v) } },
     )
+}
+
+// Mirrors useSettingsScreen.ts's gfnPlaytimeDescription().
+@Composable
+private fun gfnPlaytimeText(
+    signedIn: Boolean,
+    loading: Boolean,
+    subscription: GfnSubscriptionInfo?,
+    failed: Boolean,
+): String {
+    if (!signedIn) {
+        return stringResource(R.string.GfnPlaytimeSignedOutDesc)
+    }
+    if (loading && subscription == null) {
+        return stringResource(R.string.GfnPlaytimeLoading)
+    }
+    if (subscription != null) {
+        if (subscription.isUnlimited) {
+            return stringResource(R.string.GfnPlaytimeUnlimited)
+        }
+        val totalMinutes = maxOf(0, Math.round(subscription.remainingHours * 60).toInt())
+        return stringResource(R.string.GfnPlaytimeRemaining, totalMinutes / 60, totalMinutes % 60)
+    }
+    if (failed) {
+        return stringResource(R.string.GfnPlaytimeUnavailable)
+    }
+    return stringResource(R.string.GfnPlaytimeLoading)
 }

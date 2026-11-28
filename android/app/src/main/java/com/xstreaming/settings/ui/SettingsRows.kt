@@ -147,3 +147,23 @@ fun SliderRow(
         )
     }
 }
+
+/**
+ * A title + non-interactive value row -- the Compose counterpart of
+ * shared/ui/SettingRows' InfoRow, for a figure the user can't change here
+ * (e.g. GFN's remaining-playtime). No onLongPress-to-copy like the JS
+ * version's own InfoRow has: that copies an auth token to the clipboard for
+ * off-device inspection, a developer convenience rather than a setting, and
+ * not ported here.
+ */
+@Composable
+fun InfoRow(title: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium)
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
