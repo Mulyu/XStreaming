@@ -52,6 +52,16 @@ object NativeSettingsStore {
     external fun nativeGetXcloudDataJson(): String?
     external fun nativeSetXcloudDataJson(json: String)
 
+    // Generic, key-parameterized get/set/remove -- for GFN's
+    // locale-suffixed catalog cache keys (e.g. "gfn.ownedGames.v3.ja-JP",
+    // see GfnCatalogCache.kt), where the key itself varies with the app's
+    // locale/cache version and a fixed-key function per possible suffix
+    // isn't practical. Still the exact same shared MMKV instance every
+    // other accessor above uses -- just parameterized on which key.
+    external fun nativeGetMmkvString(key: String): String?
+    external fun nativeSetMmkvString(key: String, value: String)
+    external fun nativeRemoveMmkvKey(key: String)
+
     // No-op if MMKV is already initialized (by this call or by JS's own
     // `new MMKV()`) -- see AppSettings.kt's ensureMmkvInitialized() for why
     // a native-only caller can't just assume JS got there first.
