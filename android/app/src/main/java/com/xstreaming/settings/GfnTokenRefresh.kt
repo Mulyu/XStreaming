@@ -2,9 +2,12 @@ package com.xstreaming.settings
 
 import android.content.Context
 import com.google.gson.Gson
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 
 /**
@@ -131,6 +134,12 @@ object GfnTokenRefresh {
             if (userId != null) {
                 try {
                     return refreshWithClientToken(tokens.clientToken, userId, tokens.authClientId)
+                } catch (e: CancellationException) {
+                    // Structured concurrency: a cancelled coroutine must
+                    // keep propagating, not be treated as an ordinary
+                    // refresh failure that falls through to another
+                    // request.
+                    throw e
                 } catch (e: Exception) {
                     // Fall through to the refresh_token grant below.
                 }
@@ -141,59 +150,128 @@ object GfnTokenRefresh {
         return refreshAuthTokens(refreshToken, tokens.authClientId)
     }
 
+    // Runs [body] with at most one real invocation in flight at a time,
+    // sharing its result across every concurrent caller via a
+    // CompletableDeferred read/written through [getSlot]/[setSlot] under
+    // [lock]. Shared by refreshOnce()/ensureClientToken() below -- both
+    // need the exact same "single real request, dedup the rest" shape (see
+    // refreshOnce()'s own doc comment for why), just with a different
+    // notion of what a "not owner" caller should do while waiting
+    // ([awaitAsWaiter]).
+    //
+    // The TS original's own equivalent (auth.ts's inFlightRefresh) is a
+    // plain "check, else create" with no lock at all -- safe there only
+    // because JS is single-threaded (nothing can run between the check and
+    // the set). Coroutines on Dispatchers.IO are real threads, so that same
+    // check-then-set here would be a genuine race: the Mutex makes "check,
+    // and if absent create" one atomic step; [body] itself runs AFTER
+    // releasing the lock, so concurrent callers only ever contend for the
+    // brief moment of deciding who's in charge ("the owner"), not for the
+    // real request's full duration.
+    //
+    // The owner's own real exception (including a real CancellationException,
+    // if ITS coroutine is cancelled mid-request) still propagates normally
+    // from this function for the owner. But that same CancellationException
+    // is NOT what an unrelated, never-cancelled waiter sees: handing it that
+    // exact exception would make its own await() throw it too, which this
+    // file's deliberate CancellationException-rethrows (added so a real
+    // cancellation keeps propagating for whoever it actually belongs to)
+    // would then propagate straight out of the unrelated caller instead of
+    // falling back to cached tokens. So every OTHER caller gets an ordinary
+    // [GfnDeviceAuthFailed] instead.
+    //
+    // The slot is cleared under NonCancellable: this has to run even when
+    // the owner's own job is already cancelled, since otherwise the
+    // withLock's own suspension point could itself throw immediately
+    // without ever running the block, permanently leaking the slot as
+    // non-null and making every later call replay this one stale failure
+    // forever instead of ever actually retrying.
+    private suspend fun <T> singleFlight(
+        lock: Mutex,
+        getSlot: () -> CompletableDeferred<T>?,
+        setSlot: (CompletableDeferred<T>?) -> Unit,
+        cancelledMessage: String,
+        awaitAsWaiter: suspend (CompletableDeferred<T>) -> T,
+        body: suspend () -> T,
+    ): T {
+        val (deferred, isOwner) = lock.withLock {
+            val existing = getSlot()
+            if (existing != null) {
+                existing to false
+            } else {
+                val created = CompletableDeferred<T>()
+                setSlot(created)
+                created to true
+            }
+        }
+        if (!isOwner) {
+            return awaitAsWaiter(deferred)
+        }
+        try {
+            val result = body()
+            deferred.complete(result)
+            return result
+        } catch (e: Throwable) {
+            deferred.completeExceptionally(if (e is CancellationException) GfnDeviceAuthFailed(cancelledMessage) else e)
+            throw e
+        } finally {
+            withContext(NonCancellable) {
+                lock.withLock { setSlot(null) }
+            }
+        }
+    }
+
     // Mirrors refreshOnce()/inFlightRefresh: multiple concurrent callers
     // (e.g. a playtime load and a queue-status load both firing on the same
     // Settings screen visit) must share one in-flight refresh. NVIDIA
     // rotates refresh tokens (each use invalidates the previous one), so two
     // independent refresh calls racing the same stale token would make the
     // loser's request fail outright.
-    //
-    // The TS original's own equivalent is a plain "check inFlightRefresh,
-    // else create it" with no lock at all -- safe there only because JS is
-    // single-threaded (nothing can run between the check and the set).
-    // Coroutines on Dispatchers.IO are real threads, so that same
-    // check-then-set here would be a genuine race: a Mutex makes "check,
-    // and if absent create" one atomic step; the actual network call runs
-    // AFTER releasing the lock, so concurrent callers only ever contend for
-    // the brief moment of deciding who's in charge, not for the request's
-    // full duration.
     private val refreshLock = Mutex()
     private var inFlightRefresh: CompletableDeferred<GfnTokens>? = null
 
-    private suspend fun refreshOnce(tokens: GfnTokens): GfnTokens {
-        val (deferred, isOwner) = refreshLock.withLock {
-            val existing = inFlightRefresh
-            if (existing != null) {
-                existing to false
-            } else {
-                val created = CompletableDeferred<GfnTokens>()
-                inFlightRefresh = created
-                created to true
-            }
+    // A non-owner caller here really is meant to just get the owner's
+    // result (or its real failure) as-is: refreshOnce() only has one call
+    // site, inside getValidTokens()'s own try/catch, which already falls
+    // back to cached tokens on ANY failure.
+    private suspend fun refreshOnce(tokens: GfnTokens): GfnTokens =
+        singleFlight(
+            lock = refreshLock,
+            getSlot = { inFlightRefresh },
+            setSlot = { inFlightRefresh = it },
+            cancelledMessage = "GFN token refresh was cancelled",
+            awaitAsWaiter = { it.await() },
+        ) {
+            refreshWithBestMethod(tokens)
         }
-        if (!isOwner) {
-            return deferred.await()
-        }
-        try {
-            val result = refreshWithBestMethod(tokens)
-            deferred.complete(result)
-            return result
-        } catch (e: Throwable) {
-            deferred.completeExceptionally(e)
-            throw e
-        } finally {
-            refreshLock.withLock { inFlightRefresh = null }
-        }
-    }
 
     // Mirrors ensureClientToken(): one last chance to capture a client
     // token (NVIDIA's long-session mechanism) before it's needed, using
     // whatever life the access token has left, same ordering as OpenNOW's
     // own SessionValidityCoordinator (the reference auth.ts itself was
-    // ported from). Same atomic check-and-create reasoning as refreshOnce()
-    // above.
+    // ported from).
     private val clientTokenBootstrapLock = Mutex()
     private var inFlightClientTokenBootstrap: CompletableDeferred<Pair<String, Long>?>? = null
+
+    // Unlike refreshOnce(), ensureClientToken() must never throw at all
+    // except a caller's own real cancellation: ONE of its two call sites
+    // (getValidTokens()'s `if (expired) tokens else ensureClientToken(tokens)`)
+    // has no try/catch of its own, so this function has always had a
+    // "best effort, failure just means no client token" contract -- both
+    // for the owner's own request AND for a waiter sharing it.
+    private suspend fun requestClientTokenBestEffort(accessToken: String): Pair<String, Long>? =
+        try {
+            requestClientToken(accessToken)
+        } catch (e: CancellationException) {
+            // Must keep propagating (singleFlight()'s own catch turns this
+            // into an ordinary failure for any OTHER, unrelated waiter, but
+            // the owner's real cancellation still needs to reach ITS
+            // caller) -- not treated as "couldn't get a client token" the
+            // way an ordinary Exception is.
+            throw e
+        } catch (e: Exception) {
+            null
+        }
 
     private suspend fun ensureClientToken(tokens: GfnTokens): GfnTokens {
         val hasUsable = tokens.clientToken != null &&
@@ -201,30 +279,27 @@ object GfnTokenRefresh {
         if (hasUsable) {
             return tokens
         }
-        val (deferred, isOwner) = clientTokenBootstrapLock.withLock {
-            val existing = inFlightClientTokenBootstrap
-            if (existing != null) {
-                existing to false
-            } else {
-                val created = CompletableDeferred<Pair<String, Long>?>()
-                inFlightClientTokenBootstrap = created
-                created to true
-            }
-        }
-        val result = if (!isOwner) {
-            deferred.await()
-        } else {
-            try {
-                val bootstrapped = try {
-                    requestClientToken(tokens.accessToken)
+        val result = singleFlight(
+            lock = clientTokenBootstrapLock,
+            getSlot = { inFlightClientTokenBootstrap },
+            setSlot = { inFlightClientTokenBootstrap = it },
+            cancelledMessage = "GFN client-token bootstrap was cancelled",
+            awaitAsWaiter = { deferred ->
+                // A waiter applies the exact same best-effort fallback as
+                // the owner's own request would -- an ordinary failure
+                // completed by singleFlight() on the owner's behalf (e.g.
+                // because the OWNER was cancelled) must not propagate to
+                // this unrelated, still-running caller either.
+                try {
+                    deferred.await()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     null
                 }
-                deferred.complete(bootstrapped)
-                bootstrapped
-            } finally {
-                clientTokenBootstrapLock.withLock { inFlightClientTokenBootstrap = null }
-            }
+            },
+        ) {
+            requestClientTokenBestEffort(tokens.accessToken)
         }
         return if (result == null) tokens else tokens.copy(clientToken = result.first, clientTokenExpiresAt = result.second)
     }
@@ -280,6 +355,9 @@ object GfnTokenRefresh {
             merged = ensureClientToken(merged)
             NativeSettingsStore.nativeSetGfnTokensJson(gson.toJson(merged))
             merged
+        } catch (e: CancellationException) {
+            // Same reasoning as refreshWithBestMethod()'s own catch above.
+            throw e
         } catch (e: Exception) {
             // Refresh failed -- a transient/network error, or this call
             // lost a race against a concurrent refresh that already
