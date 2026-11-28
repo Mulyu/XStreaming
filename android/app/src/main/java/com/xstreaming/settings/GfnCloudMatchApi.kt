@@ -33,11 +33,13 @@ private val GFN_LOCALE_SLUGS = mapOf(
     "zht" to "zh-TW",
 )
 
+// e.g. "ja-JP" -- the slug GFN's public catalog JSON/cache keys use.
+fun gfnLocaleSlug(appLocale: String): String = GFN_LOCALE_SLUGS[appLocale] ?: "en-US"
+
 // e.g. "ja_JP" -- the app's locale code (Settings.locale) converted to the
 // underscore form GFN's GraphQL/MES APIs expect for their
 // `language`/`locale`/`languageCode` fields.
-fun gfnGraphqlLocale(appLocale: String): String =
-    (GFN_LOCALE_SLUGS[appLocale] ?: "en-US").replace("-", "_")
+fun gfnGraphqlLocale(appLocale: String): String = gfnLocaleSlug(appLocale).replace("-", "_")
 
 /**
  * Kotlin port of session.ts's GfnSubscriptionInfo -- only the fields the

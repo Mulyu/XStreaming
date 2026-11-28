@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
-index 976a278..b5908e6 100644
+index 976a278..ecfde30 100644
 --- a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 +++ b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 @@ -3,9 +3,22 @@
@@ -108,7 +108,7 @@ index 976a278..b5908e6 100644
  
    auto runtime = reinterpret_cast<jsi::Runtime*>(jsiPtr);
    if (runtime) {
-@@ -81,3 +155,261 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
+@@ -81,3 +155,304 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
    // if runtime was nullptr, MMKV will not be installed. This should only happen while Remote
    // Debugging (Chrome), but will be weird either way.
  }
@@ -369,4 +369,47 @@ index 976a278..b5908e6 100644
 +    return;
 +  }
 +  setMmkvDefaultString("gfn.cloudMatchDeviceId", jstringToStdString(env, deviceId));
++}
++
++// Generic, key-parameterized get/set/remove -- unlike every function above
++// (one fixed MMKV key each), these exist specifically for GFN's
++// locale-suffixed catalog cache keys (e.g. "gfn.ownedGames.v3.ja-JP"),
++// where the key itself varies with the app's current locale/cache version
++// and a fixed-key JNI function per possible suffix isn't practical. Still
++// the exact same shared "mmkv.default" instance/mutex-guarded readiness
++// check as every other accessor in this file -- just parameterized on
++// which key, not a broader capability.
++extern "C" JNIEXPORT jstring JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeGetMmkvString(JNIEnv* env,
++                                                                        jobject /* this */,
++                                                                        jstring key) {
++  if (key == nullptr) {
++    return nullptr;
++  }
++  std::string result;
++  if (!getMmkvDefaultString(jstringToStdString(env, key), result)) {
++    return nullptr;
++  }
++  return stdStringToJstring(env, result);
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeSetMmkvString(JNIEnv* env,
++                                                                        jobject /* this */,
++                                                                        jstring key,
++                                                                        jstring value) {
++  if (key == nullptr || value == nullptr) {
++    return;
++  }
++  setMmkvDefaultString(jstringToStdString(env, key), jstringToStdString(env, value));
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeRemoveMmkvKey(JNIEnv* env,
++                                                                        jobject /* this */,
++                                                                        jstring key) {
++  if (key == nullptr) {
++    return;
++  }
++  removeMmkvDefaultKey(jstringToStdString(env, key));
 +}
