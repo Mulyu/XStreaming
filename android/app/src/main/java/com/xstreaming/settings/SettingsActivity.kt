@@ -8,7 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import com.xstreaming.settings.ui.DisplaySettingsScreen
+import com.xstreaming.settings.ui.SettingsScreen
 import com.xstreaming.settings.ui.SettingsTheme
 import java.util.Locale
 
@@ -22,14 +22,14 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val context = this
-            // Read once here, not again inside DisplaySettingsScreen: both
+            // Read once here, not again inside SettingsScreen: both
             // localizedContext() and the screen itself need it, and this is
             // an MMKV JNI read + JSON parse, not a free call.
             val settings = remember { getSettings(context) }
             val localizedContext = remember { localizedContext(context, settings.locale) }
             CompositionLocalProvider(LocalContext provides localizedContext) {
                 SettingsTheme {
-                    DisplaySettingsScreen(initialSettings = settings, onBack = { finish() })
+                    SettingsScreen(initialSettings = settings, onBack = { finish() })
                 }
             }
         }

@@ -85,25 +85,22 @@ private fun GfnConfirmSignOutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit
 }
 
 /**
- * GFN/Xbox account status rows -- see AccountStatus.kt (Kotlin port of
- * useSettingsScreen.ts's isAuthed/gfnSignedIn/xboxAccount/gfnAccount
- * computation) for what each shows. GFN now actually signs in/out
- * natively (GfnDeviceAuthClient/GfnSignInDialog). Xbox doesn't yet --
- * that needs XAL/MSAL and an interactive WebView, a separate later phase
- * -- so tapping its row calls [onBack] instead, same as this screen's own
- * back button: its signed-out description text is reused verbatim from
- * the interactive JS screen and literally says "tap to sign in", so
- * tapping has to land somewhere that can actually do that.
+ * GFN account status row -- see AccountStatus.kt (Kotlin port of
+ * useSettingsScreen.ts's gfnSignedIn/gfnAccount computation) for what this
+ * shows. GFN actually signs in/out natively (GfnDeviceAuthClient/
+ * GfnSignInDialog), so tapping drives that flow directly, same as
+ * useSettingsScreen.ts's handleGfnAccountPress(): signed in -> a confirm
+ * dialog before signing out; signed out -> the interactive sign-in dialog.
+ * Placed under the GFN lane, matching SettingsView.tsx's own layout (its
+ * GfnAccountTitle row only appears in the 'gfn' lane).
  */
 @Composable
-fun AccountSection(onBack: () -> Unit) {
+fun GfnAccountRow() {
     val context = LocalContext.current
     var gfn by remember { mutableStateOf(getGfnAccountStatus(context)) }
-    val xbox = remember { getXboxAccountStatus(context) }
     var showGfnSignIn by remember { mutableStateOf(false) }
     var showGfnSignOutConfirm by remember { mutableStateOf(false) }
 
-    SectionLabel(stringResource(R.string.SectionAccount))
     AccountRow(
         title = stringResource(R.string.GfnAccountTitle),
         description = if (gfn.signedIn) {
@@ -118,15 +115,6 @@ fun AccountSection(onBack: () -> Unit) {
                 showGfnSignIn = true
             }
         },
-    )
-    AccountRow(
-        title = stringResource(R.string.XboxAccountTitle),
-        description = if (xbox.signedIn) {
-            signedInText(xbox.userName, xbox.planTitle) ?: stringResource(R.string.XcloudAccountSignedInDesc)
-        } else {
-            stringResource(R.string.XcloudAccountSignedOutDesc)
-        },
-        onClick = onBack,
     )
 
     if (showGfnSignIn) {
@@ -148,4 +136,29 @@ fun AccountSection(onBack: () -> Unit) {
             onDismiss = { showGfnSignOutConfirm = false },
         )
     }
+}
+
+/**
+ * Xbox account status row -- see AccountStatus.kt for what this shows.
+ * Xbox's own sign-in/sign-out needs XAL/MSAL and an interactive WebView, a
+ * separate later phase, so tapping [onBack]s to the RN Settings screen
+ * instead (same as this screen's own back button): its signed-out
+ * description text is reused verbatim from the interactive JS screen and
+ * literally says "tap to sign in", so tapping has to land somewhere that
+ * can actually do that. Placed under the Xbox lane, matching
+ * SettingsView.tsx's own layout.
+ */
+@Composable
+fun XboxAccountRow(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val xbox = remember { getXboxAccountStatus(context) }
+    AccountRow(
+        title = stringResource(R.string.XboxAccountTitle),
+        description = if (xbox.signedIn) {
+            signedInText(xbox.userName, xbox.planTitle) ?: stringResource(R.string.XcloudAccountSignedInDesc)
+        } else {
+            stringResource(R.string.XcloudAccountSignedOutDesc)
+        },
+        onClick = onBack,
+    )
 }
