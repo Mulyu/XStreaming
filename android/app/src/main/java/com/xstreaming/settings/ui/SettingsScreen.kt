@@ -34,6 +34,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.xstreaming.R
 import com.xstreaming.settings.GfnCloudMatchApi
+import com.xstreaming.settings.GfnQueueStatus
+import com.xstreaming.settings.GfnQueueStatusApi
 import com.xstreaming.settings.GfnRegionOption
 import com.xstreaming.settings.GfnSubscriptionInfo
 import com.xstreaming.settings.GfnTokenRefresh
@@ -45,6 +47,7 @@ import com.xstreaming.settings.getGfnAccountStatus
 import com.xstreaming.settings.gfnGraphqlLocale
 import com.xstreaming.settings.saveSettings
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 // Mirrors SettingsView.tsx's Lane type/laneRow -- which tab is showing.
 private enum class SettingsLane { COMMON, XBOX, GFN }
@@ -392,27 +395,48 @@ private fun GfnLane(settings: Settings, update: ((Settings) -> Settings) -> Unit
     var gfnSubscription by remember { mutableStateOf<GfnSubscriptionInfo?>(null) }
     var gfnPlaytimeLoading by remember { mutableStateOf(false) }
     var gfnPlaytimeFailed by remember { mutableStateOf(false) }
+    var gfnQueue by remember { mutableStateOf<GfnQueueStatus?>(null) }
+    var gfnQueueLoading by remember { mutableStateOf(false) }
 
-    // Mirrors useSettingsScreen.ts's loadGfnPlaytime()/gfnRegions-loading
-    // effects, both keyed on gfnSignedIn: re-runs whenever GfnAccountRow
-    // signs in/out (gfnStatus.signedIn changing), not just once at mount.
+    // Mirrors useSettingsScreen.ts's loadGfnPlaytime()/gfnRegions-loading/
+    // queue-status-loading effects, all keyed on gfnSignedIn: re-runs
+    // whenever GfnAccountRow signs in/out (gfnStatus.signedIn changing),
+    // not just once at mount.
     LaunchedEffect(gfnStatus.signedIn) {
         if (!gfnStatus.signedIn) {
             gfnRegions = emptyList()
             gfnSubscription = null
             gfnPlaytimeFailed = false
+            gfnQueue = null
             return@LaunchedEffect
         }
         gfnPlaytimeLoading = true
         gfnPlaytimeFailed = false
+        gfnQueueLoading = true
         try {
             val jwt = GfnTokenRefresh.getValidGfnJwt(context)
             val userId = if (jwt != null) GfnTokenRefresh.getValidGfnUserId(context) else null
             if (jwt == null || userId == null) {
                 gfnPlaytimeFailed = true
+                gfnQueue = null
+                gfnQueueLoading = false
             } else {
                 val serverInfo = GfnCloudMatchApi.fetchGfnServerInfo(context, jwt)
                 gfnRegions = serverInfo.regions
+                // Mirrors useSettingsScreen.ts's own queue-status load:
+                // the same vpcId the subscription call below uses,
+                // launched (not awaited) so it runs IN PARALLEL with that
+                // call -- matching that TS code's own comment ("it loads
+                // in parallel and never affects the playtime row"), rather
+                // than making the playtime row wait on the unofficial,
+                // possibly slow/unresponsive queue tracker.
+                launch {
+                    try {
+                        gfnQueue = serverInfo.vpcId?.let { GfnQueueStatusApi.fetchGfnQueueStatus(it) }
+                    } finally {
+                        gfnQueueLoading = false
+                    }
+                }
                 val subscription = GfnCloudMatchApi.fetchGfnSubscription(
                     context,
                     jwt,
@@ -444,6 +468,10 @@ private fun GfnLane(settings: Settings, update: ((Settings) -> Settings) -> Unit
     InfoRow(
         title = stringResource(R.string.GfnPlaytimeTitle),
         value = gfnPlaytimeText(gfnStatus.signedIn, gfnPlaytimeLoading, gfnSubscription, gfnPlaytimeFailed),
+    )
+    InfoRow(
+        title = stringResource(R.string.GfnQueueTitle),
+        value = gfnQueueText(gfnQueue, gfnQueueLoading),
     )
 
     SectionLabel(stringResource(R.string.SectionVideo))
@@ -531,4 +559,13 @@ private fun gfnPlaytimeText(
         return stringResource(R.string.GfnPlaytimeUnavailable)
     }
     return stringResource(R.string.GfnPlaytimeLoading)
+}
+
+// Mirrors useSettingsScreen.ts's gfnQueueDescription().
+@Composable
+private fun gfnQueueText(queue: GfnQueueStatus?, loading: Boolean): String {
+    if (queue != null) {
+        return stringResource(R.string.GfnQueueValue, queue.waiting, queue.etaMinutes)
+    }
+    return if (loading) stringResource(R.string.GfnQueueLoading) else stringResource(R.string.GfnQueueUnavailable)
 }
