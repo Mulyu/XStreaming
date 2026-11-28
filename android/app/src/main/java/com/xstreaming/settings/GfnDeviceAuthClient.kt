@@ -1,18 +1,9 @@
 package com.xstreaming.settings
 
 import com.google.gson.Gson
-import com.xstreaming.catalog.CatalogHttpClient
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.suspendCancellableCoroutine
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.FormBody
-import okhttp3.Request
-import okhttp3.Response
-import java.io.IOException
 import java.security.SecureRandom
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /** Kotlin port of auth.ts's GfnDeviceChallenge. */
 data class GfnDeviceChallenge(
@@ -56,17 +47,18 @@ class GfnDeviceAuthFailed(message: String) : Exception(message)
 /**
  * Kotlin port of src/entities/gfn-account/model/auth.ts's device-code
  * (QR/code) sign-in flow: requestDeviceAuthorization() + pollForTokens()
- * only -- NOT the token-refresh/client-token-bootstrap machinery that same
- * file also has (ensureClientToken/getValidTokens/refreshWithBestMethod).
- * Those exist to keep a token valid across the API calls GFN's catalog/
- * session/playtime features make; none of those are called from Kotlin
- * yet, so a freshly signed-in token set is used as-is -- AccountStatus.kt's
- * "signed in" check is presence-only and unaffected by whether these
- * tokens eventually expire, same as it already was before this phase.
+ * only. The token-refresh/client-token-bootstrap machinery that same file
+ * also has (ensureClientToken/getValidTokens/refreshWithBestMethod) -- which
+ * keeps a token valid across the API calls GFN's catalog/session/playtime
+ * features make -- is a separate file, GfnTokenRefresh.kt, not needed by
+ * sign-in itself (a freshly signed-in token set is used as-is here;
+ * AccountStatus.kt's "signed in" check is presence-only and unaffected by
+ * whether these tokens eventually expire).
  *
  * No request signing of any kind (unlike Xbox's XAL/XSTS): every call here
  * is plain form-urlencoded JSON over HTTPS with static headers impersonating
- * GFN's own Steam Deck browser client.
+ * GFN's own Steam Deck browser client (see GfnHttp.kt, shared with
+ * GfnTokenRefresh.kt).
  *
  * Only ever called from within an already-running SettingsActivity (the
  * user tapping "sign in"), by which point MMKV is already guaranteed
@@ -77,69 +69,12 @@ object GfnDeviceAuthClient {
     private val gson = Gson()
 
     private const val DEVICE_AUTHORIZE_ENDPOINT = "https://login.nvidia.com/device/authorize"
-    private const val TOKEN_ENDPOINT = "https://login.nvidia.com/token"
 
-    // NVIDIA's Steam Deck OAuth client -- its device-code flow needs no
-    // client secret and grants the streaming scopes needed here.
-    private const val STEAM_DECK_CLIENT_ID = "q61ddeJrVt7O90Nl-P-N7I36yctih4Ml6FyXLrb6j-U"
+    // The token endpoint/client id now live on GfnHttp (shared with
+    // GfnTokenRefresh.kt's refresh/client-token grants, which use the same
+    // endpoint and client id).
     private const val SCOPES = "openid consent email tk_client age"
     private const val DEFAULT_IDP_ID = "PDiAhv2kJTFeQ7WOPqiQ2tRZ7lGhR2X11dXvM4TZSxg"
-    private const val STEAM_DECK_USER_AGENT =
-        "Mozilla/5.0 (X11; Linux x86_64; Steam Deck) AppleWebKit/537.36 (KHTML, like Gecko) " +
-            "Chrome/128.0.0.0 Safari/537.36"
-    private const val GFN_PLAY_ORIGIN = "https://play.geforcenow.com"
-    private const val GFN_PLAY_REFERER = "https://play.geforcenow.com/"
-    private const val FORM_CONTENT_TYPE = "application/x-www-form-urlencoded; charset=UTF-8"
-
-    // CatalogHttpClient.instance already has a 15s callTimeout, the same
-    // this needs -- no reason to rebuild it with an identical one.
-    private val httpClient get() = CatalogHttpClient.instance
-
-    private fun authRequestBuilder(contentType: String? = null): Request.Builder {
-        val builder = Request.Builder()
-            .header("Accept", "application/json, text/plain, */*")
-            .header("Origin", GFN_PLAY_ORIGIN)
-            .header("Referer", GFN_PLAY_REFERER)
-            .header("User-Agent", STEAM_DECK_USER_AGENT)
-        if (contentType != null) {
-            builder.header("Content-Type", contentType)
-        }
-        return builder
-    }
-
-    // Uses enqueue()/call.cancel() rather than execute() inside
-    // withContext(Dispatchers.IO): a blocking execute() isn't itself
-    // cancellation-aware -- cancelling the coroutine (e.g. the user taps
-    // Cancel on GfnSignInDialog mid-request) wouldn't actually stop it, it
-    // would just keep running on its IO thread until it finishes or times
-    // out. invokeOnCancellation here cancels the real underlying OkHttp
-    // Call immediately instead.
-    private suspend fun execute(request: Request): Pair<Int, String> =
-        suspendCancellableCoroutine { continuation ->
-            val call = httpClient.newCall(request)
-            continuation.invokeOnCancellation { call.cancel() }
-            call.enqueue(object : Callback {
-                override fun onResponse(call: Call, response: Response) {
-                    val result = response.use { it.code to (it.body?.string() ?: "") }
-                    continuation.resume(result)
-                }
-
-                override fun onFailure(call: Call, e: IOException) {
-                    // NOT call.isCanceled(): OkHttp itself calls
-                    // call.cancel() internally when its own callTimeout
-                    // fires, before invoking onFailure -- checking that
-                    // would wrongly suppress a real timeout failure too,
-                    // leaving the coroutine suspended forever. Checking the
-                    // continuation's own state instead correctly
-                    // distinguishes "the user cancelled" (continuation no
-                    // longer active, nothing to resume) from "OkHttp failed
-                    // or timed out" (still active, must propagate).
-                    if (continuation.isActive) {
-                        continuation.resumeWithException(e)
-                    }
-                }
-            })
-        }
 
     // Mirrors getDeviceId(): a stable, opaque per-device identifier
     // NVIDIA's device-authorize call requires, persisted once in MMKV (via
@@ -160,16 +95,16 @@ object GfnDeviceAuthClient {
     suspend fun requestDeviceAuthorization(): GfnDeviceChallenge {
         val deviceId = getOrCreateDeviceId()
         val body = FormBody.Builder()
-            .add("client_id", STEAM_DECK_CLIENT_ID)
+            .add("client_id", GfnHttp.STEAM_DECK_CLIENT_ID)
             .add("scope", SCOPES)
             .add("device_id", deviceId)
             .add("display_name", "AnyStreaming")
             .add("idp_id", DEFAULT_IDP_ID)
             .build()
-        val request = authRequestBuilder(FORM_CONTENT_TYPE)
+        val request = GfnHttp.requestBuilder(GfnHttp.FORM_CONTENT_TYPE)
             .url(DEVICE_AUTHORIZE_ENDPOINT)
             .header("x-device-id", deviceId)
-            .header("nv-client-id", STEAM_DECK_CLIENT_ID)
+            .header("nv-client-id", GfnHttp.STEAM_DECK_CLIENT_ID)
             .header("nv-client-streamer", "WEBRTC")
             .header("nv-client-type", "BROWSER")
             .header("nv-client-platform-name", "browser")
@@ -181,7 +116,7 @@ object GfnDeviceAuthClient {
             .post(body)
             .build()
 
-        val (code, bodyText) = execute(request)
+        val (code, bodyText) = GfnHttp.execute(request)
         if (code !in 200..299) {
             throw GfnDeviceAuthFailed("GFN device authorization failed ($code): ${bodyText.take(300)}")
         }
@@ -214,10 +149,10 @@ object GfnDeviceAuthClient {
         val body = FormBody.Builder()
             .add("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
             .add("device_code", deviceCode)
-            .add("client_id", STEAM_DECK_CLIENT_ID)
+            .add("client_id", GfnHttp.STEAM_DECK_CLIENT_ID)
             .build()
-        val request = authRequestBuilder(FORM_CONTENT_TYPE).url(TOKEN_ENDPOINT).post(body).build()
-        val (code, bodyText) = execute(request)
+        val request = GfnHttp.requestBuilder(GfnHttp.FORM_CONTENT_TYPE).url(GfnHttp.TOKEN_ENDPOINT).post(body).build()
+        val (code, bodyText) = GfnHttp.execute(request)
         val json = parseJsonObjectOrNull(bodyText)
 
         if (code !in 200..299) {
@@ -242,7 +177,7 @@ object GfnDeviceAuthClient {
             idToken = stringOrNull(json, "id_token"),
             clientToken = stringOrNull(json, "client_token"),
             expiresAt = System.currentTimeMillis() + expiresIn * 1000,
-            authClientId = STEAM_DECK_CLIENT_ID,
+            authClientId = GfnHttp.STEAM_DECK_CLIENT_ID,
         )
         return ExchangeResult(tokens, null, null)
     }

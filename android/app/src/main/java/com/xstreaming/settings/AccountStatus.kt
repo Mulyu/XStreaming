@@ -1,8 +1,6 @@
 package com.xstreaming.settings
 
 import android.content.Context
-import android.util.Base64
-import com.google.gson.JsonParser
 import com.xstreaming.R
 
 /**
@@ -20,33 +18,21 @@ import com.xstreaming.R
  */
 data class AccountDisplay(val signedIn: Boolean, val userName: String?, val planTitle: String?)
 
-// parseJsonObjectOrNull/stringOrNull/objOrNull are shared with
-// GfnDeviceAuthClient.kt -- see JsonHelpers.kt.
+// parseJsonObjectOrNull/stringOrNull/objOrNull/decodeJwtClaims are shared
+// with GfnDeviceAuthClient.kt/GfnTokenRefresh.kt -- see JsonHelpers.kt.
 
-// Mirrors auth.ts's nameFromJwt(): decodes a JWT's payload segment
-// (base64url, manually padded since JWTs omit the trailing '='s Android's
-// own decoder requires) and reads preferred_username, falling back to the
-// local part of email.
+// Mirrors auth.ts's nameFromJwt(): reads preferred_username from the JWT's
+// claims, falling back to the local part of email.
 private fun nameFromJwt(token: String?): String? {
-    if (token.isNullOrEmpty()) {
-        return null
+    val claims = decodeJwtClaims(token) ?: return null
+    val preferred = stringOrNull(claims, "preferred_username")
+    if (!preferred.isNullOrEmpty()) {
+        return preferred
     }
-    val payload = token.split(".").getOrNull(1) ?: return null
-    return try {
-        val padded = payload + "=".repeat((4 - payload.length % 4) % 4)
-        val decoded = Base64.decode(padded, Base64.URL_SAFE or Base64.NO_WRAP)
-        val claims = JsonParser.parseString(String(decoded, Charsets.UTF_8)).asJsonObject
-        val preferred = stringOrNull(claims, "preferred_username")
-        if (!preferred.isNullOrEmpty()) {
-            return preferred
-        }
-        val email = stringOrNull(claims, "email")
-        // Matches the JS version's `claims.email.split('@')[0] || null`:
-        // an empty local part (e.g. "@example.com") is null, not "".
-        if (email != null && email.contains("@")) email.substringBefore("@").ifEmpty { null } else null
-    } catch (e: Exception) {
-        null
-    }
+    val email = stringOrNull(claims, "email")
+    // Matches the JS version's `claims.email.split('@')[0] || null`:
+    // an empty local part (e.g. "@example.com") is null, not "".
+    return if (email != null && email.contains("@")) email.substringBefore("@").ifEmpty { null } else null
 }
 
 // Mirrors auth.ts's getStoredTokens()/isSignedIn()/getGfnDisplayName()
