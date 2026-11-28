@@ -59,8 +59,17 @@ object GfnTokenRefresh {
             throw GfnDeviceAuthFailed("GFN token refresh failed ($code): ${bodyText.take(300)}")
         }
         val json = parseJsonObjectOrNull(bodyText)
+        val accessToken = stringOrNull(json, "access_token")
+        if (accessToken.isNullOrEmpty()) {
+            // A 2xx response with no usable access_token (non-JSON body, or
+            // a JSON body missing the field) must not become a "successful"
+            // GfnTokens -- getValidTokens() would persist it, replacing a
+            // still-usable session with an unusable one. Matches
+            // refreshWithClientToken()'s own validation below.
+            throw GfnDeviceAuthFailed("GFN token refresh response was missing access_token")
+        }
         return GfnTokens(
-            accessToken = stringOrNull(json, "access_token") ?: "",
+            accessToken = accessToken,
             refreshToken = stringOrNull(json, "refresh_token") ?: refreshToken,
             idToken = stringOrNull(json, "id_token"),
             clientToken = stringOrNull(json, "client_token"),
