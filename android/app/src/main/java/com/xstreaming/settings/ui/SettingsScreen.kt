@@ -408,6 +408,13 @@ private fun GfnLane(settings: Settings, update: ((Settings) -> Settings) -> Unit
             gfnSubscription = null
             gfnPlaytimeFailed = false
             gfnQueue = null
+            // Also resets gfnQueueLoading: a sign-out that happens WHILE a
+            // previous (signedIn=true) run of this effect was still
+            // suspended -- e.g. awaiting getValidGfnJwt() -- cancels that
+            // run before it ever reaches the launch{} that would otherwise
+            // clear this, leaving the queue row stuck on "Checking the
+            // queue..." forever.
+            gfnQueueLoading = false
             return@LaunchedEffect
         }
         gfnPlaytimeLoading = true
