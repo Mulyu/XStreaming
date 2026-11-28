@@ -1,5 +1,6 @@
 package com.xstreaming.settings
 
+import android.util.Base64
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -45,3 +46,22 @@ internal fun objOrNull(obj: JsonObject?, key: String): JsonObject? =
     } catch (e: Exception) {
         null
     }
+
+// Decodes a JWT's payload segment (base64url, manually padded since JWTs
+// omit the trailing '='s Android's own decoder requires) into its claims
+// object. Shared by AccountStatus.kt's nameFromJwt() and GfnTokenRefresh.kt's
+// expiry/subject reads -- one implementation of the same base64url-padding
+// dance, not two.
+internal fun decodeJwtClaims(token: String?): JsonObject? {
+    if (token.isNullOrEmpty()) {
+        return null
+    }
+    val payload = token.split(".").getOrNull(1) ?: return null
+    return try {
+        val padded = payload + "=".repeat((4 - payload.length % 4) % 4)
+        val decoded = Base64.decode(padded, Base64.URL_SAFE or Base64.NO_WRAP)
+        parseJsonObjectOrNull(String(decoded, Charsets.UTF_8))
+    } catch (e: Exception) {
+        null
+    }
+}
