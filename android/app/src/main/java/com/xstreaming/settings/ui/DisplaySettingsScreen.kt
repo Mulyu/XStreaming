@@ -88,6 +88,8 @@ fun DisplaySettingsScreen(initialSettings: Settings, onBack: () -> Unit) {
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
+            AccountSection(onBack = onBack)
+            SectionLabel(stringResource(R.string.DisplaySettings))
             ChoiceRow(
                 title = stringResource(R.string.Resolution),
                 description = stringResource(R.string.set_resolution_support_720p_1080p_1080p_hq),
