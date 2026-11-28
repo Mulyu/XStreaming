@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.xstreaming.R
+import com.xstreaming.settings.AccountDisplay
 import com.xstreaming.settings.GfnDeviceAuthClient
 import com.xstreaming.settings.getGfnAccountStatus
 import com.xstreaming.settings.getXboxAccountStatus
@@ -93,23 +94,27 @@ private fun GfnConfirmSignOutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit
  * dialog before signing out; signed out -> the interactive sign-in dialog.
  * Placed under the GFN lane, matching SettingsView.tsx's own layout (its
  * GfnAccountTitle row only appears in the 'gfn' lane).
+ *
+ * [status]/[onStatusChanged] are lifted to the caller (GfnLane) rather than
+ * owned here, so the GFN lane's own network-backed rows (playtime, region)
+ * can react to a sign-in/out that happens inside this row without a second,
+ * independent "is GFN signed in" read of their own going stale.
  */
 @Composable
-fun GfnAccountRow() {
+fun GfnAccountRow(status: AccountDisplay, onStatusChanged: (AccountDisplay) -> Unit) {
     val context = LocalContext.current
-    var gfn by remember { mutableStateOf(getGfnAccountStatus(context)) }
     var showGfnSignIn by remember { mutableStateOf(false) }
     var showGfnSignOutConfirm by remember { mutableStateOf(false) }
 
     AccountRow(
         title = stringResource(R.string.GfnAccountTitle),
-        description = if (gfn.signedIn) {
-            signedInText(gfn.userName, gfn.planTitle) ?: stringResource(R.string.GfnSignedIn)
+        description = if (status.signedIn) {
+            signedInText(status.userName, status.planTitle) ?: stringResource(R.string.GfnSignedIn)
         } else {
             stringResource(R.string.GfnAccountSignedOutDesc)
         },
         onClick = {
-            if (gfn.signedIn) {
+            if (status.signedIn) {
                 showGfnSignOutConfirm = true
             } else {
                 showGfnSignIn = true
@@ -122,7 +127,7 @@ fun GfnAccountRow() {
             onDismiss = { showGfnSignIn = false },
             onSignedIn = {
                 showGfnSignIn = false
-                gfn = getGfnAccountStatus(context)
+                onStatusChanged(getGfnAccountStatus(context))
             },
         )
     }
@@ -131,7 +136,7 @@ fun GfnAccountRow() {
             onConfirm = {
                 showGfnSignOutConfirm = false
                 GfnDeviceAuthClient.signOut()
-                gfn = getGfnAccountStatus(context)
+                onStatusChanged(getGfnAccountStatus(context))
             },
             onDismiss = { showGfnSignOutConfirm = false },
         )
