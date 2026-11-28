@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withLock
 import okhttp3.Request
 import java.net.URLEncoder
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /** Kotlin port of session.ts's GfnRegionOption. */
 data class GfnRegionOption(val name: String, val url: String)
@@ -52,6 +53,12 @@ object GfnCloudMatchApi {
     private val RETRY_STATUSES = setOf(408, 425, 429, 500, 502, 503, 504)
     private val RETRY_DELAYS_MS = listOf(250L, 750L)
     private const val RETRIES = 2
+
+    // session.ts's own CLOUDMATCH_TIMEOUT_MS -- longer than GfnHttp's shared
+    // 15s client (sized for NVIDIA's own login/token endpoints), since a
+    // CloudMatch GET can legitimately take longer. Derived from GfnHttp's
+    // client (same connection pool/dispatcher), not rebuilt from scratch.
+    private val httpClient = GfnHttp.client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build()
 
     // Mirrors getStableDeviceId(): a device id kept stable in MMKV, SEPARATE
     // from GfnDeviceAuthClient's own "gfn.deviceId" (NVIDIA's device-code
@@ -110,7 +117,7 @@ object GfnCloudMatchApi {
         while (true) {
             val request = requestBuilder(deviceId, token, includeOrigin = false).url(url).get().build()
             val result = try {
-                GfnHttp.execute(request)
+                GfnHttp.execute(request, httpClient)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -4,6 +4,7 @@ import com.xstreaming.catalog.CatalogHttpClient
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
@@ -62,7 +63,12 @@ internal object GfnHttp {
     // it, it would just keep running on its IO thread until it finishes or
     // times out. invokeOnCancellation here cancels the real underlying
     // OkHttp Call immediately instead.
-    suspend fun execute(request: Request): Pair<Int, String> =
+    //
+    // [client] defaults to the shared 15s-timeout instance above, but a
+    // caller whose own reference source uses a different timeout (e.g.
+    // GfnCloudMatchApi's 30s, matching session.ts's CLOUDMATCH_TIMEOUT_MS)
+    // passes its own derived client instead.
+    suspend fun execute(request: Request, client: OkHttpClient = this.client): Pair<Int, String> =
         suspendCancellableCoroutine { continuation ->
             val call = client.newCall(request)
             continuation.invokeOnCancellation { call.cancel() }
