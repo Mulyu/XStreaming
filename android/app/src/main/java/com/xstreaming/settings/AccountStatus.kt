@@ -2,7 +2,6 @@ package com.xstreaming.settings
 
 import android.content.Context
 import android.util.Base64
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.xstreaming.R
 
@@ -13,38 +12,16 @@ import com.xstreaming.R
  * rows -- whether each is signed in, and what name/plan to show. No JS/RN
  * bridge: reads the same MMKV keys those JS modules already write
  * ("gfn.tokens", "user.tokenstore", "xbox.profile.cache") via
- * NativeSettingsStore. Deliberately does NOT port the sign-in/sign-out
- * flows themselves (OAuth device-code polling, XAL/MSAL, ...) -- that's a
- * separate, much larger phase; this only shows what's already stored.
+ * NativeSettingsStore. GFN's own sign-in/sign-out IS ported natively now
+ * (see GfnDeviceAuthClient.kt/GfnSignInDialog.kt, wired up from
+ * AccountSection.kt) -- this file just displays the result either way.
+ * Xbox's sign-in/sign-out (XAL/MSAL, an interactive WebView) is not yet;
+ * that's a separate, later phase.
  */
 data class AccountDisplay(val signedIn: Boolean, val userName: String?, val planTitle: String?)
 
-private fun parseJsonObjectOrNull(raw: String?): JsonObject? {
-    if (raw.isNullOrEmpty()) {
-        return null
-    }
-    return try {
-        JsonParser.parseString(raw).asJsonObject
-    } catch (e: Exception) {
-        null
-    }
-}
-
-private fun stringOrNull(obj: JsonObject?, key: String): String? =
-    obj?.get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
-
-// Gson's JsonObject.getAsJsonObject throws (an unchecked cast) if the key
-// holds a JSON null or any non-object value, rather than returning null the
-// way a duck-typed JS `obj?.key` read degrades -- guarded here so a future
-// schema change (or a hand-edited store) can't crash this read-only screen
-// on open; every nested lookup below goes through this, not the raw Gson
-// method.
-private fun objOrNull(obj: JsonObject?, key: String): JsonObject? =
-    try {
-        obj?.getAsJsonObject(key)
-    } catch (e: Exception) {
-        null
-    }
+// parseJsonObjectOrNull/stringOrNull/objOrNull are shared with
+// GfnDeviceAuthClient.kt -- see JsonHelpers.kt.
 
 // Mirrors auth.ts's nameFromJwt(): decodes a JWT's payload segment
 // (base64url, manually padded since JWTs omit the trailing '='s Android's
