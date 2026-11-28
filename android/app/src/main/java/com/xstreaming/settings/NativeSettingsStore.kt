@@ -31,6 +31,14 @@ object NativeSettingsStore {
     external fun nativeGetGfnDeviceId(): String?
     external fun nativeSetGfnDeviceId(deviceId: String)
 
+    // "gfn.cloudMatchDeviceId" -- a SEPARATE device id from "gfn.deviceId"
+    // above (NVIDIA's own device-authorize OAuth flow uses the latter; its
+    // CloudMatch session API uses the former -- see session.ts's own
+    // CLOUDMATCH_DEVICE_ID_KEY, a distinct MMKV key from auth.ts's
+    // DEVICE_ID_KEY).
+    external fun nativeGetGfnCloudMatchDeviceId(): String?
+    external fun nativeSetGfnCloudMatchDeviceId(deviceId: String)
+
     external fun nativeGetXboxTokenStoreJson(): String?
     external fun nativeGetXboxProfileCacheJson(): String?
 

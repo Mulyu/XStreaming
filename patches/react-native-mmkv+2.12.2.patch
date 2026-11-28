@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
-index 976a278..c5a7791 100644
+index 976a278..b5908e6 100644
 --- a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 +++ b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 @@ -3,9 +3,22 @@
@@ -108,7 +108,7 @@ index 976a278..c5a7791 100644
  
    auto runtime = reinterpret_cast<jsi::Runtime*>(jsiPtr);
    if (runtime) {
-@@ -81,3 +155,238 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
+@@ -81,3 +155,261 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
    // if runtime was nullptr, MMKV will not be installed. This should only happen while Remote
    // Debugging (Chrome), but will be weird either way.
  }
@@ -346,4 +346,27 @@ index 976a278..c5a7791 100644
 +    return;
 +  }
 +  setMmkvDefaultString("user.xcloud", jstringToStdString(env, json));
++}
++
++// "gfn.cloudMatchDeviceId" -- a separate device id from "gfn.deviceId"
++// (NVIDIA's device-authorize OAuth flow uses the latter; its CloudMatch
++// session/region/subscription API uses the former).
++extern "C" JNIEXPORT jstring JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeGetGfnCloudMatchDeviceId(JNIEnv* env,
++                                                                                   jobject /* this */) {
++  std::string result;
++  if (!getMmkvDefaultString("gfn.cloudMatchDeviceId", result)) {
++    return nullptr;
++  }
++  return stdStringToJstring(env, result);
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeSetGfnCloudMatchDeviceId(JNIEnv* env,
++                                                                                   jobject /* this */,
++                                                                                   jstring deviceId) {
++  if (deviceId == nullptr) {
++    return;
++  }
++  setMmkvDefaultString("gfn.cloudMatchDeviceId", jstringToStdString(env, deviceId));
 +}
