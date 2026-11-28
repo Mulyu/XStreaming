@@ -1,4 +1,5 @@
 import React from 'react';
+import {AppState} from 'react-native';
 import {
   GfnDeviceChallenge,
   requestDeviceAuthorization,
@@ -21,6 +22,23 @@ export function useGfnSignIn() {
   >('starting');
   const cancelledRef = React.useRef(false);
   const pendingLaunchRef = React.useRef<(() => void) | null>(null);
+
+  // The native (Compose/Kotlin) Settings screen can now sign in/out of GFN
+  // too (see android/.../com/xstreaming/settings/GfnDeviceAuthClient.kt),
+  // writing to the exact same MMKV key isSignedIn() reads -- but it's a
+  // plain Activity launch, not a React Navigation transition, so returning
+  // from it never re-runs this hook's initial `isSignedIn()` call. Without
+  // this, the JS GFN row could keep showing "not signed in" (and start a
+  // second, redundant device-code flow on tap) even after the native
+  // screen just signed the user in.
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        setSignedIn(isSignedIn());
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const startLogin = React.useCallback((onSignedIn?: () => void) => {
     pendingLaunchRef.current = onSignedIn ?? null;

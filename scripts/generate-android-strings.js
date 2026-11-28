@@ -45,6 +45,9 @@ const RES_DIR = path.join(REPO_ROOT, 'android/app/src/main/res');
 // generating in case it's re-enabled later:
 //   src/features/app-settings/*.ts, src/pages/settings/ui/SettingsView.tsx,
 //   src/pages/settings/model/useSettingsScreen.ts, src/pages/settings/index.tsx
+// The 6 GfnLogin* (+Retry) keys were added by hand afterward, from
+// src/entities/gfn-account/ui/GfnSignInModal.tsx -- the JS sign-in dialog
+// GfnSignInDialog.kt's Compose port reuses this exact wording for.
 const SETTINGS_KEYS = [
   'Anti-idle max duration (minutes)',
   'AntiIdleMaxDesc',
@@ -76,6 +79,11 @@ const SETTINGS_KEYS = [
   'GfnBitrateTitle',
   'GfnFpsDesc',
   'GfnFpsTitle',
+  'GfnLoginFailed',
+  'GfnLoginInstruction',
+  'GfnLoginOpen',
+  'GfnLoginTitle',
+  'GfnLoginWaiting',
   'GfnNativeWebRtcDesc',
   'GfnNativeWebRtcTitle',
   'GfnPlaytimeLoading',
@@ -118,6 +126,7 @@ const SETTINGS_KEYS = [
   'Polling rate',
   'Preferred language of game',
   'Resolution',
+  'Retry',
   'SectionAccount',
   'SectionRegionSignaling',
   'SectionSignInLanguage',

@@ -43,3 +43,9 @@
 # blob by the same hardcoded key strings.
 -keep class com.xstreaming.settings.Settings { *; }
 -keep class com.xstreaming.settings.DisplayOptions { *; }
+
+# GfnDeviceAuthClient.kt's GfnTokens serializes Gson-reflectively to the
+# exact JSON shape src/entities/gfn-account/model/auth.ts's GfnTokens type
+# reads back from the same "gfn.tokens" MMKV key -- same reasoning as
+# Settings/DisplayOptions above.
+-keep class com.xstreaming.settings.GfnTokens { *; }

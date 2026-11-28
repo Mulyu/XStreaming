@@ -37,6 +37,11 @@
     <string name="GfnBitrateTitle">ビットレート</string>
     <string name="GfnFpsDesc">GeForce NOW でリクエストするストリーミングフレームレートを設定します。</string>
     <string name="GfnFpsTitle">フレームレート</string>
+    <string name="GfnLoginFailed">サインインに失敗しました。もう一度お試しください。</string>
+    <string name="GfnLoginInstruction">別のデバイスで下のリンクを開き、このコードを入力して NVIDIA アカウントでサインインしてください。</string>
+    <string name="GfnLoginOpen">サインインページを開く</string>
+    <string name="GfnLoginTitle">GeForce NOW にサインイン</string>
+    <string name="GfnLoginWaiting">承認を待っています…</string>
     <string name="GfnNativeWebRtcDesc">GeForce NOWの配信にKotlinネイティブのWebRTC実装を使用します。接続できない・黒画面などの問題が発生した場合は、このオプションを無効にして以前のJS実装に戻してください。</string>
     <string name="GfnNativeWebRtcTitle">ネイティブWebRTC (GFN)</string>
     <string name="GfnPlaytimeLoading">残りプレイ時間を確認中…</string>
@@ -79,6 +84,7 @@
     <string name="polling_rate">ポーリングレート</string>
     <string name="preferred_language_of_game">ゲームの言語</string>
     <string name="Resolution">解像度</string>
+    <string name="Retry">再試行</string>
     <string name="SectionAccount">アカウント</string>
     <string name="SectionRegionSignaling">リージョン・シグナリング</string>
     <string name="SectionSignInLanguage">言語</string>

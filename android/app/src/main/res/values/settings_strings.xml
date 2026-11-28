@@ -37,6 +37,11 @@
     <string name="GfnBitrateTitle">Bitrate</string>
     <string name="GfnFpsDesc">Set the streaming frame rate requested from GeForce NOW.</string>
     <string name="GfnFpsTitle">Frame rate</string>
+    <string name="GfnLoginFailed">Sign-in failed. Please try again.</string>
+    <string name="GfnLoginInstruction">On another device, open the link below and enter this code to sign in with your NVIDIA account.</string>
+    <string name="GfnLoginOpen">Open sign-in page</string>
+    <string name="GfnLoginTitle">Sign in to GeForce NOW</string>
+    <string name="GfnLoginWaiting">Waiting for approval…</string>
     <string name="GfnNativeWebRtcDesc">Use the Kotlin-native WebRTC client for GeForce NOW streaming. Disable this to fall back to the previous JS implementation if you run into connection failures, a black screen, or other issues.</string>
     <string name="GfnNativeWebRtcTitle">Native WebRTC (GFN)</string>
     <string name="GfnPlaytimeLoading">Checking remaining playtime…</string>
@@ -79,6 +84,7 @@
     <string name="polling_rate">Polling rate</string>
     <string name="preferred_language_of_game">Preferred language of game</string>
     <string name="Resolution">Resolution</string>
+    <string name="Retry">Retry</string>
     <string name="SectionAccount">Account</string>
     <string name="SectionRegionSignaling">Region &amp; Signaling</string>
     <string name="SectionSignInLanguage">Language</string>

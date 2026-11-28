@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
-index 976a278..53f9d19 100644
+index 976a278..8ec3dab 100644
 --- a/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 +++ b/node_modules/react-native-mmkv/android/src/main/cpp/cpp-adapter.cpp
 @@ -3,9 +3,22 @@
@@ -108,7 +108,7 @@ index 976a278..53f9d19 100644
  
    auto runtime = reinterpret_cast<jsi::Runtime*>(jsiPtr);
    if (runtime) {
-@@ -81,3 +155,118 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
+@@ -81,3 +155,175 @@ extern "C" JNIEXPORT void JNICALL Java_com_reactnativemmkv_MmkvModule_nativeInst
    // if runtime was nullptr, MMKV will not be installed. This should only happen while Remote
    // Debugging (Chrome), but will be weird either way.
  }
@@ -159,6 +159,23 @@ index 976a278..53f9d19 100644
 +  return mmkv->getString(key, out);
 +}
 +
++// Shared by every nativeSet*Json/nativeSet*Id function below -- same
++// reasoning as getMmkvDefaultString above, for writes.
++bool setMmkvDefaultString(const std::string& key, const std::string& value) {
++  {
++    std::lock_guard<std::mutex> lock(gMmkvInitMutex);
++    if (!mmkvRootDirReady()) {
++      return false;
++    }
++  }
++  MMKV* mmkv = MMKV::mmkvWithID("mmkv.default", mmkv::DEFAULT_MMAP_SIZE, MMKV_SINGLE_PROCESS, nullptr, nullptr);
++  if (mmkv == nullptr) {
++    return false;
++  }
++  mmkv->set(value, key);
++  return true;
++}
++
 +extern "C" JNIEXPORT jstring JNICALL
 +Java_com_xstreaming_settings_NativeSettingsStore_nativeGetUserSettingsJson(JNIEnv* env,
 +                                                                            jobject /* this */) {
@@ -176,38 +193,14 @@ index 976a278..53f9d19 100644
 +  if (json == nullptr) {
 +    return;
 +  }
-+  {
-+    // Same reasoning as getMmkvDefaultString's lock above.
-+    std::lock_guard<std::mutex> lock(gMmkvInitMutex);
-+    if (!mmkvRootDirReady()) {
-+      return;
-+    }
-+  }
-+  MMKV* mmkv = MMKV::mmkvWithID("mmkv.default", mmkv::DEFAULT_MMAP_SIZE, MMKV_SINGLE_PROCESS, nullptr, nullptr);
-+  if (mmkv == nullptr) {
-+    return;
-+  }
-+  std::string value = jstringToStdString(env, json);
-+  mmkv->set(value, "user.settings");
++  setMmkvDefaultString("user.settings", jstringToStdString(env, json));
 +}
 +
-+// Read-only access to 3 more MMKV keys this process never writes from
-+// native code: the account-status rows in the Compose Settings UI only
-+// need to SHOW what's already signed in (src/entities/gfn-account's
-+// "gfn.tokens", src/entities/xbox-token's "user.tokenstore" and
-+// "xbox.profile.cache"), not drive the sign-in/sign-out flows themselves --
-+// those stay JS-only for now, so there's no corresponding native setter for
-+// any of these three.
-+extern "C" JNIEXPORT jstring JNICALL
-+Java_com_xstreaming_settings_NativeSettingsStore_nativeGetGfnTokensJson(JNIEnv* env,
-+                                                                          jobject /* this */) {
-+  std::string result;
-+  if (!getMmkvDefaultString("gfn.tokens", result)) {
-+    return nullptr;
-+  }
-+  return stdStringToJstring(env, result);
-+}
-+
++// "user.tokenstore" (Xbox) and "xbox.profile.cache" are read-only: the Xbox
++// account row only shows what's already signed in, it doesn't yet drive
++// Xbox's own sign-in/sign-out (that needs XAL/MSAL and an interactive
++// WebView, a separate later phase) -- so there's no native setter for
++// either of those two.
 +extern "C" JNIEXPORT jstring JNICALL
 +Java_com_xstreaming_settings_NativeSettingsStore_nativeGetXboxTokenStoreJson(JNIEnv* env,
 +                                                                               jobject /* this */) {
@@ -226,4 +219,68 @@ index 976a278..53f9d19 100644
 +    return nullptr;
 +  }
 +  return stdStringToJstring(env, result);
++}
++
++// "gfn.tokens"/"gfn.deviceId" ARE read-write (via setMmkvDefaultString,
++// defined above alongside getMmkvDefaultString): GfnDeviceAuthClient.kt's
++// Kotlin port of src/entities/gfn-account/model/auth.ts's device-code
++// sign-in flow needs to persist a device id and the tokens a successful
++// sign-in gets, same as that JS code does to the exact same two keys.
++extern "C" JNIEXPORT jstring JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeGetGfnTokensJson(JNIEnv* env,
++                                                                          jobject /* this */) {
++  std::string result;
++  if (!getMmkvDefaultString("gfn.tokens", result)) {
++    return nullptr;
++  }
++  return stdStringToJstring(env, result);
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeSetGfnTokensJson(JNIEnv* env,
++                                                                          jobject /* this */,
++                                                                          jstring json) {
++  if (json == nullptr) {
++    return;
++  }
++  setMmkvDefaultString("gfn.tokens", jstringToStdString(env, json));
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeClearGfnTokens(JNIEnv* env,
++                                                                        jobject /* this */) {
++  {
++    // Scoped to just this check, like every other accessor in this file --
++    // MMKV::mmkvWithID/removeValueForKey below are already thread-safe on
++    // their own and don't need gMmkvInitMutex held around them too.
++    std::lock_guard<std::mutex> lock(gMmkvInitMutex);
++    if (!mmkvRootDirReady()) {
++      return;
++    }
++  }
++  MMKV* mmkv = MMKV::mmkvWithID("mmkv.default", mmkv::DEFAULT_MMAP_SIZE, MMKV_SINGLE_PROCESS, nullptr, nullptr);
++  if (mmkv == nullptr) {
++    return;
++  }
++  mmkv->removeValueForKey("gfn.tokens");
++}
++
++extern "C" JNIEXPORT jstring JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeGetGfnDeviceId(JNIEnv* env,
++                                                                        jobject /* this */) {
++  std::string result;
++  if (!getMmkvDefaultString("gfn.deviceId", result)) {
++    return nullptr;
++  }
++  return stdStringToJstring(env, result);
++}
++
++extern "C" JNIEXPORT void JNICALL
++Java_com_xstreaming_settings_NativeSettingsStore_nativeSetGfnDeviceId(JNIEnv* env,
++                                                                        jobject /* this */,
++                                                                        jstring deviceId) {
++  if (deviceId == nullptr) {
++    return;
++  }
++  setMmkvDefaultString("gfn.deviceId", jstringToStdString(env, deviceId));
 +}

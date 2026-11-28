@@ -10,10 +10,12 @@ package com.xstreaming.settings
  * The "user.settings" key is read/write -- that's the one JSON blob
  * shared/lib/settings.ts's getSettings/saveSettings read and write as a
  * whole, so a Kotlin-only settings UI needs nothing more granular than get/
- * set on that one key. "gfn.tokens"/"user.tokenstore"/"xbox.profile.cache"
- * are read-only: the account-status rows in the Compose Settings UI only
- * show what's already signed in (see AccountStatus.kt), they don't drive
- * sign-in/sign-out, so there's no native setter for any of these three.
+ * set on that one key. "gfn.tokens"/"gfn.deviceId" are also read/write, for
+ * GfnDeviceAuthClient.kt's native GFN sign-in flow. "user.tokenstore"/
+ * "xbox.profile.cache" are read-only: the Xbox account row only shows
+ * what's already signed in (see AccountStatus.kt) -- Xbox's own sign-in/
+ * sign-out needs XAL/MSAL and an interactive WebView, a separate later
+ * phase, so there's no native setter for either of those two.
  */
 object NativeSettingsStore {
     init {
@@ -24,6 +26,11 @@ object NativeSettingsStore {
     external fun nativeSetUserSettingsJson(json: String)
 
     external fun nativeGetGfnTokensJson(): String?
+    external fun nativeSetGfnTokensJson(json: String)
+    external fun nativeClearGfnTokens()
+    external fun nativeGetGfnDeviceId(): String?
+    external fun nativeSetGfnDeviceId(deviceId: String)
+
     external fun nativeGetXboxTokenStoreJson(): String?
     external fun nativeGetXboxProfileCacheJson(): String?
 
