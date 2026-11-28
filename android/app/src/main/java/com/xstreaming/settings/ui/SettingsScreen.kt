@@ -103,7 +103,7 @@ fun SettingsScreen(initialSettings: Settings, onBack: () -> Unit) {
                 when (lane) {
                     SettingsLane.COMMON -> CommonLane(settings, ::update)
                     SettingsLane.XBOX -> XboxLane(settings, ::update, onBack)
-                    SettingsLane.GFN -> GfnLane()
+                    SettingsLane.GFN -> GfnLane(settings, ::update)
                 }
             }
         }
@@ -372,10 +372,67 @@ private val PREFERRED_GAME_LANGUAGE_OPTIONS = listOf(
     SettingOption("zh-TW", "繁體中文"),
 )
 
-// Mirrors SettingsView.tsx's 'gfn' lane -- account row only so far; video
-// rows land in a follow-up.
+// Mirrors SettingsView.tsx's 'gfn' lane: SectionAccount (the GFN account
+// row -- its own playtime/queue/resync rows are a separate, network-backed
+// follow-up), SectionVideo (gfn_resolution/gfn_fps/gfn_bitrate_mode/
+// gfn_bitrate/gfn_native_webrtc).
+//
+// Not here: 'gfn_region' -- its option list comes from fetchGfnRegions(), a
+// network call (see useSettingsScreen.ts's gfnRegions state), landing in
+// the same network-backed follow-up as the account rows above.
 @Composable
-private fun GfnLane() {
+private fun GfnLane(settings: Settings, update: ((Settings) -> Settings) -> Unit) {
     SectionLabel(stringResource(R.string.SectionAccount))
     GfnAccountRow()
+
+    SectionLabel(stringResource(R.string.SectionVideo))
+    ChoiceRow(
+        title = stringResource(R.string.GfnResolutionTitle),
+        description = stringResource(R.string.GfnResolutionDesc),
+        options = listOf(
+            SettingOption("1280x720", "720P"),
+            SettingOption("1920x1080", "1080P"),
+            SettingOption("2560x1440", "1440P"),
+        ),
+        value = settings.gfnResolution,
+        onChange = { v -> update { it.copy(gfnResolution = v) } },
+    )
+    ChoiceRow(
+        title = stringResource(R.string.GfnFpsTitle),
+        description = stringResource(R.string.GfnFpsDesc),
+        options = listOf(
+            SettingOption(30.0, "30 FPS"),
+            SettingOption(60.0, "60 FPS"),
+        ),
+        value = settings.gfnFps,
+        onChange = { v -> update { it.copy(gfnFps = v) } },
+    )
+    ChoiceRow(
+        title = stringResource(R.string.GfnBitrateTitle),
+        description = stringResource(R.string.GfnBitrateDesc),
+        options = listOf(
+            SettingOption("auto", stringResource(R.string.Auto)),
+            SettingOption("custom", stringResource(R.string.Custom)),
+        ),
+        value = settings.gfnBitrateMode,
+        onChange = { v -> update { it.copy(gfnBitrateMode = v) } },
+    )
+    if (settings.gfnBitrateMode == "custom") {
+        SliderRow(
+            title = stringResource(R.string.Custom),
+            description = null,
+            min = 4f,
+            max = 50f,
+            step = 1f,
+            value = settings.gfnBitrate.toFloat(),
+            onChange = { v -> update { it.copy(gfnBitrate = v.toDouble()) } },
+            formatValue = { v -> "${v.toInt()} Mbps" },
+        )
+    }
+    SwitchRow(
+        title = stringResource(R.string.GfnNativeWebRtcTitle),
+        description = stringResource(R.string.GfnNativeWebRtcDesc),
+        value = settings.gfnNativeWebrtc,
+        onChange = { v -> update { it.copy(gfnNativeWebrtc = v) } },
+    )
 }
