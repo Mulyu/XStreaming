@@ -125,7 +125,16 @@ object GfnDeviceAuthClient {
                 }
 
                 override fun onFailure(call: Call, e: IOException) {
-                    if (!call.isCanceled()) {
+                    // NOT call.isCanceled(): OkHttp itself calls
+                    // call.cancel() internally when its own callTimeout
+                    // fires, before invoking onFailure -- checking that
+                    // would wrongly suppress a real timeout failure too,
+                    // leaving the coroutine suspended forever. Checking the
+                    // continuation's own state instead correctly
+                    // distinguishes "the user cancelled" (continuation no
+                    // longer active, nothing to resume) from "OkHttp failed
+                    // or timed out" (still active, must propagate).
+                    if (continuation.isActive) {
                         continuation.resumeWithException(e)
                     }
                 }
